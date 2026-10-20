@@ -3,9 +3,12 @@ package org.academy.api.common.structure;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
 import org.academy.internal.common.structure.NativeStructureRuntime;
+import org.academy.internal.common.structure.StructureCapturePhysics;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.physics.NativePhysicsArtifact;
+import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -66,6 +69,132 @@ public final class StructurePhysics {
         Objects.requireNonNull(reference, "reference");
         return NativeStructureRuntime.existing(host.getServer())
                 .flatMap(runtime -> runtime.attachedPhysicsRegion(host, reference));
+    }
+
+    /**
+     * Attaches a visible legacy structure to physics without recapturing its content or changing
+     * its identity. Callers must authorize the actor and target before invoking this method.
+     * The existing region is reused; a new attachment becomes ready on a later server tick.
+     * Ordinary geometry, region-budget and reservation checks remain in force.
+     */
+    public static StructurePhysicsRegion adoptExistingRegion(ServerLevel host, StructureRef reference) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        if (!NativeStructureRuntime.ID.equals(reference.backend())
+                || !host.dimension().identifier().equals(reference.dimension())) {
+            throw new IllegalArgumentException("Only a legacy native structure in this host can be adopted");
+        }
+        var existing = attachedRegion(host, reference).orElse(null);
+        if (existing != null) return existing;
+        var runtime = NativeStructureRuntime.backend(host.getServer());
+        var handle = runtime.resolve(reference).orElseThrow(
+                () -> new IllegalStateException("The retained structure is not active"));
+        var occupied = publishedBounds(host, handle);
+        if (occupied == null) throw new IllegalStateException("The retained structure has no published collision geometry");
+        var candidates = new java.util.LinkedHashMap<UUID, StructurePhysicsRegion>();
+        for (var candidate : runtime.loadedReferences()) {
+            // A resumed cohort can still be PAUSED while rebuilding its bodies. It already
+            // owns the reservation and must not be mistaken for an absent region.
+            attachedRegion(host, candidate).ifPresent(region -> candidates.putIfAbsent(region.id(), region));
+        }
+        for (var shared : candidates.values()) {
+            if (!contains(shared.bounds(), occupied)) continue;
+            if (shared.hasActiveControl()) {
+                throw new IllegalStateException("The containing physics region has active control");
+            }
+            requireAdoptableCohort(host, runtime, shared);
+            org.academy.AcademyCraft.LOGGER.info("LEGACY_STRUCTURE_ADOPTION_CONTAINED structure={} region={}"
+                            + " status={} diagnostic={} occupied={} bounds={}",
+                    reference, shared.id(), shared.status(), shared.diagnostic(), occupied, shared.bounds());
+            shared.attach(handle);
+            return shared;
+        }
+        var corners = List.of(BlockPos.containing(occupied.minX, occupied.minY, occupied.minZ),
+                BlockPos.containing(occupied.maxX - 1.0E-6, occupied.maxY - 1.0E-6, occupied.maxZ - 1.0E-6));
+        var bounds = StructureCapturePhysics.regionBounds(host, corners);
+        if (bounds == null) throw new IllegalStateException("The retained structure does not fit a physics region");
+        for (var shared : candidates.values()) {
+            if (!shared.bounds().inflate(1.0).intersects(bounds)) continue;
+            if (shared.hasActiveControl()) {
+                throw new IllegalStateException("The overlapping physics region has active control");
+            }
+            var cohort = requireAdoptableCohort(host, runtime, shared);
+            var required = cohort == null ? occupied : occupied.minmax(cohort);
+            var previous = shared.bounds();
+            var rebased = adoptionBounds(previous, required);
+            org.academy.AcademyCraft.LOGGER.info("LEGACY_STRUCTURE_ADOPTION_CANDIDATE structure={} region={}"
+                            + " status={} diagnostic={} occupied={} bounds={} proposed={}",
+                    reference, shared.id(), shared.status(), shared.diagnostic(), occupied, previous, rebased);
+            if (rebased == null || !shared.rebind(rebased)) continue;
+            try {
+                shared.attach(handle);
+                return shared;
+            } catch (RuntimeException failure) {
+                // A failed attachment must not silently leave unrelated members rebased.
+                if (!shared.rebind(previous)) failure.addSuppressed(
+                        new IllegalStateException("Could not restore the previous physics region bounds"));
+                throw failure;
+            }
+        }
+        var region = openRegion(host, bounds);
+        try {
+            region.attach(handle);
+            return region;
+        } catch (RuntimeException failure) {
+            try { region.close(); }
+            catch (RuntimeException cleanup) { failure.addSuppressed(cleanup); }
+            throw failure;
+        }
+    }
+
+    private static AABB publishedBounds(ServerLevel host, StructureHandle handle) {
+        var origin = handle.pose().worldOrigin();
+        AABB occupied = null;
+        for (var projection : host.getEntitiesOfClass(NativeStructureProjectionEntity.class,
+                new AABB(origin, origin).inflate(32))) {
+            if (projection.isRemoved() || !projection.viewState().reference().equals(handle.reference())) continue;
+            for (var box : projection.worldCollisionBoxes()) occupied = occupied == null ? box : occupied.minmax(box);
+        }
+        return occupied;
+    }
+
+    private static AABB requireAdoptableCohort(ServerLevel host, NativeStructureRuntime runtime,
+                                               StructurePhysicsRegion region) {
+        if (region.status() != StructurePhysicsRegion.Status.READY
+                && !List.of("awaiting_saved_geometry", "awaiting_geometry", "awaiting_rebound_geometry")
+                        .contains(region.diagnostic())) {
+            throw new IllegalStateException("The overlapping physics region cannot currently resume: " + region.diagnostic());
+        }
+        AABB required = null;
+        for (var member : runtime.savedPhysicsEntries(host, region.id())) {
+            var handle = runtime.resolve(member.reference()).orElse(null);
+            if (!member.active() || member.quarantined() || !member.physicsAttachment().resumeAllowed()
+                    || handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+                throw new IllegalStateException("The overlapping physics region has an unavailable saved member");
+            }
+            var occupied = publishedBounds(host, handle);
+            if (occupied == null) throw new IllegalStateException("The overlapping physics region has unpublished geometry");
+            required = required == null ? occupied : required.minmax(occupied);
+        }
+        return required;
+    }
+
+    /** Reuses existing slack, moving bounds only as far as all current bodies require. */
+    static AABB adoptionBounds(AABB previous, AABB required) {
+        if (required.getXsize() > MAX_REGION_AXIS || required.getYsize() > MAX_REGION_AXIS
+                || required.getZsize() > MAX_REGION_AXIS) return null;
+        double x = Math.max(previous.getXsize(), required.getXsize());
+        double y = Math.max(previous.getYsize(), required.getYsize());
+        double z = Math.max(previous.getZsize(), required.getZsize());
+        double minX = Math.clamp(previous.minX, required.maxX - x, required.minX);
+        double minY = Math.clamp(previous.minY, required.maxY - y, required.minY);
+        double minZ = Math.clamp(previous.minZ, required.maxZ - z, required.minZ);
+        return new AABB(minX, minY, minZ, minX + x, minY + y, minZ + z);
+    }
+
+    private static boolean contains(AABB outer, AABB inner) {
+        return outer.minX <= inner.minX && outer.minY <= inner.minY && outer.minZ <= inner.minZ
+                && outer.maxX >= inner.maxX && outer.maxY >= inner.maxY && outer.maxZ >= inner.maxZ;
     }
 
     /**

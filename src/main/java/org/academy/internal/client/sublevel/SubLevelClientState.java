@@ -6,11 +6,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.academy.api.common.structure.StructurePose;
+import org.academy.internal.common.network.SubLevelPosePacket;
 import org.academy.internal.common.network.SubLevelStatePacket;
 import org.academy.internal.common.sublevel.PlotPos;
 import org.academy.internal.common.sublevel.SubLevelCollisionIndex;
@@ -19,6 +19,7 @@ import org.academy.internal.common.sublevel.SubLevelId;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +27,18 @@ import java.util.Objects;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Client-side Phase 4 state store; collision registration is opt-in until rendering exists. */
+/**
+ * Client snapshots, projections and collision share the current client level lifetime.
+ * Snapshot boxes are structure-local; the client builds oriented contact data from the pose.
+ */
 public final class SubLevelClientState {
-    private static final boolean COLLISION = Boolean.getBoolean("academy.sublevel.clientCollision");
+    private static final boolean COLLISION = Boolean.parseBoolean(
+            System.getProperty("academy.sublevel.clientCollision", "true"));
     private static final Map<ClientLevel, Map<SubLevelId, Snapshot>> STATES = new WeakHashMap<>();
     private static final Map<ClientLevel, SubLevelCollisionIndex> INDEXES = new WeakHashMap<>();
     private static final Map<ClientLevel, Map<SubLevelId, NativeStructureProjectionEntity>> ENTITIES = new WeakHashMap<>();
+    private static final Map<ClientLevel, Map<SubLevelId, StructurePose>> COLLISION_POSES = new WeakHashMap<>();
+    private static final Map<Integer, SubLevelId> PROJECTION_IDS = new HashMap<>();
     private static final AtomicInteger ENTITY_IDS = new AtomicInteger(-1_000_000);
 
     private SubLevelClientState() {
@@ -39,22 +46,25 @@ public final class SubLevelClientState {
 
     public static synchronized void accept(SubLevelStatePacket packet) {
         var level = Minecraft.getInstance().level;
-        if (level == null) return;
+        if (level == null || !level.dimension().identifier().equals(packet.dimension())) return;
         var states = STATES.computeIfAbsent(level, ignored -> new LinkedHashMap<>());
         var entities = ENTITIES.computeIfAbsent(level, ignored -> new LinkedHashMap<>());
         if (packet.removed()) {
             states.remove(packet.id());
             var removed = entities.remove(packet.id());
-            if (removed != null) removed.discard();
+            if (removed != null) {
+                PROJECTION_IDS.remove(removed.getId());
+                removed.discard();
+            }
             var index = INDEXES.get(level);
             if (index != null) index.remove(packet.id());
+            var poses = COLLISION_POSES.get(level);
+            if (poses != null) poses.remove(packet.id());
             return;
         }
         var existing = states.get(packet.id());
         var view = packet.fullView() || existing == null ? packet.view() : existing.view();
         states.put(packet.id(), new Snapshot(packet.plot(), packet.pose(), packet.boxes(), view));
-        org.academy.AcademyCraft.LOGGER.debug("SubLevel client snapshot id={} cells={} boxes={} full={}",
-                packet.id().value(), view.cells().size(), packet.boxes().size(), packet.fullView());
         var projection = entities.get(packet.id());
         if (projection == null) {
             projection = new NativeStructureProjectionEntity(EntityTypes.NATIVE_STRUCTURE_PROJECTION.get(), level);
@@ -63,8 +73,7 @@ public final class SubLevelClientState {
             projection.applyClientSnapshot(view, packet.pose(), 1);
             level.addEntity(projection);
             entities.put(packet.id(), projection);
-            org.academy.AcademyCraft.LOGGER.info("SubLevel client projection id={} added entityId={}",
-                    packet.id().value(), projection.getId());
+            PROJECTION_IDS.put(projection.getId(), packet.id());
         } else {
             projection.applyClientSnapshot(view, packet.pose(), projection.viewState().revision() + 1);
         }
@@ -74,7 +83,60 @@ public final class SubLevelClientState {
             SubLevelCollisionRuntime.register(level, created);
             return created;
         });
-        index.update(packet.id(), packet.boxes(), packet.pose());
+        var poses = COLLISION_POSES.computeIfAbsent(level, ignored -> new HashMap<>());
+        var contactPose = projection.clientContactPose();
+        index.update(packet.id(), packet.boxes(), contactPose,
+                poses.getOrDefault(packet.id(), contactPose), 0, projection.viewState().revision());
+        poses.put(packet.id(), contactPose);
+    }
+
+    /** Pose-only delta; the view and local geometry are unchanged. */
+    public static synchronized void acceptPose(SubLevelPosePacket packet) {
+        var level = Minecraft.getInstance().level;
+        if (level == null || !level.dimension().identifier().equals(packet.dimension())) return;
+        var states = STATES.get(level);
+        var previous = states == null ? null : states.get(packet.id());
+        if (previous == null) return; // A delta before the full snapshot is ignored.
+        var updated = new Snapshot(previous.plot(), packet.pose(), previous.boxes(), previous.view());
+        states.put(packet.id(), updated);
+        var projection = ENTITIES.getOrDefault(level, Map.of()).get(packet.id());
+        if (projection != null) {
+            projection.applyClientSnapshot(previous.view(), packet.pose(), projection.viewState().revision() + 1);
+        }
+        // The collision pose advances in tick(), sampling the renderer's game-tick timeline;
+        // using the packet target directly would leave the visible surface behind the contact.
+    }
+
+    /**
+     * Called once per actual client game tick, before entity movement. Contact samples the same
+     * timeline as rendering, with no frame-dependent exponential approach to the target.
+     */
+    public static synchronized void tick() {
+        var minecraft = Minecraft.getInstance();
+        if (minecraft.isPaused()) return;
+        var level = minecraft.level;
+        if (level == null) return;
+        var states = STATES.get(level);
+        var index = INDEXES.get(level);
+        if (states == null) return;
+        var poses = COLLISION_POSES.computeIfAbsent(level, ignored -> new HashMap<>());
+        var entities = ENTITIES.getOrDefault(level, Map.of());
+        for (var entry : states.entrySet()) {
+            var projection = entities.get(entry.getKey());
+            var next = projection == null ? entry.getValue().pose() : projection.advanceClientPose();
+            var current = poses.getOrDefault(entry.getKey(), next);
+            poses.put(entry.getKey(), next);
+            // Even a resting body must clear its previous movement, otherwise carrying replays it.
+            if (COLLISION && index != null) {
+                index.update(entry.getKey(), entry.getValue().boxes(), next, current, 0, 0);
+            }
+        }
+        poses.keySet().removeIf(id -> !states.containsKey(id));
+    }
+
+    /** SubLevel identity of a client projection, used by the crack overlay. */
+    public static synchronized SubLevelId subLevelOf(NativeStructureProjectionEntity entity) {
+        return entity == null ? null : PROJECTION_IDS.get(entity.getId());
     }
 
     public static synchronized List<Snapshot> snapshots(ClientLevel level) {
@@ -88,10 +150,13 @@ public final class SubLevelClientState {
         if (states == null || from == null || to == null) return null;
         double best = Double.POSITIVE_INFINITY;
         Hit result = null;
+        var entities = ENTITIES.getOrDefault(level, Map.of());
+        float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         for (var entry : states.entrySet()) {
             var snapshot = entry.getValue();
             if (snapshot.view().isEmpty()) continue;
-            var pose = snapshot.pose();
+            var projection = entities.get(entry.getKey());
+            var pose = projection == null ? snapshot.pose() : projection.renderPose(partialTick);
             var localStart = pose.worldToLocalPoint(from);
             var localEnd = pose.worldToLocalPoint(to);
             var clip = snapshot.view().clip(new ClipContext(localStart, localEnd,

@@ -1439,21 +1439,47 @@ class CommonProgramNodesTest {
                 variableNode(7, CommonProgramNodeIds.VARIABLE_SET, "com", ProgramValueTypes.WORLD_POSITION.id()),
                 variableNode(8, CommonProgramNodeIds.VARIABLE_SET, "velocity", ProgramValueTypes.VECTOR.id()),
                 variableNode(9, CommonProgramNodeIds.VARIABLE_SET, "angular", ProgramValueTypes.VECTOR.id()),
-                node(10, CommonProgramNodeIds.STOP)), List.of(
+                node(10, CommonProgramNodeIds.STOP),
+                node(11, CommonProgramNodeIds.STRUCTURE_ANCHOR), integerNode(12, -2),
+                integerNode(13, 4), integerNode(14, 9),
+                variableNode(15, CommonProgramNodeIds.VARIABLE_SET, "anchor", ProgramValueTypes.STRUCTURE_ANCHOR.id())), List.of(
                 edge(1, "flow", 3, "flow"), edge(2, "structure", 3, "value"),
                 edge(3, "flow", 6, "flow"), edge(4, "value", 5, "structure"), edge(5, "mass", 6, "value"),
                 edge(6, "flow", 7, "flow"), edge(5, "position", 7, "value"),
                 edge(7, "flow", 8, "flow"), edge(5, "velocity", 8, "value"),
-                edge(8, "flow", 9, "flow"), edge(5, "angular_velocity", 9, "value"), edge(9, "flow", 10, "flow")));
+                edge(8, "flow", 9, "flow"), edge(5, "angular_velocity", 9, "value"),
+                edge(9, "flow", 15, "flow"), edge(4, "value", 11, "structure"),
+                edge(12, "value", 11, "local_x"), edge(13, "value", 11, "local_y"),
+                edge(14, "value", 11, "local_z"), edge(11, "anchor", 15, "value"),
+                edge(15, "flow", 10, "flow")));
         var variables = run(graph, forwarding).variables();
         assertEquals(target, variables.get("body").value());
         assertEquals(50.0, variables.get("mass").value());
         assertEquals(new ProgramWorldPosition(OVERWORLD, 11, 64.5, 22), variables.get("com").value());
         assertEquals(new ProgramVector(2, -3, 4), variables.get("velocity").value());
         assertEquals(new ProgramVector(0, 1, 0), variables.get("angular").value());
+        assertEquals(new org.academy.api.common.ability.program.ProgramStructureAnchor(target,
+                new net.minecraft.core.BlockPos(-2, 4, 9)), variables.get("anchor").value());
         assertFalse(ProgramValueTypes.canConnect(ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.ENTITY_REFERENCE));
         assertFalse(ProgramValueTypes.canConnect(ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.BLOCK_POSITION));
         assertFalse(ProgramValueTypes.canConnect(ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.CONTROL_DESTINATION));
+    }
+
+    @Test
+    void structurePoseCanBeAuthoredWithSignedAxisAndRadiansInARealGraph() {
+        var graph = new ProgramGraph(List.of(
+                node(1, PrecisionProgramNodeIds.ON_CAST), directionNode(2, 0, -1, 0),
+                floatNode(3, Math.PI / 3), node(4, CommonProgramNodeIds.STRUCTURE_POSE),
+                variableNode(5, CommonProgramNodeIds.VARIABLE_SET, "pose", ProgramValueTypes.STRUCTURE_POSE.id()),
+                node(6, CommonProgramNodeIds.STOP)), List.of(
+                edge(1, "flow", 5, "flow"), edge(2, "direction", 4, "axis"),
+                edge(3, "value", 4, "angle_radians"), edge(4, "pose", 5, "value"),
+                edge(5, "flow", 6, "flow")));
+        assertEquals(new org.academy.api.common.ability.program.ProgramStructurePose(
+                new ProgramDirection(0, -1, 0), Math.PI / 3), run(graph, null).variables().get("pose").value());
+        var editor = AbilityProgramDefinitions.mentalout().editorCatalog();
+        assertNotNull(editor.entry(CommonProgramNodeIds.STRUCTURE_POSE));
+        assertNotNull(editor.entry(CommonProgramNodeIds.STRUCTURE_ANCHOR));
     }
 
     private static ProgramVm.Session run(ProgramGraph graph, Object attachment) {

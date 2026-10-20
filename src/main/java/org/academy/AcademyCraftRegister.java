@@ -41,6 +41,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.network.syncher.EntityDataSerializers;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.structure.space.NativeStructureTickets;
+import org.academy.internal.common.sublevel.SubLevelEnhancementBootstrap;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
 import org.academy.internal.common.world.effect.StatusEffects;
@@ -105,6 +106,8 @@ public final class AcademyCraftRegister {
         Skills.SKILLS.register(modEventBus);
         ChunkLeapTickets.TICKET_TYPES.register(modEventBus);
         NativeStructureTickets.TICKET_TYPES.register(modEventBus);
+        SubLevelEnhancementBootstrap.register(modEventBus);
+        org.academy.internal.common.sublevel.pipeline.SubLevelPipelineBootstrap.register(modEventBus);
         AbilityProgramNodeTypes.REGISTER.register(modEventBus);
 
         DataTypes.SYNC_DATA_TYPES.register(modEventBus);

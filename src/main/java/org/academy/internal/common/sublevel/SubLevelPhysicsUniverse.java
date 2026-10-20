@@ -84,6 +84,38 @@ public final class SubLevelPhysicsUniverse {
     }
 
     public void step(double duration, int substeps) {
+        step(duration, substeps, false);
+    }
+
+    /** Keeps all poses and velocities intact until the host has installed every required terrain collider. */
+    public boolean stepCovered(double duration, int substeps, boolean force, boolean terrainCovered) {
+        if (!Double.isFinite(duration) || duration <= 0.0 || substeps < 1) {
+            throw new IllegalArgumentException("Physics step requires a finite positive duration and substeps");
+        }
+        if (!terrainCovered) return false;
+        step(duration, substeps, force);
+        return true;
+    }
+
+    /**
+     * Steps the shared world. A fully sleeping set is skipped unless terrain or another external
+     * change must wake contacts; this removes per-tick solver cost for idle structures without
+     * dropping required solver work for moving bodies.
+     */
+    public void step(double duration, int substeps, boolean force) {
+        if (!Double.isFinite(duration) || duration <= 0.0 || substeps < 1) {
+            throw new IllegalArgumentException("Physics step requires a finite positive duration and substeps");
+        }
+        if (!force && !entries.isEmpty()) {
+            boolean sleeping = true;
+            for (var entry : entries.values()) {
+                if (entry.motion == null || !entry.motion.sleeping()) {
+                    sleeping = false;
+                    break;
+                }
+            }
+            if (sleeping) return;
+        }
         world.step(duration, substeps);
         for (var entry : entries.values()) entry.motion = readMotion(entry);
         revision = Math.incrementExact(revision);
@@ -97,7 +129,13 @@ public final class SubLevelPhysicsUniverse {
     public boolean impulse(SubLevelId id, PhysicsVector impulse, PhysicsVector worldPoint) {
         var entry = entries.get(id);
         if (entry == null) return false;
-        world.impulse(entry.bodies.getFirst(), impulse, worldPoint);
+        var motion = readMotion(entry);
+        for (var body : entry.bodies) {
+            double fraction = body.mass() / motion.mass();
+            world.impulse(body, new PhysicsVector(impulse.x() * fraction,
+                    impulse.y() * fraction, impulse.z() * fraction), worldPoint);
+        }
+        entry.motion = readMotion(entry);
         revision = Math.incrementExact(revision);
         return true;
     }
@@ -105,8 +143,24 @@ public final class SubLevelPhysicsUniverse {
     public boolean setVelocity(SubLevelId id, PhysicsVector linear, PhysicsVector angular) {
         var entry = entries.get(id);
         if (entry == null) return false;
-        world.setVelocity(entry.bodies.getFirst(), linear, angular);
+        var motion = readMotion(entry);
+        for (var body : entry.bodies) {
+            var offset = rotate(motion.pose().rotation(), body.localCenterOfMass().subtract(motion.localCenterOfMass()));
+            var tangential = cross(angular, offset);
+            world.setVelocity(body, linear.add(tangential), angular);
+        }
+        entry.motion = readMotion(entry);
         revision = Math.incrementExact(revision);
+        return true;
+    }
+
+    /** Moves all welded bodies together without replacing their identity or velocity. */
+    public boolean setPose(SubLevelId id, PhysicsPose pose) {
+        var entry = entries.get(id);
+        if (entry == null) return false;
+        var motion = readMotion(entry);
+        for (var body : entry.bodies) body.setPose(pose);
+        setVelocity(id, motion.linearVelocity(), motion.angularVelocity());
         return true;
     }
 
@@ -134,6 +188,8 @@ public final class SubLevelPhysicsUniverse {
         var primary = entry.bodies.getFirst().state();
         double mass = 0.0;
         double comX = 0.0, comY = 0.0, comZ = 0.0;
+        double velocityX = 0.0, velocityY = 0.0, velocityZ = 0.0;
+        boolean sleeping = true;
         for (var body : entry.bodies) {
             var state = body.state();
             if (!Double.isFinite(state.mass()) || state.mass() <= 0.0) {
@@ -143,10 +199,29 @@ public final class SubLevelPhysicsUniverse {
             comX += state.localCenterOfMass().x() * state.mass();
             comY += state.localCenterOfMass().y() * state.mass();
             comZ += state.localCenterOfMass().z() * state.mass();
+            velocityX += state.linearVelocity().x() * state.mass();
+            velocityY += state.linearVelocity().y() * state.mass();
+            velocityZ += state.linearVelocity().z() * state.mass();
+            sleeping &= state.sleeping();
         }
         if (!Double.isFinite(mass) || mass <= 0.0) throw new IllegalStateException("Sub-level has no mass");
-        return new Motion(primary.pose(), primary.linearVelocity(), primary.angularVelocity(),
-                new PhysicsVector(comX / mass, comY / mass, comZ / mass), mass, primary.sleeping());
+        return new Motion(primary.pose(), new PhysicsVector(velocityX / mass, velocityY / mass, velocityZ / mass),
+                primary.angularVelocity(), new PhysicsVector(comX / mass, comY / mass, comZ / mass), mass, sleeping);
+    }
+
+    private static PhysicsVector cross(PhysicsVector first, PhysicsVector second) {
+        return new PhysicsVector(first.y() * second.z() - first.z() * second.y(),
+                first.z() * second.x() - first.x() * second.z(),
+                first.x() * second.y() - first.y() * second.x());
+    }
+
+    private static PhysicsVector rotate(PhysicsQuaternion rotation, PhysicsVector value) {
+        var imaginary = new PhysicsVector(rotation.x(), rotation.y(), rotation.z());
+        var first = cross(imaginary, value);
+        var second = cross(imaginary, first);
+        return new PhysicsVector(value.x() + 2.0 * (rotation.w() * first.x() + second.x()),
+                value.y() + 2.0 * (rotation.w() * first.y() + second.y()),
+                value.z() + 2.0 * (rotation.w() * first.z() + second.z()));
     }
 
     private static List<List<PhysicsBox>> batches(List<PhysicsBox> boxes) {

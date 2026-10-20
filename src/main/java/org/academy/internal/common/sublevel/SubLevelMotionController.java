@@ -12,7 +12,6 @@ import java.util.Objects;
 public final class SubLevelMotionController {
     private static final Map<SubLevelId, Session> SESSIONS = new HashMap<>();
     private static final Map<SubLevelId, Thrust> THRUSTS = new HashMap<>();
-    private static final double ARRIVAL = 0.2;
     private static final double MAX_SPEED = 8.0;
     private static final int MAX_TICKS = 1_200;
 
@@ -20,15 +19,25 @@ public final class SubLevelMotionController {
     }
 
     public static boolean moveTo(MinecraftServer server, SubLevelId id, Vec3 target, double seconds) {
+        var subLevel = SubLevelServer.runtime(server, id).flatMap(runtime -> runtime.get(id)).orElse(null);
+        return subLevel != null && moveTo(server, id, subLevel.localBounds().getCenter(), target, seconds);
+    }
+
+    /** Moves a selected local anchor, retaining that anchor across rotation. */
+    public static boolean moveTo(MinecraftServer server, SubLevelId id, Vec3 localAnchor,
+                                 Vec3 target, double seconds) {
         Objects.requireNonNull(server, "server");
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(target, "target");
-        if (!Double.isFinite(target.x) || !Double.isFinite(target.y) || !Double.isFinite(target.z)) return false;
-        var runtime = SubLevelServer.runtime(server).orElse(null);
-        if (runtime == null || runtime.get(id).isEmpty()) return false;
-        long duration = Math.max(1L, Math.min(MAX_TICKS, (long) Math.ceil(seconds * 20.0)));
+        if (!finite(target) || !finite(localAnchor) || durationTicks(seconds) == 0) return false;
+        var runtime = SubLevelServer.runtime(server, id).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (subLevel == null || subLevel.state() != SubLevelState.ACTIVE
+                && subLevel.state() != SubLevelState.SLEEPING) return false;
+        long duration = durationTicks(seconds);
         THRUSTS.remove(id);
-        SESSIONS.put(id, new Session(target, server.overworld().getGameTime() + duration));
+        SESSIONS.put(id, new Session(server, localAnchor, target, runtime.host().getGameTime() + duration,
+                SubLevelActivationRegistry.activation(id)));
         return true;
     }
 
@@ -38,13 +47,16 @@ public final class SubLevelMotionController {
         Objects.requireNonNull(server, "server");
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(direction, "direction");
-        if (!Double.isFinite(speed) || speed <= 0.0 || direction.lengthSqr() < 1.0E-12) return false;
-        var runtime = SubLevelServer.runtime(server).orElse(null);
-        if (runtime == null || runtime.get(id).isEmpty()) return false;
-        long duration = Math.max(1L, Math.min(MAX_TICKS, (long) Math.ceil(seconds * 20.0)));
+        var unit = normalized(direction);
+        if (!Double.isFinite(speed) || speed <= 0.0 || unit == null || durationTicks(seconds) == 0) return false;
+        var runtime = SubLevelServer.runtime(server, id).orElse(null);
+        var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
+        if (subLevel == null || subLevel.state() != SubLevelState.ACTIVE
+                && subLevel.state() != SubLevelState.SLEEPING) return false;
+        long duration = durationTicks(seconds);
         SESSIONS.remove(id);
-        THRUSTS.put(id, new Thrust(direction.normalize(), Math.min(MAX_SPEED, speed),
-                server.overworld().getGameTime() + duration));
+        THRUSTS.put(id, new Thrust(server, unit, Math.min(MAX_SPEED, speed),
+                runtime.host().getGameTime() + duration, SubLevelActivationRegistry.activation(id)));
         return true;
     }
 
@@ -53,20 +65,23 @@ public final class SubLevelMotionController {
         THRUSTS.remove(id);
     }
 
+    /** Releases all static motion state at a server lifecycle boundary. */
+    public static void clear() {
+        SESSIONS.clear();
+        THRUSTS.clear();
+    }
+
     public static void tick(MinecraftServer server) {
         if (SESSIONS.isEmpty() && THRUSTS.isEmpty()) return;
-        var runtime = SubLevelServer.runtime(server).orElse(null);
-        if (runtime == null) {
-            SESSIONS.clear();
-            THRUSTS.clear();
-            return;
-        }
         var thrustIterator = THRUSTS.entrySet().iterator();
         while (thrustIterator.hasNext()) {
             var entry = thrustIterator.next();
-            var subLevel = runtime.get(entry.getKey()).orElse(null);
             var thrust = entry.getValue();
-            if (subLevel == null || server.overworld().getGameTime() > thrust.expiresAt
+            if (thrust.server != server) continue;
+            var runtime = SubLevelServer.runtime(server, entry.getKey()).orElse(null);
+            var subLevel = runtime == null ? null : runtime.get(entry.getKey()).orElse(null);
+            if (subLevel == null || runtime.host().getGameTime() >= thrust.expiresAt
+                    || !matches(entry.getKey(), thrust.activation)
                     || subLevel.state() != SubLevelState.ACTIVE && subLevel.state() != SubLevelState.SLEEPING) {
                 thrustIterator.remove();
                 continue;
@@ -80,9 +95,12 @@ public final class SubLevelMotionController {
         var iterator = SESSIONS.entrySet().iterator();
         while (iterator.hasNext()) {
             var entry = iterator.next();
-            var subLevel = runtime.get(entry.getKey()).orElse(null);
             var session = entry.getValue();
-            if (subLevel == null || server.overworld().getGameTime() > session.expiresAt) {
+            if (session.server != server) continue;
+            var runtime = SubLevelServer.runtime(server, entry.getKey()).orElse(null);
+            var subLevel = runtime == null ? null : runtime.get(entry.getKey()).orElse(null);
+            if (subLevel == null || runtime.host().getGameTime() >= session.expiresAt
+                    || !matches(entry.getKey(), session.activation)) {
                 iterator.remove();
                 continue;
             }
@@ -90,15 +108,8 @@ public final class SubLevelMotionController {
                 iterator.remove();
                 continue;
             }
-            var center = subLevel.pose().localToWorldPoint(subLevel.localBounds().getCenter());
-            var delta = session.target.subtract(center);
-            double distance = delta.length();
-            if (distance <= ARRIVAL) {
-                iterator.remove();
-                continue;
-            }
-            double speed = Math.min(MAX_SPEED, Math.max(0.5, distance * 4.0));
-            var velocity = delta.normalize().scale(speed);
+            var anchor = subLevel.pose().localToWorldPoint(session.localAnchor);
+            var velocity = approachVelocity(session.target.subtract(anchor));
             if (!runtime.universe().setVelocity(entry.getKey(),
                     new PhysicsVector(velocity.x, velocity.y, velocity.z), PhysicsVector.ZERO)) {
                 iterator.remove();
@@ -106,9 +117,39 @@ public final class SubLevelMotionController {
         }
     }
 
-    private record Session(Vec3 target, long expiresAt) {
+    static int durationTicks(double seconds) {
+        if (!Double.isFinite(seconds) || seconds <= 0.0) return 0;
+        return (int) Math.max(1.0, Math.min(MAX_TICKS, Math.ceil(seconds * 20.0)));
     }
 
-    private record Thrust(Vec3 direction, double speed, long expiresAt) {
+    static boolean finite(Vec3 value) {
+        return value != null && Double.isFinite(value.x) && Double.isFinite(value.y) && Double.isFinite(value.z);
+    }
+
+    static Vec3 normalized(Vec3 direction) {
+        if (!finite(direction)) return null;
+        double scale = Math.max(Math.abs(direction.x), Math.max(Math.abs(direction.y), Math.abs(direction.z)));
+        if (scale < 1.0E-12) return null;
+        return new Vec3(direction.x / scale, direction.y / scale, direction.z / scale).normalize();
+    }
+
+    /** No minimum speed: the final physics step must brake instead of passing the target. */
+    static Vec3 approachVelocity(Vec3 delta) {
+        var unit = normalized(delta);
+        if (unit == null) return Vec3.ZERO;
+        double distance = Math.hypot(Math.hypot(delta.x, delta.y), delta.z);
+        return unit.scale(Math.min(MAX_SPEED, distance * 4.0));
+    }
+
+    private static boolean matches(SubLevelId id, SubLevelActivationRegistry.Activation activation) {
+        return SubLevelActivationRegistry.matches(id, activation.runtimeId(), activation.generation());
+    }
+
+    private record Session(MinecraftServer server, Vec3 localAnchor, Vec3 target, long expiresAt,
+                           SubLevelActivationRegistry.Activation activation) {
+    }
+
+    private record Thrust(MinecraftServer server, Vec3 direction, double speed, long expiresAt,
+                          SubLevelActivationRegistry.Activation activation) {
     }
 }

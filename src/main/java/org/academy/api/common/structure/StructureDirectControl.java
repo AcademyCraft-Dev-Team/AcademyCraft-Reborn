@@ -1,8 +1,11 @@
 package org.academy.api.common.structure;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.sublevel.SubLevelDirectControl;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
@@ -20,6 +23,7 @@ import java.util.UUID;
  */
 public final class StructureDirectControl {
     private static final Map<StructureRef, Lease> LEASES = new HashMap<>();
+    private static final Map<StructureRef, Entity> ACTORS = new HashMap<>();
 
     private StructureDirectControl() {
     }
@@ -70,12 +74,15 @@ public final class StructureDirectControl {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(controlId, "controlId");
+        if (!actor.isAlive() || actor.isRemoved() || actor.level() != host) return Status.UNAVAILABLE;
         var probe = StructureBackendRouter.probeDirectControl(host, reference);
         synchronized (LEASES) {
             var standing = LEASES.get(reference);
             var status = decideAcquire(probe, standing, actor.getUUID(), controlId);
             if (status == Status.ACTIVE) {
+                if (standing != null && !standing.controlId().equals(controlId)) cancel(reference, standing.controlId());
                 LEASES.put(reference, new Lease(actor.getUUID(), controlId, probe.runtimeId()));
+                ACTORS.put(reference, actor);
             }
             return status;
         }
@@ -89,7 +96,13 @@ public final class StructureDirectControl {
         Objects.requireNonNull(controlId, "controlId");
         var probe = StructureBackendRouter.probeDirectControl(host, reference);
         synchronized (LEASES) {
-            return validateLease(LEASES, reference, probe, actor.getUUID(), controlId);
+            var standing = LEASES.get(reference);
+            var status = validateLease(LEASES, reference, probe, actor.getUUID(), controlId);
+            if (!LEASES.containsKey(reference) && owns(standing, actor.getUUID(), controlId)) {
+                ACTORS.remove(reference);
+                cancel(reference, controlId);
+            }
+            return status;
         }
     }
 
@@ -116,8 +129,36 @@ public final class StructureDirectControl {
         Objects.requireNonNull(controlId, "controlId");
         synchronized (LEASES) {
             var standing = LEASES.get(reference);
-            if (standing != null && standing.controlId().equals(controlId)) LEASES.remove(reference);
+            if (standing != null && standing.controlId().equals(controlId)) {
+                LEASES.remove(reference);
+                ACTORS.remove(reference);
+                cancel(reference, controlId);
+            }
         }
+    }
+
+    /** Revokes actor lifecycle changes before SubLevel motion is applied. */
+    public static void tick(MinecraftServer server) {
+        synchronized (LEASES) {
+            for (var entry : Map.copyOf(ACTORS).entrySet()) {
+                var reference = entry.getKey();
+                var actor = entry.getValue();
+                if (!(actor.level() instanceof ServerLevel host) || host.getServer() != server
+                        || !SubLevelStructureRefs.isSubLevel(reference)) continue;
+                var lease = LEASES.get(reference);
+                if (lease == null) { ACTORS.remove(reference); continue; }
+                var probe = StructureBackendRouter.probeDirectControl(host, reference);
+                if (!actor.isAlive() || actor.isRemoved() || !reference.dimension().equals(host.dimension().identifier())
+                        || actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected()
+                        || probe.state() != Probe.State.READY || !lease.runtimeId().equals(probe.runtimeId())) {
+                    release(reference, lease.controlId());
+                }
+            }
+        }
+    }
+
+    private static void cancel(StructureRef reference, UUID controlId) {
+        if (SubLevelStructureRefs.isSubLevel(reference)) SubLevelDirectControl.cancel(reference, controlId);
     }
 
     /** Submits one outer tick of bounded force; the backend consumes it at physics substeps. */
@@ -132,7 +173,9 @@ public final class StructureDirectControl {
     /** Drops every lease; called when the owning server stops. */
     public static void clearAll() {
         synchronized (LEASES) {
+            for (var entry : LEASES.entrySet()) cancel(entry.getKey(), entry.getValue().controlId());
             LEASES.clear();
+            ACTORS.clear();
         }
     }
 

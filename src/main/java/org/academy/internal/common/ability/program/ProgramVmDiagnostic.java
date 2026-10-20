@@ -1,5 +1,7 @@
 package org.academy.internal.common.ability.program;
 
+import org.academy.api.common.ability.program.ProgramStructureOperationResult;
+
 import java.util.Locale;
 
 public enum ProgramVmDiagnostic {
@@ -41,7 +43,31 @@ public enum ProgramVmDiagnostic {
     CLIENT_TIMEOUT,
     PLANNING_BUDGET_EXHAUSTED,
     UNSUPPORTED_MOVEMENT_MODE,
-    ACTION_UNAVAILABLE;
+    ACTION_UNAVAILABLE,
+    SUBLEVEL_RUNTIME_UNAVAILABLE,
+    SUBLEVEL_PLOT_CAPACITY_UNAVAILABLE,
+    TARGET_PHYSICS_PREPARE_FAILED,
+    TARGET_PHYSICS_FINALIZE_FAILED,
+    NO_FREE_NATIVE_SLOT,
+    NOT_IN_PLAIN_BLOCK_WHITELIST;
+
+    /** Capture services prefix stable reason tokens with their transaction status. */
+    public static ProgramVmDiagnostic structureFailure(ProgramStructureOperationResult result) {
+        for (var token : result.detail().split(":")) {
+            var diagnostic = switch (token.trim().toLowerCase(Locale.ROOT)) {
+                case "sublevel_runtime_unavailable" -> SUBLEVEL_RUNTIME_UNAVAILABLE;
+                case "sublevel_plot_capacity_unavailable" -> SUBLEVEL_PLOT_CAPACITY_UNAVAILABLE;
+                case "target_physics_prepare_failed" -> TARGET_PHYSICS_PREPARE_FAILED;
+                case "target_finalize_failed", "target_physics_finalize_failed" -> TARGET_PHYSICS_FINALIZE_FAILED;
+                case "no_free_native_slot" -> NO_FREE_NATIVE_SLOT;
+                case "not_in_plain_block_whitelist" -> NOT_IN_PLAIN_BLOCK_WHITELIST;
+                default -> null;
+            };
+            if (diagnostic != null) return diagnostic;
+        }
+        return result.status() == ProgramStructureOperationResult.Status.UNAVAILABLE
+                ? ACTION_UNAVAILABLE : ACTION_REJECTED;
+    }
 
     public String translationKey() {
         var prefix = switch (this) {

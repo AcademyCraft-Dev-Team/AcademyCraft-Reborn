@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
@@ -32,6 +33,7 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
     private static final int MAX_BOXES = 16_384;
     public static final StreamCodec<ByteBuf, SubLevelStatePacket> CODEC = new StreamCodec<>() {
         @Override public SubLevelStatePacket decode(ByteBuf input) {
+            var dimension = Identifier.STREAM_CODEC.decode(input);
             var id = new SubLevelId(new UUID(input.readLong(), input.readLong()));
             var plot = new PlotPos(input.readInt(), input.readInt());
             boolean removed = input.readBoolean();
@@ -49,20 +51,24 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
             if (cellCount > NativeStructureView.MAX_CELLS) {
                 throw new IllegalArgumentException("Too many SubLevel view cells");
             }
-            boolean solid = input.readBoolean();
+            boolean solid = false;
             var cells = new ArrayList<NativeStructureView.Cell>(cellCount);
-            for (int index = 0; index < cellCount; index++) {
-                var position = new BlockPos(input.readShort(), input.readShort(), input.readShort());
-                var state = Block.BLOCK_STATE_REGISTRY.byId(input.readInt());
-                if (state == null) throw new IllegalArgumentException("Unknown SubLevel block state");
-                cells.add(new NativeStructureView.Cell(position, state));
+            if (cellCount > 0) {
+                solid = input.readBoolean();
+                for (int index = 0; index < cellCount; index++) {
+                    var position = new BlockPos(input.readShort(), input.readShort(), input.readShort());
+                    var state = Block.BLOCK_STATE_REGISTRY.byId(input.readInt());
+                    if (state == null) throw new IllegalArgumentException("Unknown SubLevel block state");
+                    cells.add(new NativeStructureView.Cell(position, state));
+                }
             }
             if (input.isReadable()) throw new IllegalArgumentException("Unexpected SubLevel state payload");
             var view = cells.isEmpty() ? NativeStructureView.EMPTY : new NativeStructureView(cells, solid);
-            return new SubLevelStatePacket(id, plot, pose, boxes, view, removed, fullView);
+            return new SubLevelStatePacket(dimension, id, plot, pose, boxes, view, removed, fullView);
         }
 
         @Override public void encode(ByteBuf output, SubLevelStatePacket packet) {
+            Identifier.STREAM_CODEC.encode(output, packet.dimension);
             output.writeLong(packet.id.value().getMostSignificantBits());
             output.writeLong(packet.id.value().getLeastSignificantBits());
             output.writeInt(packet.plot.x());
@@ -81,18 +87,21 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
                 output.writeDouble(box.minX); output.writeDouble(box.minY); output.writeDouble(box.minZ);
                 output.writeDouble(box.maxX); output.writeDouble(box.maxY); output.writeDouble(box.maxZ);
             }
-            output.writeShort(packet.view.cells().size());
-            output.writeBoolean(packet.view.solid());
-            for (var cell : packet.view.cells()) {
-                output.writeShort(cell.position().getX());
-                output.writeShort(cell.position().getY());
-                output.writeShort(cell.position().getZ());
-                output.writeInt(Block.getId(cell.state()));
+            output.writeShort(packet.fullView ? packet.view.cells().size() : 0);
+            if (packet.fullView && !packet.view.cells().isEmpty()) {
+                output.writeBoolean(packet.view.solid());
+                for (var cell : packet.view.cells()) {
+                    output.writeShort(cell.position().getX());
+                    output.writeShort(cell.position().getY());
+                    output.writeShort(cell.position().getZ());
+                    output.writeInt(Block.getId(cell.state()));
+                }
             }
         }
     };
 
     private static boolean initialized;
+    private final Identifier dimension;
     private final SubLevelId id;
     private final PlotPos plot;
     private final StructurePose pose;
@@ -108,6 +117,12 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
 
     public SubLevelStatePacket(SubLevelId id, PlotPos plot, StructurePose pose, List<AABB> boxes,
                                NativeStructureView view, boolean removed, boolean fullView) {
+        this(Identifier.fromNamespaceAndPath("minecraft", "overworld"), id, plot, pose, boxes, view, removed, fullView);
+    }
+
+    public SubLevelStatePacket(Identifier dimension, SubLevelId id, PlotPos plot, StructurePose pose, List<AABB> boxes,
+                               NativeStructureView view, boolean removed, boolean fullView) {
+        this.dimension = Objects.requireNonNull(dimension, "dimension");
         this.id = Objects.requireNonNull(id, "id");
         this.plot = Objects.requireNonNull(plot, "plot");
         this.pose = Objects.requireNonNull(pose, "pose");
@@ -126,9 +141,10 @@ public final class SubLevelStatePacket extends Packet<ClientPacketListener, SubL
     public static void send(ServerPlayer recipient, SubLevelId id, PlotPos plot, StructurePose pose,
                             List<AABB> boxes, NativeStructureView view, boolean removed, boolean fullView) {
         MisakaNetworkServer.send(recipient,
-                new SubLevelStatePacket(id, plot, pose, boxes, view, removed, fullView));
+                new SubLevelStatePacket(recipient.level().dimension().identifier(), id, plot, pose, boxes, view, removed, fullView));
     }
 
+    public Identifier dimension() { return dimension; }
     public SubLevelId id() { return id; }
     public PlotPos plot() { return plot; }
     public StructurePose pose() { return pose; }

@@ -22,4 +22,52 @@ class SubLevelTest {
         subLevel.setState(SubLevelState.ACTIVE);
         assertEquals(SubLevelState.ACTIVE, subLevel.state());
     }
+
+    @Test
+    void consumingCarryPreservesInteractionHistoryAndRevisions() {
+        var initial = StructurePose.identity(new Vec3(5, 10, 5));
+        var moved = StructurePose.identity(new Vec3(6, 10, 5));
+        var subLevel = new SubLevel(SubLevelId.random(), new PlotPos(0, 0),
+                new AABB(0, 0, 0, 2, 3, 1), initial);
+        subLevel.setState(SubLevelState.SLEEPING);
+        subLevel.geometryChanged();
+        subLevel.setPose(moved);
+        assertEquals(initial, subLevel.previousPose());
+        assertEquals(initial, subLevel.carryPose());
+        long revision = subLevel.revision();
+        long geometryRevision = subLevel.geometryRevision();
+
+        subLevel.consumeCarryPose();
+        subLevel.consumeCarryPose();
+
+        assertEquals(moved, subLevel.pose());
+        assertEquals(moved, subLevel.carryPose(), "a resting body must not replay the consumed movement");
+        assertEquals(initial, subLevel.previousPose(), "delayed interaction still needs the actual previous pose");
+        assertEquals(revision, subLevel.revision());
+        assertEquals(geometryRevision, subLevel.geometryRevision());
+        assertEquals(SubLevelState.SLEEPING, subLevel.state());
+        var next = StructurePose.identity(new Vec3(6, 11, 5));
+        subLevel.setPose(next);
+        assertEquals(moved, subLevel.previousPose());
+        assertEquals(moved, subLevel.carryPose());
+        assertEquals(next, subLevel.pose());
+        assertEquals(revision + 1, subLevel.revision());
+    }
+
+    @Test
+    void multiplePoseChangesAccumulateUntilCarryIsConsumed() {
+        var initial = StructurePose.identity(Vec3.ZERO);
+        var intermediate = StructurePose.identity(new Vec3(1, 0, 0));
+        var latest = StructurePose.identity(new Vec3(1, 1, 0));
+        var subLevel = new SubLevel(SubLevelId.random(), new PlotPos(0, 0),
+                new AABB(0, 0, 0, 1, 1, 1), initial);
+        subLevel.setPose(intermediate);
+        subLevel.setPose(latest);
+        assertEquals(initial, subLevel.carryPose());
+        assertEquals(intermediate, subLevel.previousPose());
+        subLevel.consumeCarryPose();
+        assertEquals(latest, subLevel.carryPose());
+        assertEquals(intermediate, subLevel.previousPose());
+        assertEquals(2, subLevel.revision());
+    }
 }

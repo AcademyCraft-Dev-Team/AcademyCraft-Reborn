@@ -330,6 +330,10 @@ public final class NativeStructurePhysics implements AutoCloseable {
         @Override public AABB bounds() { requireThread(); return bounds; }
         @Override public Status status() { requireThread(); return status; }
         @Override public String diagnostic() { requireThread(); return diagnostic; }
+        @Override public boolean hasActiveControl() {
+            requireThread();
+            return members.values().stream().anyMatch(member -> member.controls.occupied());
+        }
 
         /**
          * Re-bases this live region onto different host bounds of a valid size. Persisted
@@ -373,7 +377,6 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     return false;
                 }
             }
-            disposeWorldForRebind();
             var previousBounds = bounds;
             try {
                 if (!runtime.rebindPhysicsAttachments(host, id, previousBounds, newBounds)) return false;
@@ -383,9 +386,18 @@ public final class NativeStructurePhysics implements AutoCloseable {
             }
             bounds = newBounds;
             origin = vector(bounds.getCenter());
-            terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
             status = Status.PAUSED;
             diagnostic = "awaiting_rebound_geometry";
+            try {
+                // Persistence refusal must leave the old solver and contacts untouched. Once
+                // committed, a release failure belongs to the new bounds and is terminal; callers
+                // must not interpret it as an unchanged region and try another adoption path.
+                disposeWorldForRebind();
+                terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
+            } catch (RuntimeException | AssertionError | LinkageError failure) {
+                fail(failure);
+                throw new IllegalStateException("Physics region rebase committed but native release failed", failure);
+            }
             AcademyCraft.LOGGER.info("Physics region {} rebound from {} to {}", id, previousBounds, newBounds);
             return true;
         }

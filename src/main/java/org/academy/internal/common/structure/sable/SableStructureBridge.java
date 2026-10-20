@@ -51,6 +51,11 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         return SableStructureAccess.validate(host, from, to, proposed);
     }
 
+    @Override public StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed,
+                                                       net.minecraft.world.level.ClipContext.Block shape) {
+        return SableStructureAccess.validate(host, from, to, proposed, shape);
+    }
+
     @Override public StructurePresentationStatus presentationStatus(MinecraftServer server, StructureRef reference) {
         return SableStructureAccess.presentationStatus(server, reference);
     }

@@ -1,0 +1,11 @@
+{
+  "schema": "academy-structure-pipeline-v2-draft-1",
+  "status": "UNVERIFIED",
+  "gameplay_enabled": false,
+  "capture_slice": {"maximum_nanos": 2000000, "maximum_cells": 128, "maximum_publications": 1},
+  "terrain": {"section_side": 16, "required_coverage_before_step": true, "worker_world_access": false},
+  "lift": {"heights": [3, 5, 7], "hover_ticks_after_arrival": 200, "position_tolerance": 0.1},
+  "pose": {"history_frames": 8, "maximum_extrapolation_ticks": 1},
+  "render": {"minimum_cells_for_mesh_cache": 1},
+  "note": "Design defaults only; no runtime parser or implementation is enabled. Budgets require paired measurement."
+}

@@ -19,7 +19,11 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
+import org.academy.api.common.structure.StructureInteractionController;
+import org.academy.internal.common.network.SubLevelMiningProgressPacket;
+import org.academy.internal.common.network.SubLevelPosePacket;
 import org.academy.internal.common.network.SubLevelStatePacket;
+import org.academy.internal.common.structure.NativeStructureCollisionBoxes;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.physics.NativePhysicsLibrary;
 import org.academy.internal.common.structure.physics.NativePhysicsWorld;
@@ -35,18 +39,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Phase 1 server owner: one plot storage and one shared physics universe per running server. */
+/** One plot allocator per server, with an isolated physics universe for each host dimension. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class SubLevelServer {
     private static final Map<MinecraftServer, Runtime> RUNTIMES = new WeakHashMap<>();
-    private static final Map<net.minecraft.server.level.ServerPlayer, Map<SubLevelId, org.academy.internal.common.structure.space.NativeStructureView>> SENT_VIEWS
+    private static final Map<net.minecraft.server.level.ServerPlayer, Map<SubLevelId, Sent>> SENT_VIEWS
             = new WeakHashMap<>();
-    private static final boolean SEND_COLLISION_BOXES = Boolean.getBoolean("academy.sublevel.clientCollision");
+    /** Feedback sink for asynchronous mining receipts; it never trusts client progress. */
+    public static final StructureInteractionController.Feedback MINING_FEEDBACK = SubLevelServer::publishMining;
+    private static final boolean SEND_COLLISION_BOXES = Boolean.parseBoolean(
+            System.getProperty("academy.sublevel.clientCollision", "true"));
+    private static final int MAX_SYNC_BOXES = Math.min(16_384, Math.max(1, Integer.getInteger(
+            "academy.sublevel.maxSyncBoxes", 16_384)));
 
     private SubLevelServer() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
     public static void started(ServerStartedEvent event) {
         var server = event.getServer();
         if (!StructureBackendRouter.nativeEnabled(server)) {
@@ -59,16 +68,38 @@ public final class SubLevelServer {
             return;
         }
         try {
-            var library = NativePhysicsLibrary.openConfigured();
-            var world = library.createWorld(PhysicsVector.ZERO, new PhysicsVector(0, -9.81, 0));
             var storage = new PlotStorage(plot);
-            var universe = new SubLevelPhysicsUniverse(world);
-            var manifest = new SubLevelManifest(server.getWorldPath(LevelResource.ROOT)
-                    .resolve("data/academy/sublevels"));
-            var terrain = new TerrainColliderCache(server.overworld(), world);
-            var runtime = new SubLevelRuntime(server.overworld(), storage, universe, manifest, terrain);
-            RUNTIMES.put(server, new Runtime(library, world, storage, runtime));
-            var restored = runtime.restore();
+            var owner = new Runtime(storage);
+            RUNTIMES.put(server, owner);
+            var hosts = new ArrayList<ServerLevel>();
+            for (var host : server.getAllLevels()) {
+                if (!NativeStructureDimensions.isStorageLevel(host.dimension())) hosts.add(host);
+            }
+            var manifests = SubLevelManifest.loadHosts(server.getWorldPath(LevelResource.ROOT)
+                    .resolve("data/academy/sublevels"), hosts.stream().map(host -> host.dimension().identifier()).toList());
+            var reservations = new HashMap<SubLevelId, PlotStorage.Lease>();
+            for (var saved : manifests.values()) for (var entry : saved.entries()) {
+                if (entry.state() == SubLevelState.REMOVED) continue;
+                var lease = storage.claim(entry.plot()).orElseThrow(() ->
+                        new IllegalStateException("Cannot reserve persisted SubLevel plot " + entry.plot()));
+                reservations.put(entry.id(), lease);
+            }
+            int restored = 0;
+            for (var host : hosts) {
+                var owned = HostRuntime.open(host, storage, manifests.get(host.dimension().identifier()));
+                owner.hosts.put(host.dimension(), owned);
+                if (host == server.overworld()) owner.runtime = owned.runtime;
+                restored += owned.runtime.restore(reservations);
+                AcademyCraft.LOGGER.info("SubLevel host ready: host={} stored={} active={}",
+                        host.dimension().identifier(), owned.runtime.size(), owned.runtime.universe().activeCount());
+            }
+            for (var owned : owner.hosts.values()) {
+                SubLevelCaptureJournal.recover(server, owned.runtime);
+                SubLevelStaticizeJournal.recover(server, owned.runtime);
+            }
+            var runtime = owner.runtime;
+            var universe = runtime.universe();
+            var manifest = manifests.get(server.overworld().dimension().identifier());
             for (var entry : manifest.entries()) {
                 AcademyCraft.LOGGER.debug("SubLevel manifest entry: id={} plot={} state={}",
                         entry.id().value(), entry.plot(), entry.state());
@@ -135,6 +166,7 @@ public final class SubLevelServer {
             }
         } catch (IOException | RuntimeException | LinkageError failure) {
             AcademyCraft.LOGGER.error("SubLevel backend unavailable; legacy structure path remains active", failure);
+            shutdown(server);
         }
     }
 
@@ -143,30 +175,114 @@ public final class SubLevelServer {
         var runtime = RUNTIMES.get(event.getServer());
         if (runtime == null) return;
         try {
-            runtime.runtime.tick(1.0 / 20.0, 2);
+            org.academy.api.common.structure.StructureDirectControl.tick(event.getServer());
+            SubLevelTraction.tick(event.getServer());
             SubLevelMotionController.tick(event.getServer());
-            carryEntities(event.getServer(), runtime.runtime);
+            SubLevelDirectControl.tick(event.getServer());
+            for (var owned : runtime.hosts.values()) {
+                owned.runtime.tick(1.0 / 20.0, 2);
+                carryEntities(event.getServer(), owned.runtime);
+            }
         } catch (RuntimeException | AssertionError failure) {
             AcademyCraft.LOGGER.error("SubLevel physics tick failed", failure);
-            RUNTIMES.remove(event.getServer());
-            runtime.close();
+            shutdown(event.getServer());
             return;
         }
-        if (event.getServer().getTickCount() % 5 == 0) {
-            try { sendSnapshots(event.getServer(), runtime.runtime); }
-            catch (RuntimeException failure) { AcademyCraft.LOGGER.error("SubLevel snapshot send failed", failure); }
+        try {
+            // Interaction sessions advance once per server tick; a session fault must not tear
+            // down the physics backend or every other structure.
+            SubLevelEnhancementBootstrap.INTERACTIONS.tick(event.getServer(), MINING_FEEDBACK);
+        } catch (RuntimeException | AssertionError failure) {
+            AcademyCraft.LOGGER.error("SubLevel interaction tick failed", failure);
         }
+        try {
+            // Moving bodies need one pose delta per physics tick; unchanged views and poses stay silent.
+            for (var owned : runtime.hosts.values()) sendSnapshots(event.getServer(), owned.runtime);
+        }
+        catch (RuntimeException failure) { AcademyCraft.LOGGER.error("SubLevel snapshot send failed", failure); }
         if (event.getServer().getTickCount() % 100 == 0) {
-            try { runtime.runtime.persist(); }
+            try {
+                for (var owned : runtime.hosts.values()) owned.runtime.persist();
+            }
             catch (RuntimeException failure) { AcademyCraft.LOGGER.error("SubLevel manifest checkpoint failed", failure); }
         }
     }
 
     @SubscribeEvent
     public static void stopping(ServerStoppingEvent event) {
-        var runtime = RUNTIMES.remove(event.getServer());
-        if (runtime != null) runtime.close();
+        shutdown(event.getServer());
+        SubLevelMotionController.clear();
+        SubLevelDirectControl.clear();
+        SubLevelActivationRegistry.clear();
         SENT_VIEWS.clear();
+    }
+
+    /** Revokes live controls and client projections when this backend is stopped or disabled. */
+    public static void shutdown(MinecraftServer server) {
+        if (!server.isSameThread()) throw new IllegalStateException("SubLevel shutdown requires the server thread");
+        var runtime = RUNTIMES.remove(server);
+        try {
+            for (var entry : Map.copyOf(SENT_VIEWS).entrySet()) {
+                var player = entry.getKey();
+                if (player.level().getServer() != server) continue;
+                try {
+                    if (!player.hasDisconnected()) {
+                        for (var id : List.copyOf(entry.getValue().keySet())) {
+                            try {
+                                SubLevelStatePacket.send(player, id, new PlotPos(0, 0),
+                                        org.academy.api.common.structure.StructurePose.identity(Vec3.ZERO), List.of(),
+                                        org.academy.internal.common.structure.space.NativeStructureView.EMPTY, true);
+                            } catch (RuntimeException failure) {
+                                AcademyCraft.LOGGER.warn("Could not remove SubLevel client snapshot {}", id, failure);
+                            }
+                        }
+                    }
+                } finally {
+                    SENT_VIEWS.remove(player);
+                }
+            }
+        } finally {
+            try {
+                SubLevelTraction.clear(server);
+                // The missing runtime makes every SubLevel probe unavailable; unrelated
+                // backend leases are retained by this server-scoped lifecycle sweep.
+                org.academy.api.common.structure.StructureDirectControl.tick(server);
+                SubLevelEnhancementBootstrap.INTERACTIONS.close(server, MINING_FEEDBACK);
+                SubLevelMotionController.clear();
+                SubLevelDirectControl.clear();
+                SubLevelTerrainBreaker.clear();
+            } finally {
+                if (runtime != null) runtime.close();
+            }
+        }
+    }
+
+    /** A new client level has no full-view baseline, even when the server player is unchanged. */
+    @SubscribeEvent
+    public static void dimensionChanged(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent event) {
+        SENT_VIEWS.remove(event.getEntity());
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            SubLevelEnhancementBootstrap.INTERACTIONS.cancelActor(player,
+                    StructureInteractionController.CancelReason.ACTOR_UNAVAILABLE, MINING_FEEDBACK);
+        }
+    }
+
+    @SubscribeEvent
+    public static void playerRespawned(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
+        SENT_VIEWS.remove(event.getEntity());
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            SubLevelEnhancementBootstrap.INTERACTIONS.cancelActor(player,
+                    StructureInteractionController.CancelReason.ACTOR_UNAVAILABLE, MINING_FEEDBACK);
+        }
+    }
+
+    @SubscribeEvent
+    public static void playerLoggedOut(net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        SENT_VIEWS.remove(event.getEntity());
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            SubLevelEnhancementBootstrap.INTERACTIONS.cancelActor(player,
+                    StructureInteractionController.CancelReason.ACTOR_UNAVAILABLE, MINING_FEEDBACK);
+        }
     }
 
     /** Probe stop must not re-enter the server task queue from ServerStartedEvent. */
@@ -188,46 +304,39 @@ public final class SubLevelServer {
         thread.start();
     }
 
-    /** Translation-only entity carry; passengers/vehicles are moved by their owning chain. */
-    private static void carryTree(Entity root, Vec3 move) {
-        var passengers = root.getPassengers();
-        var targets = new ArrayList<Vec3>(passengers.size());
-        for (var passenger : passengers) targets.add(passenger.position().add(move));
-        root.teleportTo(root.getX() + move.x, root.getY() + move.y, root.getZ() + move.z);
-        for (int i = 0; i < passengers.size(); i++) {
-            var target = targets.get(i);
-            passengers.get(i).teleportTo(target.x, target.y, target.z);
-        }
-    }
-
+    /**
+     * Exact support carry: an entity resting on the previous pose is moved through the new pose
+     * at most once. Only entities near a moved body are queried, and passengers share one delta.
+     */
     private static void carryEntities(MinecraftServer server, SubLevelRuntime runtime) {
         var host = runtime.host();
-        var entities = host.getAllEntities();
-        if (!entities.iterator().hasNext()) return;
-        for (var subLevel : runtime.subLevels()) {
-            var previous = subLevel.previousPose();
-            var current = subLevel.pose();
-            if (previous.equals(current)) continue;
-            var boxes = runtime.localCollisionBoxes(subLevel.id());
-            if (boxes.isEmpty()) continue;
-            var delta = current.worldOrigin().subtract(previous.worldOrigin());
-            if (delta.lengthSqr() > 4.0 || delta.lengthSqr() < 1.0E-8) continue;
-            for (var entity : entities) {
-                if (entity.isPassenger() || entity.isSpectator()) continue;
-                var local = previous.worldToLocalPoint(entity.position());
-                double top = Double.NaN;
-                for (var box : boxes) {
-                    if (local.x < box.minX - 0.1 || local.x > box.maxX + 0.1
-                            || local.z < box.minZ - 0.1 || local.z > box.maxZ + 0.1) continue;
-                    if (local.y >= box.maxY - 0.4 && local.y <= box.maxY + 0.75) {
-                        top = Math.max(Double.isNaN(top) ? Double.NEGATIVE_INFINITY : top, box.maxY);
-                    }
+        var subLevels = runtime.subLevels();
+        try {
+            var moved = new ArrayList<SubLevel>();
+            for (var subLevel : subLevels) {
+                if (!published(subLevel) || subLevel.carryPose().equals(subLevel.pose())) continue;
+                moved.add(subLevel);
+            }
+            if (moved.isEmpty()) return;
+            var applied = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Entity, Boolean>());
+            for (var subLevel : moved) {
+                var boxes = runtime.localCollisionBoxes(subLevel.id());
+                if (boxes.isEmpty()) continue;
+                var previous = subLevel.carryPose();
+                var current = subLevel.pose();
+                var previousBounds = NativeStructureCollisionBoxes.transformBox(subLevel.localBounds(), previous);
+                var sweep = previousBounds.minmax(subLevel.worldBounds()).inflate(1.0);
+                // Query each body's neighborhood, never the world-spanning union of distant bodies.
+                var entities = host.getEntities((Entity) null, sweep);
+                for (var entity : entities) {
+                    SubLevelContactResolver.carry(host, entity, previous, current, boxes, applied, null);
                 }
-                if (Double.isNaN(top)) continue;
-                var newWorld = current.localToWorldPoint(local);
-                var move = newWorld.subtract(entity.position());
-                carryTree(entity, move);
-                AcademyCraft.LOGGER.debug("SubLevel carried entity {} by {}", entity.getType(), delta);
+            }
+        } finally {
+            // Consume even when there were no nearby riders, the body became inactive, or
+            // physics is waiting for terrain. Explicit rotate/shift deltas survive until here.
+            for (var subLevel : subLevels) {
+                subLevel.consumeCarryPose();
             }
         }
     }
@@ -242,31 +351,120 @@ public final class SubLevelServer {
             snapshotLogged = true;
             AcademyCraft.LOGGER.info("SubLevel snapshots started: players={} sublevels={}", players.size(), runtime.size());
         }
+        long started = System.nanoTime();
+        int published = 0;
         for (var subLevel : runtime.subLevels()) {
-            var boxes = SEND_COLLISION_BOXES ? runtime.localCollisionBoxes(subLevel.id()) : List.<AABB>of();
+            if (!published(subLevel)) continue;
+            published++;
+            var boxes = SEND_COLLISION_BOXES
+                    ? runtime.localCollisionBoxes(subLevel.id())
+                    : List.<AABB>of();
+            if (boxes.size() > MAX_SYNC_BOXES) {
+                boxes = boxes.subList(0, MAX_SYNC_BOXES);
+            }
             var view = runtime.view(subLevel.id());
+            var pose = subLevel.pose();
             for (var player : players) {
                 if (player.level() != host) continue;
-                if (player.position().distanceToSqr(subLevel.pose().worldOrigin()) > 256.0 * 256.0) continue;
+                if (player.position().distanceToSqr(pose.worldOrigin()) > 256.0 * 256.0) continue;
                 var sent = SENT_VIEWS.computeIfAbsent(player, ignored -> new HashMap<>());
-                boolean fullView = sent.put(subLevel.id(), view) != view;
-                SubLevelStatePacket.send(player, subLevel.id(), subLevel.plot(), subLevel.pose(), boxes,
-                        view, false, fullView);
+                var previous = sent.get(subLevel.id());
+                boolean fullView = previous == null || previous.view() != view;
+                if (fullView) {
+                    SubLevelStatePacket.send(player, subLevel.id(), subLevel.plot(), pose, boxes, view, false, true);
+                    sent.put(subLevel.id(), new Sent(view, pose));
+                } else if (!previous.pose().equals(pose)) {
+                    // Local collision boxes and view cells never change with a pose, so a delta
+                    // packet is enough and the client rebuilds the oriented contact data.
+                    SubLevelPosePacket.send(player, subLevel.id(), pose);
+                    sent.put(subLevel.id(), new Sent(view, pose));
+                }
             }
+        }
+        for (var player : players) {
+            var sent = SENT_VIEWS.get(player);
+            if (sent == null) continue;
+            var iterator = sent.keySet().iterator();
+            while (iterator.hasNext()) {
+                var id = iterator.next();
+                var subLevel = runtime.get(id).orElse(null);
+                if (subLevel != null && published(subLevel)
+                        && player.position().distanceToSqr(subLevel.pose().worldOrigin()) <= 256.0 * 256.0) continue;
+                SubLevelStatePacket.send(player, id, new PlotPos(0, 0),
+                        org.academy.api.common.structure.StructurePose.identity(Vec3.ZERO), List.of(),
+                        org.academy.internal.common.structure.space.NativeStructureView.EMPTY, true);
+                iterator.remove();
+            }
+        }
+        runtime.recordSnapshot(System.nanoTime() - started, published);
+    }
+
+    static boolean published(SubLevel subLevel) {
+        return subLevel.state() == SubLevelState.ACTIVE || subLevel.state() == SubLevelState.SLEEPING
+                || subLevel.state() == SubLevelState.INACTIVE;
+    }
+
+    /** Sends one authoritative mining receipt; the actor entity id scopes multi-player cracks. */
+    public static void publishMining(net.minecraft.server.level.ServerPlayer recipient, java.util.UUID actorId,
+                                     StructureInteractionController.MiningReceipt receipt) {
+        if (recipient == null || receipt == null || recipient.connection == null
+                || !recipient.connection.isAcceptingMessages()) return;
+        try {
+            var server = recipient.level().getServer();
+            net.minecraft.server.level.ServerPlayer actor = server == null ? null
+                    : server.getPlayerList().getPlayer(actorId);
+            SubLevelMiningProgressPacket.send(recipient, receipt, actor == null ? 0 : actor.getId());
+        } catch (RuntimeException failure) {
+            AcademyCraft.LOGGER.warn("Could not publish SubLevel mining receipt to {}", recipient.getUUID(), failure);
         }
     }
 
+    private record Sent(org.academy.internal.common.structure.space.NativeStructureView view,
+                        org.academy.api.common.structure.StructurePose pose) {
+    }
+
+    /** Host mutations invalidate only the already running world's terrain cache. */
+    public static void onBlockChanged(ServerLevel host, BlockPos position) {
+        if (!host.getServer().isSameThread()) return;
+        runtime(host).ifPresent(runtime -> runtime.onHostBlockChanged(position));
+    }
+
     public static java.util.Optional<SubLevelRuntime> runtime(MinecraftServer server) {
-        var runtime = RUNTIMES.get(server);
-        return runtime == null ? java.util.Optional.empty() : java.util.Optional.of(runtime.runtime);
+        return runtime(server.overworld());
+    }
+
+    /** Read-only lookup: never initializes a backend or accepts a detached/replaced host level. */
+    public static java.util.Optional<SubLevelRuntime> runtime(ServerLevel host) {
+        var server = host.getServer();
+        if (!server.isSameThread()) throw new IllegalStateException("SubLevel lookup requires the server thread");
+        if (server.getLevel(host.dimension()) != host || NativeStructureDimensions.isStorageLevel(host.dimension())) {
+            return java.util.Optional.empty();
+        }
+        var owner = RUNTIMES.get(server);
+        var owned = owner == null ? null : owner.hosts.get(host.dimension());
+        return owned == null || owned.runtime.host() != host ? java.util.Optional.empty()
+                : java.util.Optional.of(owned.runtime);
+    }
+
+    /** Identity lookup for internal APIs whose caller already owns the SubLevel identifier. */
+    public static java.util.Optional<SubLevelRuntime> runtime(MinecraftServer server, SubLevelId id) {
+        return runtimes(server).stream().filter(runtime -> runtime.get(id).isPresent()).findFirst();
+    }
+
+    public static List<SubLevelRuntime> runtimes(MinecraftServer server) {
+        if (!server.isSameThread()) throw new IllegalStateException("SubLevel lookup requires the server thread");
+        var owner = RUNTIMES.get(server);
+        return owner == null ? List.of() : owner.hosts.values().stream().map(owned -> owned.runtime).toList();
     }
 
     public static Status status(MinecraftServer server) {
         var runtime = RUNTIMES.get(server);
         if (runtime == null) return new Status(false, "unavailable", 0, 0, 0, 0, 0);
-        var terrain = runtime.runtime.terrainDiagnostics();
-        return new Status(true, "ready", runtime.storage.allocated(), runtime.runtime.size(),
-                runtime.runtime.universe().bodyCount(), terrain.sections(), terrain.boxes());
+        var hosts = runtimes(server);
+        return new Status(true, "ready", runtime.storage.allocated(), hosts.stream().mapToInt(SubLevelRuntime::size).sum(),
+                hosts.stream().mapToInt(host -> host.universe().bodyCount()).sum(),
+                hosts.stream().mapToInt(host -> host.terrainDiagnostics().sections()).sum(),
+                hosts.stream().mapToInt(host -> host.terrainDiagnostics().boxes()).sum());
     }
 
     /** Allocates one real plot and creates a one-block stone SubLevel for an in-game smoke check. */
@@ -288,8 +486,9 @@ public final class SubLevelServer {
         var pose = new PhysicsPose(new PhysicsVector(world.getX(), world.getY(), world.getZ()),
                 PhysicsQuaternion.IDENTITY);
         var id = SubLevelId.random();
-        var created = runtime.runtime.create(id, bounds, pose, geometry.boxes());
-        if (created.isEmpty()) {
+        try {
+            runtime.runtime.createInLease(id, lease, bounds, pose, geometry.boxes());
+        } catch (RuntimeException failure) {
             runtime.storage.release(lease);
             return "create_failed";
         }
@@ -327,7 +526,7 @@ public final class SubLevelServer {
 
     /** Debug command entry: writes a 2x2x2 stone selection above the player and captures it. */
     public static String captureProbe(MinecraftServer server, net.minecraft.server.level.ServerLevel level, BlockPos base) {
-        var runtime = RUNTIMES.get(server);
+        var runtime = runtime(level).orElse(null);
         if (runtime == null) return "unavailable";
         var positions = new ArrayList<BlockPos>(8);
         for (int x = 0; x < 2; x++) {
@@ -345,11 +544,11 @@ public final class SubLevelServer {
         chest.setItem(0, new ItemStack(Items.DIAMOND, 3));
         level.setBlockEntity(chest);
         try {
-            var result = SubLevelCaptureService.capture(level, runtime.runtime, positions);
+            var result = SubLevelCaptureService.capture(level, runtime, positions);
             var encoded = Unpooled.buffer();
             SubLevelStatePacket.CODEC.encode(encoded, new SubLevelStatePacket(result.id(), result.plot(),
-                    runtime.runtime.get(result.id()).orElseThrow().pose(),
-                    runtime.runtime.localCollisionBoxes(result.id()), runtime.runtime.view(result.id()), false));
+                    runtime.get(result.id()).orElseThrow().pose(),
+                    runtime.localCollisionBoxes(result.id()), runtime.view(result.id()), false));
             var decodedView = SubLevelStatePacket.CODEC.decode(encoded).view();
             encoded.release();
             AcademyCraft.LOGGER.info("SubLevel snapshot codec probe: cells={}", decodedView.cells().size());
@@ -373,12 +572,12 @@ public final class SubLevelServer {
             int afterBreak = 0;
             for (var shape : level.getBlockCollisions(null, insideQuery)) if (!shape.isEmpty()) afterBreak++;
             AcademyCraft.LOGGER.info("SubLevel break probe: removed={} air={} inside_after={}", broke,
-                    runtime.storage.blockState(result.plot(), BlockPos.ZERO).isAir(), afterBreak);
+                    runtime.storage().blockState(result.plot(), BlockPos.ZERO).isAir(), afterBreak);
             for (int x = 0; x < 2; x++) {
                 for (int y = 0; y < 2; y++) {
                     for (int z = 0; z < 2; z++) {
                         var local = new BlockPos(x, y, z);
-                        var candidate = runtime.storage.blockEntity(result.plot(), local);
+                        var candidate = runtime.storage().blockEntity(result.plot(), local);
                         if (candidate != null) {
                             AcademyCraft.LOGGER.info("SubLevel plot block entity at {}: {} item0={}", local,
                                     candidate.getClass().getSimpleName(),
@@ -388,7 +587,7 @@ public final class SubLevelServer {
                     }
                 }
             }
-            var stored = runtime.storage.blockEntity(result.plot(), new BlockPos(0, 1, 0));
+            var stored = runtime.storage().blockEntity(result.plot(), new BlockPos(0, 1, 0));
             var contents = stored instanceof ChestBlockEntity storedChest ? storedChest.getItem(0).toString() : "none";
             AcademyCraft.LOGGER.info("SubLevel capture chest contents: {}", contents);
             return "captured id=" + result.id().value() + " plot=" + result.plot()
@@ -421,6 +620,7 @@ public final class SubLevelServer {
         if (runtime == null) return "unavailable";
         var subLevel = runtime.runtime.subLevels().stream().findFirst().orElse(null);
         if (subLevel == null) return "none";
+        runtime.runtime.deactivate(subLevel.id());
         boolean shifted = runtime.runtime.shift(subLevel.id(), new Vec3(dx, dy, dz));
         return shifted ? "shifted " + subLevel.id().value() : "failed";
     }
@@ -445,25 +645,54 @@ public final class SubLevelServer {
     }
 
     private static final class Runtime {
-        private final NativePhysicsLibrary library;
-        private final NativePhysicsWorld world;
         private final PlotStorage storage;
-        private final SubLevelRuntime runtime;
+        private final Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, HostRuntime> hosts
+                = new java.util.LinkedHashMap<>();
+        // Compatibility for the existing overworld-only debug probes.
+        private SubLevelRuntime runtime;
         private SubLevelId probe;
 
-        private Runtime(NativePhysicsLibrary library, NativePhysicsWorld world,
-                        PlotStorage storage, SubLevelRuntime runtime) {
+        private Runtime(PlotStorage storage) {
+            this.storage = storage;
+        }
+
+        private void close() {
+            for (var owned : List.copyOf(hosts.values())) owned.close();
+            hosts.clear();
+            try { storage.close(); }
+            catch (RuntimeException failure) { AcademyCraft.LOGGER.warn("SubLevel plot close failed", failure); }
+        }
+    }
+
+    private static final class HostRuntime {
+        private final NativePhysicsLibrary library;
+        private final NativePhysicsWorld world;
+        private final SubLevelRuntime runtime;
+
+        private HostRuntime(NativePhysicsLibrary library, NativePhysicsWorld world, SubLevelRuntime runtime) {
             this.library = library;
             this.world = world;
-            this.storage = storage;
             this.runtime = runtime;
+        }
+
+        private static HostRuntime open(ServerLevel host, PlotStorage storage, SubLevelManifest manifest) throws IOException {
+            var library = NativePhysicsLibrary.openConfigured();
+            try {
+                var world = library.createWorld(PhysicsVector.ZERO, new PhysicsVector(0, -9.81, 0));
+                var universe = new SubLevelPhysicsUniverse(world);
+                var terrain = new TerrainColliderCache(host, world);
+                var runtime = new SubLevelRuntime(host, storage, universe, manifest, terrain);
+                return new HostRuntime(library, world, runtime);
+            } catch (RuntimeException | Error failure) {
+                try { library.close(); }
+                catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+                throw failure;
+            }
         }
 
         private void close() {
             try { runtime.close(); }
             catch (RuntimeException failure) { AcademyCraft.LOGGER.warn("SubLevel runtime close failed", failure); }
-            try { storage.close(); }
-            catch (RuntimeException failure) { AcademyCraft.LOGGER.warn("SubLevel plot close failed", failure); }
             try { world.close(); }
             catch (RuntimeException failure) { AcademyCraft.LOGGER.warn("SubLevel world close failed", failure); }
             try { library.close(); }

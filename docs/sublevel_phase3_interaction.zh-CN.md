@@ -3,6 +3,8 @@
 日期：2026-10-19  
 状态：服务端破坏/使用/放置桥、客户端 SubLevel 射线和交互包已实现；客户端破坏、放置和拉杆使用均已实测，BlockEntity 菜单仍待完成。
 
+> **2026-10-20 修订**：破坏已改为服务端权威挖掘会话（START/CONTINUE/ABORT、逐 tick 硬度/工具速度、裂纹广播、耐久/loot/XP 一次结算）；放置改用局部空间 SubLevelPlaceContext，使用命中点统一映射到 plot；旧 BREAK 包只启动/续约会话，不再瞬破。下文旧“一次请求直达 destroyBlock”的记录已被取代。实机多人/生存/创造验收仍 **UNVERIFIED**，见 [FILL-SPEC.md](../FILL-SPEC.md)。
+
 ## 1. 实现
 
 | 入口 | 行为 |

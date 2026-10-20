@@ -1,0 +1,32 @@
+// Explicitly opt-in; never adds the benchmark to a shipped artifact.
+allprojects {
+    afterEvaluate {
+        sourceSets.gametest.java.srcDir(rootProject.file('validation/structure_parity/java'))
+        def mode = providers.gradleProperty('academyParityBackend').get()
+        def runId = providers.gradleProperty('academyParityRun').get()
+        if (!(mode in ['local', 'sable']) || !(runId ==~ /[a-zA-Z0-9_-]+/)) {
+            throw new GradleException('Invalid parity backend/run id')
+        }
+        if (providers.gradleProperty('academySableRuntime').getOrElse('none') != (mode == 'sable' ? 'sable' : 'none')) {
+            throw new GradleException('Parity backend does not match the installed runtime')
+        }
+        def game = rootProject.file("run/sable-compat/parity-${runId}/server")
+        if (new File(game, 'parity-world').exists() || new File(game, 'result.json').exists()) {
+            throw new GradleException('Parity requires a fresh isolated world')
+        }
+        neoForge.runs {
+            parityServer {
+                server()
+                gameDirectory.set(game)
+                environment 'IS_DEV', 'true'
+                systemProperty 'academy.structureParity', mode
+                systemProperty 'academy.structureParity.fixture', providers.gradleProperty('academyParityFixture').getOrElse('ground')
+                systemProperty 'academy.structureParity.cells', rootProject.file('validation/structure_parity/cuboid_128.csv').absolutePath
+                programArguments.add('--nogui')
+            }
+        }
+        tasks.named('runParityServer').configure {
+            if (mode == 'sable') dependsOn tasks.named('verifySableCompatRuntime')
+        }
+    }
+}

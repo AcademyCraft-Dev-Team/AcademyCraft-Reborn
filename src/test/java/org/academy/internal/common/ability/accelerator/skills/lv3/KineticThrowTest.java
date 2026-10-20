@@ -27,7 +27,8 @@ class KineticThrowTest {
         assertEquals(5, KineticThrow.cylinderHeight(0));
         assertEquals(7, KineticThrow.cylinderHeight(1));
         assertEquals(9, KineticThrow.cylinderHeight(2));
-        assertEquals(4, KineticThrow.liftHeight(0));
+        // The selection-tier lift contract is 3/5/7 blocks; tier 0 no longer uses four.
+        assertEquals(3, KineticThrow.liftHeight(0));
         assertEquals(5, KineticThrow.liftHeight(1));
         assertEquals(7, KineticThrow.liftHeight(2));
         assertEquals(5, KineticThrow.explosionRadius(0));

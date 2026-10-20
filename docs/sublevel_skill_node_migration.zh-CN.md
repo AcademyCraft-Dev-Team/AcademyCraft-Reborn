@@ -1,6 +1,46 @@
 # 技能与节点迁移计划
 
-日期：2026-10-19
+日期：2026-10-20
+
+## 后续五项问题：仅骨架交接
+
+当前新增性能、精确接触、完整交互、3/5/7 格抬升和运动破坏软块的接口与未接入业务骨架。用户要求业务留给 Agent B，五项均 **UNVERIFIED**；先读根目录 [FILL-SPEC.md](../FILL-SPEC.md) 的标记与完成判据。下文是上一轮实现/测试记录，不证明新五项问题已解决。
+
+## 普通 test 原位操作与 H 悬浮修复（2026-10-20）
+
+追加修复旧区域因短草/水暂停、旧结构与已有区域部分重叠时无法接入，以及重绑保存失败提前释放旧物理世界的问题。H 新捕获结构固定在源格上方抬升，到位后悬浮 200 tick；转向再 H 优先投掷自己的手动托举结构，程序会话不被该优先级接管。
+
+原 test 副本已通过旧 59 方块结构原位推动、55/81 方块地面操作与拆块同步、9 方块原地悬浮及背向 H 投掷。真实原生 820 tick 压力与区域保存失败/重启验证均通过；最终三族直接技能、六张程序图完整客户端矩阵及正常退出通过，2868 项 JVM 测试、13 项 Rust 测试和开发/发布双构建通过。窗口退出当秒恰有 Codex 自动更新、沙盒服务重启及 Gradle 同时中断，尚无游戏内部崩溃证据；不将兼容修复误称为已证实的进程退出根因。完整证据与最新验证状态见接续记录顶部。本轮原存档 151 文件哈希未变，尚未提交。
+
+## 默认物理化修复（2026-10-19，当前实现）
+
+公共物理捕获已默认选择无 Sable 的 SubLevel 后端，三族直接技能及提取节点移除实验开关；补齐共享事务、每宿主物理世界、默认客户端碰撞、旧静态结构接管和可连线的姿态/锚点节点。同步修复地形碰撞缓存、捕获保存失败隔离、远区重启恢复、异步失败诊断及磁力 COLLIDER/OUTLINE 复核不一致。
+
+最终 `test` 四槽占满副本 r7 与干净基线 r2 均通过：三族直接技能、五个同时保留的新结构、六张实际保存/执行的程序图、三个维度捕获与物理测试；r7 重启后的六个结构控制及六条不同提交阶段日志恢复也通过。2864 项 JVM 测试和 13 项 Rust 测试通过。日志、构建状态、截图、复现步骤与未验边界见 `structure_skill_migration_handoff.zh-CN.md` 顶部。原世界 140 个文件哈希未变，尚未提交。
+
+下文为历史阶段计划与审计；其中“开关默认关闭”“只完成计划”“不新增节点 ID”等表述不再描述当前实现。原有技能和动作节点 ID/端口保留，本次仅新增两个公共值构造节点。
+
+## 普通启动阻塞项（2026-10-19 历史审阅）
+
+用户 `run/saves/test` 的实际失败已定位：两个 SubLevel 捕获开关默认 false，三族直接技能与提取节点仍使用旧四槽后端；该存档四个槽位的 claim 与索引均存在。日志同时显示新 SubLevel 后端已就绪、使用量为零。此前开启开关的隔离 smoke 不覆盖普通默认启动，不得据此认定迁移已向用户交付。
+
+下一步按接续记录中的“普通 run / test 世界故障复盘与修复计划”执行：统一默认新建策略与公共事务、保留旧引用兼容、补齐 Sable/宿主维度/客户端碰撞边界，并通过无强制开关的真实输入和已保存程序图验收。本次仅完成定位和计划，未更改生产代码或用户存档。
+
+## 实验配置操作兼容性审计（历史）
+
+本轮按旧技能的选区、输入和力学预算复核迁移。节点返回 `COMPLETED` 只代表请求已接受；新增客户端跨 tick 断言验证刚体确实响应、释放后不再受旧命令驱动。下文早期阶段记录保留为历史，当前行为以本文顶部和接续记录最新验证为准。
+
+- 程序与直接技能共用 `StructureDirectControl` 独占租约；`SubLevelProgramControl` 只保存程序操作状态，不另设竞争的控制权注册表。校验 actor、宿主维度、runtimeId、generation 和控制令牌；旧 release 不影响后继控制者。
+- 三族捕获继续使用原选区与预算：气流要求真实喷嘴，矢量使用原 tier 选区，电磁使用磁性参与率与强磁持续时间。保留节点 ID、端口及旧图数据格式。
+- move 使用原喷嘴推力、矢量锚点弹簧和磁力拉取预算；launch 使用三族原速度标定。角落锚点的磁力反馈计入 `ω × r`，直接/程序路径共用公开方法。
+- rotate 使用绝对轴角，支持任意轴与负 Y 轴；保持世界质心、原刚体、activation 与速度。休眠刚体再次受力后继续同步姿态；分片结构各刚体一致接收运动命令。
+- `StructureSpaces`、`StructureQueries`、`StructureDynamics` 与 `WorldBlockTargets` 统一接入 SubLevel。公共瞄准受宿主地形遮挡，命中世界坐标与局部操作地址分离。
+- 直接动能投掷保留抬升后 H 投掷；电磁操控可接管已物理化结构；高速喷射支持旋转后喷嘴再激活和扫掠碰撞伤害。
+- 关闭/到期/失权只撤销自己的控制并保留刚体与惯性。早期迁移的“close 自动回原点”与旧原生路径不符，已纠正；需要写回方块时显式调用 staticize。
+- staticize 按目标原点与局部格地址写回当前 plot 内容，不将任意角度烘焙成宿主方块。容器、跨 chunk 实体、plot 重用和 journal 回滚均纳入专项检查。
+- SubLevel 两个 feature flag 仍默认关闭；真实崩溃恢复、16k 网络压测与混装多人验收完成前，不据本轮功能测试默认启用。
+
+本轮最终验证：普通/原生/Sable/编辑器共 2850 项 JVM 测试无失败，开发与发布构建通过；隔离客户端 r12、最终代码 r13 的三族节点与直接技能、公共牵引、内容与实体、关闭清理矩阵全部通过。日志、截图、产物哈希及未验边界见 `structure_skill_migration_handoff.zh-CN.md` 的当前审计节。
 
 ## 1. 范围
 
@@ -47,13 +87,13 @@
 
 - ref ↔ SubLevelId 解析
 - pose / setPose 委托 SubLevel
-- geometryRevision 使用 view revision
+- geometryRevision 只随内容几何变化；普通运动不改变几何版本
 - runtimeId 使用 `SubLevelActivationRegistry`
 - 陈旧 generation 拒绝
 
 ### 3.3 控制租约
 
-新增 `SubLevelControlRegistry`：
+使用公共 `StructureDirectControl`，程序状态由 `SubLevelProgramControl` 管理：
 
 - controlId → SubLevelId + actor + runtimeToken
 - tick 过期、登出/死亡/换维度释放
@@ -65,13 +105,13 @@
 | 节点 | SubLevel 入口 | 备注 |
 | --- | --- | --- |
 | structure/extract | SubLevelSkillSupport.capture | 权限谓词在 plot 分配前执行 |
-| structure/control | SubLevelControlRegistry.acquire | 绑定 actor/controlId/activation |
-| structure/move | translate 或租约控制 | 先短路径，后连续运动 |
-| structure/rotate | rotate | 当前为绕局部中心 yaw |
-| structure/launch | launch | 已有 5 格/秒冲量实测 |
-| structure/release | registry.release | 保留结构 |
+| structure/control | StructureDirectControl.acquire | 绑定 actor/controlId/activation |
+| structure/move | SubLevelProgramControl + SubLevelDirectControl | 原三族有限力预算、局部锚点 |
+| structure/rotate | SubLevelRuntime.rotateTo | 绝对轴角，保持世界质心 |
+| structure/launch | SubLevelSkillSupport.launch | 原三族速度标定，撤销旧持续控制 |
+| structure/release | StructureDirectControl.release | 精确令牌释放，保留结构与惯性 |
 | structure/staticize | 新增 SubLevelRestoreService | 方块和 BlockEntity 写回宿主 |
-| query/look_structure | SubLevelClientState / NativeStructureQueries | 客户端命中 + 服务端复核 |
+| query/look_structure | StructureQueries / SubLevelQueries | 公共世界坐标命中、宿主遮挡和服务端复核 |
 | query/structure_motion | SubLevelPhysicsUniverse.motion | 线速度/角速度/质量现成 |
 
 ## 5. 分阶段
@@ -207,8 +247,27 @@ physical_structure_plasma_world_target_and_impact=academy:native_level
 `NATIVE_STRUCTURE_PHYSICS_CLIENT_PASSED moving_samples=40`。
 这说明此前失败是夹具世界残留数据，不是生产槽位分配逻辑。
 
-## 14. 下一步
+## 14. 审阅修复（本轮）
 
-1. 补三族 StructureProgramWorldSmoke 基线；
-2. 补 HighSpeedJet 直接路径的撞击结算/粒子音效；
-3. 清理旧 Region/Projection 兼容层的剩余调用。
+- program staticize 校验目标维度，并对每个目标格做作用距离与 `mayInteract` 校验；direct smoke 已验证跨维度和超远目标均被拒绝；
+- `SubLevelRestoreService` 发现 plot 内实体时拒绝静态化，避免实体随租约丢失；
+- `SubLevelStructureHandle.compareAndSet` 在 BlockEntity 加载失败时恢复 expected 状态和 BE；
+- HighSpeedJet 直接会话增加过期清理，`clearAll` 清理直接会话；
+- 直接路径改为 plan/capture 成功后再扣 CP；
+- `SubLevelMotionController` 仅在结构 ACTIVE/SLEEPING 时接受移动/推力；
+- 服务器停止时清理 motion 与 activation 状态；
+- `SubLevelStaticizeJournal`：静态化前写 TARGET_ALLOCATED 记录，全部写回后推进 COMMIT_DECIDED，移除 SubLevel 后删除；启动时回滚未提交目标或完成已提交移除；
+- `SubLevelCaptureJournal`：创建 SubLevel 后、删除源方块前写源坐标/state/BE 记录，删除并 persist 后推进 COMMIT_DECIDED；启动时恢复未提交捕获的源方块并移除 SubLevel；
+- 静态化时把 plot 内实体映射到宿主目标坐标并通过 `teleportTo` 迁移，失败则回滚方块和已迁移实体；direct smoke 实测 `CLIENT_SUBLEVEL_ENTITY_MIGRATION count=1`；
+- 快照碰撞盒增加 `SubLevelCollisionBudget`，超过 4,096 盒时按空间聚类合并，仍保留精确视图单元；
+- 单元测试 `SubLevelCollisionBudgetTest` 验证小集合不变和大集合有界覆盖；
+- feature flag 评估结论：暂不默认开启，等待视图压缩、碰撞盒真实压测和撞击结算完成。
+
+仍未完成：结构内实体迁移、完整网络增量/压缩、直接路径撞击结算、默认启用评估。
+
+## 15. 下一步
+
+1. 快照增量/视图压缩与真实 16k 盒网络压测；
+2. 补 HighSpeedJet 直接路径撞击结算；
+3. 补 journal 启动恢复的崩溃负例测试；
+4. 清理旧 Region/Projection 兼容层。

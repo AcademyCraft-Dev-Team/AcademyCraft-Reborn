@@ -1,0 +1,45 @@
+import groovy.json.JsonSlurper
+
+// The draft is implemented but remains unwired and gameplay-disabled. This check is not a
+// gameplay or performance acceptance test.
+tasks.register('verifyStructurePipelineDraft') {
+    group = 'verification'
+    dependsOn tasks.named('compileJava'), tasks.named('processResources')
+    doLast {
+        def root = 'src/main/java/org/academy/internal/common/sublevel/pipeline/'
+        def draft = file(root + 'SubLevelPipelineDraft.java').getText('UTF-8')
+        def spec = file('FILL-SPEC.md').getText('UTF-8')
+        if (draft.contains('[TODO: Agent B]') || draft.contains('UnsupportedOperationException')) {
+            throw new GradleException('Pipeline draft still contains scaffold placeholders')
+        }
+        (1..7).each { number ->
+            def marker = 'PIPE-0' + number
+            if (!spec.contains(marker)) throw new GradleException('Missing contract: ' + marker)
+        }
+        def services = ['PipelineTerrainPublisher', 'PipelineGeometryCompiler', 'PipelineSubstepControl',
+                        'PipelineLiftController', 'PipelinePoseTimeline', 'PipelineMeshPlanner']
+        services.each {
+            if (!file(root + it + '.java').isFile()) throw new GradleException('Missing pipeline service: ' + it)
+            if (!draft.contains(it)) throw new GradleException('Draft does not use pipeline service: ' + it)
+        }
+        if (!draft.contains('StructureCaptureCoordinator.advance')) {
+            throw new GradleException('Capture port is not connected to the sliced coordinator')
+        }
+        def template = new JsonSlurper().parse(file('src/main/resources/academy/structure_pipeline_v2.template.json'))
+        if (template.status != 'UNVERIFIED' || template.gameplay_enabled != false) {
+            throw new GradleException('Draft must not declare gameplay enabled or verified')
+        }
+        if (!file(root + 'SubLevelPipelineBootstrap.java').text.contains('GAMEPLAY_ENABLED = false')) {
+            throw new GradleException('Draft bootstrap must remain disabled')
+        }
+        def registration = file('src/main/java/org/academy/AcademyCraftRegister.java').text
+        if (registration.count('SubLevelPipelineBootstrap.register(modEventBus)') != 1) {
+            throw new GradleException('Draft bootstrap must be registered exactly once')
+        }
+        def report = layout.buildDirectory.file('reports/structure-pipeline-draft/summary.txt').get().asFile
+        report.parentFile.mkdirs()
+        report.setText('DRAFT_IMPLEMENTED\nBusiness logic: IMPLEMENTED (unwired draft ports)\nGameplay: UNVERIFIED\n', 'UTF-8')
+        logger.lifecycle('Structure pipeline draft ports implemented; live wiring and gameplay remain UNVERIFIED.')
+    }
+}
+tasks.named('check') { dependsOn tasks.named('verifyStructurePipelineDraft') }

@@ -1,6 +1,7 @@
 package org.academy.mixin.common;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,6 +20,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.sublevel.SubLevelContactResolver;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -52,6 +54,17 @@ public abstract class MixinEntity {
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     private void academy$guardMovement(MoverType moverType, Vec3 movement, CallbackInfo ci) {
         if (EntityMotionGuard.shouldBlockMovement((Entity) (Object) this, movement)) ci.cancel();
+    }
+
+    /**
+     * Resolves the requested movement against plot-backed structures' real oriented surfaces
+     * together with host colliders when the broad phase finds a structure. Vanilla's collision flags use the
+     * requested delta and this return value, so contact, onGround and step-up stay consistent.
+     */
+    @ModifyReturnValue(method = "collide", at = @At("RETURN"))
+    private Vec3 academy$resolveSubLevelContacts(Vec3 resolved, Vec3 movement) {
+        var entity = (Entity) (Object) this;
+        return entity.level() == null ? resolved : SubLevelContactResolver.resolveMovement(entity, movement, resolved);
     }
 
     @Inject(

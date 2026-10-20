@@ -315,9 +315,7 @@ public final class AcceleratorProgramExecutionBridge {
         if (result.status() != ProgramStructureOperationResult.Status.COMPLETED
                 && result.status() != ProgramStructureOperationResult.Status.PENDING) {
             throw new ProgramActionFailure(
-                    result.status() == ProgramStructureOperationResult.Status.UNAVAILABLE
-                            ? ProgramVmDiagnostic.ACTION_UNAVAILABLE
-                            : ProgramVmDiagnostic.ACTION_REJECTED,
+                    ProgramVmDiagnostic.structureFailure(result),
                     statusDetail(result));
         }
         if (result.status() == ProgramStructureOperationResult.Status.COMPLETED) {

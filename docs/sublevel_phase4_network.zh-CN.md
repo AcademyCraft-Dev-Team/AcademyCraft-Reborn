@@ -3,6 +3,8 @@
 日期：2026-10-19  
 状态：SubLevel 快照包、客户端状态存储、client-only 方块渲染、客户端碰撞、客户端破坏与放置已接入并实机验证；差量/插值/非 BlockItem 使用仍待完成。
 
+> **2026-10-20 修订**：新增 SubLevelPosePacket（姿态差量）、SubLevelMiningPacket（C2S START/CONTINUE/ABORT）与 SubLevelMiningProgressPacket（S2C 裂纹/进度）；SubLevelStatePacket.boxes 语义改为**局部**碰撞盒，客户端 SubLevelClientState.tick 以 25%/tick 插值碰撞姿态；sendSnapshots 只在首次/几何变化时发全量，其余仅发姿态差量。旧包布局未改。启动验证已做，进入世界的多人/延迟/重连仍 **UNVERIFIED**。
+
 ## 1. 实现
 
 | 组件 | 作用 |

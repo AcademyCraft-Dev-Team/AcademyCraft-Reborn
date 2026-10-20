@@ -14,6 +14,46 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SubLevelStatePacketTest {
     @Test
+    void dimensionSurvivesSnapshotAndRemovalRoundTrips() {
+        var dimension = net.minecraft.resources.Identifier.parse("minecraft:the_nether");
+        for (boolean removed : List.of(false, true)) {
+            var packet = new SubLevelStatePacket(dimension, SubLevelId.random(), new PlotPos(0, 0),
+                    StructurePose.identity(Vec3.ZERO), List.of(),
+                    org.academy.internal.common.structure.space.NativeStructureView.EMPTY, removed, true);
+            var buffer = Unpooled.buffer();
+            try {
+                SubLevelStatePacket.CODEC.encode(buffer, packet);
+                var decoded = SubLevelStatePacket.CODEC.decode(buffer);
+                assertEquals(dimension, decoded.dimension());
+                assertEquals(removed, decoded.removed());
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
+    void maximumCollisionPayloadRoundTripsAndRejectsOverflow() {
+        var boxes = java.util.stream.IntStream.range(0, 16_384)
+                .mapToObj(index -> new AABB(index % 128, 0, index / 128,
+                        index % 128 + 0.5, 1, index / 128 + 0.5)).toList();
+        var packet = new SubLevelStatePacket(SubLevelId.random(), new PlotPos(0, 0),
+                StructurePose.identity(Vec3.ZERO), boxes,
+                org.academy.internal.common.structure.space.NativeStructureView.EMPTY, false, false);
+        var buffer = Unpooled.buffer();
+        try {
+            SubLevelStatePacket.CODEC.encode(buffer, packet);
+            assertTrue(buffer.readableBytes() < 1_048_576);
+            assertEquals(boxes, SubLevelStatePacket.CODEC.decode(buffer).boxes());
+            assertFalse(buffer.isReadable());
+        } finally {
+            buffer.release();
+        }
+        assertThrows(IllegalArgumentException.class, () -> new SubLevelStatePacket(packet.id(), packet.plot(),
+                packet.pose(), java.util.Collections.nCopies(16_385, boxes.getFirst()), packet.view(), false));
+    }
+
+    @Test
     void snapshotRoundTripsWithoutLosingPoseOrBoxes() {
         var id = SubLevelId.random();
         var pose = StructurePose.identity(new Vec3(12.5, 64, -3.25));

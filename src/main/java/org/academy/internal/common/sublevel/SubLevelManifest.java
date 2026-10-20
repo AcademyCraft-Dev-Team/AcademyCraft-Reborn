@@ -5,6 +5,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePose;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +79,59 @@ public final class SubLevelManifest {
 
     public Path file() {
         return file;
+    }
+
+    /** The original path remains authoritative for existing overworld saves. */
+    public static Path directoryForHost(Path root, Identifier host) {
+        Objects.requireNonNull(root, "root");
+        Objects.requireNonNull(host, "host");
+        if (host.equals(Identifier.fromNamespaceAndPath("minecraft", "overworld"))) return root;
+        // Encode the full identifier: resource paths may contain slashes or dot segments.
+        return root.resolve("hosts").resolve(HexFormat.of().formatHex(
+                host.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    /** Loads absent hosts too, so their persisted plots cannot be reused by another dimension. */
+    public static Map<Identifier, SubLevelManifest> loadHosts(Path root, Collection<Identifier> liveHosts) throws IOException {
+        var manifests = new LinkedHashMap<Identifier, SubLevelManifest>();
+        var overworld = Identifier.fromNamespaceAndPath("minecraft", "overworld");
+        manifests.put(overworld, new SubLevelManifest(root));
+        var hostsDirectory = root.resolve("hosts");
+        if (Files.exists(hostsDirectory)) {
+            try (var children = Files.list(hostsDirectory)) {
+                for (var child : children.toList()) {
+                    if (Files.isSymbolicLink(child) || !Files.isDirectory(child)) {
+                        throw new IOException("Invalid SubLevel host manifest directory: " + child);
+                    }
+                    Identifier host;
+                    try {
+                        host = Identifier.parse(new String(HexFormat.of().parseHex(child.getFileName().toString()),
+                                java.nio.charset.StandardCharsets.UTF_8));
+                    } catch (IllegalArgumentException invalid) {
+                        throw new IOException("Invalid SubLevel host identifier: " + child, invalid);
+                    }
+                    if (!directoryForHost(root, host).equals(child) || manifests.containsKey(host)) {
+                        throw new IOException("Duplicate or noncanonical SubLevel host: " + host);
+                    }
+                    manifests.put(host, new SubLevelManifest(child));
+                }
+            }
+        }
+        for (var host : liveHosts) {
+            if (!manifests.containsKey(host)) manifests.put(host, new SubLevelManifest(directoryForHost(root, host)));
+        }
+        validateOwnership(manifests.values());
+        return Map.copyOf(manifests);
+    }
+
+    static void validateOwnership(Collection<SubLevelManifest> manifests) throws IOException {
+        var plots = new java.util.HashSet<PlotPos>();
+        var identities = new java.util.HashSet<SubLevelId>();
+        for (var manifest : manifests) for (var entry : manifest.entries()) {
+            if (entry.state() == SubLevelState.REMOVED) continue;
+            if (!plots.add(entry.plot())) throw new IOException("SubLevel plot is owned by multiple manifests: " + entry.plot());
+            if (!identities.add(entry.id())) throw new IOException("SubLevel identity is owned by multiple hosts: " + entry.id());
+        }
     }
 
     public static CompoundTag encode(Collection<Entry> values) {

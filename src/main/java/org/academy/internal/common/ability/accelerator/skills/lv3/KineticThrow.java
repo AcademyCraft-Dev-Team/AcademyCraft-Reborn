@@ -70,7 +70,7 @@ public final class KineticThrow extends Skill {
     private static final int[] VERTICAL_RADII = {2, 4, 6};
     private static final int[] CYLINDER_RADII = {5, 7, 9};
     private static final int[] CYLINDER_HEIGHTS = {5, 7, 9};
-    private static final int[] LIFT_HEIGHTS = {4, 5, 7};
+    private static final int[] LIFT_HEIGHTS = {3, 5, 7};
     private static final int[] EXPLOSION_RADII = {5, 7, 9};
 
     public KineticThrow() {
@@ -157,6 +157,7 @@ public final class KineticThrow extends Skill {
 
     @Override
     public void initServer(MinecraftServerContext context) {
+        MisakaNetworkServer.NETWORK_MANAGER.unregister(Server.class);
         MisakaNetworkServer.NETWORK_MANAGER.register(Server.class);
     }
 
@@ -215,6 +216,7 @@ public final class KineticThrow extends Skill {
 
     public static final class Server {
         private static final Map<UUID, ChargeState> CHARGES = new HashMap<>();
+        private static final Map<UUID, Integer> LAST_PRESS_TICKS = new HashMap<>();
 
         private Server() {
         }
@@ -232,7 +234,13 @@ public final class KineticThrow extends Skill {
 
         @SubscribePacket
         public static void handlePress(PressPacket packet) {
-            pressHeld(packet.getPacketListener().getPlayer());
+            var player = packet.getPacketListener().getPlayer();
+            if (acceptPacketPress(player.getUUID(), player.level().getServer().getTickCount())) pressHeld(player);
+        }
+
+        static boolean acceptPacketPress(UUID player, int tick) {
+            var previous = LAST_PRESS_TICKS.put(player, tick);
+            return previous == null || previous != tick;
         }
 
         /**
@@ -246,7 +254,7 @@ public final class KineticThrow extends Skill {
             var outcome = VectorStructureService.press(player);
             return switch (outcome.status()) {
                 case CHARGING -> startCharge(player);
-                case THROWN -> true;
+                case PREPARING, THROWN -> true;
                 case REJECTED -> {
                     AcademyCraft.LOGGER.info("Kinetic Throw H press was rejected for {}: {}",
                             player.getUUID(), outcome.detail());
@@ -351,6 +359,7 @@ public final class KineticThrow extends Skill {
 
         private static void clear(ServerPlayer player) {
             CHARGES.remove(player.getUUID());
+            LAST_PRESS_TICKS.remove(player.getUUID());
             VectorStructureService.clear(player);
         }
 
@@ -398,6 +407,7 @@ public final class KineticThrow extends Skill {
         public static void onServerStopped(ServerStoppedEvent event) {
             VectorStructureService.clearAll();
             Server.CHARGES.clear();
+            Server.LAST_PRESS_TICKS.clear();
         }
     }
 

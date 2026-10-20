@@ -608,3 +608,7 @@ apply(from = "gradle/native-physics.gradle")
 
 // Fixed external compile-only APIs; runtime integration is an explicit isolated opt-in.
 apply(from = "gradle/sable-compat.gradle")
+
+// Agent B handoff contracts and resource templates; no unfinished runtime path is activated.
+apply(from = "gradle/sublevel-scaffold.gradle")
+apply(from = "gradle/structure-pipeline-draft.gradle")

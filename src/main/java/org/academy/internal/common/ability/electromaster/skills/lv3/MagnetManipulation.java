@@ -59,6 +59,10 @@ import org.academy.api.common.ability.electromaster.MagneticallyManipulable;
 import org.academy.api.common.ability.electromaster.MagneticMovement;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureHit;
+import org.academy.api.common.structure.StructureQueries;
+import org.academy.api.server.ability.WorldBlockTargets;
+import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -455,7 +459,11 @@ public class MagnetManipulation extends Skill {
                 if (target.entity() != null) {
                     controlledTarget = target.entity();
                 } else {
-                    if (!beginStructureTarget(target.blockPos())) return false;
+                    if (target.structureHit() != null) {
+                        structure = MagneticStructureService.begin(level(), player, target.structureHit(),
+                                ClipContext.Block.COLLIDER).orElse(null);
+                        if (structure == null) return false;
+                    } else if (!beginStructureTarget(target.blockPos())) return false;
                     return tickStructureControl();
                 }
             }
@@ -521,23 +529,17 @@ public class MagnetManipulation extends Skill {
             var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
                     org.academy.api.common.ability.electromaster.MagneticFieldTuning.targetPullRange(skillMilestone()));
             var end = eye.add(look.scale(range));
-            var blockHit = level().clip(new ClipContext(
-                    eye,
-                    end,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-            ));
-            var blockDistance = blockHit.getType() == HitResult.Type.MISS
-                    ? range * range
-                    : eye.distanceToSqr(blockHit.getLocation());
+            var blockHit = WorldBlockTargets.clip(player, eye, end, ClipContext.Block.COLLIDER);
+            var rayEnd = blockHit.hit() ? blockHit.position() : end;
+            var blockDistance = eye.distanceToSqr(rayEnd);
             var entityHit = ProjectileUtil.getEntityHitResult(
                     level(),
                     player,
                     eye,
-                    end,
+                    rayEnd,
                     player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0),
                     entity -> entity != player && entity.isAlive() && !entity.isSpectator()
+                            && !(entity instanceof NativeStructureProjectionEntity)
                             && (mode != PullMode.PLAYER_TO_TARGET || isMagnetic(entity))
                             && !PvpSetting.shouldPrevent(player, entity),
                     0.3f
@@ -548,10 +550,14 @@ public class MagnetManipulation extends Skill {
                         ? new MagneticTarget(entity, null, entity.getBoundingBox().getCenter(), Direction.UP)
                         : null;
             }
-            if (blockHit.getType() == HitResult.Type.MISS) return null;
-            var pos = blockHit.getBlockPos();
+            if (!blockHit.hit()) return null;
+            if (blockHit.source() == WorldBlockTargets.Source.STRUCTURE) {
+                var hit = StructureQueries.raycast(level(), eye, end, ClipContext.Block.COLLIDER).orElse(null);
+                return hit == null ? null : new MagneticTarget(null, null, hit.worldPoint(), hit.localFace(), hit);
+            }
+            var pos = BlockPos.containing(blockHit.position().subtract(look.scale(1.0E-4)));
             return (mode == PullMode.PLAYER_TO_TARGET || isMagnetic(level().getBlockState(pos)))
-                    ? new MagneticTarget(null, pos, blockHit.getLocation(), blockHit.getDirection())
+                    ? new MagneticTarget(null, pos, blockHit.position(), Direction.UP)
                     : null;
         }
 
@@ -613,7 +619,10 @@ public class MagnetManipulation extends Skill {
     }
 
     private record MagneticTarget(@Nullable Entity entity, @Nullable BlockPos blockPos,
-                                  Vec3 location, Direction face) {
+                                  Vec3 location, Direction face, @Nullable StructureHit structureHit) {
+        private MagneticTarget(@Nullable Entity entity, @Nullable BlockPos blockPos, Vec3 location, Direction face) {
+            this(entity, blockPos, location, face, null);
+        }
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)

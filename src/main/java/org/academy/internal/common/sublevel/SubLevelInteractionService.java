@@ -48,10 +48,17 @@ public final class SubLevelInteractionService {
     private SubLevelInteractionService() {
     }
 
+    private static SubLevelRuntime interactionRuntime(MinecraftServer server, SubLevelId id, ServerPlayer player) {
+        return SubLevelServer.runtime(server, id)
+                .filter(runtime -> player == null || player.level() == runtime.host())
+                .filter(runtime -> runtime.get(id).filter(SubLevelServer::published).isPresent())
+                .orElse(null);
+    }
+
     /** Legacy proximity fallback for USE when the client/server pose gap exceeds the tight guard. */
     public static boolean validateProximity(MinecraftServer server, SubLevelId id, BlockPos local,
                                             Vec3 point, ServerPlayer player) {
-        var runtime = SubLevelServer.runtime(server).orElse(null);
+        var runtime = interactionRuntime(server, id, player);
         if (runtime == null) return false;
         var subLevel = runtime.get(id).orElse(null);
         if (subLevel == null) return false;
@@ -64,7 +71,7 @@ public final class SubLevelInteractionService {
     /** Tight USE guard: target block, face direction and reach, tolerant of the pose gap. */
     public static boolean validateUse(MinecraftServer server, SubLevelId id, BlockPos local,
                                       Vec3 point, ServerPlayer player) {
-        var runtime = SubLevelServer.runtime(server).orElse(null);
+        var runtime = interactionRuntime(server, id, player);
         if (runtime == null) return false;
         var subLevel = runtime.get(id).orElse(null);
         if (subLevel == null) return false;
@@ -92,7 +99,7 @@ public final class SubLevelInteractionService {
     /** Server-side line-of-sight validation for a client interaction packet. */
     public static boolean validateRay(MinecraftServer server, SubLevelId id, BlockPos local,
                                       Vec3 point, ServerPlayer player) {
-        var runtime = SubLevelServer.runtime(server).orElse(null);
+        var runtime = interactionRuntime(server, id, player);
         if (runtime == null) return false;
         var subLevel = runtime.get(id).orElse(null);
         if (subLevel == null) return false;
@@ -128,7 +135,7 @@ public final class SubLevelInteractionService {
 
     public static boolean breakBlock(MinecraftServer server, SubLevelId id, BlockPos local,
                                      ServerPlayer player) {
-        var runtime = SubLevelServer.runtime(server).orElse(null);
+        var runtime = interactionRuntime(server, id, player);
         if (runtime == null) return false;
         var subLevel = runtime.get(id).orElse(null);
         if (subLevel == null) return false;
@@ -144,11 +151,12 @@ public final class SubLevelInteractionService {
     public static InteractionResult useBlock(MinecraftServer server, SubLevelId id, BlockPos local,
                                              Direction face, Vec3 hit, ServerPlayer player,
                                              InteractionHand hand) {
-        var runtime = SubLevelServer.runtime(server).orElse(null);
+        var runtime = interactionRuntime(server, id, player);
         if (runtime == null) return InteractionResult.FAIL;
         var subLevel = runtime.get(id).orElse(null);
         if (subLevel == null) return InteractionResult.FAIL;
-        var level = runtime.storage().level();
+        var storage = runtime.storage();
+        var level = storage.level();
         var world = runtime.storage().worldPosition(subLevel.plot(), local);
         var state = level.getBlockState(world);
         if (!level.hasChunkAt(world) || state.isAir()) return InteractionResult.FAIL;
@@ -166,8 +174,7 @@ public final class SubLevelInteractionService {
                     title = Component.translatable("container.chestDouble");
                 }
             }
-            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
-            final var menuContainer = new SubLevelContainer(runtime.host(), container, center);
+            final var menuContainer = container(runtime, subLevel, local, container);
             final int menuRows = rows;
             final var menuTitle = title;
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
@@ -177,30 +184,26 @@ public final class SubLevelInteractionService {
         }
         var blockEntity = runtime.storage().blockEntity(subLevel.plot(), local);
         if (blockEntity instanceof HopperBlockEntity hopper) {
-            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
-            var proxy = new SubLevelContainer(runtime.host(), hopper, center);
+            var proxy = container(runtime, subLevel, local, hopper);
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
                     new HopperMenu(containerId, inventory, proxy), Component.translatable("container.hopper")));
             return InteractionResult.SUCCESS;
         }
         if (blockEntity instanceof DispenserBlockEntity dispenser) {
-            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
-            var proxy = new SubLevelContainer(runtime.host(), dispenser, center);
+            var proxy = container(runtime, subLevel, local, dispenser);
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
                     new DispenserMenu(containerId, inventory, proxy), Component.translatable("container.dispenser")));
             return InteractionResult.SUCCESS;
         }
         if (blockEntity instanceof BarrelBlockEntity barrel) {
-            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
-            var proxy = new SubLevelContainer(runtime.host(), barrel, center);
+            var proxy = container(runtime, subLevel, local, barrel);
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) ->
                     new ChestMenu(MenuType.GENERIC_9x3, containerId, inventory, proxy, 3),
                     Component.translatable("container.barrel")));
             return InteractionResult.SUCCESS;
         }
         if (blockEntity instanceof AbstractFurnaceBlockEntity furnace) {
-            var center = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local));
-            var proxy = new SubLevelContainer(runtime.host(), furnace, center);
+            var proxy = container(runtime, subLevel, local, furnace);
             var data = ((AbstractFurnaceBlockEntityAccessor) furnace).academy$dataAccess();
             var title = Component.translatable("container.furnace");
             player.openMenu(new SimpleMenuProvider((containerId, inventory, ignored) -> {
@@ -214,7 +217,7 @@ public final class SubLevelInteractionService {
             }, title));
             return InteractionResult.SUCCESS;
         }
-        var result = new BlockHitResult(hit, face, world, false);
+        var result = plotHit(storage, subLevel, local, face, hit);
         var stack = player.getItemInHand(hand);
         var before = level.getBlockState(world);
         var interaction = before.useItemOn(stack, level, player, hand, result);
@@ -227,20 +230,36 @@ public final class SubLevelInteractionService {
         return interaction;
     }
 
+    private static BlockHitResult plotHit(org.academy.internal.common.sublevel.PlotStorage storage,
+                                         SubLevel subLevel, BlockPos local, Direction face, Vec3 worldHit) {
+        var localPoint = subLevel.pose().worldToLocalPoint(worldHit);
+        var origin = storage.worldPosition(subLevel.plot(), BlockPos.ZERO);
+        return new BlockHitResult(new Vec3(origin.getX() + localPoint.x, localPoint.y, origin.getZ() + localPoint.z),
+                face, storage.worldPosition(subLevel.plot(), local), false);
+    }
+
+    private static SubLevelContainer container(SubLevelRuntime runtime, SubLevel subLevel, BlockPos local,
+                                               Container container) {
+        return new SubLevelContainer(runtime.host(), container, subLevel.id(), local,
+                () -> subLevel.pose().localToWorldPoint(Vec3.atCenterOf(local)));
+    }
+
     public static InteractionResult placeBlock(MinecraftServer server, SubLevelId id, BlockPos local,
                                                Direction face, Vec3 hit, ServerPlayer player,
                                                InteractionHand hand) {
-        var runtime = SubLevelServer.runtime(server).orElse(null);
+        var runtime = interactionRuntime(server, id, player);
         if (runtime == null) return InteractionResult.FAIL;
         var subLevel = runtime.get(id).orElse(null);
         if (subLevel == null) return InteractionResult.FAIL;
-        var level = runtime.storage().level();
+        var storage = runtime.storage();
+        var level = storage.level();
         var world = runtime.storage().worldPosition(subLevel.plot(), local);
         if (!level.hasChunkAt(world) || !level.mayInteract(player, world)) return InteractionResult.FAIL;
         var stack = player.getItemInHand(hand);
         if (!(stack.getItem() instanceof BlockItem)) return InteractionResult.FAIL;
-        var hitResult = new BlockHitResult(hit, face, world, false);
-        var context = new BlockPlaceContext(level, player, hand, stack, hitResult);
+        var hitResult = plotHit(storage, subLevel, local, face, hit);
+        var context = new SubLevelPlaceContext(level, player, hand, stack, hitResult, subLevel.pose(),
+                storage.worldPosition(subLevel.plot(), BlockPos.ZERO));
         var result = ((BlockItem) stack.getItem()).place(context);
         if (result.consumesAction()) runtime.refreshGeometry(id);
         return result;

@@ -14,8 +14,10 @@ public final class SubLevel {
     private final AABB localBounds;
     private StructurePose pose;
     private StructurePose previousPose;
+    private StructurePose carryPose;
     private SubLevelState state = SubLevelState.ALLOCATED;
     private long revision;
+    private long geometryRevision;
 
     public SubLevel(SubLevelId id, PlotPos plot, AABB localBounds, StructurePose pose) {
         this.id = Objects.requireNonNull(id, "id");
@@ -23,6 +25,7 @@ public final class SubLevel {
         this.localBounds = Objects.requireNonNull(localBounds, "localBounds");
         this.pose = Objects.requireNonNull(pose, "pose");
         this.previousPose = pose;
+        this.carryPose = pose;
     }
 
     public SubLevelId id() { return id; }
@@ -30,13 +33,25 @@ public final class SubLevel {
     public AABB localBounds() { return localBounds; }
     public StructurePose pose() { return pose; }
     public StructurePose previousPose() { return previousPose; }
+    public StructurePose carryPose() { return carryPose; }
     public SubLevelState state() { return state; }
     public long revision() { return revision; }
+    public long geometryRevision() { return geometryRevision; }
+
+    public void geometryChanged() {
+        geometryRevision = Math.incrementExact(geometryRevision);
+        revision = Math.incrementExact(revision);
+    }
 
     public void setPose(StructurePose pose) {
         this.previousPose = this.pose;
         this.pose = Objects.requireNonNull(pose, "pose");
         revision = Math.incrementExact(revision);
+    }
+
+    /** Consumes only the carry delta; previousPose remains available to delayed interaction validation. */
+    public void consumeCarryPose() {
+        carryPose = pose;
     }
 
     public void setState(SubLevelState state) {

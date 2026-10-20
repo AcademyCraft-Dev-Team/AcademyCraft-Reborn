@@ -21,6 +21,8 @@ import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureLifecycle;
+import org.academy.api.common.structure.StructureHit;
+import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureMotionState;
 import org.academy.api.common.structure.StructurePhysics;
 import org.academy.api.common.structure.StructurePhysicsControl;
@@ -34,6 +36,8 @@ import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.sable.SableStructureTraction;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -142,6 +146,38 @@ public final class MagneticStructureService {
         return Optional.of(new Session(reference, null, cropped, level.getGameTime()));
     }
 
+    /** Adopts a visible magnetic cell without recapturing or using its projected host address. */
+    public static Optional<Session> begin(ServerLevel level, ServerPlayer player, StructureHit hit) {
+        return begin(level, player, hit, net.minecraft.world.level.ClipContext.Block.OUTLINE);
+    }
+
+    /** Keeps skill collision targeting and ordinary outline targeting on the same validation policy. */
+    public static Optional<Session> begin(ServerLevel level, ServerPlayer player, StructureHit hit,
+                                           net.minecraft.world.level.ClipContext.Block shape) {
+        var range = Skills.MAGNET_MANIPULATION.get().scaledRange(player,
+                MagneticFieldTuning.targetPullRange(Skills.MAGNET_MANIPULATION.get()
+                        .getEffectiveProficiencyMilestone(player)));
+        var eye = player.getEyePosition();
+        var end = eye.add(player.getLookAngle().scale(range));
+        var checked = StructureQueries.validate(level, eye, end, hit, shape);
+        if (!checked.succeeded()) return Optional.empty();
+        var current = checked.currentHit().orElseThrow();
+        if (!level.mayInteract(player, BlockPos.containing(current.worldPoint()))) return Optional.empty();
+        var reference = current.block().structure();
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || !MagneticTargets.isMagnetic(
+                handle.world().read(current.block().localPosition()).state())) return Optional.empty();
+        var session = new Session(reference, null, List.of(), level.getGameTime());
+        session.forcePoint = current.block().localPosition();
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            var runtime = SubLevelServer.runtime(level).orElseThrow();
+            var cells = runtime.view(SubLevelStructureRefs.id(reference).orElseThrow()).cells();
+            session.participation = MagneticStructureControl.magneticParticipation(
+                    (int) cells.stream().filter(cell -> MagneticTargets.isMagnetic(cell.state())).count(), cells.size());
+        }
+        return Optional.of(session);
+    }
+
     /** Legacy admission for one block target; {@code null} means the cell may be captured. */
     static @Nullable String admit(ServerPlayer player, BlockPos pos) {
         return admit(player, pos, false);
@@ -157,12 +193,14 @@ public final class MagneticStructureService {
         if (AbilityEffectPolicy.blockDestruction(level) == AbilityEffectPolicy.Decision.DENY) {
             return "destruction_denied";
         }
+        if (!level.isInWorldBounds(pos) || !level.getWorldBorder().isWithinBounds(pos)) return "out_of_world";
         if (!level.hasChunkAt(pos)) return "chunk_unloaded";
         if (!level.mayInteract(player, pos)) return "permission_denied";
         if (!SkillTuning.allowBlockDestruction(player, Skills.MAGNET_MANIPULATION.get())) {
             return "destruction_disabled";
         }
         var state = level.getBlockState(pos);
+        if (state.isAir()) return "empty_cell";
         if (!MagneticTargets.isMagnetic(state) && !allowNonMagnetic) return "not_magnetic";
         if (state.hasBlockEntity()) return "block_entity_not_supported";
         if (state.getDestroySpeed(level, pos) < 0.0f) return "indestructible";
@@ -175,7 +213,7 @@ public final class MagneticStructureService {
      * admits non-magnetic editable cells for the lifetime of its overlay. Deterministic
      * direction order and the budget cap keep identical requests reproducible.
      */
-    static List<BlockPos> magneticSelection(ServerPlayer player, BlockPos seed, int budget,
+    public static List<BlockPos> magneticSelection(ServerPlayer player, BlockPos seed, int budget,
                                             boolean forceMagnetize) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(seed, "seed");
@@ -391,7 +429,7 @@ public final class MagneticStructureService {
         var playerId = player.getUUID();
         var existing = PROGRAM_CONTROLS.get(playerId);
         if (existing != null && existing.session.reference().equals(reference)) {
-            if (sable(reference)) {
+            if (sable(reference) || SubLevelStructureRefs.isSubLevel(reference)) {
                 return controlSableExisting(player, existing, runtimeId);
             }
             if (!programControlUsable(player, existing.session, runtimeId)) {
@@ -407,7 +445,9 @@ public final class MagneticStructureService {
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
         }
-        if (sable(reference)) return controlSable(player, level, reference, runtimeId);
+        if (sable(reference) || SubLevelStructureRefs.isSubLevel(reference)) {
+            return controlSable(player, level, reference, runtimeId);
+        }
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
             return ProgramResult.rejected("structure_unavailable");
@@ -657,6 +697,11 @@ public final class MagneticStructureService {
         return control == null ? Optional.empty() : Optional.of(control.session);
     }
 
+    /** Capture identity for program retries; independent of the backend's structure identity. */
+    public static Optional<UUID> pendingProgramCapture(ServerPlayer player) {
+        return programSession(player).map(session -> session.transactionId);
+    }
+
     /** Silent lifecycle cleanup; the captured structure, inertia and physics region are retained. */
     public static void releasePrograms(ServerPlayer player) {
         if (player == null) return;
@@ -718,12 +763,12 @@ public final class MagneticStructureService {
                 if (motion == null) continue;
                 var point = control.localForcePoint == null
                         ? motion.localCenterOfMass() : Vec3.atCenterOf(control.localForcePoint);
-                var origin = motion.pose().localToWorldPoint(point);
                 var speed = MagneticFieldTuning.targetPullSpeed(
                         Skills.MAGNET_MANIPULATION.get().getEffectiveProficiencyMilestone(player));
-                var force = MagneticStructureControl.pullForce(motion.linearVelocity(), origin,
-                        control.target, Vec3.ZERO, speed, PROGRAM_STOP_DISTANCE,
-                        motion.mass(), control.participation(gameTime));
+                var state = new StructureMotionState(motion.pose(), motion.linearVelocity(), motion.angularVelocity(),
+                        motion.localCenterOfMass(), motion.mass(), false, 0, 0);
+                var force = MagneticStructureControl.pullForce(state, point,
+                        control.target, Vec3.ZERO, speed, PROGRAM_STOP_DISTANCE, control.participation(gameTime));
                 if (!StructureDirectControl.submit(level, session.reference(), player, session.controllerId(),
                         new StructurePhysicsControl.Force(point, force))) {
                     releaseProgram(playerId, "control_unavailable");
@@ -991,7 +1036,7 @@ public final class MagneticStructureService {
                 }
             }
             if (stage == Stage.CAPTURING) {
-                if (sable(reference)) {
+                if (sable(reference) || SubLevelStructureRefs.isSubLevel(reference)) {
                     if (!program) {
                         return startSableSkillPull(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
                     }
@@ -1017,7 +1062,7 @@ public final class MagneticStructureService {
             if (stage == Stage.AWAITING_PHYSICS) {
                 return tickAwaitingPhysics(player, destination, fallback, maxSpeedPerTick, stopDistance, milestone);
             }
-            if (sable(reference)) {
+            if (sable(reference) || SubLevelStructureRefs.isSubLevel(reference)) {
                 return tickSablePull(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
             }
             return tickPulling(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
@@ -1054,13 +1099,26 @@ public final class MagneticStructureService {
                 close();
                 return false;
             }
-            var motion = SableStructureTraction.motion(level, reference).orElse(null);
+            var motion = StructureDynamics.motion(level, reference).orElse(null);
             if (motion == null) return continueOrGiveUp();
             unavailableTicks = 0;
             var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
             if (player.getEyePosition().distanceToSqr(center) > range * range) {
                 close();
                 return false;
+            }
+            if (SubLevelStructureRefs.isSubLevel(reference)) {
+                var localPoint = forcePoint == null ? motion.localCenterOfMass() : Vec3.atCenterOf(forcePoint);
+                var state = new StructureMotionState(motion.pose(), motion.linearVelocity(), motion.angularVelocity(),
+                        motion.localCenterOfMass(), motion.mass(), false, 0, 0);
+                var force = MagneticStructureControl.pullForce(state, localPoint, destination,
+                        fallback, maxSpeedPerTick, stopDistance, participation);
+                if (!StructureDirectControl.submit(level, reference, player, controllerId,
+                        new StructurePhysicsControl.Force(localPoint, force))) {
+                    close();
+                    return false;
+                }
+                return true;
             }
             var desired = MagneticMovement.calculatePullVelocity(
                     LegacyMotionUnits.velocityPerTick(motion.linearVelocity()),
@@ -1077,6 +1135,17 @@ public final class MagneticStructureService {
             if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
                 fail(player, "captured_handle_unavailable");
                 return false;
+            }
+            if (positions.isEmpty()) {
+                try {
+                    region = StructurePhysics.adoptExistingRegion(level, reference);
+                    return true;
+                } catch (IllegalStateException | IllegalArgumentException rejection) {
+                    AcademyCraft.LOGGER.info("Magnetic pull cannot physicalize retained {}: {}",
+                            reference, rejection.getMessage());
+                    fail(player, "retained_region_unavailable");
+                    return false;
+                }
             }
             var prepared = StructurePhysics.attachedRegion(level, reference).orElse(null);
             if (prepared != null) {
@@ -1142,9 +1211,8 @@ public final class MagneticStructureService {
                 return false;
             }
             var control = new StructurePhysicsControl.Force(localForcePoint(motion),
-                    MagneticStructureControl.pullForce(motion.linearVelocity(),
-                            motion.pose().localToWorldPoint(motion.localCenterOfMass()), destination, fallback,
-                            maxSpeedPerTick, stopDistance, motion.mass(), participation));
+                    MagneticStructureControl.pullForce(motion, localForcePoint(motion), destination, fallback,
+                            maxSpeedPerTick, stopDistance, participation));
             Optional<StructurePhysicsLease> acquired;
             try {
                 acquired = region.acquireEntityControl(reference, player, controllerId, control,
@@ -1196,8 +1264,8 @@ public final class MagneticStructureService {
             }
             try {
                 lease.setControl(new StructurePhysicsControl.Force(localForcePoint(motion),
-                        MagneticStructureControl.pullForce(motion.linearVelocity(), center, destination, fallback,
-                                maxSpeedPerTick, stopDistance, motion.mass(), participation)));
+                        MagneticStructureControl.pullForce(motion, localForcePoint(motion), destination, fallback,
+                                maxSpeedPerTick, stopDistance, participation)));
                 lease.renew(MagneticStructureControl.TRACTION_LEASE_TICKS);
             } catch (IllegalStateException | IllegalArgumentException rejection) {
                 AcademyCraft.LOGGER.warn("Magnetic pull lease ended for {}", reference, rejection);

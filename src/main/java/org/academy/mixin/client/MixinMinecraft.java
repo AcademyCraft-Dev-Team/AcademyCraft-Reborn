@@ -64,6 +64,10 @@ public abstract class MixinMinecraft {
             ci.cancel();
             return;
         }
+        if (SubLevelClientInteraction.continueAttack((Minecraft) (Object) this, down)) {
+            ci.cancel();
+            return;
+        }
         if (NativeStructureMiningClient.continueAttack((Minecraft) (Object) this, down, missTime)) ci.cancel();
     }
 
@@ -81,7 +85,7 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void startUseItem(CallbackInfo ci) {
-        if (NativeStructureMiningClient.isActive()) {
+        if (NativeStructureMiningClient.isActive() || SubLevelClientInteraction.isMining()) {
             ci.cancel();
             return;
         }
@@ -102,9 +106,15 @@ public abstract class MixinMinecraft {
     private void runTick(CallbackInfo info) {
         NeoForge.EVENT_BUS.post(new MainLoopEvent());
         VectorReflectionClientRuntime.tick((Minecraft) (Object) this);
+        SubLevelClientInteraction.tick((Minecraft) (Object) this);
         MentalIntrusionClientState.tick();
         MentalResistanceClientState.tick();
         PlayerControlClientState.tick();
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void academy$tickSubLevelContact(CallbackInfo ci) {
+        org.academy.internal.client.sublevel.SubLevelClientState.tick();
     }
 
     @Inject(method = "close", at = @At("HEAD"), require = 0)

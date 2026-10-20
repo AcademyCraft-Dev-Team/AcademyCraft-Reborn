@@ -5,6 +5,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureSimulationBudget;
 import org.academy.internal.common.structure.physics.PhysicsBox;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 
@@ -23,8 +25,19 @@ public final class SubLevelRuntime {
     private final SubLevelPhysicsUniverse universe;
     private final SubLevelManifest manifest;
     private final TerrainColliderCache terrain;
+    private static final StructureSimulationBudget.Limits BUDGET_LIMITS = new StructureSimulationBudget.Limits(
+            Math.max(1_000_000L, Long.getLong("academy.sublevel.targetTickNanos", 6_000_000L)),
+            Math.max(1, Integer.getInteger("academy.sublevel.terrainSections", 64)),
+            Math.max(1, Integer.getInteger("academy.sublevel.geometryCells", 32_768)),
+            Math.max(1, Integer.getInteger("academy.sublevel.contactPairs", 4_096)),
+            Math.max(1, Integer.getInteger("academy.sublevel.snapshotBytes", 1_048_576)));
     private final SubLevelCollisionIndex collision = new SubLevelCollisionIndex();
     private final Map<SubLevelId, Managed> subLevels = new LinkedHashMap<>();
+    private final SubLevelSimulationBudget budget = SubLevelEnhancementBootstrap.SIMULATION;
+    private boolean terrainNeedsUpdate = true;
+    private boolean terrainBlocked;
+    private long nextTerrainWarning;
+    private List<AABB> sampledTerrainBounds = List.of();
 
     public SubLevelRuntime(ServerLevel host, PlotStorage storage, SubLevelPhysicsUniverse universe) {
         this(host, storage, universe, null, null);
@@ -67,6 +80,98 @@ public final class SubLevelRuntime {
         return universe;
     }
 
+    /** Durable empty allocation for the shared capture transaction; not publicly controllable. */
+    public Optional<SubLevel> createStaged(SubLevelId id, AABB localBounds, StructurePose pose) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(localBounds, "localBounds");
+        Objects.requireNonNull(pose, "pose");
+        if (subLevels.containsKey(id) || SubLevelServer.runtime(host.getServer(), id).isPresent()) {
+            throw new IllegalArgumentException("Sub-level already exists: " + id);
+        }
+        var lease = storage.allocate().orElse(null);
+        if (lease == null) return Optional.empty();
+        var subLevel = new SubLevel(id, lease.plot(), localBounds, pose);
+        var managed = new Managed(subLevel, lease, List.of(),
+                org.academy.internal.common.structure.space.NativeStructureView.EMPTY);
+        subLevels.put(id, managed);
+        SubLevelActivationRegistry.activation(id);
+        remember(subLevel);
+        try {
+            persist();
+            return Optional.of(subLevel);
+        } catch (RuntimeException | Error failure) {
+            forget(id);
+            try {
+                persist();
+                subLevels.remove(id);
+                storage.release(lease);
+            } catch (RuntimeException | Error cleanup) {
+                // An uncertain durable row must keep ownership; no other capture can reuse it.
+                remember(subLevel);
+                failure.addSuppressed(cleanup);
+            }
+            throw failure;
+        }
+    }
+
+    /** Finalizes a copied staging plot without changing the transaction's activation identity. */
+    public boolean finalizeStaged(SubLevelId id) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null) return false;
+        if (managed.subLevel.state() == SubLevelState.ACTIVE || managed.subLevel.state() == SubLevelState.SLEEPING) {
+            flushStorage();
+            persist();
+            return true;
+        }
+        if (managed.subLevel.state() != SubLevelState.ALLOCATED && managed.subLevel.state() != SubLevelState.LOADING) return false;
+        var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+        if (geometry.boxes().isEmpty() || !addBody(id, physicsPose(managed.subLevel.pose()), geometry.boxes())) return false;
+        var boxes = localBoxes(geometry.boxes());
+        var view = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+        managed.subLevel.setState(SubLevelState.ACTIVE);
+        managed.subLevel.geometryChanged();
+        subLevels.put(id, new Managed(managed.subLevel, managed.lease, boxes, view));
+        collision.update(id, boxes, managed.subLevel.pose(), managed.subLevel.geometryRevision(),
+                managed.subLevel.revision());
+        budget.invalidate(host, budgetReference(managed.subLevel), StructureSimulationBudget.DirtyPart.CONTENT);
+        terrainNeedsUpdate = true;
+        remember(managed.subLevel);
+        flushStorage();
+        persist();
+        return true;
+    }
+
+    public void flushStorage() {
+        storage.level().save(null, true, false);
+        if (org.academy.internal.common.structure.space.NativeStructureStorageErrors.failed(storage.level())) {
+            throw new IllegalStateException("SubLevel plot save failed");
+        }
+    }
+
+    /** Isolates an uncommitted copy while retaining its plot and transaction activation. */
+    public boolean suspendCapture(SubLevelId id) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null) return false;
+        try {
+            universe.remove(id);
+        } finally {
+            collision.remove(id);
+            SubLevelMotionController.cancel(id);
+            managed.subLevel.setState(SubLevelState.ALLOCATED);
+            subLevels.put(id, new Managed(managed.subLevel, managed.lease, List.of(),
+                    org.academy.internal.common.structure.space.NativeStructureView.EMPTY));
+            remember(managed.subLevel);
+            // No body is observable now, so any former public controller loses its lease.
+            org.academy.api.common.structure.StructureDirectControl.tick(host.getServer());
+            try {
+                persist();
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.error("Could not persist suspended SubLevel {}; retaining plot and journal", id, failure);
+            }
+        }
+        return true;
+    }
+
     public Optional<SubLevel> create(SubLevelId id, AABB localBounds, PhysicsPose bodyPose, List<PhysicsBox> boxes) {
         Objects.requireNonNull(id, "id");
         if (subLevels.containsKey(id)) throw new IllegalArgumentException("Sub-level already exists: " + id);
@@ -86,6 +191,10 @@ public final class SubLevelRuntime {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(lease, "lease");
         if (subLevels.containsKey(id)) throw new IllegalArgumentException("Sub-level already exists: " + id);
+        if (SubLevelServer.runtimes(host.getServer()).stream().flatMap(runtime -> runtime.subLevels().stream())
+                .anyMatch(existing -> existing.id().equals(id) || existing.plot().equals(lease.plot()))) {
+            throw new IllegalArgumentException("SubLevel identity or plot already belongs to another structure");
+        }
         if (storage.lease(lease.plot()).filter(current -> current.equals(lease)).isEmpty()) {
             throw new IllegalArgumentException("Plot lease is not owned by this runtime");
         }
@@ -95,7 +204,10 @@ public final class SubLevelRuntime {
         boolean active = addBody(id, bodyPose, boxes);
         subLevel.setState(active ? SubLevelState.ACTIVE : SubLevelState.INACTIVE);
         subLevels.put(id, new Managed(subLevel, lease, localBoxes, view));
-        collision.update(id, localBoxes, subLevel.pose());
+        SubLevelActivationRegistry.activation(id);
+        collision.update(id, localBoxes, subLevel.pose(), subLevel.geometryRevision(), subLevel.revision());
+        budget.invalidate(host, budgetReference(subLevel), StructureSimulationBudget.DirtyPart.CONTENT);
+        terrainNeedsUpdate = true;
         remember(subLevel);
         return subLevel;
     }
@@ -105,19 +217,28 @@ public final class SubLevelRuntime {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         if (managed == null) return;
         var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+        var motion = universe.motion(id).orElse(null);
         universe.remove(id);
+        managed.subLevel.geometryChanged();
+        var reference = budgetReference(managed.subLevel);
+        budget.invalidate(host, reference, StructureSimulationBudget.DirtyPart.CONTENT);
+        budget.invalidate(host, reference, StructureSimulationBudget.DirtyPart.COLLISION);
+        terrainNeedsUpdate = true;
         if (geometry.boxes().isEmpty()) {
             collision.remove(id);
             managed.subLevel.setState(SubLevelState.INACTIVE);
-            subLevels.put(id, new Managed(managed.subLevel, managed.lease, List.of(), managed.view));
+            subLevels.put(id, new Managed(managed.subLevel, managed.lease, List.of(),
+                    PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds())));
             remember(managed.subLevel);
             return;
         }
         var localBoxes = localBoxes(geometry.boxes());
         var view = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
         boolean active = addBody(id, physicsPose(managed.subLevel.pose()), geometry.boxes());
+        if (active && motion != null) universe.setVelocity(id, motion.linearVelocity(), motion.angularVelocity());
         managed.subLevel.setState(active ? SubLevelState.ACTIVE : SubLevelState.INACTIVE);
-        collision.update(id, localBoxes, managed.subLevel.pose());
+        collision.update(id, localBoxes, managed.subLevel.pose(), managed.subLevel.geometryRevision(),
+                managed.subLevel.revision());
         subLevels.put(id, new Managed(managed.subLevel, managed.lease, localBoxes, view));
         remember(managed.subLevel);
     }
@@ -128,38 +249,76 @@ public final class SubLevelRuntime {
     }
 
     public boolean remove(SubLevelId id) {
-        var managed = subLevels.remove(Objects.requireNonNull(id, "id"));
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         if (managed == null) return false;
         universe.remove(id);
         collision.remove(id);
+        budget.forget(host, budgetReference(managed.subLevel));
+        SubLevelTerrainBreaker.forget(id);
+        SubLevelActivationRegistry.find(id).ifPresent(activation ->
+                SubLevelEnhancementBootstrap.INTERACTIONS.cancelStructure(host.getServer(),
+                        SubLevelStructureRefs.of(managed.subLevel, host.dimension().identifier(),
+                                activation.generation()), activation.runtimeId(),
+                        org.academy.api.common.structure.StructureInteractionController.CancelReason
+                                .STRUCTURE_UNAVAILABLE, SubLevelServer.MINING_FEEDBACK));
+        managed.subLevel.setState(SubLevelState.INACTIVE);
+        SubLevelActivationRegistry.invalidate(id);
+        SubLevelMotionController.cancel(id);
+        forget(id);
+        try {
+            // The durable owner must disappear before the shared allocator can hand this plot
+            // to another host. Failure keeps the content and its lease recoverable in memory.
+            persist();
+        } catch (RuntimeException | Error failure) {
+            remember(managed.subLevel);
+            throw failure;
+        }
+        subLevels.remove(id);
         storage.release(managed.lease);
         managed.subLevel.setState(SubLevelState.REMOVED);
-        SubLevelActivationRegistry.invalidate(id);
-        forget(id);
         return true;
     }
 
-    /** Debug/test-only rotation around the local bounds center. */
+    /** Relative world-yaw rotation, preserving the center of mass and active body. */
     public boolean rotate(SubLevelId id, double yawDegrees) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null || !Double.isFinite(yawDegrees)) return false;
+        var rotation = new org.joml.Quaterniond().rotateY(Math.toRadians(Math.IEEEremainder(yawDegrees, 360.0)))
+                .mul(managed.subLevel.pose().rotation());
+        return rotateTo(id, new StructurePose(Vec3.ZERO, rotation));
+    }
+
+    /** Applies an absolute orientation about the mass center; target translation is ignored. */
+    public boolean rotateTo(SubLevelId id, StructurePose target) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        Objects.requireNonNull(target, "target");
         if (managed == null) return false;
-        deactivate(id);
-        var pose = managed.subLevel.pose();
-        var pivot = managed.subLevel.localBounds().getCenter();
-        var rotation = new org.joml.Quaterniond().rotateY(Math.toRadians(yawDegrees));
-        var rotatedPivot = rotation.transform(new org.joml.Vector3d(pivot.x, pivot.y, pivot.z));
-        var origin = pose.worldOrigin().add(pivot).subtract(rotatedPivot.x, rotatedPivot.y, rotatedPivot.z);
-        var rotated = new StructurePose(origin, rotation);
+        var motion = universe.motion(id).orElse(null);
+        var localCenter = motion == null ? managed.subLevel.localBounds().getCenter()
+                : new Vec3(motion.localCenterOfMass().x(), motion.localCenterOfMass().y(), motion.localCenterOfMass().z());
+        var rotated = rotationAround(managed.subLevel.pose(), localCenter, target);
+        if (motion != null && !universe.setPose(id, physicsPose(rotated))) return false;
         managed.subLevel.setPose(rotated);
-        collision.update(id, managed.localBoxes, rotated);
+        if (motion != null) managed.subLevel.setState(SubLevelState.ACTIVE);
+        collision.update(id, managed.localBoxes, rotated, managed.subLevel.previousPose(),
+                managed.subLevel.geometryRevision(), managed.subLevel.revision());
+        budget.invalidate(host, budgetReference(managed.subLevel), StructureSimulationBudget.DirtyPart.POSE);
+        terrainNeedsUpdate = true;
         remember(managed.subLevel);
         return true;
     }
 
-    /** Applies one bounded launch impulse through the active SubLevel body. */
+    static StructurePose rotationAround(StructurePose current, Vec3 localCenter, StructurePose target) {
+        var rotation = new StructurePose(Vec3.ZERO, target.rotation());
+        return new StructurePose(current.localToWorldPoint(localCenter)
+                .subtract(rotation.localToWorldDirection(localCenter)), rotation.rotation());
+    }
+
+    /** Sets a bounded launch velocity, replacing any previous movement or rotation. */
     public boolean launch(SubLevelId id, Vec3 direction, double speed) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
-        if (managed == null || direction.lengthSqr() < 1.0E-8 || !Double.isFinite(speed) || speed <= 0.0) return false;
+        var unit = SubLevelMotionController.normalized(direction);
+        if (managed == null || unit == null || !Double.isFinite(speed) || speed <= 0.0) return false;
         if (managed.subLevel.state() == SubLevelState.INACTIVE) {
             var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
             if (geometry.boxes().isEmpty()) return false;
@@ -167,24 +326,29 @@ public final class SubLevelRuntime {
         }
         var motion = universe.motion(id).orElse(null);
         if (motion == null) return false;
-        var unit = direction.normalize();
-        var impulse = new org.academy.internal.common.structure.physics.PhysicsVector(
-                unit.x * speed * motion.mass(), unit.y * speed * motion.mass(), unit.z * speed * motion.mass());
-        var center = managed.subLevel.pose().localToWorldPoint(managed.subLevel.localBounds().getCenter());
-        return universe.impulse(id, impulse, new org.academy.internal.common.structure.physics.PhysicsVector(
-                center.x, center.y, center.z));
+        speed = Math.min(speed, 400.0);
+        boolean launched = universe.setVelocity(id, new org.academy.internal.common.structure.physics.PhysicsVector(
+                unit.x * speed, unit.y * speed, unit.z * speed),
+                org.academy.internal.common.structure.physics.PhysicsVector.ZERO);
+        if (launched) SubLevelMotionController.cancel(id);
+        return launched;
     }
 
-    /** Debug/test-only pose shift that removes the body so a carry probe is deterministic. */
+    /** Translates the existing body without invalidating its identity, velocity or control. */
     public boolean shift(SubLevelId id, Vec3 delta) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         if (managed == null) return false;
-        deactivate(id);
         var pose = managed.subLevel.pose();
         var shifted = new StructurePose(pose.worldOrigin().add(Objects.requireNonNull(delta, "delta")),
                 pose.rotationX(), pose.rotationY(), pose.rotationZ(), pose.rotationW());
+        var motion = universe.motion(id).orElse(null);
+        if (motion != null && !universe.setPose(id, physicsPose(shifted))) return false;
         managed.subLevel.setPose(shifted);
-        collision.update(id, managed.localBoxes, shifted);
+        if (motion != null) managed.subLevel.setState(SubLevelState.ACTIVE);
+        collision.update(id, managed.localBoxes, shifted, managed.subLevel.previousPose(),
+                managed.subLevel.geometryRevision(), managed.subLevel.revision());
+        budget.invalidate(host, budgetReference(managed.subLevel), StructureSimulationBudget.DirtyPart.POSE);
+        terrainNeedsUpdate = true;
         remember(managed.subLevel);
         return true;
     }
@@ -194,6 +358,7 @@ public final class SubLevelRuntime {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         if (managed == null || managed.subLevel.state() == SubLevelState.INACTIVE) return false;
         universe.remove(id);
+        SubLevelMotionController.cancel(id);
         managed.subLevel.setState(SubLevelState.INACTIVE);
         remember(managed.subLevel);
         return true;
@@ -208,7 +373,10 @@ public final class SubLevelRuntime {
         managed.subLevel.setPose(structurePose(pose));
         managed.subLevel.setState(SubLevelState.ACTIVE);
         SubLevelActivationRegistry.advance(id);
-        collision.update(id, localBoxes, managed.subLevel.pose());
+        collision.update(id, localBoxes, managed.subLevel.pose(), managed.subLevel.geometryRevision(),
+                managed.subLevel.revision());
+        budget.invalidate(host, budgetReference(managed.subLevel), StructureSimulationBudget.DirtyPart.POSE);
+        terrainNeedsUpdate = true;
         subLevels.put(id, new Managed(managed.subLevel, managed.lease, localBoxes, view));
         remember(managed.subLevel);
         return true;
@@ -217,50 +385,187 @@ public final class SubLevelRuntime {
     /** Steps the shared universe once and publishes each body pose back to its SubLevel. */
     public void tick(double duration, int substeps) {
         if (subLevels.isEmpty()) return;
-        if (terrain != null) {
-            terrain.update(subLevels.values().stream()
-                    .filter(managed -> managed.subLevel.state() == SubLevelState.ACTIVE
-                            || managed.subLevel.state() == SubLevelState.SLEEPING)
-                    .map(managed -> managed.subLevel.worldBounds()).toList());
-        }
-        universe.step(duration, substeps);
+        if (!Double.isFinite(duration) || duration <= 0.0 || substeps < 1) return;
+        long serverTick = host.getGameTime();
+        var work = new ArrayList<StructureSimulationBudget.WorkItem>();
         for (var managed : subLevels.values()) {
-            if (managed.subLevel.state() != SubLevelState.ACTIVE) continue;
-            var motion = universe.motion(managed.subLevel.id()).orElse(null);
-            if (motion == null) continue;
-            managed.subLevel.setPose(structurePose(motion.pose()));
-            managed.subLevel.setState(motion.sleeping() ? SubLevelState.SLEEPING : SubLevelState.ACTIVE);
-            collision.update(managed.subLevel.id(), managed.localBoxes, managed.subLevel.pose());
-            remember(managed.subLevel);
+            var subLevel = managed.subLevel;
+            if (subLevel.state() != SubLevelState.ACTIVE && subLevel.state() != SubLevelState.SLEEPING) continue;
+            var reference = budgetReference(subLevel);
+            work.add(new StructureSimulationBudget.WorkItem(reference, budget.version(host, reference),
+                    subLevel.state() == SubLevelState.SLEEPING));
         }
+        StructureSimulationBudget.FramePlan plan = null;
+        if (!work.isEmpty()) {
+            plan = budget.plan(host, serverTick, work, BUDGET_LIMITS);
+        }
+        long terrainStart = System.nanoTime();
+        boolean terrainUpdated = false;
+        if (terrain != null) {
+            var terrainBounds = activeBounds(duration);
+            // A velocity/rotation command can wake a previously sleeping body before its pose
+            // changes. Its next sweep must already be covered on that first moving tick.
+            if (terrainNeedsUpdate || !terrainBounds.equals(sampledTerrainBounds) || terrain.needsUpdate()) {
+                terrain.update(terrainBounds);
+                sampledTerrainBounds = terrainBounds;
+                terrainUpdated = true;
+                terrainNeedsUpdate = false;
+            }
+        }
+        recordPhases(serverTick, work, StructureSimulationBudget.Phase.TERRAIN_SCAN,
+                System.nanoTime() - terrainStart, terrainUpdated ? 1 : 0);
+        long physicsStart = System.nanoTime();
+        boolean terrainReady = terrain == null || terrain.coverageComplete();
+        if (!terrainReady) {
+            terrainNeedsUpdate = true;
+            if (!terrainBlocked || serverTick >= nextTerrainWarning) {
+                AcademyCraft.LOGGER.warn("SubLevel physics deferred in {}: terrain coverage incomplete ({}), cache={}; retrying without advancing bodies",
+                        host.dimension().identifier(), terrain.coverageFailure(), terrain.diagnostics());
+                nextTerrainWarning = serverTick + 100;
+            }
+            terrainBlocked = true;
+        } else if (terrainBlocked) {
+            AcademyCraft.LOGGER.info("SubLevel terrain coverage restored in {}; physics resumed", host.dimension().identifier());
+            terrainBlocked = false;
+        }
+        universe.stepCovered(duration, substeps, terrainUpdated, terrainReady);
+        long physicsNanos = System.nanoTime() - physicsStart;
+        int simulated = 0;
+        for (var managed : subLevels.values()) {
+            var subLevel = managed.subLevel;
+            if (subLevel.state() != SubLevelState.ACTIVE && subLevel.state() != SubLevelState.SLEEPING) continue;
+            simulated++;
+            var motion = universe.motion(subLevel.id()).orElse(null);
+            if (motion == null) continue;
+            var pose = structurePose(motion.pose());
+            var nextState = motion.sleeping() ? SubLevelState.SLEEPING : SubLevelState.ACTIVE;
+            if (pose.equals(subLevel.pose())) {
+                if (subLevel.state() != nextState) {
+                    subLevel.setState(nextState);
+                    remember(subLevel);
+                }
+                continue;
+            }
+            var previous = subLevel.pose();
+            subLevel.setPose(pose);
+            subLevel.setState(nextState);
+            collision.update(subLevel.id(), managed.localBoxes, pose, previous,
+                    subLevel.geometryRevision(), subLevel.revision());
+            budget.invalidate(host, budgetReference(subLevel), StructureSimulationBudget.DirtyPart.POSE);
+            terrainNeedsUpdate = true;
+            remember(subLevel);
+            SubLevelTerrainBreaker.sweep(host, subLevel, previous, pose, managed.localBoxes);
+        }
+        if (simulated > 0) {
+            long perStructure = Math.max(0L, physicsNanos / simulated);
+            for (var managed : subLevels.values()) {
+                if (managed.subLevel.state() != SubLevelState.ACTIVE
+                        && managed.subLevel.state() != SubLevelState.SLEEPING) continue;
+                budget.record(host, budgetReference(managed.subLevel),
+                        StructureSimulationBudget.Phase.PHYSICS_STEP, perStructure, terrainReady ? universe.bodyCount() : 0);
+            }
+        }
+        if (plan != null && Boolean.getBoolean("academy.sublevel.budgetLog")) {
+            AcademyCraft.LOGGER.debug("SubLevel budget tick={} scheduled={} deferred={}",
+                    serverTick, plan.scheduled().size(), plan.deferred().size());
+        }
+    }
+
+    private void recordPhases(long serverTick, List<StructureSimulationBudget.WorkItem> work,
+                              StructureSimulationBudget.Phase phase, long elapsedNanos, long workUnits) {
+        if (work.isEmpty()) return;
+        long perStructure = Math.max(0L, elapsedNanos / work.size());
+        for (var item : work) {
+            budget.record(host, item.reference(), phase, perStructure, workUnits);
+        }
+    }
+
+    private List<AABB> activeBounds(double duration) {
+        var bounds = new ArrayList<AABB>();
+        for (var managed : subLevels.values()) {
+            var state = managed.subLevel.state();
+            if (state != SubLevelState.ACTIVE && state != SubLevelState.SLEEPING) continue;
+            var current = managed.subLevel.worldBounds();
+            var motion = universe.motion(managed.subLevel.id()).orElse(null);
+            var swept = motion == null ? current : sweptTerrainBounds(current,
+                    managed.subLevel.localBounds(), motion, duration);
+            if (swept.maxY > host.getMinY() && swept.minY < host.getMaxY()) bounds.add(swept);
+        }
+        // The empty space between unrelated structures is not a terrain interest area.
+        // A shared union lets distant/void bodies consume the whole section budget.
+        return List.copyOf(bounds);
+    }
+
+    static AABB sweptTerrainBounds(AABB current, AABB localBounds, SubLevelPhysicsUniverse.Motion motion, double duration) {
+        var linear = motion.linearVelocity();
+        var angular = motion.angularVelocity();
+        var center = motion.localCenterOfMass();
+        double x = Math.max(Math.abs(localBounds.minX - center.x()), Math.abs(localBounds.maxX - center.x()));
+        double y = Math.max(Math.abs(localBounds.minY - center.y()), Math.abs(localBounds.maxY - center.y()));
+        double z = Math.max(Math.abs(localBounds.minZ - center.z()), Math.abs(localBounds.maxZ - center.z()));
+        double radius = Math.sqrt(x * x + y * y + z * z);
+        double angle = Math.sqrt(angular.x() * angular.x() + angular.y() * angular.y() + angular.z() * angular.z()) * duration;
+        double rotationMargin = Math.min(2.0 * radius, angle * radius);
+        return current.expandTowards(linear.x() * duration,
+                linear.y() * duration - 4.905 * duration * duration, linear.z() * duration).inflate(rotationMargin);
+    }
+
+    public boolean terrainCoverageComplete() { return terrain == null || terrain.coverageComplete(); }
+
+    private StructureRef budgetReference(SubLevel subLevel) {
+        long generation = SubLevelActivationRegistry.find(subLevel.id())
+                .map(SubLevelActivationRegistry.Activation::generation).orElse(0L);
+        return SubLevelStructureRefs.of(subLevel, host.dimension().identifier(), generation);
     }
 
     /** Reattaches persisted ACTIVE/SLEEPING entries to their plot identities and one universe. */
     public int restore() {
+        return restore(Map.of());
+    }
+
+    /** Server startup reserves every host's saved plots before any dimension can allocate. */
+    int restore(Map<SubLevelId, PlotStorage.Lease> reservations) {
         if (manifest == null) return 0;
         int restored = 0;
         for (var entry : manifest.entries()) {
             if (subLevels.containsKey(entry.id()) || entry.state() == SubLevelState.REMOVED) continue;
-            var lease = storage.claim(entry.plot()).orElse(null);
+            var lease = reservations.get(entry.id());
+            if (lease == null) lease = storage.claim(entry.plot()).orElse(null);
+            if (lease != null && (!lease.plot().equals(entry.plot())
+                    || storage.lease(entry.plot()).filter(lease::equals).isEmpty())) {
+                throw new IllegalStateException("Saved SubLevel does not own its reserved plot");
+            }
             if (lease == null) {
                 AcademyCraft.LOGGER.warn("Could not reclaim SubLevel plot {} for {}", entry.plot(), entry.id());
                 continue;
             }
             try {
                 var geometry = PlotGeometry.capture(storage, entry.plot(), entry.localBounds());
+                if (entry.state() == SubLevelState.ALLOCATED || entry.state() == SubLevelState.LOADING) {
+                    var staged = new SubLevel(entry.id(), entry.plot(), entry.localBounds(), entry.pose());
+                    SubLevelActivationRegistry.activation(entry.id());
+                    staged.setState(entry.state());
+                    subLevels.put(entry.id(), new Managed(staged, lease, List.of(),
+                            org.academy.internal.common.structure.space.NativeStructureView.EMPTY));
+                    restored++;
+                    continue;
+                }
                 if (geometry.boxes().isEmpty()) throw new IllegalStateException("empty geometry");
                 boolean shouldSimulate = entry.state() == SubLevelState.ACTIVE
                         || entry.state() == SubLevelState.SLEEPING;
                 boolean active = shouldSimulate && addBody(entry.id(), physicsPose(entry.pose()), geometry.boxes());
                 var subLevel = new SubLevel(entry.id(), entry.plot(), entry.localBounds(), entry.pose());
+                SubLevelActivationRegistry.activation(entry.id());
                 subLevel.setState(active ? entry.state() : SubLevelState.INACTIVE);
                 var localBoxes = localBoxes(geometry.boxes());
                 var view = PlotView.capture(storage, entry.plot(), entry.localBounds());
                 subLevels.put(entry.id(), new Managed(subLevel, lease, localBoxes, view));
-                collision.update(entry.id(), localBoxes, entry.pose());
+                collision.update(entry.id(), localBoxes, entry.pose(), subLevel.geometryRevision(),
+                        subLevel.revision());
                 restored++;
             } catch (RuntimeException | Error failure) {
-                storage.release(lease);
+                // The manifest still owns the content. Releasing this reservation would let a
+                // later capture clear the only copy after a geometry/native restore failure.
                 AcademyCraft.LOGGER.error("Could not restore SubLevel {}", entry.id(), failure);
             }
         }
@@ -270,7 +575,16 @@ public final class SubLevelRuntime {
     /** Persists active entries and closes bodies/leases without deleting their manifest rows. */
     public void close() {
         for (var managed : List.copyOf(subLevels.values())) {
+            SubLevelActivationRegistry.find(managed.subLevel.id()).ifPresent(activation ->
+                    SubLevelEnhancementBootstrap.INTERACTIONS.cancelStructure(host.getServer(),
+                            SubLevelStructureRefs.of(managed.subLevel, host.dimension().identifier(),
+                                    activation.generation()), activation.runtimeId(),
+                            org.academy.api.common.structure.StructureInteractionController.CancelReason
+                                    .SERVER_STOPPED, SubLevelServer.MINING_FEEDBACK));
             remember(managed.subLevel);
+            managed.subLevel.setState(SubLevelState.INACTIVE);
+            SubLevelActivationRegistry.invalidate(managed.subLevel.id());
+            SubLevelMotionController.cancel(managed.subLevel.id());
             try { universe.remove(managed.subLevel.id()); }
             catch (RuntimeException failure) { AcademyCraft.LOGGER.warn("SubLevel body close failed", failure); }
             try { storage.release(managed.lease); }
@@ -279,13 +593,37 @@ public final class SubLevelRuntime {
         subLevels.clear();
         collision.clear();
         SubLevelCollisionRuntime.unregister(host, collision);
+        SubLevelTerrainBreaker.forgetHost(host);
+        budget.closeHost(host);
         if (terrain != null) terrain.close();
         persist();
+    }
+
+    /** Records one measured snapshot-encoding phase for every published body. */
+    public void recordSnapshot(long elapsedNanos, int structures) {
+        if (structures <= 0 || elapsedNanos < 0) return;
+        long perStructure = elapsedNanos / structures;
+        for (var managed : subLevels.values()) {
+            if (managed.subLevel.state() != SubLevelState.ACTIVE
+                    && managed.subLevel.state() != SubLevelState.SLEEPING
+                    && managed.subLevel.state() != SubLevelState.INACTIVE) continue;
+            budget.record(host, budgetReference(managed.subLevel),
+                    StructureSimulationBudget.Phase.SNAPSHOT_ENCODE, perStructure, structures);
+        }
     }
 
     public TerrainColliderCache.Diagnostics probeTerrain(AABB bounds) {
         if (terrain == null) throw new IllegalStateException("Terrain cache is not configured");
         return terrain.update(List.of(Objects.requireNonNull(bounds, "bounds")));
+    }
+
+    public void onHostBlockChanged(net.minecraft.core.BlockPos position) {
+        if (terrain != null) terrain.onBlockChanged(position);
+        terrainNeedsUpdate = true;
+        for (var managed : subLevels.values()) {
+            budget.invalidate(host, budgetReference(managed.subLevel),
+                    StructureSimulationBudget.DirtyPart.TERRAIN);
+        }
     }
 
     public TerrainColliderCache.Diagnostics terrainDiagnostics() {

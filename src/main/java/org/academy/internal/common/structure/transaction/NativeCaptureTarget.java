@@ -28,6 +28,10 @@ import java.util.Optional;
 
 /** Native backend adapter: owns every native runtime, handle and geometry call of a capture. */
 public final class NativeCaptureTarget implements CaptureTarget {
+    @Override
+    public String allocationFailureDetail() {
+        return "no_free_native_slot";
+    }
     public static final Identifier ID = NativeStructureRuntime.ID;
 
     private final MinecraftServer server;

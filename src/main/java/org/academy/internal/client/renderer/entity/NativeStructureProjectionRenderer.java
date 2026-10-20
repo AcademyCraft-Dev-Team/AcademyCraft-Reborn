@@ -69,7 +69,12 @@ public final class NativeStructureProjectionRenderer
         state.runtimeRevision = entity.viewState().revision();
         if (entity.level() instanceof ClientLevel level) {
             state.updateBlocks(entity.view(), level, pose, position -> entity.chestOpenness(position, partialTick));
-            state.updateCracks(NativeStructureMiningClient.cracks(entity), Minecraft.getInstance().getModelManager());
+            var cracks = new HashMap<>(NativeStructureMiningClient.cracks(entity));
+            var subLevelId = org.academy.internal.client.sublevel.SubLevelClientState.subLevelOf(entity);
+            if (subLevelId != null) {
+                cracks.putAll(org.academy.internal.client.sublevel.SubLevelMiningClient.cracks(subLevelId, entity.view()));
+            }
+            state.updateCracks(cracks, Minecraft.getInstance().getModelManager());
         }
     }
 

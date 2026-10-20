@@ -1,0 +1,88 @@
+import groovy.json.JsonSlurper
+
+// Structural verification of the five SubLevel repairs. This task compiles the code and checks
+// that the implementations and runtime wiring exist; it never reports in-game gameplay as PASS.
+def implRoot = 'src/main/java/org/academy/internal/common/sublevel/'
+def apiRoot = 'src/main/java/org/academy/api/common/'
+def implementations = [
+        'PERF': implRoot + 'SubLevelSimulationBudget.java',
+        'CONTACT': implRoot + 'SubLevelContactResolver.java',
+        'INTERACT': implRoot + 'SubLevelInteractionController.java',
+        'LIFT': implRoot + 'SubLevelKineticLiftProfile.java',
+        'SOFT': implRoot + 'SubLevelTerrainBreakPolicy.java',
+        'BOOT': implRoot + 'SubLevelEnhancementBootstrap.java'
+]
+def wiring = [
+        'PERF': implRoot + 'SubLevelRuntime.java',
+        'CONTACT': 'src/main/java/org/academy/mixin/common/MixinEntity.java',
+        'INTERACT': 'src/main/java/org/academy/internal/common/network/SubLevelMiningPacket.java',
+        'LIFT': 'src/main/java/org/academy/internal/common/ability/accelerator/movement/VectorStructureService.java',
+        'SOFT': implRoot + 'SubLevelTerrainBreaker.java',
+        'BOOT': 'src/main/java/org/academy/AcademyCraftRegister.java'
+]
+def implFiles = implementations.values().collect { file(it) }
+def wiringFiles = wiring.values().collect { file(it) }
+def spec = file('FILL-SPEC.md')
+def caseTemplate = file('validation/native_structure/sublevel_enhancement_cases.template.json')
+def tagFiles = ['structure_motion_breakable', 'structure_motion_protected'].collect {
+    file("src/main/resources/data/academy/tags/block/${it}.json")
+}
+def report = layout.buildDirectory.file('reports/sublevel-scaffold/summary.txt')
+
+def verifyScaffold = tasks.register('verifySubLevelScaffold') {
+    group = 'verification'
+    description = 'Checks the five SubLevel implementation entry points and runtime wiring; gameplay remains UNVERIFIED'
+    dependsOn tasks.named('compileJava'), tasks.named('processResources')
+    inputs.files(implFiles, wiringFiles, spec, caseTemplate, tagFiles)
+    outputs.file(report)
+    doLast {
+        (implFiles + wiringFiles + [spec, caseTemplate] + tagFiles).each {
+            if (!it.isFile()) throw new GradleException("Missing SubLevel handoff file: ${it}")
+        }
+        implementations.each { id, path ->
+            def text = file(path).getText('UTF-8')
+            if (text.contains('[TODO: Agent B]') || text.contains('UnsupportedOperationException')) {
+                throw new GradleException("SubLevel ${id} still contains scaffold placeholders: ${path}")
+            }
+        }
+        wiring.each { id, path ->
+            def text = file(path).getText('UTF-8')
+            def expected
+            if (id == 'PERF') expected = 'SubLevelEnhancementBootstrap.SIMULATION'
+            else if (id == 'CONTACT') expected = 'SubLevelContactResolver.resolveMovement'
+            else if (id == 'INTERACT') expected = 'SubLevelEnhancementBootstrap.INTERACTIONS'
+            else if (id == 'LIFT') expected = 'KINETIC_LIFT'
+            else if (id == 'SOFT') expected = 'SubLevelEnhancementBootstrap.TERRAIN_BREAKING'
+            else if (id == 'BOOT') expected = 'SubLevelEnhancementBootstrap.register'
+            else throw new GradleException("Unknown feature ${id}")
+            if (!text.contains(expected)) {
+                throw new GradleException("SubLevel ${id} is not wired into ${path} (expected ${expected})")
+            }
+        }
+        def handoff = spec.getText('UTF-8')
+        ['PERF', 'CONTACT', 'INTERACT', 'LIFT', 'SOFT', 'BOOT'].each { prefix ->
+            if (!handoff.contains(prefix + '-01')) {
+                throw new GradleException("FILL-SPEC.md is missing the ${prefix} contract")
+            }
+        }
+        tagFiles.each {
+            def tag = new JsonSlurper().parse(it, 'UTF-8')
+            if (tag.replace != false || !(tag.values instanceof List) || tag.values.isEmpty()) {
+                throw new GradleException("Invalid or empty motion tag: ${it}")
+            }
+        }
+        def cases = new JsonSlurper().parse(caseTemplate, 'UTF-8')
+        if (cases.status != 'UNVERIFIED'
+                || cases.cases.collect { it.id }.toSet() != ['PERF', 'CONTACT', 'INTERACT', 'LIFT', 'SOFT'].toSet()) {
+            throw new GradleException('The in-game acceptance template must retain all five groups as UNVERIFIED')
+        }
+        def output = report.get().asFile
+        output.parentFile.mkdirs()
+        output.setText("IMPLEMENTATION_CHECKED\nGameplay: UNVERIFIED\n" +
+                "Features: ${implementations.keySet().join(', ')}\n" +
+                "Tags: ${tagFiles*.name.join(', ')}\n", 'UTF-8')
+        logger.lifecycle('SubLevel implementations and wiring checked; in-game gameplay acceptance remains UNVERIFIED.')
+    }
+}
+
+tasks.named('check') { dependsOn verifyScaffold }

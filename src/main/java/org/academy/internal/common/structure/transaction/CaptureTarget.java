@@ -4,12 +4,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jspecify.annotations.Nullable;
 import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Server-thread executor boundary for one capture target backend. A transaction selects one
@@ -24,6 +27,23 @@ public interface CaptureTarget {
      * ignores it lets the coordinator fill the cell during the copy stage instead.
      */
     Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset, BlockState seedState);
+
+    /** Full selection bounds for backends whose storage must be sized before the first write. */
+    default Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset,
+                                            BlockState seedState, List<BlockPos> positions, UUID transactionId) {
+        return allocate(host, origin, seedOffset, seedState);
+    }
+
+    /** Stable backend-specific reason when allocation cannot reserve a target. */
+    default String allocationFailureDetail() {
+        return "capture_capacity_unavailable";
+    }
+
+    /** Admission follows the target's storage capabilities, after the caller's permission gate. */
+    default @Nullable String rejectionDetail(ServerLevel host, BlockPos position, BlockState state,
+                                              @Nullable BlockEntity blockEntity) {
+        return NativeCaptureWhitelist.rejectionDetail(host, position, state, blockEntity);
+    }
 
     /**
      * Exact mass the given source cells will have as a target body when this backend can predict

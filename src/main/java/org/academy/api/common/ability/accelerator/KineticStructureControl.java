@@ -1,5 +1,6 @@
 package org.academy.api.common.ability.accelerator;
 
+import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructurePhysicsControl;
 import org.academy.api.common.structure.StructureTraction;
 
@@ -9,6 +10,8 @@ public final class KineticStructureControl {
     public static final int BASE_MASS_BUDGET = 128;
     /** The established light-body response reference used by the shared aeromanip control. */
     private static final double REFERENCE_MASS = 2.25;
+    /** Solver gravity used for the explicit hover feed-forward. */
+    public static final double GRAVITY = 9.81;
 
     private KineticStructureControl() {
     }
@@ -33,6 +36,19 @@ public final class KineticStructureControl {
                 Math.min(StructurePhysicsControl.MAX_GAIN, responseScale * (milestone >= 2 ? 144 : 120)),
                 Math.min(StructurePhysicsControl.MAX_GAIN, responseScale * 36),
                 Math.min(2000 << level, 1000 * responseScale), 20);
+    }
+
+    /**
+     * Raises an anchor target by the exact static sag of the PD spring under gravity, so the
+     * equilibrium center of mass reaches the requested height. Acceptance tolerances stay
+     * separate from this compensation and are never widened to hide a short lift.
+     */
+    public static Vec3 gravityCompensatedTarget(Vec3 target, double mass, double stiffness) {
+        requireMass(mass);
+        if (!Double.isFinite(stiffness) || stiffness <= 0.0) {
+            throw new IllegalArgumentException("Hover stiffness must be finite and positive");
+        }
+        return target.add(0.0, mass * GRAVITY / stiffness, 0.0);
     }
 
     private static void requireMass(double value) {

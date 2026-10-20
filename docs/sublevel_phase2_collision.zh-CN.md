@@ -3,6 +3,8 @@
 日期：2026-10-19  
 状态：服务端/客户端方块碰撞和地形碰撞链路已跑通；旋转精确化、实体承载和复杂 AI 寻路仍待完成。
 
+> **2026-10-20 修订**：实体碰撞已改为“局部盒 + 姿态”的真实 OBB 窄相（SubLevelOrientedCollision / SubLevelContactResolver），宿主 Level 不再追加结构 AABB，客户端按 tick 插值碰撞姿态；只有原版 AI 寻路仍消费粗世界盒提示。下文 2026-10-19 的记录描述的是旧的 world-AABB 链路，保留作历史证据。实机碰撞手感与承载仍 **UNVERIFIED**，见 [FILL-SPEC.md](../FILL-SPEC.md)。
+
 ## 1. 实现
 
 | 组件 | 作用 |

@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -13,6 +14,7 @@ import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.physics.PhysicsQuaternion;
 import org.academy.internal.common.structure.physics.PhysicsVector;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
+import org.academy.internal.common.structure.transaction.StructureTransactionJournal;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -27,6 +29,8 @@ import java.util.Objects;
 public final class SubLevelCaptureService {
     public static final int MAX_BLOCKS = 16_384;
     public static final int MAX_SPAN = 24;
+    public static final int TRANSACTION_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE
+            | Block.UPDATE_SKIP_ON_PLACE | Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS | Block.UPDATE_SUPPRESS_DROPS;
 
     private SubLevelCaptureService() {
     }
@@ -42,7 +46,7 @@ public final class SubLevelCaptureService {
         Objects.requireNonNull(positions, "positions");
         Objects.requireNonNull(permission, "permission");
         if (!host.getServer().isSameThread()) throw new IllegalStateException("Capture requires the server thread");
-        if (host.getServer() != runtime.host().getServer()) throw new IllegalArgumentException("Host/runtime server mismatch");
+        if (host != runtime.host()) throw new IllegalArgumentException("Host/runtime dimension mismatch");
         if (host == runtime.storage().level() || NativeStructureDimensions.isStorageLevel(host.dimension())) {
             throw new IllegalArgumentException("Cannot capture from a storage/plot dimension");
         }
@@ -65,6 +69,9 @@ public final class SubLevelCaptureService {
             throw new IllegalArgumentException("Capture span exceeds " + MAX_SPAN);
         }
         for (var position : normalized) {
+            if (!host.hasChunkAt(position) || !host.isInWorldBounds(position)) {
+                throw new IllegalArgumentException("source_unavailable:" + position);
+            }
             if (!permission.test(host, position)) throw new IllegalArgumentException("permission_denied:" + position);
         }
         var lease = runtime.storage().allocate().orElse(null);
@@ -72,6 +79,8 @@ public final class SubLevelCaptureService {
         var copied = new ArrayList<Copied>(normalized.size());
         var removed = new ArrayList<Copied>(copied.size());
         SubLevelId id = null;
+        StructureTransactionJournal journal = null;
+        StructureTransactionJournal.Record journalRecord = null;
         try {
             for (var position : normalized) {
                 var state = host.getBlockState(position);
@@ -79,7 +88,10 @@ public final class SubLevelCaptureService {
                 var local = new BlockPos(position.getX() - minX, position.getY() - minY, position.getZ() - minZ);
                 var sourceEntity = host.getBlockEntity(position);
                 var tag = sourceEntity == null ? null : sourceEntity.saveWithFullMetadata(host.registryAccess());
-                var placed = runtime.storage().setBlock(lease.plot(), local, state, 3);
+                var placed = runtime.storage().setBlock(lease.plot(), local, state, TRANSACTION_FLAGS);
+                if (!placed && !runtime.storage().blockState(lease.plot(), local).equals(state)) {
+                    throw new IllegalStateException("Could not copy captured source block " + position);
+                }
                 AcademyCraft.LOGGER.debug("SubLevel capture block copy at {} source={} placed={} plot={}",
                         local, state, placed, runtime.storage().blockState(lease.plot(), local));
                 if (tag != null) {
@@ -101,30 +113,61 @@ public final class SubLevelCaptureService {
             var geometry = PlotGeometry.capture(runtime.storage(), lease.plot(), bounds);
             if (geometry.boxes().isEmpty()) throw new IllegalArgumentException("Capture has no collision geometry");
             id = SubLevelId.random();
+            journal = SubLevelStaticizeJournal.journal(host.getServer()).orElse(null);
+            if (journal == null) throw new IllegalStateException("Capture journal unavailable");
+            var sources = copied.stream().map(entry -> new SubLevelCaptureJournal.Source(
+                    entry.position(), entry.state(), entry.tag())).toList();
+            journalRecord = SubLevelCaptureJournal.begin(journal, host,
+                    new BlockPos(minX, minY, minZ), id, sources);
             var bodyPose = new PhysicsPose(new PhysicsVector(minX, minY, minZ), PhysicsQuaternion.IDENTITY);
             runtime.createInLease(id, lease, bounds, bodyPose, geometry.boxes());
             for (var entry : copied) {
-                if (!host.setBlock(entry.position(), Blocks.AIR.defaultBlockState(), 3)) {
+                if (!host.setBlock(entry.position(), Blocks.AIR.defaultBlockState(), TRANSACTION_FLAGS)) {
                     throw new IllegalStateException("Could not remove captured source block " + entry.position());
                 }
                 removed.add(entry);
             }
             runtime.persist();
+            SubLevelCaptureJournal.commit(journal, journalRecord);
+            SubLevelStaticizeJournal.finish(journal, journalRecord.transactionId());
             var blockEntities = (int) copied.stream().filter(entry -> entry.tag() != null).count();
             return new Result(id, lease.plot(), copied.size(), geometry.boxes().size(), blockEntities,
                     new Vec3(minX, minY, minZ));
-        } catch (RuntimeException | Error failure) {
-            restore(host, removed);
-            if (id != null && runtime.get(id).isPresent()) runtime.remove(id);
-            else runtime.storage().release(lease);
-            throw failure;
+        } catch (RuntimeException | Error | java.io.IOException failure) {
+            // A failed source restore leaves the plot and journal as the remaining recovery copy.
+            // Completed rollbacks must retire their journal before subsequent source edits can
+            // accidentally be overwritten by startup recovery.
+            boolean restored = restore(host, removed);
+            if (restored) {
+                try {
+                    if (id != null && runtime.get(id).isPresent()) runtime.remove(id);
+                    else runtime.storage().release(lease);
+                    if (journalRecord != null) {
+                        runtime.persist();
+                        journal.delete(journalRecord.transactionId());
+                    }
+                } catch (RuntimeException | java.io.IOException cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                    AcademyCraft.LOGGER.error("SubLevel capture rollback requires journal recovery for {}", id, cleanupFailure);
+                }
+            } else {
+                AcademyCraft.LOGGER.error("SubLevel capture source rollback incomplete; retaining plot {} and journal for {}",
+                        lease.plot(), id);
+            }
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error error) throw error;
+            throw new IllegalStateException("Capture journal failed", failure);
         }
     }
 
-    private static void restore(ServerLevel host, List<Copied> entries) {
+    private static boolean restore(ServerLevel host, List<Copied> entries) {
+        boolean complete = true;
         for (var entry : entries) {
             try {
-                host.setBlock(entry.position(), entry.state(), 3);
+                if (!host.setBlock(entry.position(), entry.state(), TRANSACTION_FLAGS)
+                        && host.getBlockState(entry.position()) != entry.state()) {
+                    throw new IllegalStateException("Could not restore captured block state");
+                }
                 if (entry.tag() != null) {
                     var restored = BlockEntity.loadStatic(entry.position(), entry.state(), entry.tag(),
                             host.registryAccess());
@@ -133,9 +176,11 @@ public final class SubLevelCaptureService {
                     restored.setChanged();
                 }
             } catch (RuntimeException failure) {
+                complete = false;
                 AcademyCraft.LOGGER.error("Could not restore captured block {}", entry.position(), failure);
             }
         }
+        return complete;
     }
 
     public record Result(SubLevelId id, PlotPos plot, int blocks, int boxes, int blockEntities, Vec3 origin) {

@@ -115,4 +115,32 @@ final class SubLevelPhysicsUniverseTest {
             assertTrue(universe.motion(id).orElseThrow().mass() > 0);
         }
     }
+
+    @Test
+    void velocityAndPoseCommandsMoveEveryWeldedBodyWithoutLosingSpeed() {
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var universe = new SubLevelPhysicsUniverse(world);
+            var boxes = new ArrayList<PhysicsBox>(300);
+            for (int index = 0; index < 300; index++) {
+                boxes.add(new PhysicsBox(new PhysicsVector((index % 10) + 0.5, (index / 10) + 0.5, 0.5),
+                        PhysicsQuaternion.IDENTITY, new PhysicsVector(0.5, 0.5, 0.5)));
+            }
+            var id = SubLevelId.random();
+            universe.add(id, new PhysicsPose(PhysicsVector.ZERO, PhysicsQuaternion.IDENTITY), boxes);
+            assertTrue(universe.setVelocity(id, new PhysicsVector(6, 0, 0), PhysicsVector.ZERO));
+            assertEquals(6, universe.motion(id).orElseThrow().linearVelocity().x(), 1.0E-5);
+            for (int step = 0; step < 20; step++) universe.step(0.05, 4);
+            assertEquals(6, universe.motion(id).orElseThrow().pose().position().x(), 0.05);
+            var rotated = new PhysicsPose(new PhysicsVector(10, 20, 30),
+                    new PhysicsQuaternion(0, Math.sin(Math.PI / 4), 0, Math.cos(Math.PI / 4)));
+            assertTrue(universe.setPose(id, rotated));
+            assertEquals(2, universe.bodyCount());
+            assertEquals(6, universe.motion(id).orElseThrow().linearVelocity().x(), 1.0E-5);
+            universe.step(0.05, 4);
+            var motion = universe.motion(id).orElseThrow();
+            assertEquals(10.3, motion.pose().position().x(), 0.02);
+            assertEquals(20, motion.pose().position().y(), 0.02);
+            assertEquals(30, motion.pose().position().z(), 0.02);
+        }
+    }
 }

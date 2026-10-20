@@ -696,6 +696,18 @@ public final class PacketTypes {
             SUBLEVEL_INTERACT = PACKET_TYPES.register("sublevel_interact",
             () -> new PacketType<>(SubLevelInteractPacket.class, SubLevelInteractPacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SubLevelPosePacket>>
+            SUBLEVEL_POSE = PACKET_TYPES.register("sublevel_pose",
+            () -> new PacketType<>(SubLevelPosePacket.class, SubLevelPosePacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SubLevelMiningPacket>>
+            SUBLEVEL_MINING = PACKET_TYPES.register("sublevel_mining",
+            () -> new PacketType<>(SubLevelMiningPacket.class, SubLevelMiningPacket.CODEC));
+
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SubLevelMiningProgressPacket>>
+            SUBLEVEL_MINING_PROGRESS = PACKET_TYPES.register("sublevel_mining_progress",
+            () -> new PacketType<>(SubLevelMiningProgressPacket.class, SubLevelMiningProgressPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, MagneticHookActionPacket>>
             MAGNETIC_HOOK_ACTION = PACKET_TYPES.register("magnetic_hook_action",
             () -> new PacketType<>(MagneticHookActionPacket.class, MagneticHookActionPacket.CODEC));

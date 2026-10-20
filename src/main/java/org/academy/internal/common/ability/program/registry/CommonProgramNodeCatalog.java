@@ -475,6 +475,18 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.WORLD_POSITION
         )));
 
+        put(result, CommonProgramNodeIds.STRUCTURE_POSE, unitType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("axis", ProgramValueTypes.DIRECTION),
+                        ProgramPortDefinition.requiredInput("angle_radians", ProgramValueTypes.FLOAT)),
+                List.of(ProgramPortDefinition.output("pose", ProgramValueTypes.STRUCTURE_POSE))
+        )));
+        put(result, CommonProgramNodeIds.STRUCTURE_ANCHOR, unitType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                        ProgramPortDefinition.requiredInput("local_x", ProgramValueTypes.INTEGER),
+                        ProgramPortDefinition.requiredInput("local_y", ProgramValueTypes.INTEGER),
+                        ProgramPortDefinition.requiredInput("local_z", ProgramValueTypes.INTEGER)),
+                List.of(ProgramPortDefinition.output("anchor", ProgramValueTypes.STRUCTURE_ANCHOR))
+        )));
         put(result, CommonProgramNodeIds.DIRECTION_CONSTANT, type(
                 DirectionConfiguration.CODEC,
                 _ -> outputSchema("direction", ProgramValueTypes.DIRECTION),
@@ -1051,6 +1063,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.ENTITY_REFERENCE,
                 ProgramValueTypes.LIVING_ENTITY_REFERENCE,
                 ProgramValueTypes.STRUCTURE_REFERENCE,
+                ProgramValueTypes.STRUCTURE_ANCHOR,
+                ProgramValueTypes.STRUCTURE_POSE,
                 ProgramValueTypes.DIRECTION_SET,
                 ProgramValueTypes.WORLD_POSITION_SET,
                 ProgramValueTypes.BLOCK_POSITION_SET,

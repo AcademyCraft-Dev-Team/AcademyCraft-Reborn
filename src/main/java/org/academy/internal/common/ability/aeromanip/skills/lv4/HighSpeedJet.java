@@ -1,5 +1,12 @@
 package org.academy.internal.common.ability.aeromanip.skills.lv4;
 
+import org.academy.api.common.structure.StructureHit;
+import org.academy.api.common.structure.StructureQueries;
+import org.academy.api.server.ability.WorldBlockTargets;
+import org.academy.internal.client.sublevel.SubLevelClientState;
+import org.academy.internal.client.structure.NativeStructureRaycast;
+import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
+
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -353,6 +360,15 @@ public final class HighSpeedJet extends Skill {
                     }
                     return;
                 }
+                if (target instanceof StructurePlacement mounted && mounted.hit() != null) {
+                    var nozzles = ownedNozzles(level, player).stream()
+                            .filter(nozzle -> nozzle.isAttachedTo(mounted.hit().block().structure())).toList();
+                    if (!activateNozzles(player, skill, nozzles)) {
+                        player.sendOverlayMessage(Component.translatable(
+                                "message.academy.high_speed_jet.structure_launch_rejected"));
+                    }
+                    return;
+                }
                 if (!(target instanceof BlockPlacement block)) {
                     player.sendOverlayMessage(Component.translatable(
                             "message.academy.high_speed_jet.structure_target_required"));
@@ -519,6 +535,10 @@ public final class HighSpeedJet extends Skill {
             if (target instanceof BlockPlacement block
                     && !level.getBlockState(block.pos())
                     .isFaceSturdy(level, block.pos(), block.face())) return null;
+            if (target instanceof StructurePlacement mounted && (mounted.hit() == null
+                    || !level.mayInteract(player, BlockPos.containing(mounted.hit().worldPoint()))
+                    || !HighSpeedJetStructureService.resolvesSupportCell(level,
+                            mounted.hit().block().structure(), mounted.hit().block().localPosition()))) return null;
             var placed = new HighSpeedJetNozzle[1];
             var skill = Skills.HIGH_SPEED_JET.get();
             var executed = skill.executeActiveWithResource(
@@ -530,6 +550,10 @@ public final class HighSpeedJet extends Skill {
                                 EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), level);
                         if (target instanceof BlockPlacement block) {
                             nozzle.attach(player.getUUID(), block.pos(), block.face());
+                        } else if (target instanceof StructurePlacement mounted && mounted.hit() != null) {
+                            var hit = mounted.hit();
+                            nozzle.attachToStructure(player.getUUID(), hit.block().structure(),
+                                    hit.block().localPosition(), hit.localFace());
                         } else if (target instanceof EntityPlacement entity) {
                             var direction = suppliedDirection == null
                                     ? towardPlayerDirection(
@@ -568,6 +592,11 @@ public final class HighSpeedJet extends Skill {
         private static boolean matches(HighSpeedJetNozzle nozzle, PlacementTarget target) {
             if (target instanceof BlockPlacement block) {
                 return nozzle.isAttachedTo(block.pos(), block.face());
+            }
+            if (target instanceof StructurePlacement mounted && mounted.hit() != null) {
+                return nozzle.structureMount().filter(mount -> mount.reference().equals(mounted.hit().block().structure())
+                        && mount.offset().equals(mounted.hit().block().localPosition())
+                        && mount.face() == mounted.hit().localFace()).isPresent();
             }
             return target instanceof EntityPlacement entity
                     && nozzle.isAttachedTo(entity.entity());
@@ -652,21 +681,46 @@ public final class HighSpeedJet extends Skill {
         var blockHit = player.level().clip(new ClipContext(
                 eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         var rayEnd = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
+        StructurePlacement structure = null;
+        if (player.level() instanceof ServerLevel serverLevel) {
+            var worldHit = WorldBlockTargets.clip(player, eye, end, ClipContext.Block.COLLIDER);
+            rayEnd = worldHit.position();
+            if (worldHit.source() == WorldBlockTargets.Source.STRUCTURE) {
+                var hit = StructureQueries.raycast(serverLevel, eye, end, ClipContext.Block.COLLIDER).orElse(null);
+                if (hit != null) structure = new StructurePlacement(hit);
+            }
+        } else if (player.level() instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel) {
+            var hit = SubLevelClientState.raycast(clientLevel, eye, end);
+            if (hit != null && eye.distanceToSqr(hit.worldPoint()) < eye.distanceToSqr(rayEnd)) {
+                rayEnd = hit.worldPoint();
+                structure = new StructurePlacement(null);
+            }
+            var nativeHit = NativeStructureRaycast.pick(player, PLACEMENT_RANGE, partialTick).orElse(null);
+            if (nativeHit != null && nativeHit.distanceSquared() < eye.distanceToSqr(rayEnd)) {
+                rayEnd = nativeHit.worldLocation();
+                structure = new StructurePlacement(nativeHit.structureHit());
+            }
+        }
         var entityHit = ProjectileUtil.getEntityHitResult(
                 player.level(), player, eye, rayEnd,
                 new AABB(eye, rayEnd).inflate(0.6),
                 entity -> entity != player && entity.isAlive() && entity.isPickable()
                         && !PvpSetting.shouldPrevent(player, entity)
+                        && !(entity instanceof NativeStructureProjectionEntity)
                         && !(entity instanceof HighSpeedJetNozzle),
                 0.2f);
         if (entityHit != null) return new EntityPlacement(entityHit.getEntity());
+        if (structure != null) return structure;
         if (blockHit instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
             return new BlockPlacement(hit.getBlockPos().immutable(), hit.getDirection());
         }
         return null;
     }
 
-    private sealed interface PlacementTarget permits BlockPlacement, EntityPlacement {
+    private sealed interface PlacementTarget permits BlockPlacement, EntityPlacement, StructurePlacement {
+    }
+
+    private record StructurePlacement(@org.jspecify.annotations.Nullable StructureHit hit) implements PlacementTarget {
     }
 
     private record BlockPlacement(BlockPos pos, Direction face) implements PlacementTarget {

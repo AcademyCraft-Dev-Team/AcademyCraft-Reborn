@@ -97,27 +97,39 @@ public final class SubLevelInteractPacket extends Packet<ServerGamePacketListene
             if (player == null || player.isSpectator()) return;
             var server = player.level().getServer();
             if (server == null || !server.isSameThread()) return;
-            var runtime = SubLevelServer.runtime(server).orElse(null);
+            var runtime = SubLevelServer.runtime(player.level()).orElse(null);
             if (runtime == null) return;
             var subLevel = runtime.get(packet.id()).orElse(null);
             if (subLevel == null) return;
-            var worldCenter = subLevel.pose().localToWorldPoint(Vec3.atCenterOf(packet.local()));
-            if (player.distanceToSqr(worldCenter) > 64.0) return;
-            boolean valid = packet.action() == Action.USE
-                    ? SubLevelInteractionService.validateUse(server, packet.id(), packet.local(),
-                    packet.point(), player)
-                    || SubLevelInteractionService.validateProximity(server, packet.id(), packet.local(),
-                    packet.point(), player)
-                    : SubLevelInteractionService.validateRay(server, packet.id(), packet.local(),
-                    packet.point(), player);
-            if (!valid) return;
-            switch (packet.action()) {
-                case BREAK -> SubLevelInteractionService.breakBlock(server, packet.id(), packet.local(), player);
-                case USE -> SubLevelInteractionService.useBlock(server, packet.id(), packet.local(),
-                        packet.face(), packet.point(), player, packet.hand());
-                case PLACE -> SubLevelInteractionService.placeBlock(server, packet.id(), packet.local(),
-                        packet.face(), packet.point(), player, packet.hand());
+            var observation = observation(player, subLevel, packet);
+            if (observation == null) return;
+            var controller = org.academy.internal.common.sublevel.SubLevelEnhancementBootstrap.INTERACTIONS;
+            if (packet.action() == Action.BREAK) {
+                // Legacy compatibility: one-shot BREAK starts or renews a server-owned session
+                // and never performs an instant plot destruction.
+                var receipt = controller.continueLegacy(player, observation);
+                SubLevelServer.publishMining(player, player.getUUID(), receipt);
+                return;
             }
+            var request = new org.academy.api.common.structure.StructureInteractionController.ActionRequest(
+                    controller.nextRequestId(), observation, packet.hand());
+            if (packet.action() == Action.PLACE) controller.place(player, request);
+            else controller.use(player, request);
+        }
+
+        private static org.academy.api.common.structure.@org.jspecify.annotations.Nullable StructureHit observation(
+                ServerPlayer player, org.academy.internal.common.sublevel.SubLevel subLevel,
+                SubLevelInteractPacket packet) {
+            var activation = org.academy.internal.common.sublevel.SubLevelActivationRegistry
+                    .find(packet.id()).orElse(null);
+            if (activation == null) return null;
+            var reference = org.academy.internal.common.sublevel.SubLevelStructureRefs.of(subLevel,
+                    player.level().dimension().identifier(), activation.generation());
+            var localPoint = subLevel.pose().worldToLocalPoint(packet.point());
+            return new org.academy.api.common.structure.StructureHit(
+                    new org.academy.api.common.structure.SpaceBlockRef(reference, packet.local()),
+                    activation.runtimeId(), subLevel.geometryRevision(), subLevel.pose(), packet.face(),
+                    localPoint, packet.point(), false);
         }
     }
 }

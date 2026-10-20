@@ -55,4 +55,11 @@ public final class StructureQueries {
                                                   Vec3 trustedWorldTo, StructureHit proposed) {
         return StructureBackendRouter.validate(host, trustedWorldFrom, trustedWorldTo, proposed);
     }
+
+    /** Rechecks the same shape policy used to produce the hit, including host occlusion. */
+    public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
+                                                  Vec3 trustedWorldTo, StructureHit proposed,
+                                                  ClipContext.Block shape) {
+        return StructureBackendRouter.validate(host, trustedWorldFrom, trustedWorldTo, proposed, shape);
+    }
 }

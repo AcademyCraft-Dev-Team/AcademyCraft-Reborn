@@ -2,12 +2,16 @@ package org.academy.internal.common.sublevel;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.academy.AcademyCraft;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
 import org.academy.internal.common.structure.space.NativeStructureTickets;
+import org.academy.mixin.common.PersistentEntitySectionManagerAccessor;
+import org.academy.mixin.common.ServerLevelEntityManagerAccessor;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -67,7 +71,36 @@ public final class PlotStorage {
     /** Allocates a plot and force-loads every chunk; a partial failure releases everything. */
     public Optional<Lease> allocate() {
         var plot = allocator.allocate();
-        return plot.isEmpty() ? Optional.empty() : open(plot.get());
+        if (plot.isEmpty()) return Optional.empty();
+        var lease = open(plot.get());
+        if (lease.isEmpty()) return Optional.empty();
+        try {
+            clearUnusedContent(lease.get());
+            return lease;
+        } catch (RuntimeException | Error failure) {
+            release(lease.get());
+            throw failure;
+        }
+    }
+
+    /** Only a fresh allocation is cleared; claiming persisted content must retain its blocks. */
+    private void clearUnusedContent(Lease lease) {
+        for (var chunkPos : lease.chunks()) {
+            var chunk = level.getChunk(chunkPos.x(), chunkPos.z());
+            var sections = chunk.getSections();
+            for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+                var section = sections[sectionIndex];
+                if (section.hasOnlyAir()) continue;
+                int minY = level.getMinY() + sectionIndex * 16;
+                for (int x = 0; x < 16; x++) for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) {
+                    if (section.getBlockState(x, y, z).isAir()) continue;
+                    var position = new BlockPos(chunkPos.x() * 16 + x, minY + y, chunkPos.z() * 16 + z);
+                    if (!level.setBlock(position, Blocks.AIR.defaultBlockState(), SubLevelCaptureService.TRANSACTION_FLAGS)) {
+                        throw new IllegalStateException("Could not clear unused plot cell " + position);
+                    }
+                }
+            }
+        }
     }
 
     /** Reclaims a persisted plot identity without moving it; used by restart recovery. */
@@ -116,6 +149,41 @@ public final class PlotStorage {
 
     public Optional<Lease> lease(PlotPos plot) {
         return Optional.ofNullable(leases.get(plot));
+    }
+
+    /**
+     * Snapshots every entity owned by the leased chunks, including hidden sections. A synchronous
+     * block chunk load does not make its entities accessible to the ordinary spatial queries.
+     * Drain pending entity storage first so staticization cannot release a plot before disk-loaded
+     * entities arrive. EntityStorage.flush also runs its main-thread deserialization queue.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Entity> entities(PlotPos plot) {
+        if (!level.getServer().isSameThread()) throw new IllegalStateException("Plot entities require the server thread");
+        var lease = lease(plot).orElseThrow(() -> new IllegalStateException("Plot is not leased: " + plot));
+        var manager = ((ServerLevelEntityManagerAccessor) level).academy$getEntityManager();
+        var access = (PersistentEntitySectionManagerAccessor<Entity>) (Object) manager;
+        boolean pending = false;
+        for (var chunk : lease.chunks()) {
+            if (!manager.areEntitiesLoaded(chunk.pack())) {
+                access.academy$ensureChunkQueuedForLoad(chunk.pack());
+                pending = true;
+            }
+        }
+        if (pending) {
+            access.academy$getPermanentStorage().flush(false);
+            manager.processPendingLoads();
+        }
+        var result = new ArrayList<Entity>();
+        for (var chunk : lease.chunks()) {
+            if (!manager.areEntitiesLoaded(chunk.pack())) {
+                throw new IllegalStateException("Plot entities are not loaded at " + chunk);
+            }
+            access.academy$getSectionStorage().getExistingSectionsInChunk(chunk.pack())
+                    .flatMap(section -> section.getEntities())
+                    .filter(entity -> !entity.isRemoved()).forEach(result::add);
+        }
+        return List.copyOf(result);
     }
 
     /** Releases every outstanding plot; called only when the owning runtime stops. */

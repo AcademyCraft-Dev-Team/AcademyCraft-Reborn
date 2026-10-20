@@ -7,8 +7,10 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -42,6 +44,14 @@ public final class NativeStructurePhysicsGeometry {
             DispenserBlock.class, DropperBlock.class, HopperBlock.class, LeverBlock.class,
             LeavesBlock.class, TintedParticleLeavesBlock.class, UntintedParticleLeavesBlock.class,
             MangroveLeavesBlock.class);
+    // These exact vanilla plants inherit the ordinary noCollision shape. Terrain may ignore
+    // them, but captured structure contents still go through the stricter supported() gate.
+    // Do not generalize this to every empty CollisionContext.empty() result: powder snow and
+    // other actor-conditioned geometry can be solid for the interacting entity.
+    private static final Set<Class<?>> EMPTY_TERRAIN_PLANTS = Set.of(TallGrassBlock.class,
+            DoublePlantBlock.class, FlowerBlock.class, TallFlowerBlock.class, SaplingBlock.class, MushroomBlock.class,
+            DryVegetationBlock.class, ShortDryGrassBlock.class, TallDryGrassBlock.class,
+            BushBlock.class, FlowerBedBlock.class, LeafLitterBlock.class);
 
     private NativeStructurePhysicsGeometry() {}
 
@@ -168,6 +178,8 @@ public final class NativeStructurePhysicsGeometry {
      * Includes a one-cell halo for shapes such as fences extending outside their own cell.
      * Boxes and bounds are relative to origin; each batch can become one fixed native body.
      * maxBoxes is the caller's remaining world budget, after reserving all dynamic bodies.
+     * Host water/lava contribute no solid geometry when their collision shape is empty; this
+     * does not simulate buoyancy. Audited waterlogged blocks retain their actual solid shape.
      */
     public static Snapshot captureTerrain(ServerLevel host, AABB worldBounds, PhysicsVector origin, int maxBoxes) {
         var scan = terrainScan(host, worldBounds, origin, maxBoxes);
@@ -260,7 +272,13 @@ public final class NativeStructurePhysicsGeometry {
                                        int maxBoxes, List<PhysicsBox> result) {
         var state = getter.getBlockState(position);
         if (state.isAir()) return false;
-        if (!supported(state)) {
+        if (!supported(state) && (getter.structure || !supportedWaterloggedTerrain(state))) {
+            if (!getter.structure && (emptyTerrainPlant(state) || state.is(Blocks.WATER) || state.is(Blocks.LAVA))
+                    && state.getCollisionShape(getter, position, CollisionContext.empty()).isEmpty()) {
+                // getBlockState above remains in the receipt: replacing a plant/fluid with a solid
+                // block must invalidate the cached terrain even though it contributed no boxes.
+                return true;
+            }
             throw denied(Failure.UNSUPPORTED_CONTENT, "Unsupported collision state at " + position + ": " + state);
         }
         var shape = state.getCollisionShape(getter, position, CollisionContext.empty());
@@ -276,6 +294,22 @@ public final class NativeStructurePhysicsGeometry {
                 || !BuiltInRegistries.BLOCK.getKey(block).getNamespace().equals("minecraft")) return false;
         if (block == Blocks.CHEST) return NativeStructureView.isSingleChestState(state);
         return STATE_SHAPES.contains(block.getClass());
+    }
+
+    private static boolean emptyTerrainPlant(BlockState state) {
+        var block = state.getBlock();
+        return state.getFluidState().isEmpty() && !state.hasBlockEntity() && !block.hasDynamicShape()
+                && BuiltInRegistries.BLOCK.getKey(block).getNamespace().equals("minecraft")
+                && EMPTY_TERRAIN_PLANTS.contains(block.getClass());
+    }
+
+    private static boolean supportedWaterloggedTerrain(BlockState state) {
+        // Audit the same block's dry state, but sample the original state's actual collision.
+        // This admits waterlogged slabs/stairs/fences without weakening the captured-content gate
+        // or treating arbitrary fluid-containing/actor-conditioned blocks as safe terrain.
+        return state.hasProperty(BlockStateProperties.WATERLOGGED)
+                && state.getValue(BlockStateProperties.WATERLOGGED) && state.getFluidState().is(Fluids.WATER)
+                && supported(state.setValue(BlockStateProperties.WATERLOGGED, false));
     }
 
     /** Exact VoxelShape box decomposition: never substitutes the shape's bounding cuboid. */

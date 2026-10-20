@@ -13,6 +13,7 @@ import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
 import org.academy.api.common.structure.StructureWorldAccess;
+import org.academy.AcademyCraft;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -44,6 +45,9 @@ public final class SubLevelStructureHandle implements StructureHandle {
 
     @Override
     public StructureLifecycle lifecycle() {
+        if (!SubLevelActivationRegistry.matches(subLevel.id(), runtimeId, reference.generation())) {
+            return StructureLifecycle.UNLOADED;
+        }
         return switch (subLevel.state()) {
             case LOADING, ALLOCATED -> StructureLifecycle.LOADING;
             case ACTIVE, SLEEPING -> StructureLifecycle.ACTIVE;
@@ -58,7 +62,7 @@ public final class SubLevelStructureHandle implements StructureHandle {
 
     @Override
     public long geometryRevision() {
-        return subLevel.revision();
+        return subLevel.geometryRevision();
     }
 
     @Override
@@ -70,6 +74,9 @@ public final class SubLevelStructureHandle implements StructureHandle {
     @Override
     public void setPose(StructurePose pose) {
         Objects.requireNonNull(pose, "pose");
+        if (!SubLevelActivationRegistry.matches(subLevel.id(), runtimeId, reference.generation())) {
+            throw new IllegalStateException("SubLevel handle belongs to an expired activation");
+        }
         if (lifecycle() == StructureLifecycle.ACTIVE) {
             throw new IllegalStateException("Active SubLevel is owned by the physics solver");
         }
@@ -81,7 +88,7 @@ public final class SubLevelStructureHandle implements StructureHandle {
 
     @Override
     public StructureWorldAccess world() {
-        return new Access(reference, subLevel, storage);
+        return new Access(reference, runtimeId, subLevel, storage);
     }
 
     private void requireActive() {
@@ -90,7 +97,7 @@ public final class SubLevelStructureHandle implements StructureHandle {
         }
     }
 
-    private record Access(StructureRef reference, SubLevel subLevel, PlotStorage storage)
+    private record Access(StructureRef reference, UUID runtimeId, SubLevel subLevel, PlotStorage storage)
             implements StructureWorldAccess {
         private Access {
             Objects.requireNonNull(reference, "reference");
@@ -111,7 +118,9 @@ public final class SubLevelStructureHandle implements StructureHandle {
                                                   StructureBlockData replacement) {
             var current = read(localPosition);
             if (!same(current, expected)) return StructureWriteResult.CONFLICT;
-            if (!storage.setBlock(subLevel.plot(), localPosition, replacement.state(), 3)) {
+            if (current.state() != replacement.state()
+                    && !storage.setBlock(subLevel.plot(), localPosition, replacement.state(),
+                    SubLevelCaptureService.TRANSACTION_FLAGS)) {
                 return StructureWriteResult.REJECTED;
             }
             try {
@@ -119,13 +128,22 @@ public final class SubLevelStructureHandle implements StructureHandle {
                     var world = storage.worldPosition(subLevel.plot(), localPosition);
                     var loaded = BlockEntity.loadStatic(world, replacement.state(),
                             replacement.blockEntityData(), storage.level().registryAccess());
-                    if (loaded == null) return StructureWriteResult.REJECTED;
+                    if (loaded == null) {
+                        restoreExpected(localPosition, expected);
+                        return StructureWriteResult.REJECTED;
+                    }
                     storage.level().setBlockEntity(loaded);
                     loaded.setChanged();
                 }
             } catch (RuntimeException failure) {
-                storage.setBlock(subLevel.plot(), localPosition, expected.state(), 3);
+                restoreExpected(localPosition, expected);
                 return StructureWriteResult.REJECTED;
+            }
+            var runtime = SubLevelServer.runtime(storage.level().getServer(), subLevel.id()).orElse(null);
+            if (runtime != null && runtime.get(subLevel.id()).filter(value -> value == subLevel).isPresent()) {
+                runtime.refreshGeometry(subLevel.id());
+            } else {
+                subLevel.geometryChanged();
             }
             return StructureWriteResult.APPLIED;
         }
@@ -133,6 +151,9 @@ public final class SubLevelStructureHandle implements StructureHandle {
         private void requireReady() {
             if (subLevel.state() != SubLevelState.ACTIVE && subLevel.state() != SubLevelState.SLEEPING) {
                 throw new IllegalStateException("SubLevel world access is not active");
+            }
+            if (!SubLevelActivationRegistry.matches(subLevel.id(), runtimeId, reference.generation())) {
+                throw new IllegalStateException("SubLevel world access belongs to an expired activation");
             }
             if (!storage.level().getServer().isSameThread()) {
                 throw new IllegalStateException("SubLevel world access is server-thread confined");
@@ -150,6 +171,27 @@ public final class SubLevelStructureHandle implements StructureHandle {
         private CompoundTag saveBlockEntity(BlockPos local) {
             var entity = storage.blockEntity(subLevel.plot(), local);
             return entity == null ? null : entity.saveWithFullMetadata(storage.level().registryAccess());
+        }
+
+        private void restoreExpected(BlockPos localPosition, StructureBlockData expected) {
+            storage.setBlock(subLevel.plot(), localPosition, expected.state(), SubLevelCaptureService.TRANSACTION_FLAGS);
+            var world = storage.worldPosition(subLevel.plot(), localPosition);
+            if (expected.blockEntityData() == null) {
+                if (storage.blockEntity(subLevel.plot(), localPosition) != null) {
+                    storage.level().getChunkAt(world).removeBlockEntity(world);
+                }
+                return;
+            }
+            try {
+                var loaded = BlockEntity.loadStatic(world, expected.state(), expected.blockEntityData(),
+                        storage.level().registryAccess());
+                if (loaded != null) {
+                    storage.level().setBlockEntity(loaded);
+                    loaded.setChanged();
+                }
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.error("SubLevel CAS rollback could not restore BlockEntity at {}", localPosition, failure);
+            }
         }
 
         private static boolean same(StructureBlockData left, StructureBlockData right) {

@@ -44,12 +44,22 @@ import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.internal.client.renderer.entity.NativeStructureProjectionRenderer;
 import org.academy.internal.common.network.SubLevelInteractPacket;
 import org.academy.internal.common.sublevel.SubLevelCaptureService;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.phys.AABB;
+import org.academy.internal.common.sublevel.SubLevelStructureHandle;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
+import org.academy.api.common.structure.StructureBlockData;
+import org.academy.api.common.structure.StructureWriteResult;
+import net.minecraft.nbt.CompoundTag;
 import org.academy.internal.common.sublevel.SubLevelId;
 import org.academy.internal.common.sublevel.SubLevelServer;
 import org.academy.internal.common.sublevel.SubLevelSkillSupport;
@@ -62,11 +72,48 @@ import java.util.ArrayList;
 /** Real integrated-client visual probe for a captured SubLevel. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SubLevelClientSmoke {
+    /** Physics assertions advance with server time, even while client rendering is slow. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void controlMatrixTick(ServerTickEvent.Post event) {
+        if (!ENABLED || failed || !controlMatrixRequested || matrixComplete()) return;
+        try {
+            if (!SubLevelControlSmoke.complete()) {
+                SubLevelControlSmoke.tick(event.getServer());
+                return;
+            }
+            if (!contentProbed) {
+                SubLevelContentSmoke.run(event.getServer());
+                SubLevelTractionSmoke.run(event.getServer());
+                contentProbed = true;
+            }
+            if (!SubLevelDirectSkillSmoke.complete()) {
+                SubLevelDirectSkillSmoke.tick(event.getServer());
+                return;
+            }
+            if (Boolean.getBoolean("academy.sublevel.defaultPathProbe")) {
+                if (!multiHostProbed) {
+                    SubLevelTerrainMutationSmoke.run(event.getServer());
+                    SubLevelCaptureTransactionSmoke.run(event.getServer());
+                    SubLevelMultiHostSmoke.run(event.getServer());
+                    multiHostProbed = true;
+                }
+                SubLevelProgramGraphSmoke.start(event.getServer());
+                SubLevelProgramGraphSmoke.tick(event.getServer());
+            }
+        } catch (Throwable error) {
+            AcademyCraft.LOGGER.error("SubLevel control/content/direct matrix failed", error);
+            fail("control/content/direct matrix: " + error);
+        }
+    }
+
     private static final boolean ENABLED = Boolean.getBoolean("academy.sublevelClientSmoke");
     private static volatile boolean requested;
     private static volatile boolean failed;
     private static volatile boolean screenshotSaved;
     private static volatile boolean screenshotRequested;
+    private static volatile boolean shutdownRequested;
+    private static volatile boolean shutdownCompleted;
+    private static int shutdownWait;
     private static volatile boolean collisionProbed;
     private static volatile boolean breakSent;
     private static volatile boolean breakSeen;
@@ -124,6 +171,14 @@ public final class SubLevelClientSmoke {
     private static double launchInitialY = Double.NaN;
     private static boolean launchProbed;
     private static boolean programChainProbed;
+    private static volatile boolean programChainCompleted;
+    private static volatile boolean controlMatrixRequested;
+    private static boolean contentProbed;
+    private static boolean multiHostProbed;
+    private static boolean visualFramingRequested;
+    private static volatile Vec3 visualCenter;
+    private static volatile boolean restoreRequested;
+    private static volatile boolean restoreCompleted;
     private static boolean motionProbed;
     private static boolean motionStarted;
     private static int motionWait;
@@ -132,17 +187,62 @@ public final class SubLevelClientSmoke {
     private static volatile SubLevelCaptureService.Result result;
     private static int ticks;
     private static int stableFrames;
+    private static int observedProjectionId;
     private static Path screenshotPath;
 
     private SubLevelClientSmoke() {
     }
 
+    private static boolean matrixComplete() {
+        return SubLevelDirectSkillSmoke.complete() && (!Boolean.getBoolean("academy.sublevel.defaultPathProbe")
+                || SubLevelProgramGraphSmoke.complete());
+    }
+
     @SubscribeEvent
     public static void clientTick(ClientTickEvent.Post event) {
-        if (!ENABLED || failed || screenshotSaved) return;
+        if (!ENABLED || failed) return;
         var minecraft = Minecraft.getInstance();
+        if (screenshotSaved) {
+            if (!Boolean.getBoolean("academy.sublevel.controlMatrixProbe")) return;
+            if (!shutdownRequested) {
+                shutdownRequested = true;
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) { fail("missing integrated server during shutdown probe"); return; }
+                server.execute(() -> {
+                    try {
+                        SubLevelTractionSmoke.shutdown(server);
+                        shutdownCompleted = true;
+                    } catch (Throwable error) { fail("shutdown probe: " + error); }
+                });
+            }
+            if (shutdownCompleted && SubLevelTractionSmoke.clientSnapshotsCleared()) {
+                AcademyCraft.LOGGER.info("SUBLEVEL_SHUTDOWN_CLIENT_PASSED snapshots_cleared=true");
+                AcademyCraft.LOGGER.info("SUBLEVEL_CLIENT_SMOKE_PASSED id={} cells={} screenshot={}",
+                        result.id().value(), result.blocks(), screenshotPath);
+                minecraft.stop();
+            } else if (++shutdownWait > 100) fail("shutdown left client snapshots");
+            return;
+        }
         if (minecraft.level == null || minecraft.player == null) return;
-        if (++ticks > 600) {
+        if (Boolean.getBoolean("academy.sublevel.restoreProbe")) {
+            if (!restoreRequested) {
+                var server = minecraft.getSingleplayerServer();
+                if (server == null) return;
+                restoreRequested = true;
+                server.execute(() -> {
+                    try {
+                        SubLevelMultiHostSmoke.verifyRestored(server);
+                        restoreCompleted = true;
+                    } catch (Throwable error) { fail("default restore probe: " + error); }
+                });
+            }
+            if (restoreCompleted) {
+                AcademyCraft.LOGGER.info("SUBLEVEL_DEFAULT_RESTORE_PASSED");
+                minecraft.stop();
+            }
+            return;
+        }
+        if (++ticks > (Boolean.getBoolean("academy.sublevel.defaultPathProbe") ? 3000 : 600)) {
             fail("timeout");
             return;
         }
@@ -159,16 +259,27 @@ public final class SubLevelClientSmoke {
             return;
         }
         if (result == null) return;
+        // Capture binds this plot lease to result.id(). Client-only projections retain the
+        // unassigned legacy reference, but accept() gives the plot snapshot and its projection
+        // the same immutable view object. Match that identity, never an arbitrary cell count.
+        var snapshot = org.academy.internal.client.sublevel.SubLevelClientState.snapshots(minecraft.level)
+                .stream().filter(value -> value.plot().equals(result.plot())).findFirst().orElse(null);
+        if (snapshot == null || snapshot.view().isEmpty()) return;
         NativeStructureProjectionEntity projection = null;
         for (var entity : minecraft.level.entitiesForRendering()) {
             if (entity instanceof NativeStructureProjectionEntity candidate && candidate.isClientOnly()
-                    && candidate.view().cells().size() >= result.blocks() - 1) {
+                    && candidate.view() == snapshot.view()) {
                 projection = candidate;
                 break;
             }
         }
         if (projection == null) return;
-        aimAt(minecraft, projection);
+        if (observedProjectionId != projection.getId()) {
+            observedProjectionId = projection.getId();
+            AcademyCraft.LOGGER.info("SUBLEVEL_CLIENT_SMOKE_PROJECTION id={} plot={} entity_id={} cells={}",
+                    result.id().value(), result.plot(), observedProjectionId, projection.view().cells().size());
+        }
+        if (!controlMatrixRequested || matrixComplete()) aimAt(minecraft, projection);
         if (Boolean.getBoolean("academy.sublevel.clientBreakProbe") && !breakSeen) {
             if (!breakSent) {
                 if (!org.academy.internal.client.sublevel.SubLevelClientInteraction.attack(minecraft)) {
@@ -635,6 +746,25 @@ public final class SubLevelClientSmoke {
             server.execute(() -> probeProgramChain(server));
             return;
         }
+        if (Boolean.getBoolean("academy.sublevel.programChainProbe") && !programChainCompleted) return;
+        if (Boolean.getBoolean("academy.sublevel.controlMatrixProbe") && !matrixComplete()) {
+            controlMatrixRequested = true;
+            return;
+        }
+        if (Boolean.getBoolean("academy.sublevel.defaultPathProbe")) {
+            if (!visualFramingRequested) {
+                visualFramingRequested = true;
+                minecraft.getSingleplayerServer().execute(() -> prepareVisualFrame(minecraft.getSingleplayerServer()));
+                return;
+            }
+            var center = visualCenter;
+            if (center == null) return;
+            minecraft.player.setNoGravity(true);
+            minecraft.player.setDeltaMovement(Vec3.ZERO);
+            minecraft.player.resetFallDistance();
+            if (projection.renderPose(1.0F).localToWorldPoint(projection.view().bounds().getCenter())
+                    .distanceTo(center) > 2.0) return;
+        }
         if (Boolean.getBoolean("academy.sublevel.motionProbe") && !motionProbed) {
             if (!motionStarted) {
                 motionStarted = true;
@@ -657,6 +787,10 @@ public final class SubLevelClientSmoke {
         if (frames <= 0) return;
         if (++stableFrames < 20) return;
         if (screenshotRequested) return;
+        if (!minecraft.player.isAlive() || minecraft.gui.screen() != null) {
+            fail("visual verification requires a living player and an unobstructed world view");
+            return;
+        }
         screenshotRequested = true;
         var name = "sublevel-client-smoke-" + ProcessHandle.current().pid() + "-" + System.currentTimeMillis() + ".png";
         screenshotPath = minecraft.gameDirectory.toPath().resolve("screenshots").resolve(name).toAbsolutePath();
@@ -667,13 +801,44 @@ public final class SubLevelClientSmoke {
                     return;
                 }
                 screenshotSaved = true;
-                AcademyCraft.LOGGER.info("SUBLEVEL_CLIENT_SMOKE_PASSED id={} cells={} frames={} screenshot={}",
-                        result.id().value(), result.blocks(), frames, screenshotPath);
-                minecraft.stop();
+                if (!Boolean.getBoolean("academy.sublevel.controlMatrixProbe")) {
+                    AcademyCraft.LOGGER.info("SUBLEVEL_CLIENT_SMOKE_PASSED id={} cells={} frames={} screenshot={}",
+                            result.id().value(), result.blocks(), frames, screenshotPath);
+                    minecraft.stop();
+                }
             } catch (Throwable error) {
                 fail(error.toString());
             }
         });
+    }
+
+    /** Frame the existing tested body in clear air so terrain cannot hide the final render check. */
+    private static void prepareVisualFrame(MinecraftServer server) {
+        try {
+            var player = server.getPlayerList().getPlayers().getFirst();
+            var host = player.level();
+            var runtime = SubLevelServer.runtime(host).orElseThrow();
+            var body = runtime.get(result.id()).orElseThrow();
+            var center = new Vec3(player.getX(), host.getMaxY() - 40, player.getZ());
+            for (var pos : BlockPos.betweenClosed(BlockPos.containing(center.add(-3, -3, -3)),
+                    BlockPos.containing(center.add(10, 8, 10)))) {
+                host.getChunkAt(pos);
+                if (!host.getBlockState(pos).isAir()) throw new IllegalStateException("visual frame is obstructed");
+            }
+            if (!runtime.shift(result.id(), center.subtract(body.worldCenter()))
+                    || !SubLevelSkillSupport.moveTo(server, result.id(), center, 10)) {
+                throw new IllegalStateException("could not frame captured body");
+            }
+            player.resetFallDistance();
+            player.setNoGravity(true);
+            player.setDeltaMovement(Vec3.ZERO);
+            player.connection.teleport(center.x + 7, center.y + 3, center.z + 7, 135, 20);
+            player.resetFallDistance();
+            visualCenter = center;
+            AcademyCraft.LOGGER.info("SUBLEVEL_VISUAL_FRAME center={} cells={} clear=true", center, result.blocks());
+        } catch (Throwable error) {
+            fail("visual frame: " + error);
+        }
     }
 
     private static void prepareLever(MinecraftServer server, SubLevelId id) {
@@ -1137,6 +1302,20 @@ public final class SubLevelClientSmoke {
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GLOWSTONE, 64));
             AcademyCraft.LOGGER.info("SUBLEVEL_CLIENT_SMOKE_CAPTURED id={} blocks={} boxes={}",
                     result.id().value(), result.blocks(), result.boxes());
+            var subLevel = runtime.get(result.id()).orElseThrow();
+            var handle = new SubLevelStructureHandle(subLevel, runtime.storage(), level.dimension().identifier());
+            var cell = runtime.view(result.id()).cells().getFirst();
+            var expected = handle.world().read(cell.position());
+            var invalidBe = new CompoundTag();
+            invalidBe.putString("id", "minecraft:chest");
+            var rejected = handle.world().compareAndSet(cell.position(), expected,
+                    new StructureBlockData(expected.state(), invalidBe));
+            var after = handle.world().read(cell.position());
+            if (rejected != StructureWriteResult.REJECTED
+                    || after.state() != expected.state() || after.blockEntityData() != null) {
+                throw new IllegalStateException("CAS failure rollback was not applied: " + rejected + " / " + after.state());
+            }
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_CAS_ROLLBACK result={} state={}", rejected, after.state());
         } catch (Throwable error) {
             fail(error.toString());
         }
@@ -1170,9 +1349,12 @@ public final class SubLevelClientSmoke {
                     }
                 }
             }
+            var programNozzle = new HighSpeedJetNozzle(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), level);
+            programNozzle.attach(player.getUUID(), seed, Direction.DOWN);
+            if (!level.addFreshEntity(programNozzle)) throw new IllegalStateException("cannot place program nozzle");
             var runtime = new ServerAeromanipProgramRuntime(player);
             var extract = runtime.extractStructure(new ProgramBlockPosition(
-                    level.dimension().identifier(), seed.getX(), seed.getY(), seed.getZ()), 1, 16);
+                    level.dimension().identifier(), seed.getX(), seed.getY(), seed.getZ()), 2, 16);
             if (extract.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || extract.structure() == null) {
                 throw new IllegalStateException("program extract failed: " + extract.result());
@@ -1182,12 +1364,32 @@ public final class SubLevelClientSmoke {
                     || control.control() == null) {
                 throw new IllegalStateException("program control failed: " + control.result());
             }
+            var capturedId = SubLevelStructureRefs.id(extract.structure().reference()).orElseThrow();
+            var subLevelRuntime = SubLevelServer.runtime(level.getServer()).orElseThrow();
+            var capturedSubLevel = subLevelRuntime.get(capturedId).orElseThrow();
+            var plotLevel = subLevelRuntime.storage().level();
+            var plotOrigin = subLevelRuntime.storage().worldPosition(capturedSubLevel.plot(), new BlockPos(0, 1, 0));
+            var item = new ItemEntity(plotLevel,
+                    plotOrigin.getX() + 0.5, plotOrigin.getY() + 0.5, plotOrigin.getZ() + 0.5,
+                    new ItemStack(Items.GLOWSTONE));
+            item.setNoGravity(true);
+            if (!plotLevel.addFreshEntity(item)) throw new IllegalStateException("cannot add migration fixture entity");
+            var wrongDimension = runtime.staticizeStructure(extract.structure(), new ProgramBlockPosition(
+                    net.minecraft.resources.Identifier.fromNamespaceAndPath("minecraft", "the_nether"),
+                    seed.getX(), seed.getY(), seed.getZ()));
+            var farTarget = runtime.staticizeStructure(extract.structure(), new ProgramBlockPosition(
+                    level.dimension().identifier(), seed.getX() + 1_000, seed.getY(), seed.getZ()));
+            if (wrongDimension.result().status() != ProgramStructureOperationResult.Status.REJECTED
+                    || farTarget.result().status() != ProgramStructureOperationResult.Status.REJECTED) {
+                throw new IllegalStateException("staticize validation accepted an invalid target: "
+                        + wrongDimension.result() + " / " + farTarget.result());
+            }
             var move = runtime.moveStructure(control.control(),
                     new ProgramWorldPosition(level.dimension().identifier(), seed.getX() + 0.5,
                             seed.getY() + 3.5, seed.getZ() + 0.5), null, 1.0);
             var rotate = runtime.rotateStructure(control.control(),
                     new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(20.0)));
-            var launch = runtime.launchStructure(control.control(), new ProgramDirection(0.0, 1.0, 0.0), 5.0f, 1.0);
+            var launch = runtime.launchStructure(control.control(), new ProgramDirection(0.0, 1.0, 0.0), 1.0f, 1.0);
             var release = runtime.releaseStructure(control.control());
             var staticize = runtime.staticizeStructure(extract.structure(), new ProgramBlockPosition(
                     level.dimension().identifier(), seed.getX(), seed.getY(), seed.getZ()));
@@ -1195,6 +1397,11 @@ public final class SubLevelClientSmoke {
                     extract.result().status(), control.result().status(), move.result().status(),
                     rotate.result().status(), launch.result().status(), release.result().status(),
                     staticize.result().status(), staticize.result().detail(), extract.structure().reference());
+            var migrated = level.getEntitiesOfClass(ItemEntity.class, new AABB(seed).inflate(4.0),
+                    entity -> !entity.isRemoved());
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ENTITY_MIGRATION count={} item={}", migrated.size(),
+                    migrated.stream().findFirst().map(ItemEntity::position).orElse(null));
+            if (migrated.isEmpty()) throw new IllegalStateException("staticize did not migrate plot entity");
             if (move.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || rotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || launch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
@@ -1218,7 +1425,11 @@ public final class SubLevelClientSmoke {
                             new Vec3(0.0, 1.0, 0.0), 2.0, 1.0f, 200, true), 1.0f);
             if (direct.isEmpty()) throw new IllegalStateException("direct jet launch failed");
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DIRECT_JET launch_id={}", direct.get().launchId());
+            var directId = SubLevelStructureRefs.id(nozzle.structureMount().orElseThrow().reference()).orElseThrow();
             direct.get().close();
+            if (subLevelRuntime.get(directId).isEmpty()) throw new IllegalStateException("direct close deleted structure");
+            var directRestore = SubLevelSkillSupport.staticize(server, directId, directSeed, player, 64);
+            if (!directRestore.succeeded()) throw new IllegalStateException("explicit direct restore failed: " + directRestore);
 
             system.setPlayerAbilityCategory(id, AbilityCategories.ACCELERATOR.get());
             var kinetic = Skills.KINETIC_THROW.get();
@@ -1249,10 +1460,11 @@ public final class SubLevelClientSmoke {
                     new ProgramDirection(0.0, 1.0, 0.0), AcceleratorProgramStrength.STANDARD);
             var kineticRelease = kineticControl == null || kineticControl.control() == null ? null
                     : kineticRuntime.releaseStructure(kineticControl.control());
+            var kineticRestoreTarget = player.blockPosition().offset(3, 8, 4);
             var kineticStaticize = kineticExtract.structure() == null ? null
                     : kineticRuntime.staticizeStructure(kineticExtract.structure(),
-                    new ProgramBlockPosition(level.dimension().identifier(), kineticSeed.getX(),
-                            kineticSeed.getY(), kineticSeed.getZ()));
+                    new ProgramBlockPosition(level.dimension().identifier(), kineticRestoreTarget.getX(),
+                            kineticRestoreTarget.getY(), kineticRestoreTarget.getZ()));
             AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ACCELERATOR_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={}",
                     kineticExtract.result().status(), kineticControl == null ? "missing" : kineticControl.result().status(),
                     kineticMove == null ? "missing" : kineticMove.result().status(),
@@ -1269,7 +1481,8 @@ public final class SubLevelClientSmoke {
                     || kineticLaunch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticRelease.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
-                throw new IllegalStateException("accelerator SubLevel chain failed");
+                throw new IllegalStateException("accelerator SubLevel chain failed: "
+                        + (kineticStaticize == null ? "missing staticize" : kineticStaticize.result()));
             }
 
             system.setPlayerAbilityCategory(id, AbilityCategories.ELECTROMASTER.get());
@@ -1323,6 +1536,7 @@ public final class SubLevelClientSmoke {
                     || magnetStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
                 throw new IllegalStateException("electromaster SubLevel chain failed");
             }
+            programChainCompleted = true;
         } catch (Throwable error) {
             fail("program chain probe: " + error);
         }
