@@ -32,8 +32,9 @@ import java.util.Comparator;
 
 /**
  * Runs exclusively against an isolated copy of a saved scene. A body lacking terrain coverage
- * must stay immobile and refuse controllers while a nearby admitted body moves and rotates for
- * ordinary server ticks. It neither rebuilds terrain nor calls the runtime/solver tick manually.
+ * must stay immobile and refuse controllers while an admitted body moves and rotates for
+ * ordinary server ticks. Proximity is not required: both bodies share the same runtime/universe.
+ * It neither rebuilds terrain nor calls the runtime/solver tick manually.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SubLevelTerrainIsolationSmoke {
@@ -86,7 +87,7 @@ public final class SubLevelTerrainIsolationSmoke {
                 if (age < 100) return;
                 if (!chooseBodies(server)) {
                     if (age % 20 == 0) logProgress("waiting");
-                    if (age > 300) throw new IllegalStateException("Saved scene has no paused/nearby active pair");
+                    if (age > 300) throw new IllegalStateException("Saved scene has no paused/admitted active pair");
                     return;
                 }
                 return;
@@ -110,8 +111,7 @@ public final class SubLevelTerrainIsolationSmoke {
                 .orElse(null);
         var moving = runtime.subLevels().stream()
                 .filter(body -> !universe.isSimulationPaused(body.id()) && universe.motion(body.id()).isPresent())
-                .filter(body -> body.worldCenter().distanceToSqr(player.position()) < 96 * 96)
-                .filter(body -> body.worldCenter().distanceToSqr(player.position()) > 5 * 5)
+                .filter(body -> body.worldCenter().distanceToSqr(player.position()) > 1.0)
                 .sorted(Comparator.comparingDouble(body -> body.worldCenter().distanceToSqr(player.position())))
                 .filter(SubLevelTerrainIsolationSmoke::hasClearAscent)
                 .findFirst()

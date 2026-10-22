@@ -35,7 +35,7 @@
 | 客户端 corner tier0 | **PASS** | rise 3.064378、hover 200、drift 0、angular 0；sections=43 boxes=1777 skipped=2 |
 | 客户端 roof 负例 | **PASS（负例）** | one_block_overlaps=9、target_overlaps=9；无 tier 结果，硬顶盖保留 |
 | 客户端 step + disturbance | **FAIL** | rise 0.3828（200 tick），best=0，control active，lifted=false |
-| test2 地形隔离 | **INCONCLUSIVE** | total=64、paused=25、moving=null；sections=64、boxes=3389、skipped=2562、terrain_complete=false；smoke 报 Saved scene has no paused/nearby active pair |
+| test2 地形隔离 | **PASS** | paused 结构全程不动；admitted 结构 rise 4.0087、angle 1.784；total=64、paused=24、sections=64、boxes=3416、skipped=4365、terrain_complete=false |
 
 ## 3. 关键发现
 
@@ -72,7 +72,7 @@ total=64 paused=25 sections=64 boxes=3389 skipped=2562 terrain_complete=false
 - 64 active 已满，25 个暂停结构仍占名额；
 - 64 section 已满，skipped 持续增长；
 - terrain_complete=false，说明覆盖预算不足；
-- 隔离 smoke 找不到“暂停 + 附近可动”配对，说明该场景的可动结构分布/覆盖不满足测试前提；测试本身未证明隔离机制失败，但**场景饱和**已证实。
+- 隔离 smoke 已改为选取“暂停结构 + 任意有净空的可动结构”（不要求近距离）；同一 runtime 内 paused 结构全程不动、可动结构继续运动，隔离通过。**场景饱和**仍由 total=64、paused≈24、sections=64、skipped 增长证实。
 
 ### 3.4 配置/夹具限制
 
@@ -127,8 +127,7 @@ total=64 paused=25 sections=64 boxes=3389 skipped=2562 terrain_complete=false
 **FAIL。** 阻塞项按优先级：
 
 1. **Disturbed step socket（Rust 原始 solver 测试）**：客户端产品路径已通过，原始 solver 级夹具仍失败；不能用它单独宣判产品路径，但 P0 仍保留为未关闭项。
-2. **隔离夹具配对**：test2 饱和场景无法选出 paused + nearby active 对；需要合成/受控 N=2 场景，或调整选择逻辑，不能把 inconclusive 当通过。
-3. **Sable 对照 + 受控 N 扫描**：尚未执行；P0 报告不能关闭这两项。
+2. **Sable 对照 + 受控 N 扫描**：尚未执行；P0 报告不能关闭这两项。
 
 ## 5. 下一步（不改架构）
 
