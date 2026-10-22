@@ -611,4 +611,5 @@ apply(from = "gradle/sable-compat.gradle")
 
 // Agent B handoff contracts and resource templates; no unfinished runtime path is activated.
 apply(from = "gradle/sublevel-scaffold.gradle")
+apply(from = "gradle/structure-upgrade-scaffold.gradle")
 apply(from = "gradle/structure-pipeline-draft.gradle")

@@ -108,6 +108,7 @@ public final class AcademyCraftRegister {
         NativeStructureTickets.TICKET_TYPES.register(modEventBus);
         SubLevelEnhancementBootstrap.register(modEventBus);
         org.academy.internal.common.sublevel.pipeline.SubLevelPipelineBootstrap.register(modEventBus);
+        org.academy.internal.common.structure.upgrade.StructureUpgradeBootstrap.register(modEventBus);
         AbilityProgramNodeTypes.REGISTER.register(modEventBus);
 
         DataTypes.SYNC_DATA_TYPES.register(modEventBus);
