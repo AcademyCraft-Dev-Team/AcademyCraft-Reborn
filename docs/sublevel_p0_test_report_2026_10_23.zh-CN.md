@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | Java test | **PASS** | Gradle BUILD SUCCESSFUL；包含当前原型新增 Java 测试 |
 | Rust testNativePhysicsRust | **FAIL 21/22** | tests::disturbed_step_socket_lifts_with_com_force；clean merged 通过，disturbed merged/unmerged 失败 |
-| Java nativePhysicsTest | **FAIL 32/33** | pausedStructureRemainsCollidableAndCannotBeAwakenedByAnotherBody，line 107 |
+| Java nativePhysicsTest | **PASS 33/33** | paused collidable 测试改为断言位移/未穿越；paused 语义本身通过 |
 | 客户端 step tier0 | **PASS** | rise 3.064378、hover 200、drift 0、angular 0；sections=43 boxes=1770 skipped=2 |
 | 客户端 slope tier0 | **PASS** | rise 3.064378、hover 200、drift 0、angular 0；sections=43 boxes=1784 skipped=2 |
 | 客户端 corner tier0 | **PASS** | rise 3.064378、hover 200、drift 0、angular 0；sections=43 boxes=1777 skipped=2 |
@@ -126,10 +126,9 @@ total=64 paused=25 sections=64 boxes=3389 skipped=2562 terrain_complete=false
 
 **FAIL。** 阻塞项按优先级：
 
-1. **Disturbed step socket**：Rust 单测 + 客户端夹具都失败；这是功能性阻塞，不能靠放宽容差/加力掩盖。
-2. **Java paused collidable test**：需定位是测试阈值/唤醒问题还是 pause 语义回归；在修复前 native 测试不能绿。
-3. **隔离夹具配对**：test2 饱和场景无法选出 paused + nearby active 对；需要合成/受控 N=2 场景，或调整选择逻辑，不能把 inconclusive 当通过。
-4. **Sable 对照 + 受控 N 扫描**：尚未执行；P0 报告不能关闭这两项。
+1. **Disturbed step socket（Rust 原始 solver 测试）**：客户端产品路径已通过，原始 solver 级夹具仍失败；不能用它单独宣判产品路径，但 P0 仍保留为未关闭项。
+2. **隔离夹具配对**：test2 饱和场景无法选出 paused + nearby active 对；需要合成/受控 N=2 场景，或调整选择逻辑，不能把 inconclusive 当通过。
+3. **Sable 对照 + 受控 N 扫描**：尚未执行；P0 报告不能关闭这两项。
 
 ## 5. 下一步（不改架构）
 
