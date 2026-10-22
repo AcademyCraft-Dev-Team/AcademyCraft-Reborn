@@ -2,6 +2,7 @@ package org.academy.internal.common.sublevel;
 
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.physics.PhysicsQuaternion;
 import org.academy.internal.common.structure.physics.PhysicsVector;
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -133,5 +136,100 @@ class TerrainCoveragePlanTest {
         assertTrue(aboveWorld.required().isEmpty());
         planner.clear();
         assertNotSame(aboveWorld, planner.plan(small, -64, 64));
+    }
+
+    @Test
+    void aMissingDistantSectionCannotInvalidateCoveredLocalBodies() {
+        var local = new AABB(8, 65, 8, 9, 66, 9);
+        var distant = new AABB(8200, 65, 8, 8201, 66, 9);
+        var localPlan = TerrainColliderCache.planRequiredCoverage(List.of(local), -64, 320);
+        var distantPlan = TerrainColliderCache.planRequiredCoverage(List.of(distant), -64, 320);
+        var receipts = Set.copyOf(localPlan.required());
+        assertFalse(TerrainColliderCache.covers(
+                TerrainColliderCache.planRequiredCoverage(List.of(local, distant), -64, 320), receipts::contains));
+        assertTrue(TerrainColliderCache.covers(localPlan, receipts::contains));
+        assertFalse(TerrainColliderCache.covers(distantPlan, receipts::contains));
+    }
+
+    @Test
+    void oversizedIndividualDemandDoesNotPoisonAnotherBodiesAdmission() {
+        var oversized = new AABB(-100_000, 65, -100_000, 100_000, 66, 100_000);
+        var local = new AABB(8, 65, 8, 9, 66, 9);
+        var aggregate = TerrainColliderCache.planRequiredCoverage(List.of(oversized, local), -64, 320);
+        assertFalse(aggregate.bounded());
+        var receipts = Set.copyOf(aggregate.required());
+        assertFalse(TerrainColliderCache.covers(
+                TerrainColliderCache.planRequiredCoverage(List.of(oversized), -64, 320), receipts::contains));
+        assertTrue(TerrainColliderCache.covers(
+                TerrainColliderCache.planRequiredCoverage(List.of(local), -64, 320), receipts::contains));
+    }
+
+    @Test
+    void oversizedSolidBodyCannotReserveItsPartialPrefixAndStarveASmallerBody() {
+        var large = new ArrayList<TerrainColliderCache.SectionKey>();
+        // 72 sections in just nine chunks: this is within the candidate/ticket limits,
+        // but cannot fit the 64-solid-section cache even if it is the nearest request.
+        for (int x = 0; x < 9; x++) for (int y = 0; y < 8; y++) {
+            large.add(new TerrainColliderCache.SectionKey(x, y, 0));
+        }
+        var small = List.of(new TerrainColliderCache.SectionKey(20, 4, 0));
+        var admission = new TerrainColliderCache.AdmissionBudget(64, 28_000);
+        assertTrue(TerrainColliderCache.planRequiredChunks(large).bounded());
+        assertFalse(admission.fitsKnown(large, key -> 1));
+        assertFalse(admission.fitsComplete(large, key -> 1));
+        assertTrue(admission.required().isEmpty(), "Failed groups must reserve no partial prefix");
+        assertTrue(admission.fitsComplete(small, key -> 1));
+        admission.reserve(small);
+        assertEquals(Set.copyOf(small), admission.required());
+    }
+
+    @Test
+    void incompleteRequestsCannotReserveTicketsOrNativeBudget() {
+        var unknown = List.of(new TerrainColliderCache.SectionKey(0, 4, 0));
+        var known = List.of(new TerrainColliderCache.SectionKey(1, 4, 0));
+        var costs = Map.of(known.getFirst(), 3);
+        var admission = new TerrainColliderCache.AdmissionBudget(1, 4);
+        assertTrue(admission.fitsKnown(unknown, key -> costs.getOrDefault(key, -1)));
+        assertFalse(admission.fitsComplete(unknown, key -> costs.getOrDefault(key, -1)));
+        assertTrue(admission.required().isEmpty());
+        assertTrue(admission.fitsComplete(known, key -> costs.getOrDefault(key, -1)));
+        admission.reserve(known);
+        assertFalse(admission.fitsComplete(unknown, key -> 3));
+        assertEquals(Set.copyOf(known), admission.required());
+    }
+
+    @Test
+    void completeGroupsShareReceiptsAndEmptySectionsDoNotConsumeNativeBudget() {
+        var first = new TerrainColliderCache.SectionKey(0, 4, 0);
+        var empty = new TerrainColliderCache.SectionKey(0, 5, 0);
+        var second = new TerrainColliderCache.SectionKey(1, 4, 0);
+        var costs = Map.of(first, 3, empty, 0, second, 2);
+        var admission = new TerrainColliderCache.AdmissionBudget(2, 5);
+        assertTrue(admission.fitsComplete(List.of(first, empty), costs::get));
+        admission.reserve(List.of(first, empty));
+        assertTrue(admission.fitsComplete(List.of(first, second), costs::get));
+        admission.reserve(List.of(first, second));
+        assertEquals(Set.of(first, empty, second), admission.required());
+    }
+
+    @Test
+    void impossibleChunkGroupCannotClaimFirst64TicketsAheadOfALocalRequest() {
+        var large = new ArrayList<TerrainColliderCache.SectionKey>();
+        for (int x = 0; x < 65; x++) large.add(new TerrainColliderCache.SectionKey(x, 4, 0));
+        var admission = new TerrainColliderCache.AdmissionBudget(64, 28_000);
+        assertFalse(admission.fitsKnown(large, key -> -1));
+        assertTrue(admission.required().isEmpty());
+        assertTrue(admission.fitsComplete(List.of(new TerrainColliderCache.SectionKey(100, 4, 0)), key -> 1));
+    }
+
+    @Test
+    void admissionUsesDistanceToThePhysicalBoundsAndStableThirtyTwoBlockBands() {
+        var player = List.of(new Vec3(0, 65, 0));
+        assertEquals(0, SubLevelRuntime.terrainDistanceBand(new AABB(1, 65, 1, 2, 66, 2), player));
+        assertEquals(0, SubLevelRuntime.terrainDistanceBand(new AABB(25, 65, 1, 26, 66, 2), player));
+        assertTrue(SubLevelRuntime.terrainDistanceBand(new AABB(1000, 65, 1, 1001, 66, 2), player) > 20);
+        assertEquals(0, SubLevelRuntime.terrainDistanceBand(new AABB(-300, 60, -5, 3, 70, 5), player));
+        assertEquals(Integer.MAX_VALUE, SubLevelRuntime.terrainDistanceBand(
+                new AABB(1, 65, 1, 2, 66, 2), List.of()));
     }
 }

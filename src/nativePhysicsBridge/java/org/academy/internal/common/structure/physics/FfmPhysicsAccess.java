@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-/** ABI v1. Native memory and pointers never escape a synchronous downcall. */
+/** ABI v2. Native memory and pointers never escape a synchronous downcall. */
 public final class FfmPhysicsAccess implements PhysicsNativeAccess {
     private final Thread owner = Thread.currentThread();
     private final Arena libraryArena;
@@ -46,6 +46,17 @@ public final class FfmPhysicsAccess implements PhysicsNativeAccess {
         var linker = Linker.nativeLinker();
         bind(linker, symbols, "abi_version", FunctionDescriptor.of(ValueLayout.JAVA_INT));
         bind(linker, symbols, "engine_version", FunctionDescriptor.of(ValueLayout.JAVA_INT));
+        // Reject an older binary before looking up symbols introduced by this ABI.
+        try {
+            int actual = (int) functions.get("abi_version").invokeExact();
+            if (actual != NativePhysicsArtifact.ABI) throw new IllegalStateException("Native physics exported ABI mismatch: " + actual);
+            int engine = (int) functions.get("engine_version").invokeExact();
+            if (engine != NativePhysicsArtifact.ENGINE_VERSION) {
+                throw new IllegalStateException("Native physics exported engine version mismatch: " + engine);
+            }
+        } catch (Throwable failure) {
+            throw invocationFailure("abi_version", failure);
+        }
         bind(linker, symbols, "world_create", FunctionDescriptor.of(ValueLayout.JAVA_INT,
                 ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
         bind(linker, symbols, "world_destroy", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG));
@@ -61,25 +72,28 @@ public final class FfmPhysicsAccess implements PhysicsNativeAccess {
         for (var name : new String[]{"body_sleep", "body_wake", "body_remove"}) {
             bind(linker, symbols, name, FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
         }
+        bind(linker, symbols, "body_set_simulation_paused", FunctionDescriptor.of(ValueLayout.JAVA_INT,
+                ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT));
         bind(linker, symbols, "fixed_joint_create", FunctionDescriptor.of(ValueLayout.JAVA_INT,
                 ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG,
                 ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        try {
-            int actual = (int) functions.get("abi_version").invokeExact();
-            if (actual != NativePhysicsArtifact.ABI) throw new IllegalStateException("Native physics exported ABI mismatch: " + actual);
-            int engine = (int) functions.get("engine_version").invokeExact();
-            if (engine != NativePhysicsArtifact.ENGINE_VERSION) {
-                throw new IllegalStateException("Native physics exported engine version mismatch: " + engine);
-            }
-        } catch (Throwable failure) {
-            throw invocationFailure("abi_version", failure);
-        }
     }
 
     private void bind(Linker linker, SymbolLookup symbols, String name, FunctionDescriptor descriptor) {
         var address = symbols.find("academy_physics_" + name)
                 .orElseThrow(() -> new IllegalStateException("Missing native physics ABI symbol: " + name));
         functions.put(name, linker.downcallHandle(address, descriptor));
+    }
+
+    @Override
+    public void setSimulationPaused(long world, long body, boolean paused) {
+        requireOpen();
+        try {
+            check("body_set_simulation_paused",
+                    (int) functions.get("body_set_simulation_paused").invokeExact(world, body, paused ? 1 : 0));
+        } catch (Throwable failure) {
+            throw invocationFailure("body_set_simulation_paused", failure);
+        }
     }
 
     @Override

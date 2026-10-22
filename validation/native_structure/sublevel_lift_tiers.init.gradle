@@ -14,6 +14,14 @@ allprojects {
                     .getOrElse('false')
             systemProperty 'academy.sublevelLiftEmbedded', providers.gradleProperty('academySubLevelLiftEmbedded')
                     .getOrElse('false')
+            systemProperty 'academy.sublevelLiftTerrain', providers.gradleProperty('academySubLevelLiftTerrain')
+                    .getOrElse('flat')
+            systemProperty 'academy.sublevelLiftTier', providers.gradleProperty('academySubLevelLiftTier')
+                    .getOrElse('-1')
+            systemProperty 'academy.sublevelLiftDisturbance', providers.gradleProperty('academySubLevelLiftDisturbance')
+                    .getOrElse('false')
+            systemProperty 'academy.sublevelLiftDisturbanceMode', providers.gradleProperty('academySubLevelLiftDisturbanceMode')
+                    .getOrElse('both')
             programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
         }
     }

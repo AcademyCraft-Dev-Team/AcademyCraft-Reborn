@@ -1,4 +1,4 @@
-# Academy physics ABI v1
+# Academy physics ABI v2
 
 This is a standalone binding foundation, not Minecraft world physics. It owns no
 Minecraft objects, block inventories, terrain, players, rendering or persistence.
@@ -19,8 +19,11 @@ All exports use the platform C calling convention (`cdecl` on supported x64
 targets). Types are exactly `int32_t`, `uint64_t`, and IEEE-754 `double`. There are
 no native-owned output pointers, callbacks, strings, Rust objects or C structs in
 the ABI. All functions return a status except `academy_physics_abi_version`, which
-returns 1, and `academy_physics_engine_version`, which returns 3601 for Rapier
+returns 2, and `academy_physics_engine_version`, which returns 3601 for Rapier
 0.36.1. Array lengths count elements, not bytes, and must match exactly.
+ABI 2 adds the required per-body simulation-pause export and its snapshot semantics.
+The Java bridge rejects ABI 1 before resolving newer exports; it never silently
+loads an older binary. Existing array layouts and manifest format remain unchanged.
 
 The Java 25 FFM caller owns aligned native memory, keeps it alive until the call
 returns, and ensures each pointer addresses its declared readable/writable
@@ -85,13 +88,16 @@ int32_t academy_physics_body_impulse_at_point(uint64_t world, uint64_t body,
                                              const double *impulse_point, int32_t len);
 int32_t academy_physics_body_sleep(uint64_t world, uint64_t body);
 int32_t academy_physics_body_wake(uint64_t world, uint64_t body);
+int32_t academy_physics_body_set_simulation_paused(uint64_t world, uint64_t body,
+                                                  int32_t paused);
 int32_t academy_physics_body_remove(uint64_t world, uint64_t body);
 int32_t academy_physics_fixed_joint_create(uint64_t world, uint64_t body1, uint64_t body2,
                                            const double *anchors, int32_t anchors_len);
 ```
 
 `gravity` has 3 doubles. Handle output lengths must be 1. `kind` is 0 for a fixed
-body and 1 for a dynamic body. There are no kinematic bodies in ABI v1.
+body and 1 for a dynamic body. Callers cannot create a kinematic body; simulation
+pause internally uses a position-based kinematic while retaining the original kind.
 
 `description` has exactly 21 doubles:
 
@@ -137,7 +143,7 @@ for repeated eigenvalues; tests must compare the resulting inertia, not require
 a particular eigenvector sign/order.
 
 `pose` has 7 doubles: position followed by x/y/z/w quaternion. Changing a pose is
-an explicit teleport and wakes dynamic bodies; it is not a physical controller.
+an explicit teleport and wakes unpaused dynamic bodies; it is not a physical controller.
 `velocity` has 6 doubles: linear followed by angular velocity, both in world axes;
 changing velocity wakes the dynamic body. Fixed bodies reject velocity, impulse,
 sleep and wake operations with `INVALID_ARGUMENT`.
@@ -150,9 +156,32 @@ Explicit sleep sets linear/angular velocity to
 zero; wake does not restore a previous velocity. Manual sleep is accepted even if
 automatic sleeping was disabled.
 
+`body_set_simulation_paused` accepts `paused` exactly 0 (resume) or 1 (pause),
+only for bodies originally created dynamic. Both values reject a fixed body with
+`INVALID_ARGUMENT`. Repeating the current flag succeeds without changing saved
+motion. Pause retains the same body/collider handles, local mass/COM/inertia,
+shape, material, CCD setting and attached fixed joints. It saves linear/angular
+velocity and sleeping state, then makes the body a stationary position-based
+kinematic. Gravity, contact impulses and connected active bodies cannot move or
+wake it into dynamic simulation; other dynamic bodies can still collide with it.
+Resume restores the dynamic kind and saved velocities/sleep. Pause is not sleep.
+
+While paused, `out_state` reports the current pose, original kind 1, original
+positive mass/inertia, and the saved velocities/sleeping flag. The reported
+velocity is a prediction for resumed motion, **not** actual paused solver motion
+(which is zero). This permits swept-terrain coverage planning before resuming.
+The owning Java wrapper exposes `isSimulationPaused()` separately. Velocity,
+impulse, sleep and wake commands reject a paused body with `INVALID_ARGUMENT`,
+without failing the world or changing saved motion. Explicit `set_pose` remains
+available for recovery and updates both current and kinematic target pose; it
+does not change saved velocities/sleep. Removal and world destruction also work
+while paused. Pause affects one body: callers must pause/resume every member of
+a fixed-jointed assembly before the next simulation step.
+
 `anchors` has 6 doubles: anchor1 x/y/z in body1's local frame, then anchor2
-x/y/z in body2's local frame. Both bodies must be live dynamic bodies in the same
-world. The joint locks all relative translation and rotation. Body removal also
+x/y/z in body2's local frame. Both bodies must be live, unpaused dynamic bodies in
+the same world; fixed or paused participants reject with `INVALID_ARGUMENT`
+before inserting any joint. The joint locks all relative translation and rotation. Body removal also
 removes its attached joints.
 
 `total_dt` is the total simulated duration; the engine advances exactly `substeps`
@@ -228,7 +257,7 @@ loader verifies its sidecar before loading the explicit local path:
 
 ```properties
 format=academy-native-physics-v1
-abi=1
+abi=2
 engine=rapier3d-f64-0.36.1
 platform=windows-x86_64
 library=academy_physics.dll

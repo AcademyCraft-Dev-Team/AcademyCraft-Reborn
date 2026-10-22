@@ -80,12 +80,12 @@ public final class NativePhysicsWorld implements AutoCloseable {
         return body;
     }
 
-    /** Welds two dynamic bodies of this world together at their local anchors. */
+    /** Welds two unpaused dynamic bodies of this world together at their local anchors. */
     public void createFixedJoint(NativePhysicsBody first, NativePhysicsBody second,
                                  PhysicsVector firstAnchor, PhysicsVector secondAnchor) {
         requireOpen();
-        requireDynamic(first);
-        requireDynamic(second);
+        requireSimulatingDynamic(first);
+        requireSimulatingDynamic(second);
         if (first == second) throw new IllegalArgumentException("A fixed joint requires two distinct bodies");
         PhysicsLimits.vector(Objects.requireNonNull(firstAnchor, "firstAnchor"), 1.0E6, "first joint anchor");
         PhysicsLimits.vector(Objects.requireNonNull(secondAnchor, "secondAnchor"), 1.0E6, "second joint anchor");
@@ -124,7 +124,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
     }
 
     public void setVelocity(NativePhysicsBody body, PhysicsVector linear, PhysicsVector angular) {
-        requireDynamic(body);
+        requireSimulatingDynamic(body);
         PhysicsLimits.vector(Objects.requireNonNull(linear, "linear"), 1.0E4, "linear velocity");
         PhysicsLimits.vector(Objects.requireNonNull(angular, "angular"), 1.0E4, "angular velocity");
         run(() -> access.setVelocity(handle, body.handle,
@@ -132,7 +132,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
     }
 
     public void impulse(NativePhysicsBody body, PhysicsVector impulse, PhysicsVector worldPoint) {
-        requireDynamic(body);
+        requireSimulatingDynamic(body);
         PhysicsLimits.vector(Objects.requireNonNull(impulse, "impulse"), 1.0E12, "impulse");
         var point = Objects.requireNonNull(worldPoint, "worldPoint").subtract(origin);
         PhysicsLimits.vector(point, 1.0E6, "relative impulse point");
@@ -140,8 +140,15 @@ public final class NativePhysicsWorld implements AutoCloseable {
                 new double[]{impulse.x(), impulse.y(), impulse.z(), point.x(), point.y(), point.z()}));
     }
 
-    void sleep(NativePhysicsBody body) { requireDynamic(body); run(() -> access.sleep(handle, body.handle)); }
-    void wake(NativePhysicsBody body) { requireDynamic(body); run(() -> access.wake(handle, body.handle)); }
+    void sleep(NativePhysicsBody body) { requireSimulatingDynamic(body); run(() -> access.sleep(handle, body.handle)); }
+    void wake(NativePhysicsBody body) { requireSimulatingDynamic(body); run(() -> access.wake(handle, body.handle)); }
+
+    void setSimulationPaused(NativePhysicsBody body, boolean paused) {
+        requireDynamic(body);
+        if (body.simulationPaused == paused) return;
+        run(() -> access.setSimulationPaused(handle, body.handle, paused));
+        body.simulationPaused = paused;
+    }
 
     void remove(NativePhysicsBody body) {
         library.requireThread();
@@ -161,6 +168,11 @@ public final class NativePhysicsWorld implements AutoCloseable {
     private void requireDynamic(NativePhysicsBody body) {
         requireBody(body);
         if (body.type != BodyType.DYNAMIC) throw new IllegalArgumentException("Operation requires a dynamic body");
+    }
+
+    private void requireSimulatingDynamic(NativePhysicsBody body) {
+        requireDynamic(body);
+        if (body.simulationPaused) throw new IllegalStateException("Native physics body simulation is paused");
     }
 
     private double[] relativePose(PhysicsPose pose) {

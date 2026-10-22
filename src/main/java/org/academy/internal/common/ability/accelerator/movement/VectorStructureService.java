@@ -908,6 +908,17 @@ public final class VectorStructureService {
                 action, player.level().getGameTime(), player.getUUID(), reference, source);
     }
 
+    private static void traceLiftProbeBaseline(ServerPlayer player, StructureRef reference,
+                                               StructureDynamics.State motion, Vec3 sourceOrigin,
+                                               Vec3 sourceCenter) {
+        if (!Boolean.getBoolean("academy.sublevelLiftTiersSmoke")) return;
+        var actual = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT_ADOPT tick={} reference={} source_origin={} local_com={} "
+                        + "source_com={} actual_com={} delta={} pose={} linear={} angular={}",
+                player.level().getGameTime(), reference, sourceOrigin, motion.localCenterOfMass(), sourceCenter,
+                actual, actual.subtract(sourceCenter), motion.pose(), motion.linearVelocity(), motion.angularVelocity());
+    }
+
     /** Releases this session's transient control; the structure, region and inertia are retained. */
     public static void terminate(ServerPlayer player) {
         requireThread(player);
@@ -1042,7 +1053,9 @@ public final class VectorStructureService {
         var plan = liftProfile().planTarget(net.minecraft.util.Mth.clamp(tier, 0, 2),
                 new KineticLiftProfile.SourceBaseline(StructurePose.identity(sourceOrigin),
                         motion.localCenterOfMass()));
+        traceLiftProbeBaseline(player, reference, motion, sourceOrigin, plan.sourceWorldCenterOfMass());
         held.liftPlan = plan;
+        held.holdPose = StructurePose.identity(sourceOrigin);
         held.liftStartY = plan.sourceWorldCenterOfMass().y;
         held.liftTarget = plan.targetWorldCenterOfMass();
         held.controlTarget = held.liftTarget;
@@ -1077,6 +1090,7 @@ public final class VectorStructureService {
                 positions.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
         var plan = liftProfile().planTarget(net.minecraft.util.Mth.clamp(tier, 0, 2),
                 new KineticLiftProfile.SourceBaseline(StructurePose.identity(sourceOrigin), motion.localCenterOfMass()));
+        traceLiftProbeBaseline(player, reference, motion, sourceOrigin, plan.sourceWorldCenterOfMass());
         held.directControl = true;
         held.sableBody = true;
         held.capturedCells = List.copyOf(positions);
@@ -1270,9 +1284,13 @@ public final class VectorStructureService {
                                 : skill.scaledRange(player, KineticThrow.TARGET_RANGE + KineticThrow.liftHeight(held.tier)));
                 held.controlTarget = KineticStructureControl.gravityCompensatedTarget(held.liftTarget,
                         motion.mass(), settings.stiffness());
-                if (!StructureDirectControl.submit(level, held.reference, player, held.controllerId,
-                        new StructurePhysicsControl.Anchor(motion.localCenterOfMass(), held.controlTarget, Vec3.ZERO,
-                                settings.stiffness(), settings.damping(), settings.maxForce()))) {
+                var anchor = new StructurePhysicsControl.Anchor(motion.localCenterOfMass(), held.controlTarget,
+                        Vec3.ZERO, settings.stiffness(), settings.damping(), settings.maxForce());
+                var submitted = held.holdPose != null
+                        ? StructureDirectControl.submit(level, held.reference, player, held.controllerId,
+                                anchor, held.holdPose)
+                        : StructureDirectControl.submit(level, held.reference, player, held.controllerId, anchor);
+                if (!submitted) {
                     terminate(player.getUUID());
                 }
                 held.velocity = motion.linearVelocity();
@@ -1869,6 +1887,7 @@ public final class VectorStructureService {
         private Vec3 liftTarget = Vec3.ZERO;
         private Vec3 controlTarget = Vec3.ZERO;
         private KineticLiftProfile.@Nullable LiftTarget liftPlan;
+        private StructurePose holdPose;
         private double liftStartY;
         private double stiffness;
         private double damping;

@@ -9,6 +9,7 @@ import org.academy.AcademyCraft;
 import org.academy.internal.common.structure.physics.BodyType;
 import org.academy.internal.common.structure.physics.NativePhysicsBody;
 import org.academy.internal.common.structure.physics.NativePhysicsWorld;
+import org.academy.internal.common.structure.physics.PhysicsBox;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.physics.PhysicsQuaternion;
 import org.academy.internal.common.structure.physics.PhysicsVector;
@@ -21,6 +22,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 
 /**
  * Bounded ChunkSection terrain cache for one shared physics universe. Only sections around
@@ -42,6 +46,9 @@ public final class TerrainColliderCache implements AutoCloseable {
     private final Map<SectionKey, Entry> sections = new LinkedHashMap<>();
     private final Map<SectionKey, LevelChunk> emptySections = new LinkedHashMap<>();
     private final Map<SectionKey, Integer> retryAt = new LinkedHashMap<>();
+    /** Size-only receipts avoid recapturing rejected requests; no rejected geometry is retained. */
+    private final Map<SectionKey, SectionEstimate> sectionEstimates = new LinkedHashMap<>(16, 0.75f, true);
+    private final Map<SectionRange, CoveragePlan> requiredPlans = new LinkedHashMap<>(16, 0.75f, true);
     private final java.util.Set<SectionKey> invalidated = new LinkedHashSet<>();
     private final java.util.Set<ChunkPos> collisionTickets = new LinkedHashSet<>();
     private final CoveragePlanner coveragePlanner = new CoveragePlanner();
@@ -83,6 +90,7 @@ public final class TerrainColliderCache implements AutoCloseable {
                     emptySections.remove(key);
                     // A newly placed block must not wait out the empty-section backoff.
                     retryAt.remove(key);
+                    sectionEstimates.remove(key);
                 }
             }
         }
@@ -104,41 +112,113 @@ public final class TerrainColliderCache implements AutoCloseable {
         }
         emptySections.entrySet().removeIf(entry -> host.getChunkSource()
                 .getChunkNow(entry.getKey().x(), entry.getKey().z()) != entry.getValue());
-        var chunkPlan = planRequiredChunks(plan.required());
-        updateRequiredChunks(chunkPlan, plan.bounded());
-        var required = new LinkedHashSet<>(plan.required());
-        var needed = new LinkedHashSet<>(required);
+        var requests = activeBounds.stream().map(this::requiredPlan).toList();
+        var needed = new LinkedHashSet<SectionKey>();
+        for (var request : requests) needed.addAll(request.required());
         needed.addAll(plan.nearby());
         emptySections.keySet().retainAll(needed);
         retryAt.keySet().retainAll(needed);
+        sectionEstimates.keySet().retainAll(needed);
         for (var key : List.copyOf(sections.keySet())) {
             if (!needed.contains(key)) remove(key);
         }
-        coverageComplete = plan.bounded() && chunkPlan.bounded();
-        coverageFailure = !plan.bounded() ? "required_section_limit"
-                : !chunkPlan.bounded() ? "required_chunk_limit" : "";
+        coverageComplete = true;
+        coverageFailure = "";
         int created = 0;
-        // Required solid sections always take precedence over speculative halo colliders.
-        // Empty sections are receipts, not native bodies, and never consume the collider cap.
-        for (var key : needed) {
-            if (sections.containsKey(key) || emptySections.containsKey(key)) continue;
-            boolean mandatory = required.contains(key);
-            // The larger capacity is reserved for required coverage. Speculative prewarming
-            // retains the original total-section ceiling, even when many bodies need more.
-            if (!mandatory && (sections.size() >= Math.min(maxSections, OPTIONAL_PREWARM_SECTIONS)
-                    || retryAt.getOrDefault(key, 0) > updates)) continue;
-            var result = add(key, mandatory, required);
-            if (result == CaptureResult.SOLID || result == CaptureResult.EMPTY) {
-                retryAt.remove(key);
-                if (result == CaptureResult.SOLID) created++;
-            } else {
-                retryAt.put(key, updates + 200);
-                if (mandatory) {
-                    coverageComplete = false;
-                    if (coverageFailure.isEmpty()) coverageFailure = result + ":" + key;
+        var admission = new AdmissionBudget(maxSections, maxBoxes);
+        var pendingChunks = new ArrayList<ChunkPos>();
+        for (var request : requests) {
+            if (!request.bounded() || !admission.fitsKnown(request.required(), this::knownBoxes)) {
+                failedCoverage("required_budget");
+                continue;
+            }
+            var combined = admission.with(request.required());
+            var chunks = planRequiredChunks(combined);
+            if (!chunks.bounded()) {
+                failedCoverage("required_chunk_limit");
+                continue;
+            }
+            // A failed request never protects tickets from the next complete request. Explicit
+            // loads share one four-chunk allowance across every request and the final prewarm.
+            ensureRequiredChunks(chunks);
+            var prepared = new LinkedHashMap<SectionKey, PreparedSection>();
+            CaptureResult failure = null;
+            for (var key : request.required()) {
+                if (hasReceipt(key)) continue;
+                var captured = prepare(key);
+                if (captured == null) {
+                    failure = host.getChunkSource().getChunkNow(key.x(), key.z()) == null
+                            ? CaptureResult.UNLOADED : CaptureResult.FAILED;
+                    break;
+                }
+                prepared.put(key, captured);
+                if (!admission.fitsKnown(request.required(), this::knownBoxes)) {
+                    failure = CaptureResult.BUDGET;
+                    break;
                 }
             }
+            if (failure != null) {
+                failedCoverage(failure.toString());
+                if (failure == CaptureResult.UNLOADED) pendingChunks.addAll(chunks.required());
+                continue;
+            }
+            // Count the entire group before creating any native collider. A 65-solid-section
+            // body must not fill and protect 64 slots while never becoming runnable itself.
+            if (!admission.fitsComplete(request.required(), this::knownBoxes)) {
+                failedCoverage("required_budget");
+                continue;
+            }
+            int additionalSections = (int) prepared.values().stream().filter(value -> !value.boxes().isEmpty()).count();
+            int additionalBoxes = prepared.values().stream().mapToInt(value -> value.boxes().size()).sum();
+            int retainedBoxes = sections.values().stream().mapToInt(entry -> entry.boxes).sum();
+            for (var key : List.copyOf(sections.keySet())) {
+                if (sections.size() + additionalSections <= maxSections
+                        && additionalBoxes <= maxBoxes - retainedBoxes) break;
+                if (combined.contains(key)) continue;
+                retainedBoxes -= sections.get(key).boxes;
+                remove(key);
+            }
+            boolean installed = true;
+            for (var entry : prepared.entrySet()) {
+                if (!install(entry.getKey(), entry.getValue())) {
+                    installed = false;
+                    break;
+                }
+                if (!entry.getValue().boxes().isEmpty()) created++;
+            }
+            if (installed) admission.reserve(request.required());
+            else failedCoverage("native_install_failed");
         }
+        // Preserve successful groups first. Remaining ticket slots let pending requests make
+        // bounded progress; they confer no admission or protection on partial terrain.
+        var retainedChunks = new LinkedHashSet<>(planRequiredChunks(admission.required()).required());
+        for (var chunk : pendingChunks) {
+            if (retainedChunks.size() >= MAX_REQUIRED_CHUNKS) break;
+            retainedChunks.add(chunk);
+        }
+        updateRequiredChunks(new ChunkPlan(List.copyOf(retainedChunks), true));
+        // Receipts outside admitted groups are disposable. Trim them without discarding the
+        // successful groups, then allow at most the remaining bounded space for the halo.
+        for (var key : List.copyOf(emptySections.keySet())) {
+            if (sections.size() + emptySections.size() <= MAX_CANDIDATE_SECTIONS) break;
+            if (!admission.required().contains(key)) emptySections.remove(key);
+        }
+        // Optional halo never evicts admitted terrain and never loads chunks.
+        for (var key : plan.nearby()) {
+            if (sections.size() >= Math.min(maxSections, OPTIONAL_PREWARM_SECTIONS)) break;
+            if (sections.size() + emptySections.size() >= MAX_CANDIDATE_SECTIONS) break;
+            if (hasReceipt(key) || retryAt.getOrDefault(key, 0) > updates) continue;
+            var captured = prepare(key);
+            int boxes = sections.values().stream().mapToInt(entry -> entry.boxes).sum();
+            if (captured != null && captured.boxes().size() <= maxBoxes - boxes
+                    && install(key, captured)) {
+                if (!captured.boxes().isEmpty()) created++;
+                retryAt.remove(key);
+            } else retryAt.put(key, updates + 200);
+        }
+        // A later request may incidentally complete an earlier shared footprint.
+        coverageComplete = requests.stream().allMatch(request -> covers(request, this::hasReceipt));
+        if (coverageComplete) coverageFailure = "";
         int boxes = sections.values().stream().mapToInt(entry -> entry.boxes).sum();
         appliedPlan = plan;
         return new Diagnostics(sections.size(), boxes, created, skipped);
@@ -150,6 +230,50 @@ public final class TerrainColliderCache implements AutoCloseable {
     }
 
     public boolean coverageComplete() { return coverageComplete; }
+
+    /** A distant failed request must not invalidate another body's complete terrain receipt. */
+    public boolean covers(AABB bounds) {
+        return covers(requiredPlan(bounds), this::hasReceipt);
+    }
+
+    private boolean hasReceipt(SectionKey key) {
+        if (invalidated.contains(key)) return false;
+        var chunk = host.getChunkSource().getChunkNow(key.x(), key.z());
+        if (chunk == null) return false;
+        var solid = sections.get(key);
+        return solid != null && solid.chunk == chunk || emptySections.get(key) == chunk;
+    }
+
+    /** Reuses the section footprint for both runtime priority checks and final admission. */
+    private CoveragePlan requiredPlan(AABB bounds) {
+        if (bounds == null || !finite(bounds)) return new CoveragePlan(List.of(), List.of(), false);
+        if (bounds.maxY <= host.getMinY() || bounds.minY >= host.getMaxY()) {
+            return new CoveragePlan(List.of(), List.of(), true);
+        }
+        var padded = bounds.inflate(0.1);
+        var range = new SectionRange(floorSection(padded.minX), floorSection(padded.maxX),
+                Math.max(floorSection(host.getMinY()), floorSection(padded.minY)),
+                Math.min(floorSection(host.getMaxY() - 1.0), floorSection(padded.maxY)),
+                floorSection(padded.minZ), floorSection(padded.maxZ));
+        var cached = requiredPlans.get(range);
+        if (cached != null) return cached;
+        var result = planRequiredCoverage(List.of(bounds), host.getMinY(), host.getMaxY());
+        requiredPlans.put(range, result);
+        while (requiredPlans.size() > SubLevelPhysicsUniverse.MAX_ACTIVE * 2) {
+            requiredPlans.remove(requiredPlans.keySet().iterator().next());
+        }
+        return result;
+    }
+
+    private void failedCoverage(String reason) {
+        skipped++;
+        coverageComplete = false;
+        if (coverageFailure.isEmpty()) coverageFailure = reason;
+    }
+
+    static boolean covers(CoveragePlan plan, Predicate<SectionKey> receipt) {
+        return plan.bounded() && plan.required().stream().allMatch(receipt);
+    }
 
     public String coverageFailure() { return coverageFailure; }
 
@@ -175,6 +299,8 @@ public final class TerrainColliderCache implements AutoCloseable {
     public void clear() {
         for (var key : List.copyOf(sections.keySet())) remove(key);
         retryAt.clear();
+        sectionEstimates.clear();
+        requiredPlans.clear();
         invalidated.clear();
         emptySections.clear();
         coverageComplete = false;
@@ -189,60 +315,111 @@ public final class TerrainColliderCache implements AutoCloseable {
         clear();
     }
 
-    private CaptureResult add(SectionKey key, boolean mandatory, java.util.Set<SectionKey> required) {
+    private int knownBoxes(SectionKey key) {
+        if (invalidated.contains(key)) return -1;
+        var chunk = host.getChunkSource().getChunkNow(key.x(), key.z());
+        if (chunk == null) return -1;
+        var solid = sections.get(key);
+        if (solid != null && solid.chunk == chunk) return solid.boxes;
+        if (emptySections.get(key) == chunk) return 0;
+        var estimate = sectionEstimates.get(key);
+        return estimate != null && estimate.chunk() == chunk ? estimate.boxes() : -1;
+    }
+
+    private PreparedSection prepare(SectionKey key) {
+        var chunk = host.getChunkSource().getChunkNow(key.x(), key.z());
+        if (chunk == null) return null;
+        try {
+            List<PhysicsBox> boxes = chunk.getSection(chunk.getSectionIndex(key.y() * 16)).hasOnlyAir()
+                    ? List.of() : TerrainSectionGeometry.capture(host, key.x(), key.y(), key.z()).boxes();
+            sectionEstimates.put(key, new SectionEstimate(chunk, boxes.size()));
+            while (sectionEstimates.size() > MAX_CANDIDATE_SECTIONS) {
+                sectionEstimates.remove(sectionEstimates.keySet().iterator().next());
+            }
+            return new PreparedSection(chunk, boxes);
+        } catch (RuntimeException | AssertionError failure) {
+            AcademyCraft.LOGGER.debug("Unable to prepare terrain section {}: {}", key, failure.toString());
+            return null;
+        }
+    }
+
+    private boolean install(SectionKey key, PreparedSection prepared) {
+        if (prepared.boxes().isEmpty()) {
+            emptySections.put(key, prepared.chunk());
+            return true;
+        }
         var bodies = new ArrayList<NativePhysicsBody>();
         try {
-            // Required chunks were ticketed and loaded under the per-tick cap. Optional halo
-            // sections may use resident chunks, but never cause additional chunk loading.
-            var chunk = host.getChunkSource().getChunkNow(key.x(), key.z());
-            if (chunk == null) { skipped++; return CaptureResult.UNLOADED; }
-            if (chunk.getSection(chunk.getSectionIndex(key.y() * 16)).hasOnlyAir()) {
-                emptySections.put(key, chunk);
-                return CaptureResult.EMPTY;
-            }
-            var geometry = TerrainSectionGeometry.capture(host, key.x(), key.y(), key.z());
-            if (geometry.boxes().isEmpty()) {
-                emptySections.put(key, chunk);
-                return CaptureResult.EMPTY;
-            }
-            int currentBoxes = sections.values().stream().mapToInt(entry -> entry.boxes).sum();
-            if (mandatory) {
-                for (var optional : List.copyOf(sections.keySet())) {
-                    if (sections.size() < maxSections && geometry.boxes().size() <= maxBoxes - currentBoxes) break;
-                    if (required.contains(optional)) continue;
-                    currentBoxes -= sections.get(optional).boxes;
-                    remove(optional);
-                }
-            }
-            if (sections.size() >= maxSections || geometry.boxes().size() > maxBoxes - currentBoxes) {
-                skipped++;
-                AcademyCraft.LOGGER.debug("Skipping terrain section {}: terrain box budget {}/{}",
-                        key, currentBoxes, maxBoxes);
-                return CaptureResult.BUDGET;
-            }
             var origin = world.origin();
             var pose = new PhysicsPose(new PhysicsVector(key.x() * 16 - origin.x(),
                     key.y() * 16 - origin.y(), key.z() * 16 - origin.z()), PhysicsQuaternion.IDENTITY);
-            for (int start = 0; start < geometry.boxes().size(); start += BOXES_PER_SECTION) {
-                var batch = List.copyOf(geometry.boxes().subList(start,
-                        Math.min(geometry.boxes().size(), start + BOXES_PER_SECTION)));
+            for (int start = 0; start < prepared.boxes().size(); start += BOXES_PER_SECTION) {
+                var batch = List.copyOf(prepared.boxes().subList(start,
+                        Math.min(prepared.boxes().size(), start + BOXES_PER_SECTION)));
                 bodies.add(world.createBody(BodyType.FIXED, pose, batch, 0.0, 0.6, 0.0, false));
             }
-            sections.put(key, new Entry(chunk, List.copyOf(bodies), geometry.boxes().size()));
+            sections.put(key, new Entry(prepared.chunk(), List.copyOf(bodies), prepared.boxes().size()));
             AcademyCraft.LOGGER.debug("Terrain section added {} boxes={} bodies={}", key,
-                    geometry.boxes().size(), bodies.size());
-            return CaptureResult.SOLID;
+                    prepared.boxes().size(), bodies.size());
+            return true;
         } catch (RuntimeException | AssertionError failure) {
             for (var body : bodies) {
                 try { body.close(); }
                 catch (RuntimeException closeFailure) { failure.addSuppressed(closeFailure); }
             }
-            skipped++;
-            AcademyCraft.LOGGER.debug("Skipping terrain section {}: {}", key, failure.toString());
-            return CaptureResult.FAILED;
+            AcademyCraft.LOGGER.debug("Unable to install terrain section {}: {}", key, failure.toString());
+            return false;
         }
     }
 
+    /** Only complete groups reserve resources; a failed prefix never owns the cache. */
+    static final class AdmissionBudget {
+        private final int maxSections;
+        private final int maxBoxes;
+        private final Set<SectionKey> required = new LinkedHashSet<>();
+
+        AdmissionBudget(int maxSections, int maxBoxes) {
+            this.maxSections = maxSections;
+            this.maxBoxes = maxBoxes;
+        }
+
+        Set<SectionKey> required() { return required; }
+
+        Set<SectionKey> with(Collection<SectionKey> request) {
+            var combined = new LinkedHashSet<>(required);
+            combined.addAll(request);
+            return combined;
+        }
+
+        boolean fitsKnown(Collection<SectionKey> request, ToIntFunction<SectionKey> boxes) {
+            return fits(request, boxes, false);
+        }
+
+        boolean fitsComplete(Collection<SectionKey> request, ToIntFunction<SectionKey> boxes) {
+            return fits(request, boxes, true);
+        }
+
+        private boolean fits(Collection<SectionKey> request, ToIntFunction<SectionKey> boxes,
+                             boolean requireComplete) {
+            var combined = with(request);
+            if (combined.size() > MAX_CANDIDATE_SECTIONS || !planRequiredChunks(combined).bounded()) return false;
+            int solidSections = 0;
+            long boxCount = 0;
+            for (var key : combined) {
+                int count = boxes.applyAsInt(key);
+                if (count < 0) {
+                    if (requireComplete) return false;
+                    continue;
+                }
+                if (count > 0) solidSections++;
+                boxCount += count;
+                if (solidSections > maxSections || boxCount > maxBoxes) return false;
+            }
+            return true;
+        }
+
+        void reserve(Collection<SectionKey> request) { required.addAll(request); }
+    }
     private void remove(SectionKey key) {
         var entry = sections.remove(key);
         if (entry == null) return;
@@ -265,7 +442,7 @@ public final class TerrainColliderCache implements AutoCloseable {
         return best;
     }
 
-    private void updateRequiredChunks(ChunkPlan plan, boolean sectionsBounded) {
+    private void updateRequiredChunks(ChunkPlan plan) {
         var wanted = new LinkedHashSet<>(plan.required());
         for (var position : List.copyOf(collisionTickets)) {
             if (!wanted.contains(position)) {
@@ -284,14 +461,24 @@ public final class TerrainColliderCache implements AutoCloseable {
             chunkLoadTick = tick;
             syncChunkLoads = 0;
         }
-        // An oversized plan cannot be completed, so do not synchronously generate part of it.
-        if (!sectionsBounded || !plan.bounded()) return;
+        // The selected list is already capped. An oversized aggregate must not prevent the
+        // admitted high-priority requests from completing their bounded loads.
         for (var position : wanted) {
             if (syncChunkLoads >= MAX_SYNC_CHUNK_LOADS_PER_TICK) break;
             if (host.getChunkSource().getChunkNow(position.x(), position.z()) != null) continue;
             syncChunkLoads++;
             host.getChunk(position.x(), position.z());
         }
+    }
+
+    /** Existing tickets need no release/reacquire cycle while another request is inspected. */
+    private void ensureRequiredChunks(ChunkPlan plan) {
+        var retained = new LinkedHashSet<>(plan.required());
+        for (var current : collisionTickets) {
+            if (retained.size() >= MAX_REQUIRED_CHUNKS) break;
+            retained.add(current);
+        }
+        updateRequiredChunks(new ChunkPlan(List.copyOf(retained), true));
     }
 
     private void releaseCollisionTickets() {
@@ -327,13 +514,37 @@ public final class TerrainColliderCache implements AutoCloseable {
     /** Plans each body's local neighbourhood; never fills the gap between separated bodies. */
     static CoveragePlan planCoverage(Collection<AABB> activeBounds, int minHeight, int maxHeight) {
         var relevant = new ArrayList<AABB>();
+        for (var bounds : activeBounds) {
+            if (bounds != null && finite(bounds) && bounds.maxY > minHeight && bounds.minY < maxHeight) {
+                relevant.add(bounds.inflate(0.1));
+            }
+        }
+        var mandatory = planRequiredCoverage(activeBounds, minHeight, maxHeight);
+        var required = new LinkedHashSet<>(mandatory.required());
+        var nearby = new LinkedHashSet<SectionKey>();
+        halo:
+        for (var key : required) for (int x = key.x() - 1; x <= key.x() + 1; x++) {
+            for (int y = Math.max(minHeight >> 4, key.y() - 1); y <= Math.min((maxHeight - 1) >> 4, key.y() + 1); y++) {
+                for (int z = key.z() - 1; z <= key.z() + 1; z++) {
+                    if (required.size() + nearby.size() >= MAX_CANDIDATE_SECTIONS) break halo;
+                    var candidate = new SectionKey(x, y, z);
+                    if (!required.contains(candidate)) nearby.add(candidate);
+                }
+            }
+        }
+        var ordered = new ArrayList<>(nearby);
+        ordered.sort(java.util.Comparator.comparingDouble(key -> distanceToBounds(key, relevant)));
+        return new CoveragePlan(List.copyOf(required), List.copyOf(ordered), mandatory.bounded());
+    }
+
+    /** Coverage admission does not enumerate the speculative halo for every individual body. */
+    static CoveragePlan planRequiredCoverage(Collection<AABB> activeBounds, int minHeight, int maxHeight) {
         var required = new LinkedHashSet<SectionKey>();
         boolean bounded = true;
         for (var raw : activeBounds) {
             if (raw == null || !finite(raw)) { bounded = false; continue; }
             if (raw.maxY <= minHeight || raw.minY >= maxHeight) continue;
             var bounds = raw.inflate(0.1);
-            relevant.add(bounds);
             int minX = floorSection(bounds.minX), maxX = floorSection(bounds.maxX);
             int minY = Math.max(floorSection(minHeight), floorSection(bounds.minY));
             int maxY = Math.min(floorSection(maxHeight - 1.0), floorSection(bounds.maxY));
@@ -351,20 +562,7 @@ public final class TerrainColliderCache implements AutoCloseable {
                 required.add(key);
             }
         }
-        var nearby = new LinkedHashSet<SectionKey>();
-        halo:
-        for (var key : required) for (int x = key.x() - 1; x <= key.x() + 1; x++) {
-            for (int y = Math.max(minHeight >> 4, key.y() - 1); y <= Math.min((maxHeight - 1) >> 4, key.y() + 1); y++) {
-                for (int z = key.z() - 1; z <= key.z() + 1; z++) {
-                    if (required.size() + nearby.size() >= MAX_CANDIDATE_SECTIONS) break halo;
-                    var candidate = new SectionKey(x, y, z);
-                    if (!required.contains(candidate)) nearby.add(candidate);
-                }
-            }
-        }
-        var ordered = new ArrayList<>(nearby);
-        ordered.sort(java.util.Comparator.comparingDouble(key -> distanceToBounds(key, relevant)));
-        return new CoveragePlan(List.copyOf(required), List.copyOf(ordered), bounded);
+        return new CoveragePlan(List.copyOf(required), List.of(), bounded);
     }
 
     private static int floorSection(double coordinate) {
@@ -431,6 +629,10 @@ public final class TerrainColliderCache implements AutoCloseable {
     private record SectionRange(int minX, int maxX, int minY, int maxY, int minZ, int maxZ) {}
 
     private enum CaptureResult { SOLID, EMPTY, UNLOADED, BUDGET, FAILED }
+
+    private record SectionEstimate(LevelChunk chunk, int boxes) {}
+
+    private record PreparedSection(LevelChunk chunk, List<PhysicsBox> boxes) {}
 
     private static final class Entry {
         private final LevelChunk chunk;

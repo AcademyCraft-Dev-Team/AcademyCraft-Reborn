@@ -11,6 +11,8 @@ import java.util.Objects;
 
 /** Stable collision/configuration identity; it contains no runtime counters or registry numeric IDs. */
 public final class NativeStructurePhysicsGeometryDigest {
+    // Persisted shape-v1 identity: the historical abi=1 token must stay stable. ABI 2
+    // adds simulation pausing without changing shape, mass or material semantics.
     private static final byte[] PROFILE = ("academy-native-structure-shape-v1\0"
             + "rapier3d-f64-0.36.1;abi=1;density=1;friction=0.6;restitution=0;"
             + "linearDamping=0;angularDamping=0;gravityScale=1;ccd=1;canSleep=1\0")

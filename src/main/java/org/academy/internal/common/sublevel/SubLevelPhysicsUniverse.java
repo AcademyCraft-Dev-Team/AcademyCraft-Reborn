@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Phase 0 prototype: one shared Rapier world for many plot-backed structures. The class owns
@@ -87,12 +88,31 @@ public final class SubLevelPhysicsUniverse {
         step(duration, substeps, false);
     }
 
-    /** Keeps all poses and velocities intact until the host has installed every required terrain collider. */
+    /** Compatibility entry point for callers that deliberately gate every structure together. */
     public boolean stepCovered(double duration, int substeps, boolean force, boolean terrainCovered) {
+        return stepCovered(duration, substeps, force, terrainCovered ? Set.of() : Set.copyOf(entries.keySet()));
+    }
+
+    /**
+     * Holds only structures lacking their own swept terrain coverage. Every welded body becomes
+     * a stationary, collidable native obstacle; ordinary sleep is insufficient because impact
+     * would wake it into unknown terrain. Other structures keep using the shared solver.
+     */
+    public boolean stepCovered(double duration, int substeps, boolean force, Set<SubLevelId> blocked) {
+        Objects.requireNonNull(blocked, "blocked");
         if (!Double.isFinite(duration) || duration <= 0.0 || substeps < 1) {
             throw new IllegalArgumentException("Physics step requires a finite positive duration and substeps");
         }
-        if (!terrainCovered) return false;
+        boolean available = entries.isEmpty();
+        for (var entry : entries.values()) {
+            boolean paused = blocked.contains(entry.id);
+            if (entry.simulationPaused != paused) {
+                for (var body : entry.bodies) body.setSimulationPaused(paused);
+                entry.simulationPaused = paused;
+            }
+            available |= !paused;
+        }
+        if (!available) return false;
         step(duration, substeps, force);
         return true;
     }
@@ -109,6 +129,7 @@ public final class SubLevelPhysicsUniverse {
         if (!force && !entries.isEmpty()) {
             boolean sleeping = true;
             for (var entry : entries.values()) {
+                if (entry.simulationPaused) continue;
                 if (entry.motion == null || !entry.motion.sleeping()) {
                     sleeping = false;
                     break;
@@ -117,7 +138,9 @@ public final class SubLevelPhysicsUniverse {
             if (sleeping) return;
         }
         world.step(duration, substeps);
-        for (var entry : entries.values()) entry.motion = readMotion(entry);
+        for (var entry : entries.values()) {
+            if (!entry.simulationPaused) entry.motion = readMotion(entry);
+        }
         revision = Math.incrementExact(revision);
     }
 
@@ -128,7 +151,7 @@ public final class SubLevelPhysicsUniverse {
 
     public boolean impulse(SubLevelId id, PhysicsVector impulse, PhysicsVector worldPoint) {
         var entry = entries.get(id);
-        if (entry == null) return false;
+        if (entry == null || entry.simulationPaused) return false;
         var motion = readMotion(entry);
         for (var body : entry.bodies) {
             double fraction = body.mass() / motion.mass();
@@ -142,7 +165,7 @@ public final class SubLevelPhysicsUniverse {
 
     public boolean setVelocity(SubLevelId id, PhysicsVector linear, PhysicsVector angular) {
         var entry = entries.get(id);
-        if (entry == null) return false;
+        if (entry == null || entry.simulationPaused) return false;
         var motion = readMotion(entry);
         for (var body : entry.bodies) {
             var offset = rotate(motion.pose().rotation(), body.localCenterOfMass().subtract(motion.localCenterOfMass()));
@@ -154,10 +177,23 @@ public final class SubLevelPhysicsUniverse {
         return true;
     }
 
+    /** Changes only angular velocity; linear velocity is preserved per welded body. */
+    public boolean setAngularVelocity(SubLevelId id, PhysicsVector angular) {
+        var entry = entries.get(id);
+        if (entry == null || entry.simulationPaused) return false;
+        for (var body : entry.bodies) {
+            var state = body.state();
+            world.setVelocity(body, state.linearVelocity(), angular);
+        }
+        entry.motion = readMotion(entry);
+        revision = Math.incrementExact(revision);
+        return true;
+    }
+
     /** Moves all welded bodies together without replacing their identity or velocity. */
     public boolean setPose(SubLevelId id, PhysicsPose pose) {
         var entry = entries.get(id);
-        if (entry == null) return false;
+        if (entry == null || entry.simulationPaused) return false;
         var motion = readMotion(entry);
         for (var body : entry.bodies) body.setPose(pose);
         setVelocity(id, motion.linearVelocity(), motion.angularVelocity());
@@ -166,6 +202,12 @@ public final class SubLevelPhysicsUniverse {
 
     public boolean contains(SubLevelId id) {
         return entries.containsKey(id);
+    }
+
+    /** Terrain admission is independent of sleeping and never consumes control impulses. */
+    public boolean isSimulationPaused(SubLevelId id) {
+        var entry = entries.get(id);
+        return entry != null && entry.simulationPaused;
     }
 
     public int activeCount() {
@@ -243,6 +285,7 @@ public final class SubLevelPhysicsUniverse {
         private final SubLevelId id;
         private final List<NativePhysicsBody> bodies;
         private Motion motion;
+        private boolean simulationPaused;
 
         private Entry(SubLevelId id, List<NativePhysicsBody> bodies) {
             this.id = id;

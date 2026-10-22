@@ -24,7 +24,7 @@ import java.util.function.Function;
  */
 public record NativePhysicsArtifact(Path library, Path manifest, String sha256, String platform) {
     public static final String ENGINE = "rapier3d-f64-0.36.1";
-    public static final int ABI = 1;
+    public static final int ABI = 2;
     public static final int ENGINE_VERSION = 3601;
     public static final String LIBRARY_PROPERTY = "academy.nativePhysics.library";
     public static final String MANIFEST_PROPERTY = "academy.nativePhysics.manifest";

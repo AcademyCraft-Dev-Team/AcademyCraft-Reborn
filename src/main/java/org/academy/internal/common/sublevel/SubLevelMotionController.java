@@ -34,6 +34,7 @@ public final class SubLevelMotionController {
         var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
         if (subLevel == null || subLevel.state() != SubLevelState.ACTIVE
                 && subLevel.state() != SubLevelState.SLEEPING) return false;
+        if (runtime.universe().isSimulationPaused(id)) return false;
         long duration = durationTicks(seconds);
         THRUSTS.remove(id);
         SESSIONS.put(id, new Session(server, localAnchor, target, runtime.host().getGameTime() + duration,
@@ -53,6 +54,7 @@ public final class SubLevelMotionController {
         var subLevel = runtime == null ? null : runtime.get(id).orElse(null);
         if (subLevel == null || subLevel.state() != SubLevelState.ACTIVE
                 && subLevel.state() != SubLevelState.SLEEPING) return false;
+        if (runtime.universe().isSimulationPaused(id)) return false;
         long duration = durationTicks(seconds);
         SESSIONS.remove(id);
         THRUSTS.put(id, new Thrust(server, unit, Math.min(MAX_SPEED, speed),

@@ -38,9 +38,16 @@ pub(super) struct ContactSurfaces {
     fixed_index: Bvh,
     fixed_handles: HashMap<u32, ColliderHandle>,
     dynamic_links: HashMap<RigidBodyHandle, HashSet<RigidBodyHandle>>,
+    #[cfg(test)]
+    diagnostic_contacts: std::sync::atomic::AtomicUsize,
 }
 
 impl ContactSurfaces {
+    #[cfg(test)]
+    pub(super) fn diagnose_next_contacts(&self, count: usize) {
+        self.diagnostic_contacts.store(count, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub(super) fn insert_body(&mut self, body: RigidBodyHandle,
                              bodies: &RigidBodySet, colliders: &ColliderSet) {
         let body = &bodies[body];
@@ -280,11 +287,33 @@ impl PhysicsHooks for ContactSurfaces {
         let colliders = context.colliders;
         let Some(contact) = context.rigid_mut() else { return; };
         let original = *contact.normal;
+        #[cfg(test)]
+        let diagnostic = self.diagnostic_contacts.fetch_update(
+            std::sync::atomic::Ordering::Relaxed, std::sync::atomic::Ordering::Relaxed,
+            |remaining| remaining.checked_sub(1)).is_ok();
+        #[cfg(test)]
+        if diagnostic {
+            eprintln!("SURFACE_CONTACT pair={:?}/{:?} normal={:?} count={}",
+                collider1, collider2, original, contact.solver_contacts.len());
+            for handle in [collider1, collider2] {
+                if let Some(surface) = self.surfaces.get(&handle) {
+                    eprintln!("  surface={:?} half={:?} patches={:?}", handle, surface.half,
+                        surface.faces.each_ref().map(|face| face.len()));
+                }
+            }
+        }
         let mut corrected = None;
         let mut consistent = true;
         contact.solver_contacts.retain(|point| {
             let one = self.exposed_normal(collider1, colliders, point.anchor1, original);
             let two = -self.exposed_normal(collider2, colliders, point.anchor2, -one);
+            #[cfg(test)]
+            if diagnostic {
+                eprintln!("  anchor1={:?} local1={:?} anchor2={:?} local2={:?} one={:?} two={:?} dist={}",
+                    point.anchor1, colliders[collider1].position().inverse_transform_point(point.anchor1),
+                    point.anchor2, colliders[collider2].position().inverse_transform_point(point.anchor2),
+                    one, two, point.dist);
+            }
             if two.length_squared() < 1.0e-8 { return false; }
             let normal = two.normalize();
             if let Some(previous) = corrected {
@@ -301,6 +330,11 @@ impl PhysicsHooks for ContactSurfaces {
             for point in contact.solver_contacts.iter_mut() {
                 point.dist = (point.anchor2 - point.anchor1).dot(normal);
             }
+        }
+        #[cfg(test)]
+        if diagnostic {
+            eprintln!("SURFACE_RESULT consistent={} normal={:?} retained={}",
+                consistent, contact.normal, contact.solver_contacts.len());
         }
     }
 }

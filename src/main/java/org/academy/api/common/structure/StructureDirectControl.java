@@ -164,10 +164,36 @@ public final class StructureDirectControl {
     /** Submits one outer tick of bounded force; the backend consumes it at physics substeps. */
     public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
                                  StructurePhysicsControl control) {
+        return submit(host, reference, actor, controlId, control, false);
+    }
+
+    /**
+     * Submits one controlled tick. When holdOrientation is true the backend holds the pose rotation
+     * observed at the first submission for the lifetime of the standing control token (at least
+     * the skill's 200-tick hover window), instead of allowing contact torque to spin the structure.
+     * Backends without angular authority ignore the flag rather than rejecting the command.
+     */
+    public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
+                                 StructurePhysicsControl control, boolean holdOrientation) {
         Objects.requireNonNull(control, "control");
         if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
                 || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
-        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control);
+        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control,
+                holdOrientation);
+    }
+
+    /**
+     * Submits one controlled tick with an explicit source pose. The backend holds that rotation
+     * for the standing control token and, when supported, normalizes the body to the source pose
+     * at the first tick so a capture-adjacent disturbance cannot wedge the structure.
+     */
+    public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
+                                 StructurePhysicsControl control, StructurePose holdPose) {
+        Objects.requireNonNull(control, "control");
+        Objects.requireNonNull(holdPose, "holdPose");
+        if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
+                || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
+        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control, holdPose);
     }
 
     /** Drops every lease; called when the owning server stops. */

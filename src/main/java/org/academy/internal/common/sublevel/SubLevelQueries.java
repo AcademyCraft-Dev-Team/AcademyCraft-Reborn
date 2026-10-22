@@ -40,10 +40,14 @@ public final class SubLevelQueries {
         var handle = resolve(host.getServer(), reference).orElse(null);
         var runtime = SubLevelServer.runtime(host).orElse(null);
         if (handle == null || runtime == null || runtime.host() != host) return Optional.empty();
-        return runtime.universe().motion(new SubLevelId(reference.id())).map(motion ->
+        var id = new SubLevelId(reference.id());
+        boolean paused = runtime.universe().isSimulationPaused(id);
+        // Saved velocities belong to terrain prediction and eventual native resumption. Public
+        // observations describe the stationary collider, so they must not advertise that inertia.
+        return runtime.universe().motion(id).map(motion ->
                 new StructureDynamics.State(handle.pose(),
-                        new Vec3(motion.linearVelocity().x(), motion.linearVelocity().y(), motion.linearVelocity().z()),
-                        new Vec3(motion.angularVelocity().x(), motion.angularVelocity().y(), motion.angularVelocity().z()),
+                        paused ? Vec3.ZERO : new Vec3(motion.linearVelocity().x(), motion.linearVelocity().y(), motion.linearVelocity().z()),
+                        paused ? Vec3.ZERO : new Vec3(motion.angularVelocity().x(), motion.angularVelocity().y(), motion.angularVelocity().z()),
                         new Vec3(motion.localCenterOfMass().x(), motion.localCenterOfMass().y(), motion.localCenterOfMass().z()),
                         motion.mass()));
     }

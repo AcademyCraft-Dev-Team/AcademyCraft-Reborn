@@ -13,6 +13,7 @@ import org.academy.internal.common.structure.physics.PhysicsPose;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -444,13 +445,15 @@ public final class SubLevelRuntime {
         for (var managed : subLevels.values()) {
             var subLevel = managed.subLevel;
             if (subLevel.state() != SubLevelState.ACTIVE && subLevel.state() != SubLevelState.SLEEPING) continue;
+            if (universe.isSimulationPaused(subLevel.id())) continue;
             SubLevelTerrainBreaker.beforeStep(host, subLevel, universe.motion(subLevel.id()).orElse(null),
                     managed.localBoxes, duration);
         }
         long terrainStart = System.nanoTime();
         boolean terrainUpdated = false;
+        var terrainRequests = terrainRequests(duration);
         if (terrain != null) {
-            var terrainBounds = activeBounds(duration);
+            var terrainBounds = List.copyOf(terrainRequests.values());
             // A velocity/rotation command can wake a previously sleeping body before its pose
             // changes. Its next sweep must already be covered on that first moving tick.
             if (terrainNeedsUpdate || !terrainBounds.equals(sampledTerrainBounds) || terrain.needsUpdate()) {
@@ -463,20 +466,28 @@ public final class SubLevelRuntime {
         recordPhases(serverTick, work, StructureSimulationBudget.Phase.TERRAIN_SCAN,
                 System.nanoTime() - terrainStart, terrainUpdated ? 1 : 0);
         long physicsStart = System.nanoTime();
-        boolean terrainReady = terrain == null || terrain.coverageComplete();
-        if (!terrainReady) {
+        var blocked = new LinkedHashSet<SubLevelId>();
+        if (terrain != null) {
+            for (var request : terrainRequests.entrySet()) {
+                if (!terrain.covers(request.getValue())) blocked.add(request.getKey());
+            }
+        }
+        if (!blocked.isEmpty()) {
             terrainNeedsUpdate = true;
             if (!terrainBlocked || serverTick >= nextTerrainWarning) {
-                AcademyCraft.LOGGER.warn("SubLevel physics deferred in {}: terrain coverage incomplete ({}), cache={}; retrying without advancing bodies",
-                        host.dimension().identifier(), terrain.coverageFailure(), terrain.diagnostics());
+                AcademyCraft.LOGGER.warn("SubLevel terrain admission paused {}/{} structures in {}: {};"
+                                + " cache={}, paused_ids={}; covered structures continue simulating",
+                        blocked.size(), terrainRequests.size(), host.dimension().identifier(),
+                        terrain.coverageFailure(), terrain.diagnostics(), blocked.stream().limit(8).toList());
                 nextTerrainWarning = serverTick + 100;
             }
             terrainBlocked = true;
         } else if (terrainBlocked) {
-            AcademyCraft.LOGGER.info("SubLevel terrain coverage restored in {}; physics resumed", host.dimension().identifier());
+            AcademyCraft.LOGGER.info("SubLevel terrain admission restored in {}; paused structures resumed",
+                    host.dimension().identifier());
             terrainBlocked = false;
         }
-        universe.stepCovered(duration, substeps, terrainUpdated, terrainReady);
+        universe.stepCovered(duration, substeps, terrainUpdated, blocked);
         long physicsNanos = System.nanoTime() - physicsStart;
         int simulated = 0;
         for (var managed : subLevels.values()) {
@@ -510,7 +521,8 @@ public final class SubLevelRuntime {
                 if (managed.subLevel.state() != SubLevelState.ACTIVE
                         && managed.subLevel.state() != SubLevelState.SLEEPING) continue;
                 budget.record(host, budgetReference(managed.subLevel),
-                        StructureSimulationBudget.Phase.PHYSICS_STEP, perStructure, terrainReady ? universe.bodyCount() : 0);
+                        StructureSimulationBudget.Phase.PHYSICS_STEP, perStructure,
+                        universe.isSimulationPaused(managed.subLevel.id()) ? 0 : universe.bodyCount());
             }
         }
         if (plan != null && Boolean.getBoolean("academy.sublevel.budgetLog")) {
@@ -528,8 +540,9 @@ public final class SubLevelRuntime {
         }
     }
 
-    private List<AABB> activeBounds(double duration) {
-        var bounds = new ArrayList<AABB>();
+    private Map<SubLevelId, AABB> terrainRequests(double duration) {
+        var demands = new ArrayList<TerrainDemand>();
+        var players = host.players().stream().map(net.minecraft.world.entity.Entity::position).toList();
         for (var managed : subLevels.values()) {
             var state = managed.subLevel.state();
             if (state != SubLevelState.ACTIVE && state != SubLevelState.SLEEPING) continue;
@@ -538,12 +551,32 @@ public final class SubLevelRuntime {
             var motion = universe.motion(managed.subLevel.id()).orElse(null);
             var swept = motion == null ? current : sweptTerrainBounds(current,
                     managed.subLevel.localBounds(), motion, duration);
-            if (swept.maxY > host.getMinY() && swept.minY < host.getMaxY()) bounds.add(swept);
+            demands.add(new TerrainDemand(managed.subLevel.id(), swept,
+                    terrainDistanceBand(swept, players), terrain == null || terrain.covers(swept)));
         }
+        // Nearby requests may displace far sleeping coverage. Within the same 32-block band,
+        // retain existing complete coverage first to avoid sub-block movement churning the cache.
+        demands.sort(java.util.Comparator.comparingInt(TerrainDemand::distanceBand)
+                .thenComparing(demand -> !demand.covered()));
+        var bounds = new LinkedHashMap<SubLevelId, AABB>();
+        for (var demand : demands) bounds.put(demand.id(), demand.bounds());
         // The empty space between unrelated structures is not a terrain interest area.
         // A shared union lets distant/void bodies consume the whole section budget.
-        return List.copyOf(bounds);
+        return bounds;
     }
+
+    static int terrainDistanceBand(AABB bounds, List<Vec3> players) {
+        double distance = Double.POSITIVE_INFINITY;
+        for (var player : players) {
+            double x = Math.max(Math.max(bounds.minX - player.x, player.x - bounds.maxX), 0);
+            double y = Math.max(Math.max(bounds.minY - player.y, player.y - bounds.maxY), 0);
+            double z = Math.max(Math.max(bounds.minZ - player.z, player.z - bounds.maxZ), 0);
+            distance = Math.min(distance, Math.sqrt(x * x + y * y + z * z));
+        }
+        return !Double.isFinite(distance) ? Integer.MAX_VALUE : (int) Math.min(Integer.MAX_VALUE, distance / 32);
+    }
+
+    private record TerrainDemand(SubLevelId id, AABB bounds, int distanceBand, boolean covered) {}
 
     static AABB sweptTerrainBounds(AABB current, AABB localBounds, SubLevelPhysicsUniverse.Motion motion, double duration) {
         var linear = motion.linearVelocity();

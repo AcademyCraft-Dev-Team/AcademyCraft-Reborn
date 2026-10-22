@@ -272,8 +272,27 @@ public final class StructureBackendRouter {
     /** Queues one bounded control command in the selected backend. */
     public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
                                               UUID controlId, StructurePhysicsControl control) {
+        return submitDirectControl(host, reference, actor, controlId, control, false);
+    }
+
+    /** Routes an optional orientation hold; only backends with angular authority consume it. */
+    public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                              UUID controlId, StructurePhysicsControl control,
+                                              boolean holdOrientation) {
         if (SubLevelStructureRefs.isSubLevel(reference)) {
-            return SubLevelDirectControl.submit(host, reference, actor, controlId, control);
+            return SubLevelDirectControl.submit(host, reference, actor, controlId, control, holdOrientation);
+        }
+        var selected = selection(host.getServer());
+        return selected.bridge != null
+                && selected.bridge.submitDirectControl(host, reference, actor, controlId, control);
+    }
+
+    /** Routes an explicit source-pose hold; local SubLevel normalizes to it once. */
+    public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                              UUID controlId, StructurePhysicsControl control,
+                                              StructurePose holdPose) {
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return SubLevelDirectControl.submit(host, reference, actor, controlId, control, holdPose);
         }
         var selected = selection(host.getServer());
         return selected.bridge != null

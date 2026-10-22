@@ -30,6 +30,32 @@ class NativePhysicsLifecycleTest {
     }
 
     @Test
+    void pauseRejectsMotionCommandsWithoutFailingWorldAndRemainsIdempotent() {
+        var access = new FakeAccess();
+        try (var library = new NativePhysicsLibrary(access, () -> {})) {
+            var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO);
+            var body = body(world);
+            body.setSimulationPaused(true);
+            body.setSimulationPaused(true);
+            assertTrue(body.isSimulationPaused());
+            assertThrows(IllegalStateException.class, () -> body.setVelocity(PhysicsVector.ZERO, PhysicsVector.ZERO));
+            assertThrows(IllegalStateException.class, () -> body.applyImpulse(PhysicsVector.ZERO, PhysicsVector.ZERO));
+            assertThrows(IllegalStateException.class, body::sleep);
+            assertThrows(IllegalStateException.class, body::wake);
+            assertDoesNotThrow(() -> world.step(0.05, 3));
+            assertDoesNotThrow(() -> body.setPose(new PhysicsPose(PhysicsVector.ZERO, PhysicsQuaternion.IDENTITY)));
+            body.setSimulationPaused(false);
+            body.setSimulationPaused(false);
+            assertFalse(body.isSimulationPaused());
+            assertEquals(List.of("pause:2:true", "pause:2:false"), access.events);
+            body.setSimulationPaused(true);
+            body.close();
+            assertDoesNotThrow(body::close);
+            assertThrows(IllegalStateException.class, () -> body.setSimulationPaused(false));
+        }
+    }
+
+    @Test
     void destroysWorldsInReverseOrderBeforeReleasingCodeAndInvalidatesBodies() {
         var access = new FakeAccess();
         var library = new NativePhysicsLibrary(access, () -> access.events.add("release"));
@@ -188,6 +214,9 @@ class NativePhysicsLifecycleTest {
         @Override public void impulse(long world, long body, double[] impulseAndPoint) { impulse = impulseAndPoint.clone(); }
         @Override public void sleep(long world, long body) { states.get(body)[24] = 1; }
         @Override public void wake(long world, long body) { states.get(body)[24] = 0; }
+        @Override public void setSimulationPaused(long world, long body, boolean paused) {
+            events.add("pause:" + body + ":" + paused);
+        }
         @Override public void removeBody(long world, long body) { states.remove(body); }
         @Override public void createFixedJoint(long world, long body1, long body2, double[] anchors) {
             events.add("joint:" + body1 + ":" + body2);

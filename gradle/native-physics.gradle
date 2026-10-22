@@ -119,7 +119,7 @@ def prepareNative = tasks.register('prepareNativePhysics') {
             sourceDigest.update(it.bytes)
         }
         manifest.setText("""format=academy-native-physics-v1
-abi=1
+abi=2
 engine=rapier3d-f64-0.36.1
 platform=${hostPlatform}
 library=${libraryName}

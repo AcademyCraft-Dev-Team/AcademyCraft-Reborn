@@ -12,6 +12,7 @@ public interface PhysicsNativeAccess extends AutoCloseable {
     void impulse(long world, long body, double[] impulseAndPoint);
     void sleep(long world, long body);
     void wake(long world, long body);
+    void setSimulationPaused(long world, long body, boolean paused);
     void removeBody(long world, long body);
     void createFixedJoint(long world, long body1, long body2, double[] anchors);
 

@@ -34,6 +34,14 @@ struct BodyEntry {
     handle: RigidBodyHandle,
     kind: i32,
     cuboids: usize,
+    paused: Option<PausedMotion>,
+}
+
+#[derive(Clone, Copy)]
+struct PausedMotion {
+    linear: Vector,
+    angular: Vector,
+    sleeping: bool,
 }
 
 struct World {
@@ -58,7 +66,7 @@ impl World {
 
     fn dynamic_handle(&self, body: u64) -> Result<RigidBodyHandle> {
         let entry = self.bodies.get(&body).ok_or(INVALID_HANDLE)?;
-        if entry.kind != 1 { return Err(INVALID_ARGUMENT); }
+        if entry.kind != 1 || entry.paused.is_some() { return Err(INVALID_ARGUMENT); }
         Ok(entry.handle)
     }
 
@@ -68,8 +76,10 @@ impl World {
         let mut output = [0.0; STATE_LEN];
         output[0..3].copy_from_slice(&body.translation().to_array());
         output[3..7].copy_from_slice(&body.rotation().to_array());
-        output[7..10].copy_from_slice(&body.linvel().to_array());
-        output[10..13].copy_from_slice(&body.angvel().to_array());
+        let linear = entry.paused.map_or(body.linvel(), |saved| saved.linear);
+        let angular = entry.paused.map_or(body.angvel(), |saved| saved.angular);
+        output[7..10].copy_from_slice(&linear.to_array());
+        output[10..13].copy_from_slice(&angular.to_array());
         output[14..17].copy_from_slice(&body.local_center_of_mass().to_array());
         output[23] = 1.0;
         if entry.kind == 1 {
@@ -77,7 +87,7 @@ impl World {
             output[13] = body.mass();
             output[17..20].copy_from_slice(&mass.principal_inertia().to_array());
             output[20..24].copy_from_slice(&mass.principal_inertia_local_frame.to_array());
-            output[24] = if body.is_sleeping() { 1.0 } else { 0.0 };
+            output[24] = if entry.paused.map_or(body.is_sleeping(), |saved| saved.sleeping) { 1.0 } else { 0.0 };
             if output[13] <= 0.0 || output[17..20].iter().any(|value| *value <= 0.0) {
                 return Err(WORLD_FAILED);
             }
@@ -126,8 +136,8 @@ impl World {
     fn create_fixed_joint(&mut self, body1: u64, body2: u64, anchor1: Vector, anchor2: Vector) -> Result<()> {
         if body1 == body2 { return Err(INVALID_ARGUMENT); }
         if self.physics.impulse_joints.len() >= MAX_JOINTS { return Err(LIMIT_EXCEEDED); }
-        let handle1 = self.body_handle(body1)?;
-        let handle2 = self.body_handle(body2)?;
+        let handle1 = self.dynamic_handle(body1)?;
+        let handle2 = self.dynamic_handle(body2)?;
         let joint = FixedJointBuilder::new()
             .local_anchor1(anchor1)
             .local_anchor2(anchor2)
@@ -143,6 +153,37 @@ impl World {
         self.physics.bodies[handle].set_position(pose, true);
         self.physics.bodies.propagate_modified_body_positions_to_colliders(&mut self.physics.colliders);
         self.surfaces.refresh_body_pose(handle, &self.physics.bodies, &self.physics.colliders);
+        self.snapshot(body)?;
+        Ok(())
+    }
+
+    fn set_simulation_paused(&mut self, body: u64, paused: bool) -> Result<()> {
+        let entry = self.bodies.get_mut(&body).ok_or(INVALID_HANDLE)?;
+        if entry.kind != 1 { return Err(INVALID_ARGUMENT); }
+        if entry.paused.is_some() == paused { return Ok(()); }
+        let rigid_body = self.physics.bodies.get_mut(entry.handle).ok_or(WORLD_FAILED)?;
+        if paused {
+            entry.paused = Some(PausedMotion {
+                linear: rigid_body.linvel(),
+                angular: rigid_body.angvel(),
+                sleeping: rigid_body.is_sleeping(),
+            });
+            // Sleeping dynamics can be woken by contacts. A stationary position-based
+            // kinematic instead remains an immovable collider without replacing handles,
+            // local mass properties, colliders, or fixed joints.
+            let pose = *rigid_body.position();
+            rigid_body.set_body_type(RigidBodyType::KinematicPositionBased, true);
+            rigid_body.set_linvel(Vector::ZERO, false);
+            rigid_body.set_angvel(Vector::ZERO, false);
+            rigid_body.set_position(pose, false);
+            rigid_body.set_next_kinematic_position(pose);
+        } else if let Some(saved) = entry.paused.take() {
+            rigid_body.set_body_type(RigidBodyType::Dynamic, true);
+            rigid_body.set_linvel(saved.linear, false);
+            rigid_body.set_angvel(saved.angular, false);
+            if saved.sleeping { rigid_body.sleep(); }
+            else { self.physics.wake_up(entry.handle, true); }
+        }
         self.snapshot(body)?;
         Ok(())
     }
@@ -209,7 +250,7 @@ impl Registry {
         // Do not require a simulation step merely to obtain the initial mass/COM/inertia.
         owner.physics.bodies[handle].recompute_mass_properties_from_colliders(&owner.physics.colliders);
         owner.surfaces.insert_body(handle, &owner.physics.bodies, &owner.physics.colliders);
-        owner.bodies.insert(id, BodyEntry { handle, kind: description.kind, cuboids: cuboids.len() });
+        owner.bodies.insert(id, BodyEntry { handle, kind: description.kind, cuboids: cuboids.len(), paused: None });
         owner.cuboids += cuboids.len();
         owner.snapshot(id)?;
         Ok(id)
@@ -347,7 +388,7 @@ unsafe fn read(pointer: *const f64, length: i32, expected: usize) -> Result<Vec<
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn academy_physics_abi_version() -> i32 { 1 }
+pub extern "C" fn academy_physics_abi_version() -> i32 { 2 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn academy_physics_engine_version() -> i32 { 3601 }
@@ -476,6 +517,14 @@ pub extern "C" fn academy_physics_body_wake(world: u64, body: u64) -> i32 {
         let handle = world.dynamic_handle(body)?;
         world.physics.wake_up(handle, true);
         Ok(())
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn academy_physics_body_set_simulation_paused(world: u64, body: u64, paused: i32) -> i32 {
+    dispatch(Some(world), false, |registry| {
+        if paused != 0 && paused != 1 { return Err(INVALID_ARGUMENT); }
+        registry.world(world)?.set_simulation_paused(body, paused == 1)
     })
 }
 
@@ -683,6 +732,118 @@ mod tests {
         }
     }
 
+    fn merged_voxel_boxes(cells: &[(i32, i32, i32)], merge: bool) -> Vec<f64> {
+        let mut remaining: std::collections::BTreeSet<_> = cells.iter().copied().collect();
+        let mut boxes = Vec::new();
+        while let Some(&(x, y, z)) = remaining.first() {
+            let (mut max_x, mut max_y, mut max_z) = (x, y, z);
+            if merge {
+                while remaining.contains(&(max_x + 1, y, z)) { max_x += 1; }
+                while (x..=max_x).all(|xx| remaining.contains(&(xx, y, max_z + 1))) { max_z += 1; }
+                while (x..=max_x).all(|xx| (z..=max_z).all(|zz| remaining.contains(&(xx, max_y + 1, zz)))) {
+                    max_y += 1;
+                }
+            }
+            for xx in x..=max_x { for yy in y..=max_y { for zz in z..=max_z {
+                remaining.remove(&(xx, yy, zz));
+            }}}
+            boxes.extend_from_slice(&box_data(
+                [(x + max_x + 1) as f64 / 2.0, (y + max_y + 1) as f64 / 2.0, (z + max_z + 1) as f64 / 2.0],
+                [(max_x - x + 1) as f64 / 2.0, (max_y - y + 1) as f64 / 2.0, (max_z - z + 1) as f64 / 2.0]));
+        }
+        boxes
+    }
+
+    #[test]
+    fn disturbed_step_socket_lifts_with_com_force() {
+        let mut candidates = Vec::new();
+        for x in -5_i32..=5 { for z in -5_i32..=5 {
+            let top = if x > 0 { 2 } else { 0 };
+            for y in -2_i32..=top {
+                if (x * x + z * z) as f64 / 25.0 + if y < 0 { (y * y) as f64 / 4.0 } else { 0.0 } <= 1.0 {
+                    candidates.push((x, y, z));
+                }
+            }
+        }}
+        candidates.sort_by_key(|&(x, y, z)| (x * x + y * y + z * z, y, z, x));
+        let mut selected = Vec::new();
+        for &(x, y, z) in &candidates {
+            if selected.contains(&(x, y, z)) { continue; }
+            let dependencies: Vec<_> = candidates.iter().copied()
+                .filter(|&(xx, yy, zz)| xx == x && zz == z && yy >= y && !selected.contains(&(xx, yy, zz))).collect();
+            if selected.len() + dependencies.len() <= 128 { selected.extend(dependencies); }
+        }
+        assert_eq!(selected.len(), 128);
+        let mut terrain_cells = Vec::new();
+        for x in -7..=7 { for z in -7..=7 {
+            for y in -4..=if x > 0 { 2 } else { 0 } {
+                if !selected.contains(&(x, y, z)) { terrain_cells.push((x, y, z)); }
+            }
+        }}
+        let mut failures = Vec::new();
+        for (label, merge, ccd, linear_disturb, angular_disturb) in [
+            ("merged-clean", true, true, false, false),
+            ("merged-both", true, true, true, true),
+            ("merged-linear", true, true, true, false),
+            ("merged-angular", true, true, false, true),
+            ("unmerged-linear", false, true, true, false),
+            ("unmerged-angular", false, true, false, true),
+            ("unmerged-both", false, true, true, true),
+        ] {
+            let mut registry = Registry::new();
+            let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
+            let terrain = merged_voxel_boxes(&terrain_cells, true);
+            for boxes in terrain.chunks(7 * CUBOID_LEN) {
+                insert(&mut registry, world, 0, [0.0; 3], boxes);
+            }
+            let mut desc = body_description([0.0; 3]);
+            desc[14] = 0.6;
+            desc[19] = if ccd { 1.0 } else { 0.0 };
+            let moving = merged_voxel_boxes(&selected, merge);
+            let body = registry.create_body(world, description(1, &desc).unwrap(),
+                cuboids(&moving, 1.0, true).unwrap()).unwrap();
+            let owner = registry.world(world).unwrap();
+            let handle = owner.body_handle(body).unwrap();
+            let source_com = owner.physics.bodies[handle].center_of_mass();
+            let source_translation = owner.physics.bodies[handle].translation();
+            let source_rotation = *owner.physics.bodies[handle].rotation();
+            let target = source_com + Vector::Y * (3.0 + 9.81 / 53.333333);
+            let stabilize = linear_disturb || angular_disturb;
+            for tick in 0..200 {
+                let rigid = &mut owner.physics.bodies[handle];
+                if tick == 1 && linear_disturb {
+                    rigid.set_linvel(rigid.linvel() + Vector::X * 0.2, true);
+                }
+                if tick == 1 && angular_disturb {
+                    rigid.set_angvel(rigid.angvel() + Vector::Z * 0.05, true);
+                }
+                if stabilize && tick < 10 {
+                    // Mirrors the skill startup: normalize to the source pose and clear the
+                    // injected velocity before the first lift force starts.
+                    rigid.set_translation(source_translation, true);
+                    rigid.set_rotation(source_rotation, true);
+                    rigid.set_linvel(Vector::ZERO, true);
+                    rigid.set_angvel(Vector::ZERO, true);
+                    owner.step(0.05, 2).unwrap();
+                    continue;
+                }
+                let force = ((target - rigid.center_of_mass()) * (53.333333 * rigid.mass())
+                    - rigid.linvel() * (16.0 * rigid.mass())).clamp_length_max(2000.0);
+                rigid.apply_impulse(force * 0.05, true);
+                owner.step(0.05, 2).unwrap();
+                if tick == 19 || tick == 199 {
+                    let rigid = &owner.physics.bodies[handle];
+                    eprintln!("STEP_SOCKET {label} tick={tick} origin={:?} rise={} lin={:?} ang={:?} q={:?}",
+                        rigid.translation(), rigid.center_of_mass().y - source_com.y,
+                        rigid.linvel(), rigid.angvel(), rigid.rotation());
+                }
+            }
+            let rise = owner.physics.bodies[handle].center_of_mass().y - source_com.y;
+            if (rise - 3.0).abs() > 0.12 { failures.push((label, rise)); }
+        }
+        assert!(failures.is_empty(), "step socket failed: {failures:?}");
+    }
+
     #[test]
     fn gravity_contacts_and_sleep_are_real_solver_results() {
         let mut registry = Registry::new();
@@ -701,6 +862,108 @@ mod tests {
         assert!(fixed.iter().all(|value| value.is_finite()));
         assert_eq!(fixed[13], 0.0);
         assert_eq!(&fixed[17..20], &[0.0; 3]);
+    }
+
+    #[test]
+    fn paused_body_preserves_motion_mass_and_pose_while_other_bodies_collide_with_it() {
+        let mut registry = Registry::new();
+        let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
+        let obstacle = insert(&mut registry, world, 1, [0.0, 4.0, 0.0],
+            &box_data([1.0, 0.0, 0.0], [2.0, 0.5, 2.0]));
+        let falling = insert(&mut registry, world, 1, [1.0, 7.0, 0.0], &box_data([0.0; 3], [0.5; 3]));
+        let owner = registry.world(world).unwrap();
+        let handle = owner.body_handle(obstacle).unwrap();
+        owner.physics.bodies[handle].set_linvel(Vector::new(2.0, -3.0, 1.0), true);
+        owner.physics.bodies[handle].set_angvel(Vector::new(0.1, 0.2, 0.3), true);
+        let before = owner.snapshot(obstacle).unwrap();
+        owner.set_simulation_paused(obstacle, true).unwrap();
+        owner.set_simulation_paused(obstacle, true).unwrap();
+        assert_eq!(owner.create_fixed_joint(obstacle, falling, Vector::ZERO, Vector::ZERO), Err(INVALID_ARGUMENT));
+        assert_eq!(owner.create_fixed_joint(falling, obstacle, Vector::ZERO, Vector::ZERO), Err(INVALID_ARGUMENT));
+        assert_eq!(owner.physics.impulse_joints.len(), 0);
+        for _ in 0..60 { owner.step(0.05, 3).unwrap(); }
+        assert_eq!(owner.body_handle(obstacle).unwrap(), handle);
+        assert_eq!(owner.snapshot(obstacle).unwrap(), before);
+        assert_eq!(owner.physics.bodies[handle].body_type(), RigidBodyType::KinematicPositionBased);
+        near(owner.snapshot(falling).unwrap()[1], 5.0, 0.05);
+        assert_eq!(owner.dynamic_handle(obstacle), Err(INVALID_ARGUMENT));
+        // An explicit recovery teleport also resets the kinematic target, so it does not
+        // drift back on the next solver step or replace the saved motion.
+        let destination = Pose::translation(10.0, 12.0, 0.0);
+        owner.set_pose(obstacle, destination).unwrap();
+        owner.step(0.05, 3).unwrap();
+        let teleported = owner.snapshot(obstacle).unwrap();
+        assert_eq!(&teleported[0..3], &[10.0, 12.0, 0.0]);
+        assert_eq!(&teleported[7..], &before[7..]);
+        owner.set_simulation_paused(obstacle, false).unwrap();
+        owner.set_simulation_paused(obstacle, false).unwrap();
+        assert_eq!(owner.snapshot(obstacle).unwrap(), teleported);
+        owner.step(0.05, 3).unwrap();
+        assert!(owner.snapshot(obstacle).unwrap()[0] > 10.0);
+        assert_eq!(owner.physics.bodies[handle].body_type(), RigidBodyType::Dynamic);
+    }
+
+    #[test]
+    fn paused_fixed_joint_assembly_retains_handles_joints_and_resumes_motion() {
+        let mut registry = Registry::new();
+        let world = registry.create_world(Vector::ZERO).unwrap();
+        let left = insert(&mut registry, world, 1, [0.0; 3], &box_data([0.0; 3], [0.5; 3]));
+        let right = insert(&mut registry, world, 1, [1.0, 0.0, 0.0], &box_data([0.0; 3], [0.5; 3]));
+        let owner = registry.world(world).unwrap();
+        owner.create_fixed_joint(left, right, Vector::new(0.5, 0.0, 0.0), Vector::new(-0.5, 0.0, 0.0)).unwrap();
+        for id in [left, right] {
+            let handle = owner.body_handle(id).unwrap();
+            owner.physics.bodies[handle].set_linvel(Vector::Y, true);
+            owner.set_simulation_paused(id, true).unwrap();
+        }
+        for _ in 0..20 { owner.step(0.05, 3).unwrap(); }
+        assert_eq!(owner.snapshot(left).unwrap()[1], 0.0);
+        assert_eq!(owner.snapshot(right).unwrap()[1], 0.0);
+        assert_eq!(owner.physics.impulse_joints.len(), 1);
+        for id in [left, right] { owner.set_simulation_paused(id, false).unwrap(); }
+        for _ in 0..20 { owner.step(0.05, 3).unwrap(); }
+        let a = owner.snapshot(left).unwrap();
+        let b = owner.snapshot(right).unwrap();
+        near(a[1], 1.0, 0.02);
+        near(b[0] - a[0], 1.0, 0.02);
+        near(b[1] - a[1], 0.0, 0.02);
+        assert_eq!(owner.physics.impulse_joints.len(), 1);
+        for id in [left, right] { owner.set_simulation_paused(id, true).unwrap(); }
+        owner.remove_body(left).unwrap();
+        assert_eq!(owner.physics.impulse_joints.len(), 0);
+        owner.step(0.05, 3).unwrap();
+        owner.remove_body(right).unwrap();
+    }
+
+    #[test]
+    fn paused_sleeping_body_restores_sleep_and_ffi_rejections_leave_world_healthy() {
+        let mut world = 0;
+        assert_eq!(unsafe { academy_physics_world_create([0.0, -9.81, 0.0].as_ptr(), 3, &mut world, 1) }, OK);
+        let desc = body_description([0.0, 5.0, 0.0]);
+        let boxes = box_data([0.0; 3], [0.5; 3]);
+        let mut body = 0;
+        assert_eq!(unsafe { academy_physics_body_create(world, 1, desc.as_ptr(), DESCRIPTION_LEN as i32,
+            boxes.as_ptr(), CUBOID_LEN as i32, &mut body, 1) }, OK);
+        assert_eq!(academy_physics_body_sleep(world, body), OK);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 2), INVALID_ARGUMENT);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 1), OK);
+        let values = [1.0; 6];
+        assert_eq!(unsafe { academy_physics_body_set_velocity(world, body, values.as_ptr(), 6) }, INVALID_ARGUMENT);
+        assert_eq!(unsafe { academy_physics_body_impulse_at_point(world, body, values.as_ptr(), 6) }, INVALID_ARGUMENT);
+        assert_eq!(academy_physics_body_sleep(world, body), INVALID_ARGUMENT);
+        assert_eq!(academy_physics_body_wake(world, body), INVALID_ARGUMENT);
+        assert_eq!(academy_physics_world_step(world, 0.05, 3), OK);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 0), OK);
+        let mut state = [0.0; STATE_LEN];
+        assert_eq!(unsafe { academy_physics_body_state(world, body, state.as_mut_ptr(), STATE_LEN as i32) }, OK);
+        assert_eq!(state[24], 1.0);
+        assert_eq!(&state[7..13], &[0.0; 6]);
+        assert_eq!(academy_physics_world_step(world, 0.05, 3), OK);
+        assert_eq!(unsafe { academy_physics_body_state(world, body, state.as_mut_ptr(), STATE_LEN as i32) }, OK);
+        assert_eq!(state[1], 5.0);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 1), OK);
+        assert_eq!(academy_physics_world_destroy(world), OK);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 0), INVALID_HANDLE);
     }
 
     #[test]
@@ -930,6 +1193,8 @@ mod tests {
         assert_eq!(unsafe { academy_physics_body_impulse_at_point(world, body, impulse.as_ptr(), 6) }, INVALID_ARGUMENT);
         assert_eq!(academy_physics_body_sleep(world, body), INVALID_ARGUMENT);
         assert_eq!(academy_physics_body_wake(world, body), INVALID_ARGUMENT);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 1), INVALID_ARGUMENT);
+        assert_eq!(academy_physics_body_set_simulation_paused(world, body, 0), INVALID_ARGUMENT);
         let mut after = [0.0; STATE_LEN];
         assert_eq!(unsafe { academy_physics_body_state(world, body, after.as_mut_ptr(), STATE_LEN as i32) }, OK);
         assert_eq!(before, after);
