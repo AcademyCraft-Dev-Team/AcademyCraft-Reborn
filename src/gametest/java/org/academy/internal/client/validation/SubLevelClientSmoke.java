@@ -1387,13 +1387,18 @@ public final class SubLevelClientSmoke {
             var move = runtime.moveStructure(control.control(),
                     new ProgramWorldPosition(level.dimension().identifier(), seed.getX() + 0.5,
                             seed.getY() + 3.5, seed.getZ() + 0.5), null, 1.0);
-            var rotate = runtime.rotateStructure(control.control(),
+            var rotate = runtime.rotateOrientation(control.control(),
                     new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(20.0)));
             var launch = runtime.launchStructure(control.control(), new ProgramDirection(0.0, 1.0, 0.0), 1.0f, 1.0);
+            // This single-tick chain checks queue-and-cancel, not completed physical rotation.
+            if (runtime.orientationStatus(control.control(), rotate.operationId()).result().status()
+                    == ProgramStructureOperationResult.Status.PENDING) {
+                throw new IllegalStateException("launch retained its superseded rotation command");
+            }
             var release = runtime.releaseStructure(control.control());
             var staticize = runtime.staticizeStructure(extract.structure(), new ProgramBlockPosition(
                     level.dimension().identifier(), seed.getX(), seed.getY(), seed.getZ()));
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_PROGRAM_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={} detail={} ref={}",
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_PROGRAM_QUEUE_CANCEL_CHAIN rotation_completion_checked=false extract={} control={} move={} rotate={} launch={} release={} staticize={} detail={} ref={}",
                     extract.result().status(), control.result().status(), move.result().status(),
                     rotate.result().status(), launch.result().status(), release.result().status(),
                     staticize.result().status(), staticize.result().detail(), extract.structure().reference());
@@ -1403,7 +1408,7 @@ public final class SubLevelClientSmoke {
                     migrated.stream().findFirst().map(ItemEntity::position).orElse(null));
             if (migrated.isEmpty()) throw new IllegalStateException("staticize did not migrate plot entity");
             if (move.result().status() != ProgramStructureOperationResult.Status.COMPLETED
-                    || rotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || rotate.result().status() != ProgramStructureOperationResult.Status.PENDING
                     || launch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || release.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || staticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
@@ -1453,11 +1458,15 @@ public final class SubLevelClientSmoke {
                     new ProgramWorldPosition(level.dimension().identifier(), kineticSeed.getX() + 0.5,
                             kineticSeed.getY() + 2.5, kineticSeed.getZ() + 0.5), null, 1.0);
             var kineticRotate = kineticControl == null || kineticControl.control() == null ? null
-                    : kineticRuntime.rotateStructure(kineticControl.control(),
+                    : kineticRuntime.rotateOrientation(kineticControl.control(),
                     new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(10.0)));
             var kineticLaunch = kineticControl == null || kineticControl.control() == null ? null
                     : kineticRuntime.launchStructure(kineticControl.control(),
                     new ProgramDirection(0.0, 1.0, 0.0), AcceleratorProgramStrength.STANDARD);
+            if (kineticRotate != null && kineticRuntime.orientationStatus(kineticControl.control(),
+                    kineticRotate.operationId()).result().status() == ProgramStructureOperationResult.Status.PENDING) {
+                throw new IllegalStateException("kinetic launch retained its rotation command");
+            }
             var kineticRelease = kineticControl == null || kineticControl.control() == null ? null
                     : kineticRuntime.releaseStructure(kineticControl.control());
             var kineticRestoreTarget = player.blockPosition().offset(3, 8, 4);
@@ -1465,7 +1474,7 @@ public final class SubLevelClientSmoke {
                     : kineticRuntime.staticizeStructure(kineticExtract.structure(),
                     new ProgramBlockPosition(level.dimension().identifier(), kineticRestoreTarget.getX(),
                             kineticRestoreTarget.getY(), kineticRestoreTarget.getZ()));
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ACCELERATOR_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={}",
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ACCELERATOR_QUEUE_CANCEL_CHAIN rotation_completion_checked=false extract={} control={} move={} rotate={} launch={} release={} staticize={}",
                     kineticExtract.result().status(), kineticControl == null ? "missing" : kineticControl.result().status(),
                     kineticMove == null ? "missing" : kineticMove.result().status(),
                     kineticRotate == null ? "missing" : kineticRotate.result().status(),
@@ -1477,7 +1486,7 @@ public final class SubLevelClientSmoke {
                     || kineticExtract.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticControl.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticMove.result().status() != ProgramStructureOperationResult.Status.COMPLETED
-                    || kineticRotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || kineticRotate.result().status() != ProgramStructureOperationResult.Status.PENDING
                     || kineticLaunch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticRelease.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || kineticStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {
@@ -1507,18 +1516,22 @@ public final class SubLevelClientSmoke {
                     new ProgramWorldPosition(level.dimension().identifier(), magnetSeed.getX() + 0.5,
                             magnetSeed.getY() + 2.5, magnetSeed.getZ() + 0.5), null, 1.0);
             var magnetRotate = magnetControl == null || magnetControl.control() == null ? null
-                    : magnetRuntime.rotateStructure(magnetControl.control(),
+                    : magnetRuntime.rotateOrientation(magnetControl.control(),
                     new ProgramStructurePose(new ProgramDirection(0.0, 1.0, 0.0), Math.toRadians(10.0)));
             var magnetLaunch = magnetControl == null || magnetControl.control() == null ? null
                     : magnetRuntime.launchStructure(magnetControl.control(),
                     new ProgramDirection(0.0, 1.0, 0.0), 1.0f);
+            if (magnetRotate != null && magnetRuntime.orientationStatus(magnetControl.control(),
+                    magnetRotate.operationId()).result().status() == ProgramStructureOperationResult.Status.PENDING) {
+                throw new IllegalStateException("magnetic launch retained its rotation command");
+            }
             var magnetRelease = magnetControl == null || magnetControl.control() == null ? null
                     : magnetRuntime.releaseStructure(magnetControl.control());
             var magnetStaticize = magnetExtract.structure() == null ? null
                     : magnetRuntime.staticizeStructure(magnetExtract.structure(),
                     new ProgramBlockPosition(level.dimension().identifier(), magnetSeed.getX(),
                             magnetSeed.getY() + 8, magnetSeed.getZ()));
-            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ELECTROMASTER_CHAIN extract={} control={} move={} rotate={} launch={} release={} staticize={}",
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_ELECTROMASTER_QUEUE_CANCEL_CHAIN rotation_completion_checked=false extract={} control={} move={} rotate={} launch={} release={} staticize={}",
                     magnetExtract.result().status(), magnetControl == null ? "missing" : magnetControl.result().status(),
                     magnetMove == null ? "missing" : magnetMove.result().status(),
                     magnetRotate == null ? "missing" : magnetRotate.result().status(),
@@ -1530,7 +1543,7 @@ public final class SubLevelClientSmoke {
                     || magnetExtract.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || magnetControl.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || magnetMove.result().status() != ProgramStructureOperationResult.Status.COMPLETED
-                    || magnetRotate.result().status() != ProgramStructureOperationResult.Status.COMPLETED
+                    || magnetRotate.result().status() != ProgramStructureOperationResult.Status.PENDING
                     || magnetLaunch.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || magnetRelease.result().status() != ProgramStructureOperationResult.Status.COMPLETED
                     || magnetStaticize.result().status() != ProgramStructureOperationResult.Status.COMPLETED) {

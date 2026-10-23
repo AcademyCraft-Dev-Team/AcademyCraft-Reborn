@@ -2,7 +2,7 @@
 
 ## 2026-10-23 可替换服务与引擎骨架
 
-新一轮六项技能结构完善和 MPS/流体/软体采用的接口、分工、TODO 标记、构建命令与未验证项见 [可替换物理骨架 FILL-SPEC](docs/structure_upgrade_fill_spec.zh-CN.md)。该骨架独立于下方 PIPE 草案，未切换 live 后端、未替换 DLL、未启用自动归块或新节点；状态以专项 FILL-SPEC 最新记录为准。
+新一轮六项技能结构完善和 MPS/流体/软体采用的接口、分工、TODO 标记、构建命令与未验证项见 [可替换物理骨架 FILL-SPEC](docs/structure_upgrade_fill_spec.zh-CN.md)。骨架已本地提交为 `26635388`。[B 线独立算法与节点契约](docs/structure_upgrade_line_b_2026_10_23.zh-CN.md)之后，已接入本地/Sable 真实子步角控制与三系 rotate/reset_orientation/spin 节点，见 [B 线接线与验证](docs/structure_upgrade_line_b_live_2026_10_23.zh-CN.md)。未替换 DLL、接入新提取 planner 或启用自动归块；其余服务仍为禁用骨架。
 
 ## 2026-10-20 后续：贴地接触、嵌地抬升与卸载设计
 

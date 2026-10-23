@@ -31,6 +31,8 @@ import org.academy.api.common.structure.StructurePhysicsRegion;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.common.structure.StructureTransactions;
+import org.academy.api.common.structure.upgrade.StructureOrientations;
+import org.academy.internal.common.ability.program.ProgramOrientationHandoff;
 import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.internal.common.ability.Skills;
@@ -734,6 +736,10 @@ public final class MagneticStructureService {
             }
             var session = control.session;
             var gameTime = level.getGameTime();
+            var angularControl = control.angularHandoff.retain(gameTime, session.controllerId(), session.directControl,
+                    session.directControl && StructureDirectControl.validate(level, session.reference(), player, session.controllerId())
+                            == StructureDirectControl.Status.ACTIVE,
+                    session.directControl && StructureOrientations.controls(level, session.reference(), session.controllerId()));
             if (control.magnetizeExpiresAt != 0L && gameTime > control.magnetizeExpiresAt) {
                 control.magnetizeExpiresAt = 0L;
                 AcademyCraft.LOGGER.info(
@@ -749,8 +755,13 @@ public final class MagneticStructureService {
                     control.moveExpiresAt = gameTime + MAXIMUM_PROGRAM_MOVE_TICKS;
                 }
             } else if (gameTime > control.moveExpiresAt) {
-                releaseProgram(playerId, "move_window_ended");
-                continue;
+                if (angularControl) {
+                    // Preserve angular authority without extending the paid translation window.
+                    control.moving = false;
+                } else {
+                    releaseProgram(playerId, "move_window_ended");
+                    continue;
+                }
             }
             if (session.directControl) {
                 if (StructureDirectControl.validate(level, session.reference(), player, session.controllerId())
@@ -845,6 +856,7 @@ public final class MagneticStructureService {
     private static final class ProgramControl {
         private final ServerPlayer controller;
         private final Session session;
+        private final ProgramOrientationHandoff angularHandoff;
         private final int magneticCells;
         private final int totalCells;
         private Vec3 target;
@@ -857,6 +869,7 @@ public final class MagneticStructureService {
                                int magneticCells, int totalCells, long magnetizeExpiresAt) {
             this.controller = controller;
             this.session = session;
+            angularHandoff = new ProgramOrientationHandoff(session.controllerId());
             this.target = target;
             this.magneticCells = magneticCells;
             this.totalCells = totalCells;

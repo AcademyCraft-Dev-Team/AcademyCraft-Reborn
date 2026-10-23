@@ -247,13 +247,12 @@ public final class ElectromasterProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::reset);
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_SPIN,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::spin);
         put(result, ElectromasterProgramNodeIds.STRUCTURE_ROTATE,
-                (context, _, inputs) -> structureResult(
-                        runtime(context).rotateStructure(
-                                structureControl(inputs),
-                                optionalStructurePose(inputs, "pose")),
-                        false,
-                        false));
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::rotate);
         put(result, ElectromasterProgramNodeIds.STRUCTURE_LAUNCH,
                 (ProgramVmContext context,
                  ElectromasterProgramNodeCatalog.PowerConfiguration configuration,

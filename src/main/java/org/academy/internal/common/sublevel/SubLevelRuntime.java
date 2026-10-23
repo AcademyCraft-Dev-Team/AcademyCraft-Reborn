@@ -9,6 +9,7 @@ import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSimulationBudget;
 import org.academy.internal.common.structure.physics.PhysicsBox;
 import org.academy.internal.common.structure.physics.PhysicsPose;
+import org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -487,7 +488,12 @@ public final class SubLevelRuntime {
                     host.dimension().identifier());
             terrainBlocked = false;
         }
-        universe.stepCovered(duration, substeps, terrainUpdated, blocked);
+        if (LiveStructureOrientation.hasActive(host, false)) {
+            universe.stepCovered(duration, substeps, terrainUpdated, blocked,
+                    seconds -> LiveStructureOrientation.beforeSubstep(host, false, seconds));
+        } else {
+            universe.stepCovered(duration, substeps, terrainUpdated, blocked);
+        }
         long physicsNanos = System.nanoTime() - physicsStart;
         int simulated = 0;
         for (var managed : subLevels.values()) {
@@ -543,6 +549,7 @@ public final class SubLevelRuntime {
     private Map<SubLevelId, AABB> terrainRequests(double duration) {
         var demands = new ArrayList<TerrainDemand>();
         var players = host.players().stream().map(net.minecraft.world.entity.Entity::position).toList();
+        boolean angularControl = LiveStructureOrientation.hasActive(host, false);
         for (var managed : subLevels.values()) {
             var state = managed.subLevel.state();
             if (state != SubLevelState.ACTIVE && state != SubLevelState.SLEEPING) continue;
@@ -551,6 +558,12 @@ public final class SubLevelRuntime {
             var motion = universe.motion(managed.subLevel.id()).orElse(null);
             var swept = motion == null ? current : sweptTerrainBounds(current,
                     managed.subLevel.localBounds(), motion, duration);
+            if (angularControl && motion != null
+                    && LiveStructureOrientation.controls(host, budgetReference(managed.subLevel))) {
+                // The controller is applied only after terrain admission. Cover its complete
+                // rotation envelope now even when the currently observed omega is still zero.
+                swept = angularTerrainBounds(managed.subLevel.localBounds(), motion, duration);
+            }
             demands.add(new TerrainDemand(managed.subLevel.id(), swept,
                     terrainDistanceBand(swept, players), terrain == null || terrain.covers(swept)));
         }
@@ -590,6 +603,22 @@ public final class SubLevelRuntime {
         double rotationMargin = Math.min(2.0 * radius, angle * radius);
         return current.expandTowards(linear.x() * duration,
                 linear.y() * duration - 4.905 * duration * duration, linear.z() * duration).inflate(rotationMargin);
+    }
+
+    /** Covers every rotation about the actual COM plus the complete translational step. */
+    static AABB angularTerrainBounds(AABB localBounds, SubLevelPhysicsUniverse.Motion motion, double duration) {
+        var localCenter = motion.localCenterOfMass();
+        var center = structurePose(motion.pose()).localToWorldPoint(
+                new Vec3(localCenter.x(), localCenter.y(), localCenter.z()));
+        double x = Math.max(Math.abs(localBounds.minX - localCenter.x()), Math.abs(localBounds.maxX - localCenter.x()));
+        double y = Math.max(Math.abs(localBounds.minY - localCenter.y()), Math.abs(localBounds.maxY - localCenter.y()));
+        double z = Math.max(Math.abs(localBounds.minZ - localCenter.z()), Math.abs(localBounds.maxZ - localCenter.z()));
+        double radius = Math.hypot(Math.hypot(x, y), z);
+        var linear = motion.linearVelocity();
+        return new AABB(center.x - radius, center.y - radius, center.z - radius,
+                center.x + radius, center.y + radius, center.z + radius)
+                .expandTowards(linear.x() * duration, linear.y() * duration, linear.z() * duration)
+                .expandTowards(0, -4.905 * duration * duration, 0);
     }
 
     public boolean terrainCoverageComplete() { return terrain == null || terrain.coverageComplete(); }

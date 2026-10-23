@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.*;
+import org.academy.api.common.structure.upgrade.StructureOrientations;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.physics.PhysicsQuaternion;
 import org.academy.internal.common.structure.physics.PhysicsVector;
@@ -61,14 +62,17 @@ public final class SubLevelDirectControl {
             if (motion != null) {
                 var hold = HOLDS.get(reference);
                 if (hold == null || !hold.controlId.equals(controlId)) {
+                    boolean angularControlled = StructureOrientations.controls(host, reference, controlId);
                     // Skill physicalization starts from rest: a capture-adjacent disturbance must
                     // not pre-rotate or translate the body before the orientation hold engages.
                     var runtime = SubLevelServer.runtime(host).orElse(null);
-                    if (runtime != null) {
+                    if (runtime != null && !angularControlled) {
                         runtime.universe().setVelocity(new SubLevelId(reference.id()),
                                 new PhysicsVector(0, 0, 0), new PhysicsVector(0, 0, 0));
                     }
-                    HOLDS.put(reference, new Hold(controlId, motion.pose(), now, now + STABILIZE_TICKS));
+                    hold = new Hold(controlId, motion.pose(), now, now + STABILIZE_TICKS);
+                    hold.beginTick(angularControlled, motion.pose(), now);
+                    HOLDS.put(reference, hold);
                 } else {
                     hold.lastSeen = now;
                 }
@@ -92,8 +96,9 @@ public final class SubLevelDirectControl {
         var now = host.getServer().getTickCount();
         var hold = HOLDS.get(reference);
         if (hold == null || !hold.controlId.equals(controlId)) {
+            boolean angularControlled = StructureOrientations.controls(host, reference, controlId);
             var runtime = SubLevelServer.runtime(host).orElse(null);
-            if (runtime != null) {
+            if (runtime != null && !angularControlled) {
                 var id = new SubLevelId(reference.id());
                 var pose = new PhysicsPose(
                         new PhysicsVector(holdPose.worldOrigin().x, holdPose.worldOrigin().y,
@@ -105,7 +110,9 @@ public final class SubLevelDirectControl {
                             new PhysicsVector(0, 0, 0), new PhysicsVector(0, 0, 0));
                 }
             }
-            HOLDS.put(reference, new Hold(controlId, holdPose, now, now + STABILIZE_TICKS));
+            hold = new Hold(controlId, holdPose, now, now + STABILIZE_TICKS);
+            hold.beginTick(angularControlled, holdPose, now);
+            HOLDS.put(reference, hold);
         } else {
             hold.lastSeen = now;
         }
@@ -146,8 +153,10 @@ public final class SubLevelDirectControl {
             var point = motion.pose().localToWorldPoint(command.control.localPoint());
             var id = new SubLevelId(entry.getKey().id());
             var hold = HOLDS.get(entry.getKey());
-            if (hold != null && hold.controlId.equals(command.controlId)
-                    && server.getTickCount() <= hold.stabilizeUntil) {
+            boolean legacyOrientation = hold != null && hold.controlId.equals(command.controlId)
+                    && hold.beginTick(StructureOrientations.controls(command.host, entry.getKey(), command.controlId),
+                    motion.pose(), server.getTickCount());
+            if (legacyOrientation && hold.stabilizing(server.getTickCount())) {
                 // The source pose was applied once when the hold was created. Only clear the
                 // velocities here; re-teleporting every tick would visibly jitter the client.
                 runtime.universe().setVelocity(id,
@@ -157,7 +166,7 @@ public final class SubLevelDirectControl {
             }
             runtime.universe().impulse(id,
                     new PhysicsVector(impulse.x, impulse.y, impulse.z), new PhysicsVector(point.x, point.y, point.z));
-            if (hold != null && hold.controlId.equals(command.controlId)) {
+            if (legacyOrientation) {
                 var after = SubLevelQueries.motion(command.host, entry.getKey()).orElse(null);
                 if (after != null) {
                     var angular = nextAngularVelocity(hold.target, after.pose(), after.angularVelocity());
@@ -218,18 +227,41 @@ public final class SubLevelDirectControl {
                 new PhysicsQuaternion(pose.rotationX(), pose.rotationY(), pose.rotationZ(), pose.rotationW()));
     }
 
-    private static final class Hold {
+    /** Translation continues while a shared-lease angular operation temporarily owns rotation. */
+    static final class Hold {
         private final UUID controlId;
-        private final StructurePose target;
-        private final long stabilizeUntil;
+        private StructurePose target;
+        private long stabilizeUntil;
         private long lastSeen;
+        private boolean angularOverride;
 
-        private Hold(UUID controlId, StructurePose target, long lastSeen, long stabilizeUntil) {
+        Hold(UUID controlId, StructurePose target, long lastSeen, long stabilizeUntil) {
             this.controlId = controlId;
             this.target = target;
             this.lastSeen = lastSeen;
             this.stabilizeUntil = stabilizeUntil;
         }
+
+        /** Returns whether the legacy orientation servo may write during this outer tick. */
+        boolean beginTick(boolean angularControlled, StructurePose current, long now) {
+            lastSeen = now;
+            if (angularControlled) {
+                angularOverride = true;
+                return false;
+            }
+            if (angularOverride) {
+                // Keep the actual completed/interrupted angle instead of fighting it back to
+                // the old capture angle. Do not restart the initial translation freeze either.
+                target = current;
+                stabilizeUntil = now - 1;
+                angularOverride = false;
+            }
+            return true;
+        }
+
+        boolean stabilizing(long now) { return now <= stabilizeUntil; }
+
+        StructurePose target() { return target; }
     }
 
     private static boolean validPoint(ServerLevel host, StructureRef reference, StructurePhysicsControl control) {

@@ -94,7 +94,7 @@ public final class StructureDirectControl {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(controlId, "controlId");
-        var probe = StructureBackendRouter.probeDirectControl(host, reference);
+        var probe = leaseProbe(host, reference);
         synchronized (LEASES) {
             var standing = LEASES.get(reference);
             var status = validateLease(LEASES, reference, probe, actor.getUUID(), controlId);
@@ -123,6 +123,14 @@ public final class StructureDirectControl {
         }
     }
 
+    /** Identity only, for retaining a command while its terrain is paused; not mutation permission. */
+    public static boolean matches(StructureRef reference, UUID actorId, UUID controlId, UUID runtimeId) {
+        synchronized (LEASES) {
+            var lease = LEASES.get(reference);
+            return owns(lease, actorId, controlId) && lease.runtimeId().equals(runtimeId);
+        }
+    }
+
     /** Idempotent and token-scoped; a foreign or stale token is a no-op. */
     public static void release(StructureRef reference, UUID controlId) {
         Objects.requireNonNull(reference, "reference");
@@ -137,28 +145,54 @@ public final class StructureDirectControl {
         }
     }
 
-    /** Revokes actor lifecycle changes before SubLevel motion is applied. */
+    /** Revokes dead/moved actors for every backend before local motion is applied. */
     public static void tick(MinecraftServer server) {
         synchronized (LEASES) {
             for (var entry : Map.copyOf(ACTORS).entrySet()) {
                 var reference = entry.getKey();
                 var actor = entry.getValue();
-                if (!(actor.level() instanceof ServerLevel host) || host.getServer() != server
-                        || !SubLevelStructureRefs.isSubLevel(reference)) continue;
+                if (!(actor.level() instanceof ServerLevel host) || host.getServer() != server) continue;
                 var lease = LEASES.get(reference);
                 if (lease == null) { ACTORS.remove(reference); continue; }
-                var probe = StructureBackendRouter.probeDirectControl(host, reference);
-                if (!actor.isAlive() || actor.isRemoved() || !reference.dimension().equals(host.dimension().identifier())
-                        || actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected()
-                        || probe.state() != Probe.State.READY || !lease.runtimeId().equals(probe.runtimeId())) {
+                boolean disconnected = actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected();
+                if (actorLeaseEnded(actor.isAlive(), actor.isRemoved(), disconnected,
+                        reference.dimension().equals(host.dimension().identifier()))) {
                     release(reference, lease.controlId());
+                    continue;
+                }
+                boolean local = SubLevelStructureRefs.isSubLevel(reference);
+                if (local || !org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)) {
+                    var probe = local ? leaseProbe(host, reference) : StructureBackendRouter.probeDirectControl(host, reference);
+                    if (probeRevokesLease(probe, lease.runtimeId(), local)) release(reference, lease.controlId());
                 }
             }
         }
     }
 
+    static boolean actorLeaseEnded(boolean alive, boolean removed, boolean disconnected, boolean sameDimension) {
+        return !alive || removed || disconnected || !sameDimension;
+    }
+
+    /** Optional backend pause/staff ownership is not evidence of a changed runtime identity. */
+    static boolean probeRevokesLease(Probe probe, UUID runtimeId, boolean local) {
+        return probe.state() == Probe.State.READY ? !runtimeId.equals(probe.runtimeId()) : local;
+    }
+
     private static void cancel(StructureRef reference, UUID controlId) {
+        org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.cancel(reference, controlId);
         if (SubLevelStructureRefs.isSubLevel(reference)) SubLevelDirectControl.cancel(reference, controlId);
+    }
+
+    private static Probe leaseProbe(ServerLevel host, StructureRef reference) {
+        var probe = StructureBackendRouter.probeDirectControl(host, reference);
+        if (probe.state() == Probe.State.UNAVAILABLE && SubLevelStructureRefs.isSubLevel(reference)
+                && org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)) {
+            // Keep the exact existing lease while this body alone waits for terrain. No impulse
+            // can pass the paused native body, and the angular registry still enforces timeout.
+            var body = org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE.observe(host, reference);
+            if (body.isPresent() && !body.get().terrainReady()) return Probe.ready(body.get().runtimeId());
+        }
+        return probe;
     }
 
     /** Submits one outer tick of bounded force; the backend consumes it at physics substeps. */

@@ -15,8 +15,8 @@ tasks.register('verifyStructureUpgradeScaffold') {
             throw new GradleException('Upgrade template must remain disabled and UNVERIFIED')
         }
         def bootstrap = file('src/main/java/org/academy/internal/common/structure/upgrade/StructureUpgradeBootstrap.java').getText('UTF-8')
-        if (!bootstrap.contains('GAMEPLAY_ENABLED = false')) {
-            throw new GradleException('Scaffold cannot enable gameplay')
+        if (!bootstrap.contains('DRAFT_GAMEPLAY_ENABLED = false') || !bootstrap.contains('ORIENTATION_ENABLED = true')) {
+            throw new GradleException('Draft services stay disabled; live orientation must be explicit')
         }
         def registration = file('src/main/java/org/academy/AcademyCraftRegister.java').getText('UTF-8')
         if (registration.count('StructureUpgradeBootstrap.register(modEventBus)') != 1) {
@@ -34,8 +34,8 @@ tasks.register('verifyStructureUpgradeScaffold') {
         }
         def report = layout.buildDirectory.file('reports/structure-upgrade-scaffold/summary.txt').get().asFile
         report.parentFile.mkdirs()
-        report.setText('SCAFFOLD_REGISTERED\nGameplay: DISABLED\nMPS runtime: NOT_LOADED\nGameplay acceptance: UNVERIFIED\n', 'UTF-8')
-        logger.lifecycle('Structure upgrade scaffold contracts verified; gameplay disabled and UNVERIFIED.')
+        report.setText('SCAFFOLD_REGISTERED\nDraft gameplay: DISABLED\nLive orientation: EXPERIMENTAL\nMPS runtime: NOT_LOADED\nFull upgrade acceptance: UNVERIFIED\n', 'UTF-8')
+        logger.lifecycle('Structure upgrade draft verified; live orientation experimental, other upgrade services disabled.')
     }
 }
 

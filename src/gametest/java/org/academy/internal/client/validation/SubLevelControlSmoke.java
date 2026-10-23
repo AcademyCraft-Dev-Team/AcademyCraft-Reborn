@@ -41,6 +41,8 @@ final class SubLevelControlSmoke {
     private static double closestDistance;
     private static double peakHorizontalSpeed;
     private static Vec3 launchOrigin;
+    private static Vec3 rotationCenter;
+    private static UUID rotationOperation;
     private static ServerAeromanipProgramRuntime aero;
     private static ServerAcceleratorProgramRuntime vector;
     private static ServerElectromasterProgramRuntime magnet;
@@ -111,13 +113,35 @@ final class SubLevelControlSmoke {
                     new StructurePhysicsControl.Force(new Vec3(1_000_000, 0, 0), new Vec3(1, 0, 0))),
                     "out-of-body force point accepted");
             var center = body.pose().localToWorldPoint(body.localBounds().getCenter());
-            completed(rotate(new ProgramStructurePose(new ProgramDirection(1, 0, 0), Math.PI / 2)), "rotate X");
-            var rotated = body.pose();
+            rotationCenter = center;
+            beginRotation();
+            wait = 0;
+            phase = 10;
+            return;
+        }
+        var body = runtime.get(id).orElseThrow();
+        if (phase == 10 || phase == 11) {
+            var motion = StructureDynamics.motion(player.level(), reference.reference()).orElseThrow();
+            var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+            var force = rotationCenter.subtract(center).scale(16).subtract(motion.linearVelocity().scale(8))
+                    .add(0, 9.81, 0).scale(motion.mass());
+            check(StructureDirectControl.submit(player.level(), reference.reference(), player, control.controlId(),
+                    new StructurePhysicsControl.Force(motion.localCenterOfMass(), force)), "rotation fixture gravity support failed");
+            var status = orientationRuntime().orientationStatus(control, rotationOperation);
+            check(++wait <= 110, "asynchronous rotate exceeded its deadline");
+            if (status.result().status() == ProgramStructureOperationResult.Status.PENDING) return;
+            completed(status.result(), phase == 10 ? "rotate X" : "repeat absolute rotate");
             check(runtime.universe().contains(id), "rotation removed physics body");
-            check(rotated.localToWorldPoint(body.localBounds().getCenter()).distanceTo(center) < 1.0E-6, "rotation moved center");
-            completed(rotate(new ProgramStructurePose(new ProgramDirection(1, 0, 0), Math.PI / 2)), "repeat absolute rotate");
-            check(body.pose().rotation().equals(rotated.rotation(), 1.0E-9), "absolute rotation accumulated");
-            check(SubLevelActivationRegistry.matches(id, identity.runtimeId(), identity.generation()), "rotation changed identity");
+            check(center.distanceTo(rotationCenter) < 0.5, "rotation fixture lost mass-center suspension");
+            check(body.pose().localToWorldDirection(new Vec3(0, 1, 0)).distanceTo(new Vec3(0, 0, 1)) <= 0.02
+                    && motion.angularVelocity().length() <= 0.03, "absolute angular target did not converge");
+            check(SubLevelActivationRegistry.matches(id, reference.runtimeId(), reference.reference().generation()),
+                    "rotation changed identity");
+            if (phase == 10) {
+                beginRotation();
+                phase = 11; wait = 0;
+                return;
+            }
             var from = center.add(0, 0, -4);
             var to = center.add(0, 0, 4);
             var hit = StructureQueries.raycast(player.level(), from, to).orElseThrow();
@@ -143,7 +167,6 @@ final class SubLevelControlSmoke {
             phase = 1;
             return;
         }
-        var body = runtime.get(id).orElseThrow();
         if (phase == 1) {
             closestDistance = Math.min(closestDistance,
                     body.pose().localToWorldPoint(Vec3.atCenterOf(anchor.localPosition())).distanceTo(target));
@@ -231,8 +254,16 @@ final class SubLevelControlSmoke {
         return switch (family) { case 0 -> aero.moveStructure(control, world, anchor, 2).result(); case 1 -> vector.moveStructure(control, world, anchor, 2).result(); default -> magnet.moveStructure(control, world, anchor, 2).result(); };
     }
 
-    private static ProgramStructureOperationResult rotate(ProgramStructurePose pose) {
-        return switch (family) { case 0 -> aero.rotateStructure(control, pose).result(); case 1 -> vector.rotateStructure(control, pose).result(); default -> magnet.rotateStructure(control, pose).result(); };
+    private static ProgramStructureOrientationRuntime orientationRuntime() {
+        return switch (family) { case 0 -> aero; case 1 -> vector; default -> magnet; };
+    }
+
+    private static void beginRotation() {
+        var operation = orientationRuntime().rotateOrientation(control,
+                new ProgramStructurePose(new ProgramDirection(1, 0, 0), Math.PI / 2));
+        check(operation.result().status() == ProgramStructureOperationResult.Status.PENDING,
+                "rotate must publish a trackable asynchronous receipt: " + operation);
+        rotationOperation = operation.operationId();
     }
 
     private static ProgramStructureOperationResult launch() {

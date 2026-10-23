@@ -67,7 +67,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.Context context, StructureOrientation.RotateRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-05] 保留旧节点绝对轴角语义，复核旋转扫掠与租约，绕质量中心按子步限速限加速度执行；禁止直接传送穿墙。
+        // [UPG-CTRL-05] Disabled DRAFT placeholder; LIVE delegates to LiveStructureOrientation.rotateTo.
         return StructureOperation.unsupported("orientation_rotate_not_implemented");
     }
 
@@ -76,7 +76,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.Context context, StructureOrientation.ResetRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-06] 从可信来源解析回正基准；缺基准按显式策略拒绝或使用世界网格，制动并安全回正，保留物理碰撞。
+        // [UPG-CTRL-06] Disabled DRAFT placeholder; LIVE delegates to LiveStructureOrientation.reset.
         return StructureOperation.unsupported("orientation_reset_not_implemented");
     }
 
@@ -85,7 +85,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.Context context, StructureOrientation.SpinRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-07] 在明确世界或局部轴上执行有限时长转动，按真实子步和总冲量预算限速限加速度，结束后按策略制动或释放惯性。
+        // [UPG-CTRL-07] Disabled DRAFT placeholder; LIVE delegates to LiveStructureOrientation.spin.
         return StructureOperation.unsupported("orientation_spin_not_implemented");
     }
 
@@ -94,7 +94,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.Context context, StructureOrientation.StopRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-08] 只终止匹配操作及租约的角命令；旧操作不得清除后继命令，制动保留限力与碰撞约束。
+        // [UPG-CTRL-08] Disabled DRAFT placeholder; LIVE delegates to LiveStructureOrientation.stop.
         return StructureOperation.unsupported("orientation_stop_not_implemented");
     }
 
@@ -103,7 +103,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.Context context, StructureOrientation.StatusRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-09] 校验操作所属主体及结构运行期后返回角误差、阶段和基准来源；提交成功不等于完成。
+        // [UPG-CTRL-09] Disabled DRAFT placeholder; LIVE delegates to LiveStructureOrientation.status.
         return StructureOperation.unsupported("orientation_status_not_implemented");
     }
 }

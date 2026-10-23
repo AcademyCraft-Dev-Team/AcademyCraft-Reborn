@@ -33,6 +33,7 @@ import org.academy.internal.common.ability.program.ProgramActionTransaction;
 import org.academy.internal.common.ability.program.ProgramStructureCaptureMonitor;
 import org.academy.internal.common.ability.program.StructureProgramActions;
 import org.academy.internal.common.ability.program.SubLevelProgramControl;
+import org.academy.internal.common.ability.program.ProgramOrientationControl;
 import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
@@ -71,6 +72,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private final ServerProgramTargetResolver targets;
     private final UUID runtimeToken = UUID.randomUUID();
     private final SubLevelProgramControl subLevelControls;
+    private final ProgramOrientationControl orientationControls;
     private @Nullable StructureRef pendingExtraction;
     private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
     private long extractionDeadline;
@@ -89,6 +91,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
         subLevelControls = new SubLevelProgramControl(player, runtimeToken, MAX_ACTION_RANGE);
+        orientationControls = new ProgramOrientationControl(player, MAX_ACTION_RANGE, this::validateOrientationControl);
     }
 
     @Override
@@ -437,13 +440,36 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation rotateStructure(ProgramStructureControl control,
                                               @Nullable ProgramStructurePose pose) {
+        return StructureOperation.result(rotateOrientation(control, pose).result());
+    }
+
+    @Override
+    public Operation rotateOrientation(ProgramStructureControl control, @Nullable ProgramStructurePose pose) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
-        var rejection = validateControl(control);
-        if (rejection != null) return StructureOperation.rejected(rejection);
-        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
-            return rotateSubLevelStructure(control, pose);
-        }
-        return StructureOperation.unavailable("finite_torque_control_unavailable");
+        return orientationControls.rotate(control, pose, Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation resetOrientation(ProgramStructureControl control, ResetRequest request) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.reset(control, request, Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation spinStructure(ProgramStructureControl control, SpinRequest request) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.spin(control, request, Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.status(control, operationId);
+    }
+
+    @Override
+    public void closeOrientationCommands() {
+        orientationControls.close();
     }
 
     @Override
@@ -476,6 +502,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation releaseStructure(ProgramStructureControl control) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        orientationControls.cancel(control);
         if (SubLevelStructureRefs.isSubLevel(control.reference())) {
             return StructureOperation.result(subLevelControls.release(control));
         }
@@ -520,11 +547,6 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                                                       @Nullable ProgramStructureAnchor anchor,
                                                       double seconds) {
         return StructureOperation.result(subLevelControls.moveJet(control, target, anchor, seconds));
-    }
-
-    private StructureOperation rotateSubLevelStructure(ProgramStructureControl control,
-                                                       @Nullable ProgramStructurePose pose) {
-        return StructureOperation.result(subLevelControls.rotate(control, pose));
     }
 
     @Override
@@ -744,6 +766,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             case REJECTED -> ProgramStructureOperationResult.rejected(result.detail());
             case UNAVAILABLE -> ProgramStructureOperationResult.unavailable(result.detail());
         };
+    }
+
+    private @Nullable String validateOrientationControl(ProgramStructureControl control) {
+        var rejection = validateControl(control);
+        if (rejection != null) return rejection;
+        return SubLevelStructureRefs.isSubLevel(control.reference()) ? subLevelControls.validate(control) : null;
     }
 
     private @Nullable String validateControl(ProgramStructureControl control) {

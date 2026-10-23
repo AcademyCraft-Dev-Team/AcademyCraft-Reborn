@@ -4,6 +4,7 @@ import org.academy.internal.common.structure.physics.BodyType;
 import org.academy.internal.common.structure.physics.NativePhysicsBody;
 import org.academy.internal.common.structure.physics.NativePhysicsWorld;
 import org.academy.internal.common.structure.physics.PhysicsBox;
+import org.academy.internal.common.structure.physics.PhysicsBodyState;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.physics.PhysicsQuaternion;
 import org.academy.internal.common.structure.physics.PhysicsVector;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.DoubleConsumer;
 
 /**
  * Phase 0 prototype: one shared Rapier world for many plot-backed structures. The class owns
@@ -99,6 +101,16 @@ public final class SubLevelPhysicsUniverse {
      * would wake it into unknown terrain. Other structures keep using the shared solver.
      */
     public boolean stepCovered(double duration, int substeps, boolean force, Set<SubLevelId> blocked) {
+        return stepCovered(duration, substeps, force, blocked, null);
+    }
+
+    /**
+     * An active controller runs immediately before every real native substep, after terrain
+     * admission has frozen uncovered bodies. Without a controller the original batched path
+     * is retained. The callback must never write a paused body or publish a guessed pose.
+     */
+    public boolean stepCovered(double duration, int substeps, boolean force, Set<SubLevelId> blocked,
+                               DoubleConsumer beforeSubstep) {
         Objects.requireNonNull(blocked, "blocked");
         if (!Double.isFinite(duration) || duration <= 0.0 || substeps < 1) {
             throw new IllegalArgumentException("Physics step requires a finite positive duration and substeps");
@@ -113,7 +125,16 @@ public final class SubLevelPhysicsUniverse {
             available |= !paused;
         }
         if (!available) return false;
-        step(duration, substeps, force);
+        if (beforeSubstep == null) {
+            step(duration, substeps, force);
+        } else {
+            double seconds = duration / substeps;
+            for (int index = 0; index < substeps; index++) {
+                beforeSubstep.accept(seconds);
+                // An angular command may wake a sleeping assembly in this callback.
+                step(seconds, 1, force);
+            }
+        }
         return true;
     }
 
@@ -149,6 +170,13 @@ public final class SubLevelPhysicsUniverse {
         return entry == null ? Optional.empty() : Optional.of(entry.motion);
     }
 
+    /** One published native observation, including every welded part's parallel-axis term. */
+    public Optional<AngularMotion> angularMotion(SubLevelId id) {
+        var entry = entries.get(id);
+        return entry == null ? Optional.empty()
+                : Optional.of(new AngularMotion(entry.motion, entry.maximumInertia, revision));
+    }
+
     public boolean impulse(SubLevelId id, PhysicsVector impulse, PhysicsVector worldPoint) {
         var entry = entries.get(id);
         if (entry == null || entry.simulationPaused) return false;
@@ -166,9 +194,14 @@ public final class SubLevelPhysicsUniverse {
     public boolean setVelocity(SubLevelId id, PhysicsVector linear, PhysicsVector angular) {
         var entry = entries.get(id);
         if (entry == null || entry.simulationPaused) return false;
-        var motion = readMotion(entry);
+        return setVelocity(entry, readMotion(entry), linear, angular);
+    }
+
+    private boolean setVelocity(Entry entry, Motion motion, PhysicsVector linear, PhysicsVector angular) {
+        var center = worldCenter(motion.pose(), motion.localCenterOfMass());
         for (var body : entry.bodies) {
-            var offset = rotate(motion.pose().rotation(), body.localCenterOfMass().subtract(motion.localCenterOfMass()));
+            var state = body.state();
+            var offset = worldCenter(state.pose(), state.localCenterOfMass()).subtract(center);
             var tangential = cross(angular, offset);
             world.setVelocity(body, linear.add(tangential), angular);
         }
@@ -177,17 +210,16 @@ public final class SubLevelPhysicsUniverse {
         return true;
     }
 
-    /** Changes only angular velocity; linear velocity is preserved per welded body. */
+    /**
+     * Changes angular velocity while preserving aggregate COM translation. Each welded part
+     * receives its new tangential velocity; retaining old part velocities would inject joint
+     * correction impulses and destroy both the intended spin and the assembly's momentum.
+     */
     public boolean setAngularVelocity(SubLevelId id, PhysicsVector angular) {
         var entry = entries.get(id);
         if (entry == null || entry.simulationPaused) return false;
-        for (var body : entry.bodies) {
-            var state = body.state();
-            world.setVelocity(body, state.linearVelocity(), angular);
-        }
-        entry.motion = readMotion(entry);
-        revision = Math.incrementExact(revision);
-        return true;
+        var motion = readMotion(entry);
+        return setVelocity(entry, motion, motion.linearVelocity(), angular);
     }
 
     /** Moves all welded bodies together without replacing their identity or velocity. */
@@ -228,6 +260,17 @@ public final class SubLevelPhysicsUniverse {
 
     private Motion readMotion(Entry entry) {
         var primary = entry.bodies.getFirst().state();
+        if (entry.bodies.size() == 1) {
+            var principal = primary.principalInertia();
+            entry.maximumInertia = Math.max(principal.x(), Math.max(principal.y(), principal.z()));
+            if (!Double.isFinite(primary.mass()) || primary.mass() <= 0.0
+                    || !Double.isFinite(entry.maximumInertia) || entry.maximumInertia <= 0.0) {
+                throw new IllegalStateException("Sub-level body reported invalid mass or inertia");
+            }
+            return new Motion(primary.pose(), primary.linearVelocity(), primary.angularVelocity(),
+                    primary.localCenterOfMass(), primary.mass(), primary.sleeping());
+        }
+        var states = new ArrayList<PhysicsBodyState>(entry.bodies.size());
         double mass = 0.0;
         double comX = 0.0, comY = 0.0, comZ = 0.0;
         double velocityX = 0.0, velocityY = 0.0, velocityZ = 0.0;
@@ -236,21 +279,44 @@ public final class SubLevelPhysicsUniverse {
             // Each state read crosses the native boundary and decodes the complete body.
             // The primary body used for the pose is also the first mass/velocity sample.
             var state = index == 0 ? primary : entry.bodies.get(index).state();
+            states.add(state);
             if (!Double.isFinite(state.mass()) || state.mass() <= 0.0) {
                 throw new IllegalStateException("Sub-level body reported invalid mass");
             }
             mass += state.mass();
-            comX += state.localCenterOfMass().x() * state.mass();
-            comY += state.localCenterOfMass().y() * state.mass();
-            comZ += state.localCenterOfMass().z() * state.mass();
+            var center = worldCenter(state.pose(), state.localCenterOfMass());
+            comX += center.x() * state.mass();
+            comY += center.y() * state.mass();
+            comZ += center.z() * state.mass();
             velocityX += state.linearVelocity().x() * state.mass();
             velocityY += state.linearVelocity().y() * state.mass();
             velocityZ += state.linearVelocity().z() * state.mass();
             sleeping &= state.sleeping();
         }
         if (!Double.isFinite(mass) || mass <= 0.0) throw new IllegalStateException("Sub-level has no mass");
+        var worldCenter = new PhysicsVector(comX / mass, comY / mass, comZ / mass);
+        var rotation = primary.pose().rotation();
+        var localCenter = rotate(new PhysicsQuaternion(-rotation.x(), -rotation.y(), -rotation.z(), rotation.w()),
+                worldCenter.subtract(primary.pose().position()));
+        double maximumInertia = 0.0;
+        for (var state : states) {
+            var principal = state.principalInertia();
+            var offset = worldCenter(state.pose(), state.localCenterOfMass()).subtract(worldCenter);
+            // lambda_max(A+B) <= lambda_max(A)+lambda_max(B), and the parallel-axis
+            // tensor m (|r|² I - r rᵀ) has largest eigenvalue m |r|².
+            maximumInertia += Math.max(principal.x(), Math.max(principal.y(), principal.z()))
+                    + state.mass() * (offset.x() * offset.x() + offset.y() * offset.y() + offset.z() * offset.z());
+        }
+        if (!Double.isFinite(maximumInertia) || maximumInertia <= 0.0) {
+            throw new IllegalStateException("Sub-level has invalid aggregate inertia");
+        }
+        entry.maximumInertia = maximumInertia;
         return new Motion(primary.pose(), new PhysicsVector(velocityX / mass, velocityY / mass, velocityZ / mass),
-                primary.angularVelocity(), new PhysicsVector(comX / mass, comY / mass, comZ / mass), mass, sleeping);
+                primary.angularVelocity(), localCenter, mass, sleeping);
+    }
+
+    private static PhysicsVector worldCenter(PhysicsPose pose, PhysicsVector localCenter) {
+        return pose.position().add(rotate(pose.rotation(), localCenter));
     }
 
     private static PhysicsVector cross(PhysicsVector first, PhysicsVector second) {
@@ -281,10 +347,14 @@ public final class SubLevelPhysicsUniverse {
                          PhysicsVector localCenterOfMass, double mass, boolean sleeping) {
     }
 
+    public record AngularMotion(Motion motion, double maximumInertia, long revision) {
+    }
+
     private static final class Entry {
         private final SubLevelId id;
         private final List<NativePhysicsBody> bodies;
         private Motion motion;
+        private double maximumInertia;
         private boolean simulationPaused;
 
         private Entry(SubLevelId id, List<NativePhysicsBody> bodies) {

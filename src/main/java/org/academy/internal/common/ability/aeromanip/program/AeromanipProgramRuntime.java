@@ -19,7 +19,8 @@ import java.util.Optional;
 /**
  * Restricted server-owned environment exposed to Aeromanip programs.
  */
-public interface AeromanipProgramRuntime extends ProgramTargetResolver {
+public interface AeromanipProgramRuntime extends ProgramTargetResolver,
+        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime {
     Object caster();
 
     Optional<Object> lookTarget();
@@ -86,11 +87,17 @@ public interface AeromanipProgramRuntime extends ProgramTargetResolver {
             double seconds
     );
 
-    /** Finite-torque attitude control is not implemented; the request is reported unavailable. */
+    /** Legacy synchronous facade; asynchronous nodes use rotateOrientation to track completion. */
     StructureOperation rotateStructure(
             ProgramStructureControl control,
             @Nullable ProgramStructurePose pose
     );
+
+    /** Retains synchronous third-party runtimes while the server implementation provides receipts. */
+    @Override
+    default Operation rotateOrientation(ProgramStructureControl control, @Nullable ProgramStructurePose pose) {
+        return Operation.fromLegacy(rotateStructure(control, pose).result());
+    }
 
     /**
      * One bounded launch along an explicit direction for the configured window. Damage is settled

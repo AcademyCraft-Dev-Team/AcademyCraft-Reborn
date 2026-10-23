@@ -34,6 +34,8 @@ import org.academy.api.common.structure.StructurePhysicsRegion;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.common.structure.StructureTransactions;
+import org.academy.api.common.structure.upgrade.StructureOrientations;
+import org.academy.internal.common.ability.program.ProgramOrientationHandoff;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
@@ -863,9 +865,19 @@ public final class HighSpeedJetStructureService {
             stopSession(playerId, session.launchId, "owner_or_structure_unavailable");
             return;
         }
+        var programAngular = session.program && session.directControl;
+        var angularControl = session.angularHandoff.retain(player.level().getGameTime(), session.controllerId,
+                programAngular, programAngular && StructureDirectControl.validate(player.level(), session.reference,
+                        player, session.controllerId) == StructureDirectControl.Status.ACTIVE,
+                programAngular && StructureOrientations.controls(player.level(), session.reference, session.controllerId));
         if (--session.remainingTicks <= 0) {
-            stopSession(playerId, session.launchId, "duration_elapsed");
-            return;
+            if (angularControl) {
+                // The finite angular receipt retains the lease, never extra nozzle thrust.
+                session.engaged = false;
+            } else {
+                stopSession(playerId, session.launchId, "duration_elapsed");
+                return;
+            }
         }
         if (session.stage == Stage.SABLE_DIRECT) {
             tickSableDirect(player, session);
@@ -1967,6 +1979,7 @@ public final class HighSpeedJetStructureService {
         private final HighSpeedJetNozzle targetNozzle;
         private final int blockCount;
         private final UUID controllerId = UUID.randomUUID();
+        private final ProgramOrientationHandoff angularHandoff = new ProgramOrientationHandoff(controllerId);
         private final @Nullable StructurePhysicsRegion region;
         private final Map<UUID, Long> impactTicks = new HashMap<>();
         private final boolean program;

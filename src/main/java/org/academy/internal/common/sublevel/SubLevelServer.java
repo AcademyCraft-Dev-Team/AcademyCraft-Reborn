@@ -176,9 +176,10 @@ public final class SubLevelServer {
     @SubscribeEvent
     public static void tick(ServerTickEvent.Post event) {
         var runtime = RUNTIMES.get(event.getServer());
-        if (runtime == null) return;
         try {
+            // Common leases also exist when the optional Sable backend replaces this runtime.
             org.academy.api.common.structure.StructureDirectControl.tick(event.getServer());
+            if (runtime == null) return;
             try {
                 runtime.storage.prewarmTick(PLOT_PREWARM);
             } catch (RuntimeException failure) {

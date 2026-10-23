@@ -9,13 +9,24 @@ import org.academy.internal.common.physics.PhysicsProviderCatalog;
 
 import java.util.EnumMap;
 
-/** Discovery only. No tick listeners, world writes, node actions or native library loading. */
+/** Draft services stay disabled; the separately enabled orientation service uses existing solvers. */
 public final class StructureUpgradeBootstrap {
-    public static final boolean GAMEPLAY_ENABLED = false;
+    public static final boolean DRAFT_GAMEPLAY_ENABLED = false;
+    public static final boolean ORIENTATION_ENABLED = true;
     public static final StructureUpgradeServices DRAFT = createScaffold();
+    public static final StructureUpgradeServices LIVE = createLive();
     public static final PhysicsProviderCatalog PROVIDERS = PhysicsProviderCatalog.defaults();
 
     private StructureUpgradeBootstrap() {}
+
+    private static StructureUpgradeServices createLive() {
+        var entries = new EnumMap<StructureCapabilities.Capability, StructureCapabilities.Support>(DRAFT.capabilities().entries());
+        entries.put(StructureCapabilities.Capability.ORIENTATION, new StructureCapabilities.Support(
+                StructureCapabilities.Readiness.EXPERIMENTAL, true, "sublevel_sable_bounded_angular_control"));
+        return new StructureUpgradeServices(new StructureCapabilities(entries), DRAFT.extraction(),
+                org.academy.api.common.structure.upgrade.StructureOrientations.service(), DRAFT.provenance(),
+                DRAFT.restoration(), DRAFT.damage(), DRAFT.impacts(), DRAFT.fracture());
+    }
 
     public static StructureUpgradeServices createScaffold() {
         var controls = new ScaffoldStructureControls();
@@ -37,7 +48,7 @@ public final class StructureUpgradeBootstrap {
 
     private static void setup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> AcademyCraft.LOGGER.info(
-                "Structure upgrade: SCAFFOLD_REGISTERED; gameplay disabled, {} explicit capabilities, {} provider descriptors",
+                "Structure upgrade: SCAFFOLD_REGISTERED; draft services disabled; live orientation EXPERIMENTAL; {} capabilities, {} provider descriptors",
                 DRAFT.capabilities().entries().size(), PROVIDERS.descriptors().size()));
     }
 }

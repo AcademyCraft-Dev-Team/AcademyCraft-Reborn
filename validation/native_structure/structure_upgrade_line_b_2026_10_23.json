@@ -1,0 +1,52 @@
+{
+  "schema": "academy-structure-upgrade-validation-v1",
+  "date": "2026-10-23",
+  "base_commit": "26635388",
+  "scope": "line_b_independent_algorithms_and_node_contracts",
+  "gameplay_enabled": false,
+  "native_production_changed": false,
+  "checks": {
+    "jvm_test": { "passed": 2957, "failed": 0, "skipped": 0, "added_in_line_b": 62 },
+    "control_kernel_tests": {
+      "translation_sweep": 8,
+      "extraction_planner": 10,
+      "orientation_targets": 6,
+      "orientation_controller": 8,
+      "orientation_sweep": 7,
+      "orientation_session": 11
+    },
+    "node_api_codec_vm_configuration_added_tests": 12,
+    "sable_compat_test": { "passed": 16, "failed": 0, "skipped": 0 },
+    "development_build": "PASSED",
+    "release_build": "PASSED",
+    "diff_check": "PASSED"
+  },
+  "client_smoke": {
+    "result": "PASSED",
+    "run_task": "runClientDev",
+    "isolated_directory": "run/native-sublevel-direct-smoke-upgrade-line-b-20261023",
+    "log": "build/line-b-client.log",
+    "fixture": "SubLevelLiftTiersSmoke",
+    "terrain": "step",
+    "embedded": true,
+    "disturbance": "both",
+    "uses_new_control_kernel": false,
+    "original_test_worlds_modified": false,
+    "normal_save_and_exit": true,
+    "tiers": [
+      { "target_rise": 3, "observed_rise": 3.0643781249999336, "hover_ticks": 200 },
+      { "target_rise": 5, "observed_rise": 5.064378124999905, "hover_ticks": 200 },
+      { "target_rise": 7, "observed_rise": 7.064378124999905, "hover_ticks": 200 }
+    ]
+  },
+  "unverified": [
+    "live_sublevel_and_sable_control_adapters",
+    "capture_journal_and_trusted_provenance_binding",
+    "atomic_live_geometry_terrain_and_lease_admission",
+    "new_extraction_rotation_reset_and_spin_gameplay",
+    "real_solver_substep_command_replacement_and_lifecycle_cleanup",
+    "controlled_multi_structure_performance_comparison",
+    "manual_editor_presentation",
+    "known_s0_native_contact_failures_remain_outside_this_line"
+  ]
+}

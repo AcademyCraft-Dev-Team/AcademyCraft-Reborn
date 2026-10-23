@@ -48,6 +48,7 @@ public final class SubLevelLiftTiersSmoke {
     private static final boolean EMBEDDED = Boolean.getBoolean("academy.sublevelLiftEmbedded");
     private static final String TERRAIN = System.getProperty("academy.sublevelLiftTerrain", "flat");
     private static final int ONLY_TIER = Integer.getInteger("academy.sublevelLiftTier", -1);
+    private static final String FIXED_ANCHOR = System.getProperty("academy.sublevelLiftAnchor", "").trim();
     private static final boolean HARD_ROOF = TERRAIN.equals("roof");
     private static final boolean DISTURBANCE = Boolean.getBoolean("academy.sublevelLiftDisturbance");
     private static final String DISTURBANCE_MODE = System.getProperty("academy.sublevelLiftDisturbanceMode", "both");
@@ -73,6 +74,7 @@ public final class SubLevelLiftTiersSmoke {
     private static int hoverTicks;
     private static int hoverBest;
     private static int platformX, platformY, platformZ;
+    private static BlockPos fixedAnchor;
     private static Vec3 sourceCenter;
     private static StructureRef reference;
     private static ServerPlayer player;
@@ -141,11 +143,24 @@ public final class SubLevelLiftTiersSmoke {
         }
         if (ONLY_TIER < -1 || ONLY_TIER > 2) throw new IllegalArgumentException("Lift tier must be -1 or 0..2");
         if (!EMBEDDED && !TERRAIN.equals("flat")) throw new IllegalArgumentException("Terrain fixtures require embedded=true");
+        if (!FIXED_ANCHOR.isEmpty()) {
+            var coordinates = FIXED_ANCHOR.split(",", -1);
+            if (coordinates.length != 3) throw new IllegalArgumentException("Lift anchor must be tier-0 platform x,y,z");
+            fixedAnchor = new BlockPos(Integer.parseInt(coordinates[0].trim()),
+                    Integer.parseInt(coordinates[1].trim()), Integer.parseInt(coordinates[2].trim()));
+            if (Math.abs((long) fixedAnchor.getX()) > 29_999_000
+                    || Math.abs((long) fixedAnchor.getZ()) > 29_999_000
+                    || fixedAnchor.getY() < player.level().getMinY() + 8
+                    || fixedAnchor.getY() > player.level().getMaxY() - 24) {
+                throw new IllegalArgumentException("Lift anchor leaves insufficient room for the fixture");
+            }
+        }
         tier = ONLY_TIER >= 0 ? ONLY_TIER : 0;
         buildPlatform();
         phase = 1;
         started = true;
-        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_START origin={} tier={} terrain={}", player.blockPosition(), tier, TERRAIN);
+        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_START origin={} tier={} terrain={} fixed_anchor={}",
+                player.blockPosition(), tier, TERRAIN, fixedAnchor);
     }
 
     private static void buildPlatform() {
@@ -156,6 +171,13 @@ public final class SubLevelLiftTiersSmoke {
         // sit in a surface hillside; its uncaptured terrain then blocks the ascent even though the
         // captured columns are clear.
         int y = Math.min(level.getMaxY() - 24, level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) + 60);
+        if (fixedAnchor != null) {
+            // Preserve sequential tier spacing (+80/+120 X, -9 Z) independently of player
+            // startup motion. The anchor always denotes tier 0, including single-tier runs.
+            x = fixedAnchor.getX() + TIER_SPACING * tier * (tier + 3) / 2;
+            y = fixedAnchor.getY();
+            z = fixedAnchor.getZ() - 9 * tier;
+        }
         platformX = x;
         platformY = y;
         platformZ = z;

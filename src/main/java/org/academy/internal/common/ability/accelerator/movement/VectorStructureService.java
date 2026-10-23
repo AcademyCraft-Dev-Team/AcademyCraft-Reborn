@@ -42,9 +42,11 @@ import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.common.structure.StructureTraction;
 import org.academy.api.common.structure.StructureTractionSession;
 import org.academy.api.common.structure.StructureTransactions;
+import org.academy.api.common.structure.upgrade.StructureOrientations;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
+import org.academy.internal.common.ability.program.ProgramOrientationHandoff;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.NativeStructureCollisionBoxes;
@@ -663,6 +665,10 @@ public final class VectorStructureService {
         var direct = sable || SubLevelStructureRefs.isSubLevel(reference);
         StructurePhysicsRegion region = null;
         if (direct) {
+            var owned = SESSIONS.get(player.getUUID());
+            if (owned != null && owned.reference.equals(reference)) {
+                StructureOrientations.cancel(level, reference, owned.controllerId);
+            }
             if (!StructureBackendRouter.launch(level, reference, direction, speed)) {
                 return PressResult.rejected("sable_launch_rejected");
             }
@@ -824,7 +830,12 @@ public final class VectorStructureService {
         tickCapture(player);
         var held = SESSIONS.get(player.getUUID());
         if (held == null) return;
-        if (!held.usableBy(player) || player.level().getGameTime() > held.expiresAt) {
+        var expired = player.level().getGameTime() > held.expiresAt;
+        var programAngular = !held.manualHover && held.directControl && held.stage == Stage.LIFTING;
+        var angularControl = held.angularHandoff.retain(player.level().getGameTime(), held.controllerId,
+                programAngular, programAngular && directControlActive(player, held),
+                programAngular && StructureOrientations.controls(player.level(), held.reference, held.controllerId));
+        if (!held.usableBy(player) || expired && !angularControl) {
             // Expiration releases the hover. Launching requires an explicit H press or node
             // command; merely looking at a structure must never turn it into a projectile.
             if (held.stage == Stage.LIFTING && held.lifted) {
@@ -835,6 +846,9 @@ public final class VectorStructureService {
             terminate(player.getUUID());
             return;
         }
+        // Keep the exact lease through the short completion/poll handoff as well as active work.
+        // An expired move/hover must not gain extra translation work from a rotation command.
+        if (expired && angularControl) return;
         switch (held.stage) {
             case AWAITING_PHYSICS -> tickAwaitingPhysics(player, held);
             case LIFTING -> tickLifting(player, held);
@@ -876,6 +890,7 @@ public final class VectorStructureService {
         if (!(player.level() instanceof ServerLevel level)) return false;
         var direction = KineticThrow.throwDirection(player.getLookAngle());
         if (direction.lengthSqr() <= 1.0e-8) return false;
+        StructureOrientations.cancel(level, held.reference, held.controllerId);
         if (held.traction != null || held.directControl) return launchSable(player, held, level, direction);
         return launchNative(player, held, direction, 1.0);
     }
@@ -1878,6 +1893,7 @@ public final class VectorStructureService {
         private final int tier;
         private final int blockCount;
         private final UUID controllerId = UUID.randomUUID();
+        private final ProgramOrientationHandoff angularHandoff = new ProgramOrientationHandoff(controllerId);
         private final Map<UUID, Long> impactTicks = new HashMap<>();
         private final StructurePhysicsRegion region;
         private final StructureTractionSession traction;

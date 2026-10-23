@@ -190,7 +190,7 @@ final class SubLevelProgramGraphSmoke {
                 if (!rotated) approach = Math.max(approach,
                         firstCenter.distanceTo(target) - center.distanceTo(target));
                 boolean rotatedNow = motion.pose().localToWorldDirection(new Vec3(1, 0, 0))
-                        .distanceTo(new Vec3(0, 1, 0)) < 1.0E-4;
+                        .distanceTo(new Vec3(0, 1, 0)) <= 0.02 && motion.angularVelocity().length() <= 0.03;
                 if (rotatedNow && !rotated) {
                     check(approach > 0.05, "move node did not advance its anchor before rotation: " + approach);
                     rotated = true;
@@ -394,7 +394,8 @@ final class SubLevelProgramGraphSmoke {
         if (run % 3 == 0) launch.addProperty("strength", 1);
         else launch.addProperty("power", 1.0);
         var move = new JsonObject();
-        move.addProperty("duration_seconds", 2.0);
+        // The old rotate graph schema now waits for bounded physical angular convergence.
+        move.addProperty("duration_seconds", 10.0);
         return new ProgramGraph(List.of(
                 node(definition, 0, BaseAbilityProgramDefinition.entryId(category), new JsonObject()),
                 node(definition, 1, CommonProgramNodeIds.BLOCK_POSITION_CONSTANT, position(player, seed, false)),

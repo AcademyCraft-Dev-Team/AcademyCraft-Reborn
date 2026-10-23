@@ -22,6 +22,8 @@ public final class ElectromasterProgramNodeIds {
     public static final Identifier STRUCTURE_CONTROL = id("action/structure/control");
     public static final Identifier STRUCTURE_MOVE = id("action/structure/move");
     public static final Identifier STRUCTURE_ROTATE = id("action/structure/rotate");
+    public static final Identifier STRUCTURE_RESET_ORIENTATION = id("action/structure/reset_orientation");
+    public static final Identifier STRUCTURE_SPIN = id("action/structure/spin");
     public static final Identifier STRUCTURE_LAUNCH = id("action/structure/launch");
     public static final Identifier STRUCTURE_RELEASE = id("action/structure/release");
     public static final Identifier STRUCTURE_STATICIZE = id("action/structure/staticize");

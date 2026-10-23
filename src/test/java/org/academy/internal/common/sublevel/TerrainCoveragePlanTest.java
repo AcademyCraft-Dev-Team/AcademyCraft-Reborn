@@ -74,6 +74,29 @@ class TerrainCoveragePlanTest {
     }
 
     @Test
+    void firstAngularCommandCoversItsEntireArcBeforeAnyAngularVelocityExists() {
+        var bounds = new AABB(0, 0, 0, 12, 1, 1);
+        var motion = new SubLevelPhysicsUniverse.Motion(new PhysicsPose(new PhysicsVector(8, 65, 8),
+                PhysicsQuaternion.IDENTITY), new PhysicsVector(-20, 10, 30), PhysicsVector.ZERO,
+                new PhysicsVector(2, 0.5, 0.5), 12, true);
+        var swept = SubLevelRuntime.angularTerrainBounds(bounds, motion, 0.05);
+        var pose = org.academy.api.common.structure.StructurePose.identity(new Vec3(8, 65, 8));
+        var localCenter = new Vec3(2, 0.5, 0.5);
+        for (int sample = 0; sample <= 36; sample++) {
+            var rotation = org.academy.internal.common.structure.upgrade.control.OrientationTargets.axisAngle(
+                    new Vec3(0, 1, 1), sample * Math.PI / 18);
+            var rotated = org.academy.internal.common.structure.upgrade.control.OrientationTargets.aroundCenterOfMass(
+                    pose, localCenter, rotation);
+            for (int corner = 0; corner < 8; corner++) {
+                var point = rotated.localToWorldPoint(new Vec3((corner & 1) == 0 ? 0 : 12,
+                        (corner & 2) == 0 ? 0 : 1, (corner & 4) == 0 ? 0 : 1));
+                assertTrue(swept.inflate(1.0E-8).contains(point));
+                assertTrue(swept.inflate(1.0E-8).contains(point.add(-1, 0.5 - 4.905 * 0.05 * 0.05, 1.5)));
+            }
+        }
+    }
+
+    @Test
     void requiredChunkTicketsExcludeHaloAndDeduplicateVerticalSections() {
         var coverage = TerrainColliderCache.planCoverage(List.of(
                 new AABB(8, 64, 8, 9, 96, 9), new AABB(8200, 65, 8, 8201, 66, 9)), -64, 320);

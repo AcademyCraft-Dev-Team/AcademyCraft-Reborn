@@ -54,6 +54,9 @@ public final class StructureBackendRouter {
 
     /** This neutral boundary contains no optional mod types, including in generic signatures. */
     public interface Bridge {
+        default Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess() {
+            return Optional.empty();
+        }
         Optional<StructureHandle> resolve(MinecraftServer server, StructureRef reference);
         Optional<StructureDynamics.State> motion(ServerLevel host, StructureRef reference);
         Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to);
@@ -95,6 +98,30 @@ public final class StructureBackendRouter {
     }
 
     public static StructureBackendStatus status(MinecraftServer server) { return selection(server).status; }
+
+    /** Optional mod types stay behind the verified bridge. Local plots can coexist with Sable. */
+    public static Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess(
+            ServerLevel host, StructureRef reference) {
+        requireThread(host.getServer());
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return Optional.of(org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE);
+        }
+        if (!reference.backend().equals(SABLE_ID)) return Optional.empty();
+        var selected = selection(host.getServer());
+        return selected.bridge == null ? Optional.empty() : selected.bridge.orientationAccess();
+    }
+
+    public static java.util.List<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationBackends(
+            ServerLevel host) {
+        requireThread(host.getServer());
+        var result = new java.util.ArrayList<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess>();
+        if (SubLevelServer.runtime(host).isPresent()) {
+            result.add(org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE);
+        }
+        var selected = selection(host.getServer());
+        if (selected.bridge != null) selected.bridge.orientationAccess().ifPresent(result::add);
+        return java.util.List.copyOf(result);
+    }
 
     public static boolean nativeEnabled(MinecraftServer server) {
         return status(server).mode() == StructureBackendStatus.Mode.NATIVE;
@@ -258,15 +285,17 @@ public final class StructureBackendRouter {
         requireThread(host.getServer());
         if (host.getServer().getLevel(host.dimension()) != host
                 || !host.dimension().identifier().equals(reference.dimension())) return false;
+        boolean launched;
         if (SubLevelStructureRefs.isSubLevel(reference)) {
-            return SubLevelQueries.resolve(host.getServer(), reference).isPresent()
+            launched = SubLevelQueries.resolve(host.getServer(), reference).isPresent()
                     && SubLevelSkillSupport.launch(host.getServer(), new SubLevelId(reference.id()), direction, speed);
+        } else {
+            var selected = selection(host.getServer());
+            launched = selected.bridge != null && SABLE_ID.equals(reference.backend())
+                    && selected.bridge.launch(host, reference, direction, speed);
         }
-        var selected = selection(host.getServer());
-        if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
-            return selected.bridge.launch(host, reference, direction, speed);
-        }
-        return false;
+        if (launched) org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.launched(host, reference);
+        return launched;
     }
 
     /** Queues one bounded control command in the selected backend. */

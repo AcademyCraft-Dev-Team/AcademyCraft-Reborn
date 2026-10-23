@@ -2,13 +2,13 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
-**状态：SCAFFOLD；业务未实现，GAMEPLAY_ENABLED=false，验收 UNVERIFIED。** 骨架的输入校验、能力描述及依赖注入是实作；所有世界操作仍明确返回 UNSUPPORTED。不能因编译/骨架校验通过就接入现有技能 tick。本文件的验证记录随实施更新。
+**状态：B 线本地/Sable 真实角控制及三系 rotate/reset_orientation/spin 已接线，ORIENTATION_ENABLED=true（EXPERIMENTAL）；其余 DRAFT_GAMEPLAY_ENABLED=false。** `StructureOrientations.service()` 与 `StructureUpgradeBootstrap.LIVE.orientation()` 使用实际子步服务；DRAFT 中的禁用占位实现继续返回 UNSUPPORTED。当前证据、限制和剩余验收见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)，此前独立算法阶段见 [B 线第一阶段](structure_upgrade_line_b_2026_10_23.zh-CN.md)。
 
 ## 1. 接手与替换方式
 
 公共玩法契约位于 `src/main/java/org/academy/api/common/structure/upgrade/`，公共引擎契约位于 `src/main/java/org/academy/api/common/physics/`。实现分别位于 `internal/common/structure/upgrade/` 与 `internal/common/physics/`。
 
-`StructureUpgradeServices` 通过构造器注入各服务；实现者可以单独替换某个接口并声明真实能力。`StructureUpgradeBootstrap` 注册可发现的禁用服务包，只在 common setup 记录日志，不注册玩法 tick、可执行节点、自动归块或 DLL 加载。
+`StructureUpgradeServices` 通过构造器注入各服务；实现者可以单独替换某个接口并声明真实能力。`StructureUpgradeBootstrap.DRAFT` 保留禁用服务包；`LIVE` 仅替换 ORIENTATION。`LiveStructureOrientation` 管理有界回执与生命周期，两个 adapter 在各自真实物理子步调用。三系 runtime/executor 共用该服务；未注册自动归块或新 DLL 加载。
 
 `PhysicsProvider` 与玩法后端分层：MPS provider 是 native world 的候选；Sable 保持自己的内容和求解权威，走独立结构适配器，不能拿 MPS 句柄替换 Sable 句柄。默认 provider 目录必须显式区分已有引擎描述与尚未接线的新 adapter，不能误称 openWorld 已可用。
 
@@ -20,7 +20,8 @@
 
 | 标记 | 接手文件 / 接口 | 必须保持的契约 | 完成判据 |
 | --- | --- | --- | --- |
-| UPG-CTRL-* | ScaffoldStructureControls / StructureExtraction、StructureOrientation | 源姿态/内容/覆盖绑定；新捕获初始化与已有体控制分开；独占租约；真实子步控制；角扫掠；强制回正不穿墙；到位才开始 H 200 tick | 本地/Sable 的复杂台阶/凹角/顶盖/偏心扰动、3/5/7 与 200 tick；三系 rotate 兼容、reset/spin、争抢和生命周期撤销 |
+| UPG-CTRL-01..04、10/11 | ScaffoldStructureControls / StructureExtraction；独立 ExtractionPlanner 已实现 | 源姿态/内容/覆盖绑定；新捕获初始化与已有体控制分开；独占租约；真实子步提取；到位才开始 H 200 tick | 仍待来源绑定、planner 接线与双后端复杂地形/3/5/7/200 tick 验证 |
+| UPG-CTRL-05..09 | LiveStructureOrientation / StructureOrientation；SubLevelOrientationAccess、SableOrientationAccess | 实际子步限速限力矩、连续角扫掠、COM 不传送；精确租约/版本/操作身份、替换与制动；三系异步节点 | 已接线，双后端实机与剩余矩阵见 B 线接线记录；DRAFT 角方法是刻意禁用的占位，不再是待填业务入口 |
 | UPG-LIFE-* | ScaffoldStructureLifecycle / StructureProvenance、StructureGridRestoration | 来源在捕获提交内持久化；离线身份不是无限授权；未知策略保留；sleep 不等于 terrain-paused；完整目标镜像与保存屏障，唯一所有权 | 未标记不处理；重启/碎片继承；有效控制不归块；冲突延期；各提交断点无丢块/复制/幽灵碰撞；Sable 保存契约完整 |
 | UPG-DAMAGE-01 | ScaffoldStructureCombat.query / StructureDamage | 宿主和局部格的真实内容选择体，含无碰撞植物；有界查询；server-owned 计划 | 静止/旋转/高速铁块可查询；空洞不命中；权限与缺区块失败可解释 |
 | UPG-DAMAGE-02 | ScaffoldStructureCombat.apply | effect+稳定格去重；版本只作复核；全局 BlockDropsEvent 与已有作用域；内容立即失效、昂贵重建合并 | 普通/精密冲击波、取消/替换掉落/经验、最后一格、事件重入与移动命中通过 |
@@ -32,7 +33,7 @@
 | UPG-FRACTURE-04/05 | ScaffoldStructureCombat.status/abort | 持久 LaunchAuthority 支持玩家离线和源结构退休后的查询；提交后中止只能继续清理 | 完成阶段必须有拥有者回执；中止不复活父结构或删除已提交子结构 |
 | UPG-ENGINE-* | PhysicsProvider 与禁用 provider adapters | 独立 world/epoch/object 身份；能力组合；有限预算；批处理原子失败；稳定 ABI；MPS 不热替换当前 DLL | 先通过现有原生刚体矩阵，再做隔离游戏对照；流体/软体耦合与守恒逐项验证 |
 
-资源模板：`src/main/resources/academy/structure_upgrade.template.json`。它不是运行配置，75/90、静止周期及碎片数量都是待标定值。节点名仅为设计描述，未注册新可执行节点。
+资源模板：`src/main/resources/academy/structure_upgrade.template.json`。它不是运行配置，75/90、静止周期及碎片数量都是待标定值。角节点的运行能力由 LIVE 服务决定，模板仍禁用且 UNVERIFIED，不能据此启用其他玩法。
 
 标记明细：`UPG-CTRL-01..09` 为已有结构提取与角控制，`UPG-CTRL-10/11` 为捕获前规划与捕获日志绑定；`UPG-ENGINE-01/02` 为候选 MPS 与现有 Rapier 的 adapter，`03..07` 为配置、步进、批命令、快照、接触，`08..11` 为创建、移除、真实形状查询及地形覆盖发布。`UPG-LIFE-*` 共 9 个入口：QUERY/PREPARE/PREVIEW/REQUEST/STATUS/CANCEL/HOLD/HOLD-RENEW/HOLD-RELEASE。可用 `rg -n '\[TODO: Agent B\]\[UPG-' src/main/java` 定位每一个方法。
 
@@ -68,6 +69,9 @@
 
 ## 5. 验证记录与 UNVERIFIED
 
+- 最新角控制接线验证与未覆盖矩阵统一见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)。以下骨架/独立算法数据保留为阶段历史证据；其中“未接线/未启用”不再适用于当前 ORIENTATION。
+
+- B 线新增 62 项测试包含在当前全量 JVM 2,957 项中，全部通过；Sable 专项 16 项、开发/发布 build 均通过。隔离客户端现有台阶双扰动 H 3/5/7 与各 200 tick 通过并正常保存退出；该烟测不调用新算法。新 planner、角控制/连续角扫掠/状态机和三系 schema/异步 VM 已实现，真实双后端接线、来源绑定和新玩法验收仍 UNVERIFIED。详见 [B 线记录](structure_upgrade_line_b_2026_10_23.zh-CN.md)。以下骨架/S0 数据保留为各自阶段证据。
 - 本骨架：编译与 `verifyStructureUpgradeScaffold` 通过；新契约测试 38 项包含在全量 JVM 2,895 项中，全部通过。Sable 专项 16 项通过。开发与发布 `build` 两种配置均通过。
 - 隔离 `runClientDev` 通过：注册日志明确 gameplay disabled、7 项服务能力、2 个 provider 描述；现有台阶双扰动 H 的 3/5/7 实测 3.064/5.064/7.064 格，各稳定悬浮 200 tick。原 test/test2 未改动。此为原路径自动夹具，不是新业务、Sable 或人工验收。
 - S0 原生全量：23 通过、5 失败、0 ignored。失败为拆分后的静置/扰动抬升；全局降暖启动虽能通过抬升，却损坏堆叠，已撤回候选。记录见 [S0 报告](structure_upgrade_s0_warmstart_2026_10_23.zh-CN.md)。
