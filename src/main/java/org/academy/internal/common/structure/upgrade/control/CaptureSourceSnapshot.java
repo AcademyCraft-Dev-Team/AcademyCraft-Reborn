@@ -18,9 +18,9 @@ import java.util.Objects;
  * pre-capture preview to the content actually committed into the new structure, so a binding
  * can prove that its plan belongs to the same source instead of trusting a caller's record.
  *
- * <p>Cells carry host-world positions and the exact loaded block states. Neighbour-dependent
- * shapes and block-entity payloads are deliberately excluded: those are capture admission
- * concerns and may legitimately differ while the digest stays comparable. This value is
+ * <p>Cells carry host-world positions and the exact loaded block states. Block-entity content
+ * is unsupported by this snapshot and must be rejected at admission, never silently omitted.
+ * Neighbour-dependent shapes are observed separately by the bounded planner. This value is
  * evidence only; it neither loads chunks nor grants a capture, a lease or a world write.</p>
  */
 public record CaptureSourceSnapshot(List<Cell> cells) {

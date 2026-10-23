@@ -47,7 +47,7 @@ final class OrientationWorldSnapshot implements ExtractionPlanner.ObstacleSnapsh
         var bounds = AABB.ofSize(center, radius * 2, radius * 2, radius * 2)
                 .expandTowards(controlled.freeStepDisplacement(seconds)).inflate(controlled.freeStepMargin(seconds) + 1.0E-6);
         sweptBodyBounds = bounds;
-        if (!legacyClear(bounds)) { complete = false; return; }
+        if (!legacyClear(host, bounds)) { complete = false; return; }
         for (var backend : StructureBackendRouter.orientationBackends(host)) {
             var nearby = backend.nearby(host, bounds, MAX_NEARBY - bodies.size());
             complete &= nearby.complete();
@@ -111,7 +111,7 @@ final class OrientationWorldSnapshot implements ExtractionPlanner.ObstacleSnapsh
 
     /** Recheck the same immutable states immediately before the native correction. */
     boolean current() {
-        if (!complete || !legacyClear(sweptBodyBounds)) return false;
+        if (!complete || !legacyClear(host, sweptBodyBounds)) return false;
         for (var cell : cells.entrySet()) {
             var position = cell.getKey();
             var observed = cell.getValue();
@@ -126,7 +126,7 @@ final class OrientationWorldSnapshot implements ExtractionPlanner.ObstacleSnapsh
     }
 
     /** Older entities/regions have no shared angular adapter; intersecting coverage stays unknown. */
-    private boolean legacyClear(AABB bounds) {
+    static boolean legacyClear(ServerLevel host, AABB bounds) {
         var runtime = NativeStructureRuntime.existing(host.getServer()).orElse(null);
         if (runtime != null) {
             for (var reference : runtime.loadedReferences()) {

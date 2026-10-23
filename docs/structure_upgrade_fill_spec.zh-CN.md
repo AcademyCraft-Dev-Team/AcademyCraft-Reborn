@@ -2,6 +2,8 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
+最新预演/绑定实现与实机证据见[捕获预演活路径修复与验证](structure_upgrade_line_b_capture_validation_2026_10_23.zh-CN.md)。角控制状态不变；H 连续场景卡位仍未关闭。
+
 **状态：B 线本地/Sable 真实角控制及三系 rotate/reset_orientation/spin 已接线，ORIENTATION_ENABLED=true（EXPERIMENTAL）；捕获前预演与来源绑定（UPG-CTRL-10/11）已实现，但未接入玩法且能力关闭；其余 DRAFT_GAMEPLAY_ENABLED=false。** `StructureOrientations.service()` 与 `StructureUpgradeBootstrap.LIVE.orientation()` 使用实际子步服务；`LIVE.extraction()` 使用 `LiveStructureExtraction` 的预演/绑定，DRAFT 中的禁用占位实现继续返回 UNSUPPORTED。当前证据、限制和剩余验收见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md) 与 [捕获前规划与来源绑定](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)，此前独立算法阶段见 [B 线第一阶段](structure_upgrade_line_b_2026_10_23.zh-CN.md)。
 
 ## 1. 接手与替换方式
@@ -20,7 +22,7 @@
 
 | 标记 | 接手文件 / 接口 | 必须保持的契约 | 完成判据 |
 | --- | --- | --- | --- |
-| UPG-CTRL-10/11 | LiveStructureExtraction / StructureExtraction；CapturePlanRegistry、CaptureSourceSnapshot、ExtractionPlanBuilder、LevelCaptureSource、LevelExtractionObstacles | 服务端持有预演主体/摘要/请求/到期；只用已加载区块；单次绑定；捕获结果、结构身份与租约复核；结构内容按捕获原点重算摘要 | 预演/绑定已实现（JVM 14 项）；双后端活路径夹具、H 接入与超期边界仍 UNVERIFIED |
+| UPG-CTRL-10/11 | LiveStructureExtraction / StructureExtraction；CapturePlanRegistry、CaptureSourceSnapshot、ExtractionPlanBuilder、LevelCaptureSource、LevelExtractionObstacles、StructureCaptureEvidence | 服务端持有预演主体/摘要/原请求/到期；只用已加载区块；有界完成证据核对真实来源；每次绑定复核身份、版本、租约与净空；同一局部格网比较内容摘要 | 预演/绑定已实现；本地/Sable 实际捕获各 34 项、Sable 拆分失效 7 项通过；H 接入、超期及复杂回调边界仍 UNVERIFIED |
 | UPG-CTRL-01..04 | ScaffoldStructureControls / StructureExtraction；ExtractionPlanner 结构侧规划已实现 | 源姿态/内容/覆盖绑定；新捕获初始化与已有体控制分开；独占租约；真实子步提取；到位才开始 H 200 tick | 仍待 planner 结构侧接线与双后端复杂地形/3/5/7/200 tick 验证 |
 | UPG-CTRL-05..09 | LiveStructureOrientation / StructureOrientation；SubLevelOrientationAccess、SableOrientationAccess | 实际子步限速限力矩、连续角扫掠、COM 不传送；精确租约/版本/操作身份、替换与制动；三系异步节点 | 已接线，双后端实机与剩余矩阵见 B 线接线记录；DRAFT 角方法是刻意禁用的占位，不再是待填业务入口 |
 | UPG-LIFE-* | ScaffoldStructureLifecycle / StructureProvenance、StructureGridRestoration | 来源在捕获提交内持久化；离线身份不是无限授权；未知策略保留；sleep 不等于 terrain-paused；完整目标镜像与保存屏障，唯一所有权 | 未标记不处理；重启/碎片继承；有效控制不归块；冲突延期；各提交断点无丢块/复制/幽灵碰撞；Sable 保存契约完整 |
@@ -70,7 +72,7 @@
 
 ## 5. 验证记录与 UNVERIFIED
 
-- 捕获前预演与来源绑定（UPG-CTRL-10/11）见 [B 线捕获前规划记录](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)：新增 14 项 JVM 测试通过，`verifyStructureUpgradeScaffold` 与两种 `build` 通过；活路径双后端夹具、H 接入、超期与复杂地形矩阵仍 UNVERIFIED，EXTRACTION 能力为 EXPERIMENTAL 且关闭。
+- 捕获前预演与来源绑定（UPG-CTRL-10/11）的最新修复和验证见[活路径记录](structure_upgrade_line_b_capture_validation_2026_10_23.zh-CN.md)：本地/Sable 连通组合各 34 项、Sable 拆分反例 7 项通过；H 接入、超期与复杂地形矩阵仍 UNVERIFIED，EXTRACTION 能力为 EXPERIMENTAL 且关闭。[原规划记录](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)保留此前 14 项新增 JVM 测试与阶段历史状态。
 
 - 最新角控制接线验证与未覆盖矩阵统一见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)。以下骨架/独立算法数据保留为阶段历史证据；其中“未接线/未启用”不再适用于当前 ORIENTATION。
 

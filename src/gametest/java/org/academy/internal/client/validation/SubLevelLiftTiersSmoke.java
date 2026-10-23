@@ -22,6 +22,7 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureTransactions;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
@@ -49,6 +50,8 @@ public final class SubLevelLiftTiersSmoke {
     private static final String TERRAIN = System.getProperty("academy.sublevelLiftTerrain", "flat");
     private static final int ONLY_TIER = Integer.getInteger("academy.sublevelLiftTier", -1);
     private static final String FIXED_ANCHOR = System.getProperty("academy.sublevelLiftAnchor", "").trim();
+    /** Diagnostic isolation only: a pass in this mode does not validate sequential retained bodies. */
+    private static final boolean DISCARD_BETWEEN_TIERS = Boolean.getBoolean("academy.sublevelLiftDiscardBetweenTiers");
     private static final boolean HARD_ROOF = TERRAIN.equals("roof");
     private static final boolean DISTURBANCE = Boolean.getBoolean("academy.sublevelLiftDisturbance");
     private static final String DISTURBANCE_MODE = System.getProperty("academy.sublevelLiftDisturbanceMode", "both");
@@ -97,6 +100,7 @@ public final class SubLevelLiftTiersSmoke {
     private static Vec3 previousAngular = Vec3.ZERO;
     private static double maximumRise;
     private static final List<BlockPos> hardRoof = new ArrayList<>();
+    private static StructureRef pendingDiscardObservation;
 
     private SubLevelLiftTiersSmoke() {
     }
@@ -114,6 +118,11 @@ public final class SubLevelLiftTiersSmoke {
             }
             age++;
             if (age > MAX_AGE) throw new IllegalStateException("lift tiers smoke deadline");
+            if (pendingDiscardObservation != null) {
+                AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_DISCARD_NEXT_TICK reference={} terrain={} active={}",
+                        pendingDiscardObservation, terrainCoverage(), activeBodies());
+                pendingDiscardObservation = null;
+            }
             player.setNoGravity(true);
             player.setDeltaMovement(Vec3.ZERO);
             player.resetFallDistance();
@@ -159,8 +168,8 @@ public final class SubLevelLiftTiersSmoke {
         buildPlatform();
         phase = 1;
         started = true;
-        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_START origin={} tier={} terrain={} fixed_anchor={}",
-                player.blockPosition(), tier, TERRAIN, fixedAnchor);
+        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_START origin={} tier={} terrain={} fixed_anchor={} discard_between_tiers={}",
+                player.blockPosition(), tier, TERRAIN, fixedAnchor, DISCARD_BETWEEN_TIERS);
     }
 
     private static void buildPlatform() {
@@ -470,6 +479,7 @@ public final class SubLevelLiftTiersSmoke {
             result.put("height", HEIGHTS[tier]);
             result.put("rise", rise);
             result.put("terrain", TERRAIN);
+            result.put("discard_between_tiers", DISCARD_BETWEEN_TIERS);
             result.put("max_xz_drift", maximumHorizontalDrift);
             result.put("max_angular_speed", maximumAngularSpeed);
             result.put("max_orientation_error_deg", maximumOrientationErrorDegrees);
@@ -507,6 +517,24 @@ public final class SubLevelLiftTiersSmoke {
             if (distance < 3.0) throw new IllegalStateException("vegetation launch remained stuck: " + distance);
             AcademyCraft.LOGGER.info("SUBLEVEL_VEGETATION_LAUNCH_PASSED tier={} distance={}", tier, distance);
         }
+        if (DISCARD_BETWEEN_TIERS) {
+            // Remove only the reference captured and launched by this fixture. Keep the same
+            // 20-tick flight window, terrain edits and next-tier coordinates as the retained
+            // path. The ordinary runtime tick, not a forced cache refresh here, evicts terrain.
+            var discarded = reference;
+            AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_DISCARD_BEGIN tier={} reference={} terrain={} active={}",
+                    tier, discarded, terrainCoverage(), activeBodies());
+            if (discarded == null || !StructureTransactions.discard(server, discarded)) {
+                throw new IllegalStateException("Prior-tier diagnostic discard failed: " + discarded);
+            }
+            if (StructureDynamics.motion(player.level(), discarded).isPresent()) {
+                throw new IllegalStateException("Prior-tier diagnostic discard retained a body: " + discarded);
+            }
+            AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_DISCARD_COMPLETE tier={} reference={} terrain={} active={} "
+                            + "terrain_cleanup=deferred_to_normal_runtime_tick", tier, discarded,
+                    terrainCoverage(), activeBodies());
+            pendingDiscardObservation = discarded;
+        }
         tier++;
         if (tier > 2 || ONLY_TIER >= 0) {
             complete = true;
@@ -520,6 +548,10 @@ public final class SubLevelLiftTiersSmoke {
     private static String terrainCoverage() {
         return SubLevelServer.runtime(player.level()).map(runtime ->
                 runtime.terrainCoverageComplete() + ":" + runtime.terrainDiagnostics()).orElse("foreign_solver");
+    }
+
+    private static int activeBodies() {
+        return SubLevelServer.runtime(player.level()).map(runtime -> runtime.universe().activeCount()).orElse(-1);
     }
 
     private static void enable(ServerPlayer player) {

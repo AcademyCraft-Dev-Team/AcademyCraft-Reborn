@@ -3,6 +3,7 @@ package org.academy.internal.common.structure.upgrade.control;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -11,6 +12,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureDirectControl;
+import org.academy.api.common.structure.StructureCaptureRequest;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSpaces;
@@ -20,6 +22,7 @@ import org.academy.api.common.structure.upgrade.StructureOperation;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.transaction.StructureCaptureCoordinator;
 import org.academy.internal.common.structure.upgrade.ScaffoldStructureControls;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -36,7 +39,7 @@ import java.util.UUID;
  * display value, while the source snapshot, actor, request and expiry stay server-side.
  *
  * <p>Binding re-reads the committed structure's content on its local grid and compares the
- * digest with the previewed source, so a forged preview, a different capture or a silently
+ * digest with the previewed source and the completed transaction's retained evidence, so a forged preview, a different capture or a silently
  * changed selection cannot be turned into a plan. The plan is re-planned from the body's actual
  * pose and collision geometry. Nothing here moves a body or acquires a second lease: extraction
  * motion, status and cancellation remain scaffolded until their sub-step control is wired.</p>
@@ -66,12 +69,14 @@ public final class LiveStructureExtraction implements StructureExtraction {
         if (host.getServer().getLevel(host.dimension()) != host) {
             return failure(StructureOperation.Status.DENIED, "capture_host_dimension_mismatch");
         }
-        for (var position : request.capture().positions()) {
-            if (!request.capture().permission().test(host, position)) {
-                return failure(StructureOperation.Status.DENIED, "capture_source_permission_denied");
-            }
+        var permissionFailure = LiveStructureExtraction.<CapturePlan>permissionFailure(host, actor, request.capture());
+        if (permissionFailure != null) return permissionFailure;
+        Optional<LevelCaptureSource.Snapshot> read;
+        try {
+            read = LevelCaptureSource.read(host, request.capture());
+        } catch (LevelCaptureSource.Rejected rejected) {
+            return failure(rejected.status, rejected.detail);
         }
-        var read = LevelCaptureSource.read(host, request.capture());
         if (read.isEmpty()) {
             return failure(StructureOperation.Status.TERRAIN_PENDING, "capture_source_chunk_unloaded");
         }
@@ -98,6 +103,9 @@ public final class LiveStructureExtraction implements StructureExtraction {
         if (registry(host.getServer()).register(preview, source.source(), now)
                 != CapturePlanRegistry.Registration.REGISTERED) {
             return failure(StructureOperation.Status.CONFLICT, "capture_plan_registry_full");
+        }
+        if (!StructureCaptureCoordinator.watchExtractionPreview(host, request.capture(), preview.expiresAtGameTime())) {
+            return failure(StructureOperation.Status.CONFLICT, "capture_preview_observation_capacity");
         }
         return new StructureOperation.Result<>(StructureOperation.Status.READY, "capture_preview_ready",
                 Optional.empty(), Optional.of(preview));
@@ -130,6 +138,9 @@ public final class LiveStructureExtraction implements StructureExtraction {
             }
         }
         var entry = Objects.requireNonNull(lookup.entry(), "entry");
+        if (!entry.preview().hostDimension().equals(host.dimension().identifier())) {
+            return failure(StructureOperation.Status.DENIED, "capture_preview_dimension_mismatch");
+        }
         if (!entry.preview().request().controlId().equals(request.controlId())) {
             return failure(StructureOperation.Status.DENIED, "capture_control_token_mismatch");
         }
@@ -137,8 +148,10 @@ public final class LiveStructureExtraction implements StructureExtraction {
             if (entry.captureOperationId().filter(id -> id.equals(request.captureOperationId())).isEmpty()) {
                 return failure(StructureOperation.Status.CONFLICT, "capture_preview_already_bound");
             }
-            return new StructureOperation.Result<>(StructureOperation.Status.READY, "capture_binding_repeated",
-                    Optional.empty(), entry.boundPlan());
+            var bound = entry.boundPlan().orElseThrow();
+            if (!bound.reference().equals(context.reference())) {
+                return failure(StructureOperation.Status.DENIED, "capture_structure_mismatch");
+            }
         }
         var committed = StructureCaptureCoordinator.poll(host.getServer(), request.captureOperationId());
         if (committed.isEmpty()) {
@@ -153,6 +166,20 @@ public final class LiveStructureExtraction implements StructureExtraction {
         if (result.structure().filter(structure -> structure.equals(context.reference())).isEmpty()) {
             return failure(StructureOperation.Status.DENIED, "capture_structure_mismatch");
         }
+        var evidence = StructureCaptureCoordinator.completedEvidence(host.getServer(), request.captureOperationId())
+                .orElse(null);
+        if (evidence == null) return failure(StructureOperation.Status.DENIED, "capture_source_evidence_unavailable");
+        if (!evidence.matches(host.dimension().identifier(), context.reference(), entry.preview().request().capture())) {
+            return failure(StructureOperation.Status.DENIED, "capture_submission_mismatch");
+        }
+        var committedSource = CaptureSourceSnapshot.of(evidence.cells().stream()
+                .map(cell -> new CaptureSourceSnapshot.Cell(cell.position(), cell.state())).toList());
+        if (!committedSource.digest().equals(entry.source().digest())) {
+            return failure(StructureOperation.Status.DENIED, "capture_source_digest_mismatch");
+        }
+        var permissionFailure = LiveStructureExtraction.<Plan>permissionFailure(host, actor,
+                entry.preview().request().capture());
+        if (permissionFailure != null) return permissionFailure;
         if (StructureDirectControl.validate(host, context.reference(), actor, request.controlId())
                 != StructureDirectControl.Status.ACTIVE) {
             return failure(StructureOperation.Status.DENIED, "capture_control_lease_inactive");
@@ -166,8 +193,17 @@ public final class LiveStructureExtraction implements StructureExtraction {
             return failure(StructureOperation.Status.TERRAIN_PENDING, "capture_body_terrain_pending");
         }
         if (!body.runtimeId().equals(context.runtimeId())
-                || body.contentRevision() != context.expectedContentRevision()) {
+                || body.contentRevision() != context.expectedContentRevision()
+                || !body.runtimeId().equals(evidence.runtimeId())
+                || body.contentRevision() != evidence.contentRevision()) {
             return failure(StructureOperation.Status.STALE, "capture_authority_stale");
+        }
+        if (entry.bound()) {
+            var previous = entry.boundPlan().orElseThrow();
+            if (!previous.runtimeId().equals(body.runtimeId()) || previous.contentRevision() != body.contentRevision()
+                    || previous.poseRevision() != body.poseRevision()) {
+                return failure(StructureOperation.Status.STALE, "capture_binding_observation_stale");
+            }
         }
         var content = verifySourceContent(host.getServer(), context, entry);
         if (content != StructureOperation.Status.READY) {
@@ -181,13 +217,20 @@ public final class LiveStructureExtraction implements StructureExtraction {
                 body.motion().localCenterOfMass(), body.localBoxes(),
                 body.contentRevision(), body.poseRevision());
         var outcome = plan(host, entry.preview().request().limits(), entry.preview().request().liftHeight(),
-                entry.preview().request().hoverTicks(), geometry, entry.source().cells().stream()
-                        .map(CaptureSourceSnapshot.Cell::position).toList(),
+                entry.preview().request().hoverTicks(), geometry, List.of(),
                 body.localBoxes(), body.motion().pose(), entry.preview().request().limits().maxRetreatDistance(),
                 context.reference());
         if (outcome.status() != StructureOperation.Status.READY) {
             return new StructureOperation.Result<>(outcome.status(), outcome.detail(),
                     Optional.empty(), Optional.empty());
+        }
+        if (entry.bound()) {
+            var previous = entry.boundPlan().orElseThrow();
+            if (!outcome.worldPath().equals(previous.worldPath())) {
+                return failure(StructureOperation.Status.STALE, "capture_binding_path_changed");
+            }
+            return new StructureOperation.Result<>(StructureOperation.Status.READY, "capture_binding_repeated",
+                    Optional.empty(), Optional.of(previous));
         }
         var planRequest = new PlanRequest(request.controlId(), SourceKind.NEW_CAPTURE, baseline,
                 body.motion().localCenterOfMass(), entry.preview().request().liftHeight(),
@@ -250,12 +293,15 @@ public final class LiveStructureExtraction implements StructureExtraction {
         try {
             for (var cell : expected.cells()) {
                 var data = access.read(cell.position());
+                if (data.state().hasBlockEntity() || data.blockEntityData() != null) {
+                    return StructureOperation.Status.DENIED;
+                }
                 actual.add(new CaptureSourceSnapshot.Cell(cell.position(), data.state().toString()));
             }
         } catch (IllegalStateException | IllegalArgumentException unavailable) {
             return StructureOperation.Status.TERRAIN_PENDING;
         }
-        return CaptureSourceSnapshot.of(actual).digest().equals(entry.source().digest())
+        return CaptureSourceSnapshot.of(actual).digest().equals(expected.digest())
                 ? StructureOperation.Status.READY : StructureOperation.Status.DENIED;
     }
 
@@ -273,7 +319,35 @@ public final class LiveStructureExtraction implements StructureExtraction {
         if (envelope == null) envelope = new AABB(offset, offset.add(1.0, 1.0, 1.0));
         envelope = envelope.inflate(retreat + 0.5).expandTowards(0.0, liftHeight + 1.0, 0.0);
         var obstacles = new LevelExtractionObstacles(host, excluded, envelope, UNVERSIONED_TERRAIN, controlled);
-        return ExtractionPlanBuilder.plan(limits, liftHeight, hoverTicks, UNVERSIONED_TERRAIN, geometry, obstacles);
+        var result = ExtractionPlanBuilder.plan(limits, liftHeight, hoverTicks, UNVERSIONED_TERRAIN, geometry, obstacles);
+        return result.status() == StructureOperation.Status.READY && !obstacles.current()
+                ? new ExtractionPlanBuilder.Outcome(StructureOperation.Status.STALE, "capture_terrain_changed_during_preview",
+                        List.of(), List.of(), UNVERSIONED_TERRAIN) : result;
+    }
+
+    /** Built-in actor restrictions are mandatory; the caller predicate can only restrict them. */
+    private static <T> StructureOperation.@Nullable Result<T> permissionFailure(ServerLevel host, Entity actor,
+                                                                              StructureCaptureRequest request) {
+        if (actor instanceof ServerPlayer player && (player.isSpectator() || !player.getAbilities().mayBuild)) {
+            return failure(StructureOperation.Status.DENIED, "capture_actor_cannot_build");
+        }
+        for (var position : request.positions()) {
+            if (!host.isInWorldBounds(position) || !host.getWorldBorder().isWithinBounds(position)) {
+                return failure(StructureOperation.Status.DENIED, "capture_source_out_of_world");
+            }
+            if (host.getChunkSource().getChunkNow(position.getX() >> 4, position.getZ() >> 4) == null) {
+                return failure(StructureOperation.Status.TERRAIN_PENDING, "capture_source_chunk_unloaded");
+            }
+            try {
+                if (!actor.mayInteract(host, position) || !host.mayInteract(actor, position)
+                        || !request.permission().test(host, position)) {
+                    return failure(StructureOperation.Status.DENIED, "capture_source_permission_denied");
+                }
+            } catch (RuntimeException denied) {
+                return failure(StructureOperation.Status.DENIED, "capture_source_permission_unavailable");
+            }
+        }
+        return null;
     }
 
     private static CapturePlanRegistry registry(MinecraftServer server) {

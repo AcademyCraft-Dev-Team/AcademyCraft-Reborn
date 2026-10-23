@@ -60,6 +60,7 @@ public final class StructureCaptureCoordinator {
     private static final int ACTIVATION_TIMEOUT_TICKS = 200;
     private static final int SAVE_TIMEOUT_TICKS = 600;
     private static final int MAX_FINISHED_RESULTS = 256;
+    private static final int MAX_EXTRACTION_PREVIEWS = 64;
     private static final int HOST_UPDATE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE
             | Block.UPDATE_SKIP_ON_PLACE | Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS
             | Block.UPDATE_SUPPRESS_DROPS;
@@ -69,6 +70,8 @@ public final class StructureCaptureCoordinator {
     private final StructureCaptureClaims claims = new StructureCaptureClaims();
     private final Map<UUID, PendingCapture> pending = new LinkedHashMap<>();
     private final Map<UUID, StructureCaptureResult> finished = new LinkedHashMap<>();
+    private final Map<UUID, StructureCaptureEvidence> finishedEvidence = new LinkedHashMap<>();
+    private final Map<StructureCaptureRequest, PreviewInterest> extractionPreviews = new IdentityHashMap<>();
     private @Nullable StructureTransactionJournal journal;
     private boolean journalAttempted;
     private boolean closed;
@@ -103,6 +106,49 @@ public final class StructureCaptureCoordinator {
         synchronized (SERVERS) { coordinator = SERVERS.get(server); }
         if (coordinator == null || coordinator.closed) return Optional.empty();
         return coordinator.currentResult(transactionId);
+    }
+
+    /** Same bounded lifetime as completed results; absent for pending, failed or recovered captures. */
+    public static Optional<StructureCaptureEvidence> completedEvidence(MinecraftServer server, UUID transactionId) {
+        Objects.requireNonNull(server, "server");
+        Objects.requireNonNull(transactionId, "transactionId");
+        if (!server.isSameThread()) {
+            throw new IllegalStateException("Structure capture requires the server thread");
+        }
+        StructureCaptureCoordinator coordinator;
+        synchronized (SERVERS) { coordinator = SERVERS.get(server); }
+        return coordinator == null || coordinator.closed ? Optional.empty()
+                : Optional.ofNullable(coordinator.finishedEvidence.get(transactionId));
+    }
+
+    /**
+     * Register a successfully stored extraction preview for optional completion evidence.
+     * Only request identity is retained; this neither opens the journal nor loads/observes a body.
+     * Ordinary captures without a preview never pay for an orientation geometry observation.
+     */
+    public static boolean watchExtractionPreview(ServerLevel host, StructureCaptureRequest request, long expiresAt) {
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(request, "request");
+        if (!host.getServer().isSameThread()) {
+            throw new IllegalStateException("Extraction preview registration requires the server thread");
+        }
+        var coordinator = coordinator(host.getServer());
+        coordinator.requireRunning();
+        if (host.getServer().getLevel(host.dimension()) != host || !request.physical()
+                || expiresAt <= host.getGameTime() || expiresAt - host.getGameTime() > 1_200) return false;
+        coordinator.expireExtractionPreviews();
+        if (!coordinator.extractionPreviews.containsKey(request)
+                && coordinator.extractionPreviews.size() >= MAX_EXTRACTION_PREVIEWS) return false;
+        coordinator.extractionPreviews.put(request, new PreviewInterest(host.dimension(), expiresAt));
+        return true;
+    }
+
+    private void expireExtractionPreviews() {
+        if (extractionPreviews.isEmpty()) return;
+        extractionPreviews.values().removeIf(preview -> {
+            var host = server.getLevel(preview.dimension());
+            return host == null || host.getGameTime() > preview.expiresAt();
+        });
     }
 
     private static StructureCaptureCoordinator coordinator(MinecraftServer server) {
@@ -280,6 +326,7 @@ public final class StructureCaptureCoordinator {
             var seeded = seededAllocation(backend, target, seedOffset, seedState);
             var capture = new PendingCapture(record, host, origin, target, backend, ordered, cells, states,
                     request.permission(), false, seedIndex, seeded, request.physical());
+            capture.submittedRequest = request;
             pending.put(transactionId, capture);
             long driveStarted = CaptureTimings.begin();
             try {
@@ -762,7 +809,35 @@ public final class StructureCaptureCoordinator {
         capture.result = result;
         pending.remove(capture.transactionId);
         claims.release(capture.transactionId);
-        if (capture.reportResults) remember(capture.transactionId, result);
+        if (capture.reportResults) {
+            expireExtractionPreviews();
+            var interest = capture.submittedRequest == null ? null : extractionPreviews.get(capture.submittedRequest);
+            if (result.succeeded() && capture.physical && capture.submittedRequest != null && interest != null
+                    && interest.dimension().equals(capture.host.dimension())
+                    && capture.record.stage() == StructureTransactionJournal.Stage.PUBLISHED) {
+                extractionPreviews.remove(capture.submittedRequest);
+                try {
+                    var body = StructureBackendRouter.orientationAccess(capture.host, capture.target)
+                            .flatMap(access -> access.observe(capture.host, capture.target)).orElse(null);
+                    if (body != null) {
+                        var source = new ArrayList<StructureCaptureEvidence.Cell>(capture.positions.size());
+                        for (int index = 0; index < capture.cells.size(); index++) {
+                            source.add(new StructureCaptureEvidence.Cell(capture.cells.get(index).position(),
+                                    capture.states.get(index).toString()));
+                        }
+                        finishedEvidence.put(capture.transactionId, new StructureCaptureEvidence(
+                                capture.record.hostDimension(), capture.target, capture.submittedRequest, source,
+                                body.runtimeId(), body.contentRevision()));
+                    }
+                } catch (RuntimeException | AssertionError | LinkageError unavailable) {
+                    // Capture ownership is already committed. Missing optional planning evidence
+                    // must refuse later binding, never turn a successful capture into a rollback.
+                    AcademyCraft.LOGGER.debug("Capture {} has no extraction binding observation",
+                            capture.transactionId, unavailable);
+                }
+            }
+            remember(capture.transactionId, result);
+        }
     }
 
     private void finishRecovery(PendingCapture capture) {
@@ -810,8 +885,9 @@ public final class StructureCaptureCoordinator {
         finished.put(transactionId, result);
         while (finished.size() > MAX_FINISHED_RESULTS) {
             var iterator = finished.keySet().iterator();
-            iterator.next();
+            var evicted = iterator.next();
             iterator.remove();
+            finishedEvidence.remove(evicted);
         }
     }
 
@@ -1140,6 +1216,7 @@ public final class StructureCaptureCoordinator {
         StructureCaptureCoordinator coordinator;
         synchronized (SERVERS) { coordinator = SERVERS.get(event.getServer()); }
         if (coordinator == null || coordinator.closed) return;
+        coordinator.expireExtractionPreviews();
         coordinator.driveAll();
     }
 
@@ -1151,6 +1228,9 @@ public final class StructureCaptureCoordinator {
         coordinator.closed = true;
         coordinator.pending.clear();
         coordinator.claims.clear();
+        coordinator.finished.clear();
+        coordinator.finishedEvidence.clear();
+        coordinator.extractionPreviews.clear();
     }
 
     private enum Phase {
@@ -1171,6 +1251,8 @@ public final class StructureCaptureCoordinator {
         }
     }
 
+    private record PreviewInterest(ResourceKey<net.minecraft.world.level.Level> dimension, long expiresAt) {}
+
     private static final class PendingCapture {
         private final UUID transactionId;
         private final ServerLevel host;
@@ -1186,6 +1268,7 @@ public final class StructureCaptureCoordinator {
         private final int seedIndex;
         private final boolean seeded;
         private final boolean physical;
+        private @Nullable StructureCaptureRequest submittedRequest;
         private StructureTransactionJournal.Record record;
         private Phase phase = Phase.AWAIT_ACTIVATION;
         private int copyProgress;

@@ -2,6 +2,8 @@
 
 ## 2026-10-23 可替换服务与引擎骨架
 
+本轮继续补全[捕获预演活路径修复与验证](docs/structure_upgrade_line_b_capture_validation_2026_10_23.zh-CN.md)：真实坐标/摘要、完成事务来源证据、重复绑定复核与有界形状读取已修正；本地/Sable 连通组合各 34 项、Sable 拆分失效 7 项通过。新提取控制未启用；旧 H 连续场景仍复现卡位，固定坐标清理对照及后续诊断点已记录。
+
 新一轮六项技能结构完善和 MPS/流体/软体采用的接口、分工、TODO 标记、构建命令与未验证项见 [可替换物理骨架 FILL-SPEC](docs/structure_upgrade_fill_spec.zh-CN.md)。骨架已本地提交为 `26635388`。[B 线独立算法与节点契约](docs/structure_upgrade_line_b_2026_10_23.zh-CN.md)之后，已接入本地/Sable 真实子步角控制与三系 rotate/reset_orientation/spin 节点，见 [B 线接线与验证](docs/structure_upgrade_line_b_live_2026_10_23.zh-CN.md)。捕获前预演与来源绑定（UPG-CTRL-10/11）见 [B 线捕获前规划](docs/structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)：只做服务端预演与绑定，提取动作、自动归块与新玩法仍未启用。未替换 DLL。
 
 ## 2026-10-20 后续：贴地接触、嵌地抬升与卸载设计

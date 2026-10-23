@@ -146,11 +146,20 @@ public final class CapturePlanRegistry {
         }
         var preview = entry.preview;
         if (!preview.actorId().equals(actorId)
-                || !preview.request().controlId().equals(plan.request().controlId())) {
+                || !preview.request().controlId().equals(plan.request().controlId())
+                || !preview.hostDimension().equals(plan.reference().dimension())
+                || plan.request().sourceKind() != StructureExtraction.SourceKind.NEW_CAPTURE) {
             return Bind.of(Outcome.DENIED, null);
         }
         if (entry.bound != null) {
-            boolean identical = captureOperationId.equals(entry.captureOperationId);
+            boolean identical = captureOperationId.equals(entry.captureOperationId)
+                    && entry.bound.reference().equals(plan.reference())
+                    && entry.bound.runtimeId().equals(plan.runtimeId())
+                    && entry.bound.contentRevision() == plan.contentRevision()
+                    && entry.bound.poseRevision() == plan.poseRevision()
+                    && entry.bound.terrainRevision() == plan.terrainRevision()
+                    && entry.bound.request().equals(plan.request())
+                    && entry.bound.worldPath().equals(plan.worldPath());
             return identical ? Bind.of(Outcome.REPEATED, entry.bound) : Bind.of(Outcome.CONFLICT, null);
         }
         entry.bound = plan;

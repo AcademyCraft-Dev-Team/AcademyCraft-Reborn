@@ -28,11 +28,16 @@ final class LevelExtractionObstacles implements ExtractionPlanner.ObstacleSnapsh
     private final Set<Long> excluded = new HashSet<>();
     private final long revision;
     private final boolean complete;
-    private int cellsRead;
+    private final ServerLevel host;
+    private final AABB envelope;
+    private final @Nullable StructureRef controlled;
 
     LevelExtractionObstacles(ServerLevel host, List<BlockPos> excluded, AABB envelope, long revision,
                              @Nullable StructureRef controlled) {
         this.view = new LoadedChunkView(host);
+        this.host = host;
+        this.envelope = envelope;
+        this.controlled = controlled;
         this.revision = revision;
         for (var position : excluded) this.excluded.add(position.asLong());
         this.complete = foreignBodiesClear(host, envelope, controlled);
@@ -50,20 +55,21 @@ final class LevelExtractionObstacles implements ExtractionPlanner.ObstacleSnapsh
         try {
             for (var mutable : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
                 if (excluded.contains(mutable.asLong())) continue;
-                if (++cellsRead > MAX_CELLS) return truncated(result);
                 var position = mutable.immutable();
                 var state = view.getBlockState(position);
-                if (state.getCollisionShape(view, position).isEmpty()) {
-                    if (state.getShape(view, position).isEmpty()) continue;
-                    for (var shape : state.getShape(view, position).toAabbs()) {
+                var collision = LoadedChunkView.inspectShape(() -> state.getCollisionShape(view, position).toAabbs());
+                if (collision.isEmpty()) {
+                    for (var shape : LoadedChunkView.inspectShape(() -> state.getShape(view, position).toAabbs())) {
+                        var world = shape.move(position);
+                        if (!world.intersects(bounds)) continue;
                         if (result.size() >= maximumShapes) return truncated(result);
                         result.add(new ExtractionPlanner.Obstacle("soft:" + position.asLong(),
                                 ExtractionPlanner.ObstacleKind.SOFT_REQUIRES_PERMISSION,
-                                TranslationSweep.Box.axisAligned(shape.move(position))));
+                                TranslationSweep.Box.axisAligned(world)));
                     }
                     continue;
                 }
-                for (var box : state.getCollisionShape(view, position).toAabbs()) {
+                for (var box : collision) {
                     var world = box.move(position);
                     if (!world.intersects(bounds)) continue;
                     if (result.size() >= maximumShapes) return truncated(result);
@@ -72,6 +78,8 @@ final class LevelExtractionObstacles implements ExtractionPlanner.ObstacleSnapsh
                 }
             }
         } catch (LoadedChunkView.Unavailable unavailable) {
+            return unavailable.budget ? truncated(result) : unknown();
+        } catch (LoadedChunkView.ShapeFailure unavailable) {
             return unknown();
         }
         return new ExtractionPlanner.Query(revision, ExtractionPlanner.Coverage.COMPLETE, false, result);
@@ -79,6 +87,7 @@ final class LevelExtractionObstacles implements ExtractionPlanner.ObstacleSnapsh
 
     /** The controlled body is not an obstacle to itself; every other loaded body is. */
     private static boolean foreignBodiesClear(ServerLevel host, AABB envelope, @Nullable StructureRef controlled) {
+        if (!OrientationWorldSnapshot.legacyClear(host, envelope)) return false;
         for (var backend : StructureBackendRouter.orientationBackends(host)) {
             var nearby = backend.nearby(host, envelope, 2);
             if (!nearby.complete()) return false;
@@ -87,6 +96,10 @@ final class LevelExtractionObstacles implements ExtractionPlanner.ObstacleSnapsh
             }
         }
         return true;
+    }
+
+    boolean current() {
+        return complete && view.current() && foreignBodiesClear(host, envelope, controlled);
     }
 
     private ExtractionPlanner.Query unknown() {

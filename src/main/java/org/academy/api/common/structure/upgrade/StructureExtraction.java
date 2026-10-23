@@ -31,6 +31,9 @@ public interface StructureExtraction {
      * source snapshot digest, terrain revision and expiry server-side. The capture predicate is
      * an additional restriction, never a substitute for actor permissions. This does not capture,
      * acquire a control lease, load chunks or authorize source writes.
+     * The current live preview supports state-only cells; block entities, fluids and pending
+     * block ticks are explicitly refused. Submit the same {@link StructureCaptureRequest}
+     * instance to the capture coordinator so its completion can be joined to this preview.
      */
     StructureOperation.Result<CapturePlan> planCapture(StructureOperation.ActorContext context,
                                                        CaptureRequest request);
@@ -44,6 +47,10 @@ public interface StructureExtraction {
      * Success returns a bound Plan whose ID can be passed to begin; binding does not start motion.
      * One preview binds to one capture/control pair; an identical retry returns the same binding,
      * and reuse with another capture, actor or control returns CONFLICT or DENIED.
+     * The live coordinator retains the submitted request identity, source cells and completed
+     * activation/content observation. Missing or recovered evidence is not bindable. The legacy
+     * capture entry point has no actor parameter; actor authority comes from the saved preview,
+     * mandatory interaction restrictions and the current exact lease, not the result alone.
      */
     StructureOperation.Result<Plan> bindCapture(StructureOperation.Context context, BindCaptureRequest request);
 
@@ -114,7 +121,8 @@ public interface StructureExtraction {
 
     /**
      * Display-only pre-capture preview. Digest is SHA-256 over the service's canonical source
-     * snapshot, including relevant block/BE data, not merely position names. The actual trusted
+     * snapshot, including relevant block/BE data, not merely position names. Implementations
+     * without BE evidence must refuse such cells instead of omitting their payload. The actual trusted
      * request, actor binding and source digest remain in the server-owned plan registry.
      */
     record CapturePlan(UUID planId, UUID actorId, Identifier hostDimension, String sourceContentDigest,

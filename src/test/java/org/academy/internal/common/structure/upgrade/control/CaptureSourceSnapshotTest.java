@@ -36,6 +36,11 @@ class CaptureSourceSnapshotTest {
         assertEquals(new BlockPos(0, 0, 0), local.cells().getFirst().position());
         assertEquals(new BlockPos(1, 1, 0), local.cells().getLast().position());
         assertEquals("minecraft:stone", local.cells().getFirst().state());
+        assertNotEquals(snapshot.digest(), local.digest(), "Host and local coordinates belong to distinct digests");
+        var committedLocal = CaptureSourceSnapshot.of(List.of(
+                new CaptureSourceSnapshot.Cell(new BlockPos(1, 1, 0), "minecraft:oak_planks"),
+                new CaptureSourceSnapshot.Cell(BlockPos.ZERO, "minecraft:stone")));
+        assertEquals(local.digest(), committedLocal.digest());
         assertThrows(IllegalArgumentException.class, () -> local.localize(new BlockPos(1, 0, 0)));
     }
 

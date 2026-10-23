@@ -53,12 +53,40 @@ class CapturePlanRegistryTest {
         var first = registry.bind(actor, bound, capture, NOW);
         assertEquals(CapturePlanRegistry.Outcome.READY, first.outcome());
         assertSame(bound, first.plan());
-        var repeated = registry.bind(actor, boundPlan(plan.planId(), control, NOW + 400), capture, NOW + 1);
+        var duplicate = new StructureExtraction.Plan(bound.planId(), bound.reference(), bound.runtimeId(),
+                bound.contentRevision(), bound.poseRevision(), bound.terrainRevision(), NOW + 800,
+                bound.request(), bound.worldPath(), bound.blockedCells());
+        var repeated = registry.bind(actor, duplicate, capture, NOW + 1);
         assertEquals(CapturePlanRegistry.Outcome.REPEATED, repeated.outcome());
         assertSame(bound, repeated.plan(), "A repeated retry must return the stored plan, not a new one");
         assertEquals(CapturePlanRegistry.Outcome.CONFLICT,
                 registry.bind(actor, bound, UUID.randomUUID(), NOW + 2).outcome());
         assertTrue(registry.resolve(plan.planId(), actor, NOW).entry().bound());
+    }
+
+    @Test
+    void sameCaptureIdDoesNotPermitAnotherStructureOrActivationOnRetry() {
+        var registry = new CapturePlanRegistry();
+        var actor = UUID.randomUUID();
+        var control = UUID.randomUUID();
+        var capture = UUID.randomUUID();
+        var preview = preview(actor, control, 200);
+        registry.register(preview, source(), NOW);
+        var bound = boundPlan(preview.planId(), control, NOW + 400);
+        assertEquals(CapturePlanRegistry.Outcome.READY, registry.bind(actor, bound, capture, NOW).outcome());
+        assertEquals(CapturePlanRegistry.Outcome.CONFLICT,
+                registry.bind(actor, boundPlan(preview.planId(), control, NOW + 400), capture, NOW + 1).outcome());
+        var reactivated = new StructureExtraction.Plan(bound.planId(), bound.reference(), UUID.randomUUID(),
+                bound.contentRevision(), bound.poseRevision(), bound.terrainRevision(), bound.expiresAtGameTime(),
+                bound.request(), bound.worldPath(), bound.blockedCells());
+        assertEquals(CapturePlanRegistry.Outcome.CONFLICT,
+                registry.bind(actor, reactivated, capture, NOW + 1).outcome());
+        var contentChanged = new StructureExtraction.Plan(bound.planId(), bound.reference(), bound.runtimeId(),
+                bound.contentRevision() + 1, bound.poseRevision(), bound.terrainRevision(), bound.expiresAtGameTime(),
+                bound.request(), bound.worldPath(), bound.blockedCells());
+        assertEquals(CapturePlanRegistry.Outcome.CONFLICT,
+                registry.bind(actor, contentChanged, capture, NOW + 1).outcome());
+        assertSame(bound, registry.resolve(preview.planId(), actor, NOW + 1).entry().boundPlan().orElseThrow());
     }
 
     @Test

@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructureCaptureRequest;
+import org.academy.api.common.structure.upgrade.StructureOperation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,18 +41,64 @@ final class LevelCaptureSource {
         try {
             for (var position : request.positions()) {
                 var state = view.getBlockState(position);
-                cells.add(new CaptureSourceSnapshot.Cell(position, state.toString()));
-                for (var box : state.getCollisionShape(view, position).toAabbs()) {
-                    var local = box.move(-origin.getX(), -origin.getY(), -origin.getZ());
+                // The transaction persists block states only. Do not certify a digest that
+                // silently drops inventories or other block-entity payloads.
+                if (state.hasBlockEntity() || view.getBlockEntity(position) != null) {
+                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_block_entity_unsupported");
+                }
+                if (!state.getFluidState().isEmpty()) {
+                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_fluid_unsupported");
+                }
+                if (LoadedChunkView.inspectShape(() -> state.getDestroySpeed(view, position)) < 0.0f) {
+                    throw new Rejected(StructureOperation.Status.DENIED, "capture_source_unbreakable");
+                }
+                if (host.getBlockTicks().hasScheduledTick(position, state.getBlock())) {
+                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_scheduled_tick_pending");
+                }
+                var stateId = state.toString();
+                if (stateId.isBlank() || stateId.length() > CaptureSourceSnapshot.MAX_STATE_LENGTH) {
+                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_state_id_unsupported");
+                }
+                cells.add(new CaptureSourceSnapshot.Cell(position, stateId));
+                for (var box : LoadedChunkView.inspectShape(() -> state.getCollisionShape(view, position).toAabbs())) {
+                    if (boxes.size() >= ExtractionPlanner.MAX_LOCAL_BOXES) {
+                        throw new Rejected(StructureOperation.Status.CONFLICT, "capture_source_shape_budget_exhausted");
+                    }
+                    var local = localBox(box, position, origin);
                     boxes.add(local);
                     union = union == null ? local : union.minmax(local);
                 }
             }
         } catch (LoadedChunkView.Unavailable unavailable) {
+            if (unavailable.budget) {
+                throw new Rejected(StructureOperation.Status.CONFLICT, "capture_source_read_budget_exhausted");
+            }
             return Optional.empty();
+        } catch (LoadedChunkView.ShapeFailure unavailable) {
+            throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_geometry_unavailable");
+        }
+        if (!view.current()) {
+            throw new Rejected(StructureOperation.Status.STALE, "capture_source_changed_during_preview");
         }
         var center = union == null ? new Vec3(0.5, 0.5, 0.5) : union.getCenter();
         return Optional.of(new Snapshot(CaptureSourceSnapshot.of(cells), boxes, center));
+    }
+
+    /** Vanilla shape cuboids start in block-local coordinates, not host coordinates. */
+    static AABB localBox(AABB blockLocal, BlockPos position, BlockPos origin) {
+        return blockLocal.move(position.getX() - origin.getX(), position.getY() - origin.getY(),
+                position.getZ() - origin.getZ());
+    }
+
+    static final class Rejected extends RuntimeException {
+        final StructureOperation.Status status;
+        final String detail;
+
+        Rejected(StructureOperation.Status status, String detail) {
+            super(null, null, false, false);
+            this.status = status;
+            this.detail = detail;
+        }
     }
 
     /** Minimum corner of the selection, matching the capture transaction's own origin. */

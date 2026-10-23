@@ -21,6 +21,9 @@ allprojects {
             // Optional tier-0 platform x,y,z; fixes terrain section boundaries for A/B runs.
             systemProperty 'academy.sublevelLiftAnchor', providers.gradleProperty('academySubLevelLiftAnchor')
                     .getOrElse('')
+            // Diagnostic A/B only; retain the previous body by default. Never a production fix.
+            systemProperty 'academy.sublevelLiftDiscardBetweenTiers', providers.gradleProperty('academySubLevelLiftDiscardBetweenTiers')
+                    .getOrElse('false')
             systemProperty 'academy.sublevelLiftDisturbance', providers.gradleProperty('academySubLevelLiftDisturbance')
                     .getOrElse('false')
             systemProperty 'academy.sublevelLiftDisturbanceMode', providers.gradleProperty('academySubLevelLiftDisturbanceMode')
