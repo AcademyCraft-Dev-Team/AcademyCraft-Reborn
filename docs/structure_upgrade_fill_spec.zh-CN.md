@@ -2,13 +2,13 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
-**状态：B 线本地/Sable 真实角控制及三系 rotate/reset_orientation/spin 已接线，ORIENTATION_ENABLED=true（EXPERIMENTAL）；其余 DRAFT_GAMEPLAY_ENABLED=false。** `StructureOrientations.service()` 与 `StructureUpgradeBootstrap.LIVE.orientation()` 使用实际子步服务；DRAFT 中的禁用占位实现继续返回 UNSUPPORTED。当前证据、限制和剩余验收见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)，此前独立算法阶段见 [B 线第一阶段](structure_upgrade_line_b_2026_10_23.zh-CN.md)。
+**状态：B 线本地/Sable 真实角控制及三系 rotate/reset_orientation/spin 已接线，ORIENTATION_ENABLED=true（EXPERIMENTAL）；捕获前预演与来源绑定（UPG-CTRL-10/11）已实现，但未接入玩法且能力关闭；其余 DRAFT_GAMEPLAY_ENABLED=false。** `StructureOrientations.service()` 与 `StructureUpgradeBootstrap.LIVE.orientation()` 使用实际子步服务；`LIVE.extraction()` 使用 `LiveStructureExtraction` 的预演/绑定，DRAFT 中的禁用占位实现继续返回 UNSUPPORTED。当前证据、限制和剩余验收见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md) 与 [捕获前规划与来源绑定](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)，此前独立算法阶段见 [B 线第一阶段](structure_upgrade_line_b_2026_10_23.zh-CN.md)。
 
 ## 1. 接手与替换方式
 
 公共玩法契约位于 `src/main/java/org/academy/api/common/structure/upgrade/`，公共引擎契约位于 `src/main/java/org/academy/api/common/physics/`。实现分别位于 `internal/common/structure/upgrade/` 与 `internal/common/physics/`。
 
-`StructureUpgradeServices` 通过构造器注入各服务；实现者可以单独替换某个接口并声明真实能力。`StructureUpgradeBootstrap.DRAFT` 保留禁用服务包；`LIVE` 仅替换 ORIENTATION。`LiveStructureOrientation` 管理有界回执与生命周期，两个 adapter 在各自真实物理子步调用。三系 runtime/executor 共用该服务；未注册自动归块或新 DLL 加载。
+`StructureUpgradeServices` 通过构造器注入各服务；实现者可以单独替换某个接口并声明真实能力。`StructureUpgradeBootstrap.DRAFT` 保留禁用服务包；`LIVE` 替换 ORIENTATION 与 EXTRACTION。`LiveStructureOrientation` 管理有界回执与生命周期，两个 adapter 在各自真实物理子步调用；`LiveStructureExtraction` 只做捕获前预演与来源绑定，提取动作仍为 UNSUPPORTED。三系 runtime/executor 共用角服务；未注册自动归块或新 DLL 加载。
 
 `PhysicsProvider` 与玩法后端分层：MPS provider 是 native world 的候选；Sable 保持自己的内容和求解权威，走独立结构适配器，不能拿 MPS 句柄替换 Sable 句柄。默认 provider 目录必须显式区分已有引擎描述与尚未接线的新 adapter，不能误称 openWorld 已可用。
 
@@ -20,7 +20,8 @@
 
 | 标记 | 接手文件 / 接口 | 必须保持的契约 | 完成判据 |
 | --- | --- | --- | --- |
-| UPG-CTRL-01..04、10/11 | ScaffoldStructureControls / StructureExtraction；独立 ExtractionPlanner 已实现 | 源姿态/内容/覆盖绑定；新捕获初始化与已有体控制分开；独占租约；真实子步提取；到位才开始 H 200 tick | 仍待来源绑定、planner 接线与双后端复杂地形/3/5/7/200 tick 验证 |
+| UPG-CTRL-10/11 | LiveStructureExtraction / StructureExtraction；CapturePlanRegistry、CaptureSourceSnapshot、ExtractionPlanBuilder、LevelCaptureSource、LevelExtractionObstacles | 服务端持有预演主体/摘要/请求/到期；只用已加载区块；单次绑定；捕获结果、结构身份与租约复核；结构内容按捕获原点重算摘要 | 预演/绑定已实现（JVM 14 项）；双后端活路径夹具、H 接入与超期边界仍 UNVERIFIED |
+| UPG-CTRL-01..04 | ScaffoldStructureControls / StructureExtraction；ExtractionPlanner 结构侧规划已实现 | 源姿态/内容/覆盖绑定；新捕获初始化与已有体控制分开；独占租约；真实子步提取；到位才开始 H 200 tick | 仍待 planner 结构侧接线与双后端复杂地形/3/5/7/200 tick 验证 |
 | UPG-CTRL-05..09 | LiveStructureOrientation / StructureOrientation；SubLevelOrientationAccess、SableOrientationAccess | 实际子步限速限力矩、连续角扫掠、COM 不传送；精确租约/版本/操作身份、替换与制动；三系异步节点 | 已接线，双后端实机与剩余矩阵见 B 线接线记录；DRAFT 角方法是刻意禁用的占位，不再是待填业务入口 |
 | UPG-LIFE-* | ScaffoldStructureLifecycle / StructureProvenance、StructureGridRestoration | 来源在捕获提交内持久化；离线身份不是无限授权；未知策略保留；sleep 不等于 terrain-paused；完整目标镜像与保存屏障，唯一所有权 | 未标记不处理；重启/碎片继承；有效控制不归块；冲突延期；各提交断点无丢块/复制/幽灵碰撞；Sable 保存契约完整 |
 | UPG-DAMAGE-01 | ScaffoldStructureCombat.query / StructureDamage | 宿主和局部格的真实内容选择体，含无碰撞植物；有界查询；server-owned 计划 | 静止/旋转/高速铁块可查询；空洞不命中；权限与缺区块失败可解释 |
@@ -68,6 +69,8 @@
 共享检查仅复用同修订/同配置的成功结果。构建含现有 Rust 红测时须明确报告失败；不能为了让骨架绿而把该测试从 check 拿掉。客户端验证使用隔离存档和 runClientDev；Sable 使用固定依赖和 runClientSable。新增业务后必须补对应玩法烟测，禁止修改原 test/test2。
 
 ## 5. 验证记录与 UNVERIFIED
+
+- 捕获前预演与来源绑定（UPG-CTRL-10/11）见 [B 线捕获前规划记录](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)：新增 14 项 JVM 测试通过，`verifyStructureUpgradeScaffold` 与两种 `build` 通过；活路径双后端夹具、H 接入、超期与复杂地形矩阵仍 UNVERIFIED，EXTRACTION 能力为 EXPERIMENTAL 且关闭。
 
 - 最新角控制接线验证与未覆盖矩阵统一见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)。以下骨架/独立算法数据保留为阶段历史证据；其中“未接线/未启用”不再适用于当前 ORIENTATION。
 

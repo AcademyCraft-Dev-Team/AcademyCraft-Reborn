@@ -4,7 +4,7 @@
 
 - [技能物理结构完善方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)：性能与 Sable 适配、防楔紧、技能来源标记与静止归块、角控制节点、统一技能破坏、高速首撞与有限碎裂；含接口契约、分期和验收。审查基线 `711feb72`。
 - [MPS 采用评估](mps_physics_evaluation_2026_10_23.zh-CN.md)：固定源码/子模块与许可证，批量接口和求解器候选，实际流体/软体能力及耦合待修项。按用户后续流体、软体规划，将 MPS 列为统一物理底座的重点候选，尚未构建或替换 DLL。
-- [骨架 FILL-SPEC](structure_upgrade_fill_spec.zh-CN.md)：公开接口、禁用实现、主类注册、资源模板、构建检查及协作分工已本地提交 `26635388`。[B 线算法](structure_upgrade_line_b_2026_10_23.zh-CN.md)之后，已完成 [本地/Sable 后端角控制与三系节点接线](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)，旧 rotate 保留图格式和绝对轴角语义并改为异步完成。新提取 planner、来源/归块及 MPS 仍未接入；S0 历史红测不因角控制接线关闭。
+- [骨架 FILL-SPEC](structure_upgrade_fill_spec.zh-CN.md)：公开接口、禁用实现、主类注册、资源模板、构建检查及协作分工已本地提交 `26635388`。[B 线算法](structure_upgrade_line_b_2026_10_23.zh-CN.md)之后，已完成 [本地/Sable 后端角控制与三系节点接线](structure_upgrade_line_b_live_2026_10_23.zh-CN.md)，旧 rotate 保留图格式和绝对轴角语义并改为异步完成。捕获前预演与来源绑定（UPG-CTRL-10/11）见 [B 线捕获前规划](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)：仅服务端预演/绑定，提取动作、来源归块与 MPS 仍未接入；S0 历史红测不因上述接线关闭。
 - 当前实现与已跑测试以[最新接续](sublevel_continuation_2026_10_24.zh-CN.md)和 [P0 报告](sublevel_p0_test_report_2026_10_23.zh-CN.md)的最新补充为准；原生楔紧红测、Sable 同场景和受控 N 扫描仍未关闭。下方保留历史记录。
 
 更新日期：2026-10-20。此文件随每个实现/验证节点更新；状态以实际代码和结果文件为准。最新补充为贴地接触、紧密地形 H 抬升、Sable 捕获坐标及源格同步修复，并另交付仅设计的区块卸载回正方案。此前渲染、反射生命周期与冻结铁块恢复记录保留。下方 v2 骨架和早期性能段落保留当轮历史状态，其他 Agent 后续实现及验证见 `FILL-SPEC.md`，不能把旧诊断数值当当前性能结论。

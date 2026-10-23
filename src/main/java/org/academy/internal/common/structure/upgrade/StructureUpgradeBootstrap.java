@@ -23,7 +23,10 @@ public final class StructureUpgradeBootstrap {
         var entries = new EnumMap<StructureCapabilities.Capability, StructureCapabilities.Support>(DRAFT.capabilities().entries());
         entries.put(StructureCapabilities.Capability.ORIENTATION, new StructureCapabilities.Support(
                 StructureCapabilities.Readiness.EXPERIMENTAL, true, "sublevel_sable_bounded_angular_control"));
-        return new StructureUpgradeServices(new StructureCapabilities(entries), DRAFT.extraction(),
+        entries.put(StructureCapabilities.Capability.EXTRACTION, new StructureCapabilities.Support(
+                StructureCapabilities.Readiness.EXPERIMENTAL, false, "capture_preview_and_binding_only"));
+        return new StructureUpgradeServices(new StructureCapabilities(entries),
+                org.academy.api.common.structure.upgrade.StructureExtractions.service(),
                 org.academy.api.common.structure.upgrade.StructureOrientations.service(), DRAFT.provenance(),
                 DRAFT.restoration(), DRAFT.damage(), DRAFT.impacts(), DRAFT.fracture());
     }
@@ -48,7 +51,9 @@ public final class StructureUpgradeBootstrap {
 
     private static void setup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> AcademyCraft.LOGGER.info(
-                "Structure upgrade: SCAFFOLD_REGISTERED; draft services disabled; live orientation EXPERIMENTAL; {} capabilities, {} provider descriptors",
+                "Structure upgrade: SCAFFOLD_REGISTERED; draft services disabled; live orientation EXPERIMENTAL; "
+                        + "live extraction preview/binding EXPERIMENTAL and not gameplay-enabled; {} capabilities, "
+                        + "{} provider descriptors",
                 DRAFT.capabilities().entries().size(), PROVIDERS.descriptors().size()));
     }
 }

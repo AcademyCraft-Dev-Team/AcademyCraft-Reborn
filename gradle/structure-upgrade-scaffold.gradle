@@ -34,8 +34,8 @@ tasks.register('verifyStructureUpgradeScaffold') {
         }
         def report = layout.buildDirectory.file('reports/structure-upgrade-scaffold/summary.txt').get().asFile
         report.parentFile.mkdirs()
-        report.setText('SCAFFOLD_REGISTERED\nDraft gameplay: DISABLED\nLive orientation: EXPERIMENTAL\nMPS runtime: NOT_LOADED\nFull upgrade acceptance: UNVERIFIED\n', 'UTF-8')
-        logger.lifecycle('Structure upgrade draft verified; live orientation experimental, other upgrade services disabled.')
+        report.setText('SCAFFOLD_REGISTERED\nDraft gameplay: DISABLED\nLive orientation: EXPERIMENTAL\nLive extraction preview and binding: EXPERIMENTAL, gameplay disabled\nMPS runtime: NOT_LOADED\nFull upgrade acceptance: UNVERIFIED\n', 'UTF-8')
+        logger.lifecycle('Structure upgrade draft verified; live orientation and capture preview experimental, gameplay disabled.');
     }
 }
 

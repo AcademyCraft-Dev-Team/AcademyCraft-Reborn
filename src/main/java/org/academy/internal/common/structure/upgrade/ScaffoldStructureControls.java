@@ -13,7 +13,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.ActorContext context, StructureExtraction.CaptureRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-10] 捕获前核查主体、来源、真实抬升路径及预算；在服务端保存源内容摘要、地形版本和到期时间，不捕获或授予租约。
+        // [UPG-CTRL-10] Disabled DRAFT placeholder; LIVE delegates to LiveStructureExtraction.planCapture.
         return StructureOperation.unsupported("extraction_capture_plan_not_implemented");
     }
 
@@ -22,7 +22,7 @@ public final class ScaffoldStructureControls implements StructureExtraction, Str
             StructureOperation.Context context, StructureExtraction.BindCaptureRequest request) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(request, "request");
-        // [TODO: Agent B][UPG-CTRL-11] 从服务端计划与捕获日志解析完成结果，复核同源摘要、主体、宿主、激活、租约、地形及到期；不得信任调用方预览或伪造捕获回执。
+        // [UPG-CTRL-11] Disabled DRAFT placeholder; LIVE delegates to LiveStructureExtraction.bindCapture.
         return StructureOperation.unsupported("extraction_capture_bind_not_implemented");
     }
 
