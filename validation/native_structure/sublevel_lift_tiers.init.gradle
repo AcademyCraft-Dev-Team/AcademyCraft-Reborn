@@ -23,6 +23,8 @@ allprojects {
                     .getOrElse('false')
             systemProperty 'academy.sublevelLiftTerrain', providers.gradleProperty('academySubLevelLiftTerrain')
                     .getOrElse('flat')
+            systemProperty 'academy.sublevelLiftMaterial', providers.gradleProperty('academySubLevelLiftMaterial')
+                    .getOrElse('soil')
             systemProperty 'academy.sublevelLiftTier', providers.gradleProperty('academySubLevelLiftTier')
                     .getOrElse('-1')
             // Optional tier-0 platform x,y,z; fixes terrain section boundaries for A/B runs.

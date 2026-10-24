@@ -83,10 +83,12 @@ public interface StructureExtraction {
      */
     record Limits(double maxLinearSpeed, double maxLinearAcceleration, double maxForce,
                   double maxRetreatDistance, int maxShapeTests) {
+        public static final double MAX_FORCE = 1_000_000.0;
+
         public Limits {
             positive(maxLinearSpeed, 100.0, "maxLinearSpeed");
             positive(maxLinearAcceleration, 1_000.0, "maxLinearAcceleration");
-            positive(maxForce, 10_000.0, "maxForce");
+            positive(maxForce, MAX_FORCE, "maxForce");
             nonnegative(maxRetreatDistance, MAX_RETREAT_DISTANCE, "maxRetreatDistance");
             count(maxShapeTests, MAX_SHAPE_TESTS, "maxShapeTests");
         }

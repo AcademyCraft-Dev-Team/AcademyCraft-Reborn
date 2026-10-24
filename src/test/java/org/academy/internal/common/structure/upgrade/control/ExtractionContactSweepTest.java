@@ -15,6 +15,22 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ExtractionContactSweepTest {
+    @Test void reportedDistantSocketAllowsOnlyExistingQuantizedContact() {
+        double error = .0001200661063;
+        var body = body(StructurePose.identity(new Vec3(-2162 - error, 67.839975, -1482)), Vec3.ZERO);
+        var wall = new AABB(-2163, 68, -1482, -2162, 69, -1481);
+        var rounding = new Vec3(Math.ulp(-2162F) * .5, Math.ulp(68F) * .5, Math.ulp(-1482F) * .5);
+        ExtractionPlanner.ObstacleSnapshot world = (bounds, budget) -> new ExtractionPlanner.Query(0,
+                ExtractionPlanner.Coverage.COMPLETE, false, List.of(new ExtractionPlanner.Obstacle(
+                "host:reported-step", ExtractionPlanner.ObstacleKind.HARD, TranslationSweep.Box.axisAligned(wall))));
+        assertEquals(OrientationSweep.Status.BLOCKED, ExtractionContactSweep.check(body,
+                new Vec3(0, .179429676, 0), .025, 0, 100, world).status());
+        assertEquals(OrientationSweep.Status.CLEAR, ExtractionContactSweep.check(body,
+                new Vec3(0, .179429676, 0), .025, 0, 100, world, rounding).status());
+        assertEquals(OrientationSweep.Status.BLOCKED, ExtractionContactSweep.check(body,
+                new Vec3(-1E-6, .179429676, 0), .025, 0, 100, world, rounding).status());
+    }
+
     @Test void existingSideOverlapMayDecreaseButCannotSlideDeeperOrRemainWedged() {
         var body = body(StructurePose.identity(new Vec3(.01, 0, 0)), Vec3.ZERO);
         var wall = new AABB(1, -1, -1, 2, 2, 2);

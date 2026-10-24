@@ -64,6 +64,7 @@ public final class SubLevelLiftTiersSmoke {
     private static final boolean VEGETATION = Boolean.getBoolean("academy.sublevelLiftVegetation");
     private static final boolean EMBEDDED = Boolean.getBoolean("academy.sublevelLiftEmbedded");
     private static final String TERRAIN = System.getProperty("academy.sublevelLiftTerrain", "flat");
+    private static final String MATERIAL = System.getProperty("academy.sublevelLiftMaterial", "soil");
     private static final int ONLY_TIER = Integer.getInteger("academy.sublevelLiftTier", -1);
     private static final String FIXED_ANCHOR = System.getProperty("academy.sublevelLiftAnchor", "").trim();
     /** Diagnostic isolation only: a pass in this mode does not validate sequential retained bodies. */
@@ -172,6 +173,7 @@ public final class SubLevelLiftTiersSmoke {
         if (!List.of("flat", "slope", "step", "corner", "roof").contains(TERRAIN)) {
             throw new IllegalArgumentException("Unknown lift terrain fixture: " + TERRAIN);
         }
+        if (!List.of("soil", "stone", "iron").contains(MATERIAL)) throw new IllegalArgumentException("Unknown lift material");
         if (ONLY_TIER < -1 || ONLY_TIER > 2) throw new IllegalArgumentException("Lift tier must be -1 or 0..2");
         if (!EMBEDDED && !TERRAIN.equals("flat")) throw new IllegalArgumentException("Terrain fixtures require embedded=true");
         if (!FIXED_ANCHOR.isEmpty()) {
@@ -227,20 +229,22 @@ public final class SubLevelLiftTiersSmoke {
                     int top = terrainHeight(dx, dz);
                     for (int dy = -8; dy <= top; dy++) {
                         level.setBlock(new BlockPos(x + dx, y + dy, z + dz),
-                                dy == top ? Blocks.GRASS_BLOCK.defaultBlockState()
-                                        : Blocks.DIRT.defaultBlockState(), 2);
+                                MATERIAL.equals("iron") ? Blocks.IRON_BLOCK.defaultBlockState()
+                                        : MATERIAL.equals("stone") ? Blocks.STONE.defaultBlockState()
+                                        : dy == top ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.DIRT.defaultBlockState(), 2);
                     }
                 }
             }
         }
         if (VEGETATION && tier == 0) {
-            NativeStructureTerrainAdmissionSmoke.run(level, new BlockPos(x + 7, y + 6, z + 7));
+            NativeStructureTerrainAdmissionSmoke.run(level, new BlockPos(x + 7, y + 9, z + 7));
         }
         for (int dx = -PLATFORM_RADIUS; dx <= PLATFORM_RADIUS; dx++) {
             for (int dz = -PLATFORM_RADIUS; dz <= PLATFORM_RADIUS; dz++) {
                 var ground = new BlockPos(x + dx, y + (EMBEDDED ? terrainHeight(dx, dz) : 0), z + dz);
                 boolean crop = (dx + dz) % 3 == 0;
-                level.setBlock(ground, !VEGETATION ? (EMBEDDED ? Blocks.GRASS_BLOCK : Blocks.STONE).defaultBlockState()
+                level.setBlock(ground, !VEGETATION ? (MATERIAL.equals("iron") ? Blocks.IRON_BLOCK
+                        : MATERIAL.equals("stone") ? Blocks.STONE : EMBEDDED ? Blocks.GRASS_BLOCK : Blocks.STONE).defaultBlockState()
                         : crop ? Blocks.FARMLAND.defaultBlockState().setValue(FarmlandBlock.MOISTURE, 7)
                         : Blocks.GRASS_BLOCK.defaultBlockState(), 2);
                 if (VEGETATION) {
@@ -496,7 +500,9 @@ public final class SubLevelLiftTiersSmoke {
             var sourceMinimum = BlockPos.containing(sourceOrigin);
             capturedPlants = (int) sourceCells.stream().map(cell -> world.read(cell.subtract(sourceMinimum)).state())
                     .filter(state -> state.is(Blocks.SHORT_GRASS) || state.is(Blocks.WHEAT)).count();
-            if (capturedPlants == 0) throw new IllegalStateException("capture discarded all grass/crops");
+            if (StructureCaptureExtractions.enabled() && capturedPlants != 0) {
+                throw new IllegalStateException("soft source plants were copied instead of explicitly cleared");
+            }
             canopy.clear();
             leafBreakEvents = 0;
             leafDropEvents = 0;
@@ -795,6 +801,7 @@ public final class SubLevelLiftTiersSmoke {
                 return;
             }
         }
+        if (!clientReady) org.lwjgl.glfw.GLFW.glfwIconifyWindow(minecraft.getWindow().handle());
         clientReady = true;
     }
 
@@ -833,6 +840,7 @@ public final class SubLevelLiftTiersSmoke {
         report.put("status", status);
         report.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
         report.put("terrain", TERRAIN);
+        report.put("material", MATERIAL);
         report.put("embedded", EMBEDDED);
         report.put("vegetation", VEGETATION);
         report.put("disturbance", DISTURBANCE);

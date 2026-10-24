@@ -9,6 +9,21 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class StructureCaptureExtractionsTest {
     @Test
+    void heavyBackendMassRetainsLiftAccelerationAndGravityHeadroom() {
+        // 256 Sable iron cells weigh 1024: the old fixed 10,000 N cannot even hover them.
+        var limits = StructureCaptureExtractions.limits(1024);
+        assertTrue(limits.maxForce() / 1024 >= limits.maxLinearAcceleration());
+        var step = org.academy.internal.common.structure.upgrade.control.ExtractionController.step(
+                net.minecraft.world.phys.Vec3.ZERO, net.minecraft.world.phys.Vec3.ZERO,
+                new net.minecraft.world.phys.Vec3(0, -9.81, 0), 1024,
+                new net.minecraft.world.phys.Vec3(0, 3, 0), limits, .025);
+        assertTrue(step.displacement().y > 0);
+        assertTrue(step.force() <= limits.maxForce());
+        assertEquals(10_000, StructureCaptureExtractions.limits(Double.NaN).maxForce());
+        assertEquals(StructureExtraction.Limits.MAX_FORCE, StructureCaptureExtractions.limits(Double.MAX_VALUE).maxForce());
+    }
+
+    @Test
     void foreignActorCannotCancelEvenWithTheCurrentControlId() {
         var host = new Object();
         var owner = UUID.randomUUID();

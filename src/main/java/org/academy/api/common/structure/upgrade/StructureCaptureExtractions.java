@@ -20,7 +20,8 @@ import java.util.UUID;
 
 /**
  * Shared, bounded capture-to-extraction lifecycle for skills, action nodes and non-player actors.
- * Preview precedes every source write; the exact request is passed to the transaction journal.
+ * Explicit soft-cell breaking precedes the preview; the preview then precedes every solid
+ * source transfer, and its exact prepared request is passed to the transaction journal.
  * Once committed, failed or cancelled motion retains the structure and releases only our token.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -40,19 +41,39 @@ public final class StructureCaptureExtractions {
 
     /** Identical policy for all three ability categories; values are in blocks/seconds/Newtons. */
     public static StructureExtraction.Limits limits() {
+        return limits(Double.NaN);
+    }
+
+    /** Preserve the same acceleration for backend mass units; never alter the body's real mass. */
+    public static StructureExtraction.Limits limits(double estimatedMass) {
         // Fresh skill captures lift over their source cells. An automatic lateral detour can
         // push a low cell into an uneven socket wall; callers of the lower-level planner may
         // explicitly authorize retreat, but these default actions must keep their X/Z anchor.
-        return new StructureExtraction.Limits(8, 40, 10_000, 0, StructureExtraction.MAX_SHAPE_TESTS);
+        double force = Double.isFinite(estimatedMass) && estimatedMass > 0
+                ? Math.min(StructureExtraction.Limits.MAX_FORCE, Math.max(10_000, estimatedMass * 40)) : 10_000;
+        return new StructureExtraction.Limits(8, 40, force, 0, StructureExtraction.MAX_SHAPE_TESTS);
     }
 
     public static StructureCaptureResult capture(ServerLevel host, Entity actor, StructureCaptureRequest capture,
                                                   double liftHeight, int hoverTicks) {
         requireThread(host);
         if (SESSIONS.size() >= MAX_SESSIONS) return rejected("extraction_session_budget");
+        // Validate caller bounds before the explicit clearance action can mutate soft cells.
         var control = UUID.randomUUID();
         var request = new StructureExtraction.CaptureRequest(control, capture, liftHeight,
                 EXTRACTION_TIMEOUT_TICKS, hoverTicks, limits());
+        var prepared = StructureCaptureClearance.prepareSelection(host, actor, capture);
+        if (prepared.value().isEmpty()) return rejected(prepared.detail());
+        capture = prepared.value().orElseThrow();
+        var backend = org.academy.internal.common.structure.StructureBackendRouter
+                .captureTarget(host, capture.physical()).orElse(null);
+        if (backend == null) return rejected("extraction_backend_unavailable");
+        double mass = backend.estimateMass(host, capture.positions());
+        if (Double.isFinite(mass) && mass > StructureExtraction.Limits.MAX_FORCE / 40) {
+            return rejected("extraction_force_budget_exceeded");
+        }
+        request = new StructureExtraction.CaptureRequest(control, capture, liftHeight,
+                EXTRACTION_TIMEOUT_TICKS, hoverTicks, limits(mass));
         var preview = StructureExtractions.service().planCapture(new StructureOperation.ActorContext(host, actor), request);
         if (preview.status() == StructureOperation.Status.BLOCKED
                 && StructureCaptureClearance.clearSoftObstacles(host, actor, capture, liftHeight) > 0) {
@@ -70,6 +91,14 @@ public final class StructureCaptureExtractions {
     }
 
     public static boolean tracked(StructureRef reference) { return SESSIONS.containsKey(reference); }
+
+    /** The actual immutable source grid after soft clearance, for counts, anchors and attachments. */
+    public static Optional<java.util.List<net.minecraft.core.BlockPos>> sourcePositions(Entity actor, StructureRef reference) {
+        var session = SESSIONS.get(reference);
+        if (session == null) return Optional.empty();
+        requireThread(session.host);
+        return owned(actor, reference).map(ignored -> session.preview.request().capture().positions());
+    }
 
     /** Opaque cancellation identity for this exact capture, available only to its original actor. */
     public static Optional<Handle> owned(Entity actor, StructureRef reference) {

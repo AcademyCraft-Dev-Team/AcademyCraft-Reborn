@@ -1,0 +1,841 @@
+{
+  "format": "academy-sable-suite-capture-2026-10-24",
+  "date": "2026-10-24",
+  "base_commit": "37a7b9b8",
+  "original_instance": {
+    "pid": 48132,
+    "game_directory": "D:/MC/cs/.minecraft/versions/ACclient1.1",
+    "minecraft": "26.2",
+    "neoforge": "26.2.0.70",
+    "java": 25,
+    "installed_academy_sha256": "04A603A12C06ECB07F5AC90AE855283E7577F958DB89389EB8AD323C3062D2DF",
+    "sable_sha256": "21A22BCD6B0DD5BC742472E332F7E8A17DD83CBBD471EBE97087E153ACC206CA",
+    "suite_sha256": "F473A6BFC8BFB3FA3DA8169FC3D704EB4367994BF612369DCE32692CFBEB10AB",
+    "installed_jar_replaced": false,
+    "original_world_modified": false
+  },
+  "confirmed_causes": [
+    "obsolete Sable traction mass gate on planned H extraction",
+    "float COM contact allowance discontinuity near absolute coordinate 2048",
+    "fixed 10000 force insufficient for 1024 mass",
+    "non-full soft source cells sent into state capture instead of normal break/drop flow",
+    "source-grid and nozzle offsets must follow prepared solid cells"
+  ],
+  "original_lift_observations": [
+    {
+      "failure": "new_contact_not_proven_clear",
+      "time": "20:28:00.546",
+      "origin": [
+        -2162.0001200661063,
+        67.83997532578783,
+        -1481.9999939911067
+      ]
+    },
+    {
+      "failure": "new_contact_not_proven_clear",
+      "time": "20:28:41.087",
+      "origin": [
+        -2145.000088773668,
+        66.83997594659985,
+        -1468.000006660819
+      ]
+    },
+    {
+      "failure": "new_contact_not_proven_clear",
+      "time": "20:29:08.787",
+      "origin": [
+        -2137.0000757724047,
+        61.83997445819014,
+        -1425.0000196397305
+      ]
+    }
+  ],
+  "observations": [
+    {
+      "run": "suite-lift-baseline3-20261024",
+      "description": "pre-fix near-coordinate soil control",
+      "file": "run/native-sublevel-direct-smoke-suite-lift-baseline3-20261024/sublevel-lift-tiers-result.json",
+      "sha256": "7DA74AEB372C67272D2C19B529A167BC772912E209314280344796A5EB7A08CA",
+      "result": {
+        "passed": true,
+        "status": "passed",
+        "extraction_gameplay_enabled": true,
+        "terrain": "step",
+        "embedded": true,
+        "vegetation": false,
+        "disturbance": false,
+        "disturbance_mode": "both",
+        "discard_between_tiers": false,
+        "only_tier": 0,
+        "tier": 1,
+        "phase": 4,
+        "age_ticks": 241,
+        "hover_best": 200,
+        "cases": [
+          {
+            "tier": 0,
+            "height": 3,
+            "rise": 3.032409667968807,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 1.0536752322167114E-08,
+            "max_angular_speed": 5.127294977631323E-07,
+            "max_orientation_error_deg": 2.4148365394514667E-06,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 0,
+            "cleared_leaves": 0,
+            "leaf_break_events": 0,
+            "leaf_drop_events": 0,
+            "pass": true
+          }
+        ],
+        "roof_observed_rejections": [],
+        "roof_source_snapshot_cells": 0,
+        "roof_structure_count_before": 0,
+        "failure": "",
+        "failure_stack": []
+      }
+    },
+    {
+      "run": "suite-lift-fixed-r2-20261024",
+      "description": "256 iron cells, mass 1024, stepped socket, 3/5/7 and 200 tick hold",
+      "file": "run/native-sublevel-direct-smoke-suite-lift-fixed-r2-20261024/sublevel-lift-tiers-result.json",
+      "sha256": "8897D55CA4B2A3645D9B9C5953DB10FC8BD2AD8B977C97BE456C08E0A05C8F06",
+      "result": {
+        "passed": true,
+        "status": "passed",
+        "extraction_gameplay_enabled": true,
+        "terrain": "step",
+        "embedded": true,
+        "vegetation": false,
+        "disturbance": false,
+        "disturbance_mode": "both",
+        "discard_between_tiers": false,
+        "only_tier": -1,
+        "tier": 3,
+        "phase": 4,
+        "age_ticks": 798,
+        "hover_best": 200,
+        "cases": [
+          {
+            "tier": 0,
+            "height": 3,
+            "rise": 3.0324159004320563,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 6.873161610225924E-06,
+            "max_angular_speed": 2.5404688986193272E-08,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 0,
+            "cleared_leaves": 0,
+            "leaf_break_events": 0,
+            "leaf_drop_events": 0,
+            "pass": true
+          },
+          {
+            "tier": 1,
+            "height": 5,
+            "rise": 5.032409667968807,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 8.33000234328132E-09,
+            "max_angular_speed": 2.305168766959436E-08,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 0,
+            "cleared_leaves": 0,
+            "leaf_break_events": 0,
+            "leaf_drop_events": 0,
+            "pass": true
+          },
+          {
+            "tier": 2,
+            "height": 7,
+            "rise": 7.032409667968892,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 1.8995327925655188E-08,
+            "max_angular_speed": 8.75850734077681E-09,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 0,
+            "cleared_leaves": 0,
+            "leaf_break_events": 0,
+            "leaf_drop_events": 0,
+            "pass": true
+          }
+        ],
+        "roof_observed_rejections": [],
+        "roof_source_snapshot_cells": 0,
+        "roof_structure_count_before": 0,
+        "failure": "",
+        "failure_stack": []
+      }
+    },
+    {
+      "run": "suite-payload-r1-20261024",
+      "description": "11 ACR admission cases plus direct Sable payload round trip",
+      "file": "run/native-sublevel-direct-smoke-suite-payload-r1-20261024/structure-soft-capture-result.json",
+      "sha256": "023A35A251C3EA422B49DBF35520EBA33C84CF5EAD3756F31FBD53EF5748B16D",
+      "result": {
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "passed": true,
+            "drop_events": 1,
+            "case": "snow",
+            "detail": "rise=2.98309326171875",
+            "break_events": 1
+          },
+          {
+            "passed": true,
+            "drop_events": 1,
+            "case": "grass",
+            "detail": "rise=2.98309326171875",
+            "break_events": 1
+          },
+          {
+            "passed": true,
+            "drop_events": 1,
+            "case": "flower",
+            "detail": "rise=2.98309326171875",
+            "break_events": 1
+          },
+          {
+            "passed": true,
+            "drop_events": 1,
+            "case": "powder_snow",
+            "detail": "rise=2.98309326171875",
+            "break_events": 1
+          },
+          {
+            "passed": true,
+            "drop_events": 1,
+            "case": "dry_grass",
+            "detail": "rise=2.98309326171875",
+            "break_events": 1
+          },
+          {
+            "passed": true,
+            "drop_events": 0,
+            "case": "snow_block",
+            "detail": "rise=2.98309326171875",
+            "break_events": 0
+          },
+          {
+            "passed": true,
+            "drop_events": 0,
+            "case": "cancel_break",
+            "detail": "capture_soft_clearance_denied_or_changed",
+            "break_events": 1
+          },
+          {
+            "passed": true,
+            "drop_events": 0,
+            "case": "permission",
+            "detail": "capture_source_permission_denied",
+            "break_events": 0
+          },
+          {
+            "passed": true,
+            "drop_events": 0,
+            "case": "chest",
+            "detail": "block_entity_not_supported",
+            "break_events": 0
+          },
+          {
+            "passed": true,
+            "drop_events": 0,
+            "case": "waterlogged",
+            "detail": "waterlogged_not_supported",
+            "break_events": 0
+          },
+          {
+            "passed": true,
+            "drop_events": 0,
+            "case": "unbreakable",
+            "detail": "not_in_plain_block_whitelist",
+            "break_events": 0
+          },
+          {
+            "waterlogging_round_trip": true,
+            "passed": true,
+            "acr_capture_supported": false,
+            "case": "sable_payload_transfer",
+            "full_chest_nbt_round_trip": true,
+            "inventory_items": 19,
+            "crash_recovery_verified": false
+          }
+        ],
+        "failure": "",
+        "passed": true
+      }
+    },
+    {
+      "run": "native-soft-r1-20261024",
+      "description": "11 ACR admission cases without Sable",
+      "file": "run/native-sublevel-direct-smoke-native-soft-r1-20261024/structure-soft-capture-result.json",
+      "sha256": "96E068955CB1D4E55FB9BB96586C77C8A0CE3B7F3B10AE0AEE7518E9A8ABEFC2",
+      "result": {
+        "passed": true,
+        "backend": "academy:sublevel",
+        "cases": [
+          {
+            "detail": "rise=2.9754060475518713",
+            "break_events": 1,
+            "passed": true,
+            "drop_events": 1,
+            "case": "snow"
+          },
+          {
+            "detail": "rise=2.9754060475518713",
+            "break_events": 1,
+            "passed": true,
+            "drop_events": 1,
+            "case": "grass"
+          },
+          {
+            "detail": "rise=2.9754060475518713",
+            "break_events": 1,
+            "passed": true,
+            "drop_events": 1,
+            "case": "flower"
+          },
+          {
+            "detail": "rise=2.9754060475518713",
+            "break_events": 1,
+            "passed": true,
+            "drop_events": 1,
+            "case": "powder_snow"
+          },
+          {
+            "detail": "rise=2.9754060475518713",
+            "break_events": 1,
+            "passed": true,
+            "drop_events": 1,
+            "case": "dry_grass"
+          },
+          {
+            "detail": "rise=2.9754060475518713",
+            "break_events": 0,
+            "passed": true,
+            "drop_events": 0,
+            "case": "snow_block"
+          },
+          {
+            "detail": "capture_soft_clearance_denied_or_changed",
+            "break_events": 1,
+            "passed": true,
+            "drop_events": 0,
+            "case": "cancel_break"
+          },
+          {
+            "detail": "capture_source_permission_denied",
+            "break_events": 0,
+            "passed": true,
+            "drop_events": 0,
+            "case": "permission"
+          },
+          {
+            "detail": "block_entity_not_supported",
+            "break_events": 0,
+            "passed": true,
+            "drop_events": 0,
+            "case": "chest"
+          },
+          {
+            "detail": "waterlogged_not_supported",
+            "break_events": 0,
+            "passed": true,
+            "drop_events": 0,
+            "case": "waterlogged"
+          },
+          {
+            "detail": "unbreakable",
+            "break_events": 0,
+            "passed": true,
+            "drop_events": 0,
+            "case": "unbreakable"
+          }
+        ],
+        "failure": ""
+      }
+    },
+    {
+      "run": "suite-default-20261024",
+      "description": "three default entries plus unmarked existing-body control",
+      "file": "run/native-sublevel-direct-smoke-suite-default-20261024/structure-default-provenance-result.json",
+      "sha256": "DAB2B9659A5BDCE153187AE7D1349F2755A1D6719179057E7122E8722AE29B1C",
+      "result": {
+        "backend": "academy:sable",
+        "passed": true,
+        "failure": "",
+        "server_ticks": 106,
+        "actual_keyboard_or_network_packets": false,
+        "cases": [
+          {
+            "operation": "76bbc4a2-2238-4eb1-9b40-e71f450eccb3",
+            "default_service": true,
+            "provenance_verified": true,
+            "backend": "academy:sable",
+            "skill": "kinetic_throw",
+            "passed": true,
+            "actual_rise": 2.976470947265625,
+            "ticks": 30
+          },
+          {
+            "operation": "1f05b6b5-49d9-4d75-8252-ae06032f95ab",
+            "default_service": true,
+            "provenance_verified": true,
+            "backend": "academy:sable",
+            "skill": "magnet_manipulation",
+            "passed": true,
+            "actual_rise": 0.984344482421875,
+            "ticks": 25
+          },
+          {
+            "operation": "d17d7830-87a2-47a4-999e-92955349157d",
+            "default_service": true,
+            "provenance_verified": true,
+            "backend": "academy:sable",
+            "skill": "high_speed_jet",
+            "passed": true,
+            "actual_rise": 0.984344482421875,
+            "ticks": 25
+          },
+          {
+            "backend": "academy:sable",
+            "case": "existing_unmarked_after_control_rotation",
+            "actual_rotate_to": true,
+            "passed": true,
+            "still_unmarked": true,
+            "rotation_error": 0.008808271820703907
+          }
+        ],
+        "real_default_service_entries": true
+      }
+    },
+    {
+      "run": "native-default-20261024",
+      "description": "three default entries plus unmarked existing-body control",
+      "file": "run/native-sublevel-direct-smoke-native-default-20261024/structure-default-provenance-result.json",
+      "sha256": "5CE7978ACDC156E2C0E4627E84043566475BF7FEB3636EB8E036B31E6CEAEBD5",
+      "result": {
+        "cases": [
+          {
+            "actual_rise": 2.987185612624387,
+            "passed": true,
+            "skill": "kinetic_throw",
+            "backend": "academy:sublevel",
+            "provenance_verified": true,
+            "default_service": true,
+            "operation": "84b92b2d-4d3c-4a9f-b6cf-dc2619aa0003",
+            "ticks": 32
+          },
+          {
+            "actual_rise": 0.9762646488762243,
+            "passed": true,
+            "skill": "magnet_manipulation",
+            "backend": "academy:sublevel",
+            "provenance_verified": true,
+            "default_service": true,
+            "operation": "eb14350b-388f-4e4d-8d0a-0394bccc4fd7",
+            "ticks": 25
+          },
+          {
+            "actual_rise": 0.9710125758927006,
+            "passed": true,
+            "skill": "high_speed_jet",
+            "backend": "academy:sublevel",
+            "provenance_verified": true,
+            "default_service": true,
+            "operation": "b8d30d4d-f6ff-4f0b-9717-9c084cd278c7",
+            "ticks": 25
+          },
+          {
+            "still_unmarked": true,
+            "passed": true,
+            "actual_rotate_to": true,
+            "case": "existing_unmarked_after_control_rotation",
+            "backend": "academy:sublevel",
+            "rotation_error": 0.008782057779549622
+          }
+        ],
+        "actual_keyboard_or_network_packets": false,
+        "server_ticks": 108,
+        "failure": "",
+        "passed": true,
+        "backend": "academy:sublevel",
+        "real_default_service_entries": true
+      }
+    },
+    {
+      "run": "suite-soft-origin-20261024",
+      "description": "final code, removed minimum source cell, counts and nozzle offset",
+      "file": "run/native-sublevel-direct-smoke-suite-soft-origin-20261024/structure-default-provenance-result.json",
+      "sha256": "613A86D2F2069AC82A0861982DAE80EDC8F14837C5382A3AE34F9C0077CBA91F",
+      "result": {
+        "backend": "academy:sable",
+        "real_default_service_entries": true,
+        "cases": [
+          {
+            "actual_rise": 2.976470947265625,
+            "provenance_verified": true,
+            "ticks": 30,
+            "skill": "kinetic_throw",
+            "passed": true,
+            "default_service": true,
+            "backend": "academy:sable",
+            "operation": "b0408335-8683-41d8-8b37-020742f895fe",
+            "soft_origin_checked": true
+          },
+          {
+            "actual_rise": 0.984344482421875,
+            "provenance_verified": true,
+            "ticks": 25,
+            "skill": "magnet_manipulation",
+            "passed": true,
+            "default_service": true,
+            "backend": "academy:sable",
+            "operation": "d36df499-3cf2-4f0e-8207-3dda782591f4",
+            "soft_origin_checked": true
+          },
+          {
+            "actual_rise": 0.984344482421875,
+            "provenance_verified": true,
+            "ticks": 25,
+            "skill": "high_speed_jet",
+            "passed": true,
+            "default_service": true,
+            "backend": "academy:sable",
+            "operation": "9d369280-bc93-4d3a-b1ba-574bbebefab1",
+            "soft_origin_checked": true
+          },
+          {
+            "rotation_error": 0.008808271820703907,
+            "still_unmarked": true,
+            "passed": true,
+            "actual_rotate_to": true,
+            "case": "existing_unmarked_after_control_rotation",
+            "backend": "academy:sable"
+          }
+        ],
+        "actual_keyboard_or_network_packets": false,
+        "server_ticks": 106,
+        "failure": "",
+        "passed": true
+      }
+    },
+    {
+      "run": "native-soft-origin-20261024",
+      "description": "final code, removed minimum source cell, counts and nozzle offset",
+      "file": "run/native-sublevel-direct-smoke-native-soft-origin-20261024/structure-default-provenance-result.json",
+      "sha256": "699138BEE7D68F1469BCDB808E04880A5A57AB1DFBD77ADA3D8F28F7136385DF",
+      "result": {
+        "passed": true,
+        "failure": "",
+        "server_ticks": 108,
+        "actual_keyboard_or_network_packets": false,
+        "cases": [
+          {
+            "soft_origin_checked": true,
+            "operation": "78581ac6-30b8-406c-a32b-46045fd76ecf",
+            "backend": "academy:sublevel",
+            "default_service": true,
+            "passed": true,
+            "skill": "kinetic_throw",
+            "ticks": 32,
+            "provenance_verified": true,
+            "actual_rise": 2.987185612624387
+          },
+          {
+            "soft_origin_checked": true,
+            "operation": "818a5230-3eea-44bf-844f-136ba280c7ed",
+            "backend": "academy:sublevel",
+            "default_service": true,
+            "passed": true,
+            "skill": "magnet_manipulation",
+            "ticks": 25,
+            "provenance_verified": true,
+            "actual_rise": 0.9762646488762243
+          },
+          {
+            "soft_origin_checked": true,
+            "operation": "28e882ca-e1af-47e9-b89a-d2c4cc898439",
+            "backend": "academy:sublevel",
+            "default_service": true,
+            "passed": true,
+            "skill": "high_speed_jet",
+            "ticks": 25,
+            "provenance_verified": true,
+            "actual_rise": 0.9710125758927006
+          },
+          {
+            "backend": "academy:sublevel",
+            "case": "existing_unmarked_after_control_rotation",
+            "actual_rotate_to": true,
+            "passed": true,
+            "still_unmarked": true,
+            "rotation_error": 0.008782057779549622
+          }
+        ],
+        "real_default_service_entries": true,
+        "backend": "academy:sublevel"
+      }
+    },
+    {
+      "run": "suite-nodes-final-20261024",
+      "description": "final code, three actual category VM graphs",
+      "file": "run/native-sublevel-direct-smoke-suite-nodes-final-20261024/structure-program-orientation-result.json",
+      "sha256": "0ECBF3A49909D472C74DA8850E0933FDE83EEE51C07BB0E3DD20CD4E7112DF34",
+      "result": {
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.976470947265625,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 22,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.984344482421875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 17,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "actual_node_vm": true,
+        "linear_gravity_support_only": true,
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true
+      }
+    },
+    {
+      "run": "native-nodes-final-20261024",
+      "description": "final code, three actual category VM graphs",
+      "file": "run/native-sublevel-direct-smoke-native-nodes-final-20261024/structure-program-orientation-result.json",
+      "sha256": "279DBE57E5C6B96A257B067ADDD434AAF3A988F3FFC479559696BACFEC297973",
+      "result": {
+        "linear_gravity_support_only": true,
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.9787865395054496,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 23,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.9762646488762243,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 17,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.9798103654334795,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 16,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "actual_node_vm": true
+      }
+    }
+  ],
+  "tests": {
+    "test": {
+      "tests": 3192,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 32,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "builds": [
+    {
+      "kind": "dev",
+      "log": "build/suite-capture-final2-dev-20261024.log",
+      "file": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "sha256": "2A90EE0C42D625CB5849F2853D3239198EFE8A30DDB8506B0117C294CA46BA1B",
+      "bytes": 32068839
+    },
+    {
+      "kind": "release",
+      "log": "build/suite-capture-final2-release-20261024.log",
+      "file": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "sha256": "DE49953C1A39B00608E76ECDC2463B6E919369177019AC47FD72D3E4CD583C2C",
+      "bytes": 24597738
+    }
+  ],
+  "packaging": {
+    "bundled_dll_unchanged": true,
+    "unrelated_rust_worktree_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+    "test_fixtures_excluded": true,
+    "bundled_dll_sha256": "F68C901911B18BE6F92A9EA9E44B1E09CEA8D34DD75FF08AF50F035F6DCF4A06"
+  },
+  "diagnostic_history": [
+    {
+      "outcome": "fixture occupied; terrain admission fixture moved above steep socket",
+      "run": "suite-lift-baseline-20261024"
+    },
+    {
+      "outcome": "old native-content world triggered migration protection; replaced by fresh terrain-only fixture",
+      "run": "suite-lift-baseline2-20261024"
+    },
+    {
+      "outcome": "tiers 0/1 passed; tier 2 interrupted by real H network packet; automatic window minimization added and complete test rerun",
+      "run": "suite-lift-fixed-r1-20261024"
+    },
+    {
+      "outcome": "fixture captured in teleport tick; Sable unload/reload changed runtime identity; wait for player tracking before capture; authority checks kept intact",
+      "run": "suite-soft-r1/r2/r3-20261024"
+    }
+  ],
+  "limitations": [
+    "exact pinned Sable/Create/Aeronautics closure tested, not every unrelated mod in the original pack",
+    "current ACR capture still rejects BE/waterlogged/fluid payloads; direct Sable transfer capability alone is verified",
+    "no payload crash recovery or ACR marked restoration support claimed",
+    "node tests use actual VM/executors with fixture gravity support, not GUI save/execute packets",
+    "no FPS or throughput benchmark and no whole Rust solver test suite rerun",
+    "farther coordinate precision errors beyond 0.001 block remain conservatively blocked"
+  ],
+  "follow_up": "docs/structure_sable_suite_capture_2026_10_24.zh-CN.md"
+}

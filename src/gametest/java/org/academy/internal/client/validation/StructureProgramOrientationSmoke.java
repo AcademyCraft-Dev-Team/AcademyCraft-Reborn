@@ -451,6 +451,7 @@ public final class StructureProgramOrientationSmoke {
                     ? setup.generation() : -1;
             client.player.setYRot(setup.yaw()); client.player.setXRot(setup.pitch());
         }
+        if (!ready) org.lwjgl.glfw.GLFW.glfwIconifyWindow(client.getWindow().handle());
         ready = true;
     }
     private record ArenaSetup(int generation, Vec3 position, BlockPos seed, float yaw, float pitch) {}

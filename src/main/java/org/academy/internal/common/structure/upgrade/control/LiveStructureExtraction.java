@@ -197,6 +197,9 @@ public final class LiveStructureExtraction implements StructureExtraction {
                 || body.contentRevision() != context.expectedContentRevision()
                 || !body.runtimeId().equals(evidence.runtimeId())
                 || body.contentRevision() != evidence.contentRevision()) {
+            AcademyCraft.LOGGER.debug("Capture extraction authority changed: body={}/{} context={}/{} evidence={}/{}",
+                    body.runtimeId(), body.contentRevision(), context.runtimeId(), context.expectedContentRevision(),
+                    evidence.runtimeId(), evidence.contentRevision());
             return failure(StructureOperation.Status.STALE, "capture_authority_stale");
         }
         if (entry.bound()) {

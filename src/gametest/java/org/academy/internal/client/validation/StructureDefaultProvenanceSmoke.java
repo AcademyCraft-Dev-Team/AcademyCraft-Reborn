@@ -37,6 +37,7 @@ import java.util.*;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class StructureDefaultProvenanceSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureDefaultProvenanceSmoke");
+    private static final boolean SOFT_ORIGIN = Boolean.getBoolean("academy.structureDefaultProvenanceSoftOrigin");
     private static final List<Map<String, Object>> RESULTS = new ArrayList<>();
     private static final StructureOrientation.Limits ROTATION_LIMITS = new StructureOrientation.Limits(
             3, 12, 5_000, 200, .01, .03, 0, 65_536);
@@ -97,10 +98,20 @@ public final class StructureDefaultProvenanceSmoke {
             double rise = motion.pose().localToWorldPoint(motion.localCenterOfMass()).y - Vec3.atCenterOf(seed).y;
             check(Math.abs(rise - (scenario == 0 ? 3 : 1)) <= .2, "default service bypassed source-relative extraction: " + rise);
             check(player.level().getBlockState(seed).isAir(), "default capture retained the host source");
+            if (SOFT_ORIGIN) {
+                check(player.level().getBlockState(seed.below()).isAir(), "soft source was not cleared");
+                var body = StructureSpaces.resolve(player.level().getServer(), reference).orElseThrow();
+                check(body.world().read(BlockPos.ZERO).state().is(Blocks.IRON_BLOCK), "capture grid origin shifted incorrectly");
+                if (scenario == 0) check(VectorStructureService.diagnostic(player).orElseThrow().blockCount() == 1,
+                        "vector retained removed soft cell in its count");
+                if (scenario == 1) check(magnetic.blockCount() == 1, "magnetic retained removed soft cell in its count");
+                if (scenario == 2) check(nozzle.structureMount().orElseThrow().offset().equals(BlockPos.ZERO),
+                        "nozzle was not rebased to the actual solid capture grid");
+            }
             backend = reference.backend().toString();
             RESULTS.add(Map.of("skill", skill(), "backend", backend, "default_service", true,
                     "provenance_verified", true, "operation", metadata.creationOperationId().toString(),
-                    "actual_rise", rise, "ticks", caseTicks, "passed", true));
+                    "actual_rise", rise, "ticks", caseTicks, "soft_origin_checked", SOFT_ORIGIN, "passed", true));
             finishCase();
         } catch (Throwable error) { fail(error); }
     }
@@ -136,6 +147,11 @@ public final class StructureDefaultProvenanceSmoke {
         player.setGameMode(GameType.SURVIVAL); player.setNoGravity(true);
         player.connection.teleport(seed.getX() - 5, seed.getY(), seed.getZ() + .5, -90, 0);
         check(player.level().setBlock(seed, Blocks.IRON_BLOCK.defaultBlockState(), 3), "fixture seed placement failed");
+        if (SOFT_ORIGIN && scenario < 3) {
+            org.academy.internal.common.world.damagesource.DestroyBlocksSetting.setDestroyBlocksEnabled(player, true);
+            player.level().setBlock(seed.below(), Blocks.VINE.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.VineBlock.UP, true), 2);
+        }
         caseTicks = 0; started = false;
     }
 
@@ -143,9 +159,11 @@ public final class StructureDefaultProvenanceSmoke {
         check(StructureCaptureExtractions.enabled(), "default fixture requires actual gameplay extraction routing");
         if (scenario == 0) {
             var plan = VectorStructureService.planCapture(player, seed, 0).orElseThrow();
+            if (SOFT_ORIGIN) check(plan.positions().contains(seed.below()), "fixture missed soft origin cell");
             check(VectorStructureService.beginCapture(player, plan), "default vector capture rejected");
         } else if (scenario == 1) {
-            magnetic = MagneticStructureService.begin(player.level(), player, List.of(seed)).orElseThrow();
+            magnetic = MagneticStructureService.begin(player.level(), player,
+                    SOFT_ORIGIN ? List.of(seed, seed.below()) : List.of(seed)).orElseThrow();
         } else if (scenario == 2) {
             nozzle = new HighSpeedJetNozzle(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), player.level());
             // The default service activates thrust in the same handoff tick. Keep that thrust
@@ -215,6 +233,7 @@ public final class StructureDefaultProvenanceSmoke {
             }
         }
         if (seed != null) player.level().setBlock(seed, Blocks.AIR.defaultBlockState(), 3);
+        if (seed != null && SOFT_ORIGIN) player.level().setBlock(seed.below(), Blocks.AIR.defaultBlockState(), 3);
         reference = null; control = null; operation = null; capture = null; anchor = null;
     }
     private static void restorePlayer() {
@@ -245,6 +264,7 @@ public final class StructureDefaultProvenanceSmoke {
         if (!directory.getFileName().toString().startsWith("native-sublevel-direct-smoke")) {
             fail(new IllegalStateException("Default provenance smoke requires an isolated fixture directory")); return;
         }
+        if (!ready) org.lwjgl.glfw.GLFW.glfwIconifyWindow(minecraft.getWindow().handle());
         minecraft.player.setNoGravity(true); minecraft.player.setDeltaMovement(Vec3.ZERO); minecraft.player.resetFallDistance(); ready = true;
     }
     private static void check(boolean condition, String message) { if (!condition) throw new IllegalStateException(message); }

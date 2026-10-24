@@ -178,7 +178,7 @@ public final class VectorStructureService {
         traceLiftProbeCommand("begin_capture", player, null);
         requireThread(player);
         Objects.requireNonNull(plan, "plan");
-        if (sableLiftMassRejected(player, plan)) return false;
+        if (!StructureCaptureExtractions.enabled() && sableLiftMassRejected(player, plan)) return false;
         var result = startCapture(player, plan, true, false);
         if (result.pending()) return true;
         if (!result.succeeded()) {
@@ -746,9 +746,8 @@ public final class VectorStructureService {
         var playerSafeSelection = BlockStructureApi.cropToForwardHalfSpace(
                 selection.positions(), player.position(), forward, KineticThrow.PLAYER_CLEARANCE);
         boolean localCapture = !sableMode(level);
-        // The live Sable capture target preserves admitted plants and partial terrain states.
-        // Keep the pointed-at plant and its supporting column; the preview and transaction
-        // both enforce backend admission instead of silently removing the selected seed.
+        // Keep the pointed-at plant and its support until the shared capture action has
+        // checked permission and broken soft source cells through normal break/drop events.
         if (!localCapture && !StructureCaptureExtractions.enabled()) {
             playerSafeSelection = BlockStructureApi.cropNonFullBlocks(level, playerSafeSelection);
         }
@@ -758,9 +757,8 @@ public final class VectorStructureService {
                         && org.academy.internal.common.sublevel.SubLevelTerrainBreaker
                         .canClearObstacle(level, player, position));
         boolean seedUnblocked = positions.contains(seed);
-        // Preserve selected plants and partial collision shapes with their supporting cells.
-        // The capture backend validates the complete body before any source cell is removed.
-        // Sable retains its curated admission gates, including the supported terrain extension.
+        // Solid cells retain the backend's admission gates. The shared action prepares the
+        // exact solid request only after any selected soft cells have actually been cleared.
         if (positions.isEmpty() || !positions.contains(seed)) {
             AcademyCraft.LOGGER.debug("Kinetic capture selection rejected seed={} player={} yaw={} forward={}"
                             + " selected={} seed_selected={} forward_cells={} seed_forward={} seed_unblocked={}"
@@ -772,10 +770,11 @@ public final class VectorStructureService {
             return new PlanOutcome(null, "selection_blocked_or_seed_missing");
         }
         var budget = cellBudget(level);
-        // At tier zero a normal full terrain selection can exceed the 128 mass admission
-        // budget before the player has any chance to lift it. Bound the default one-mass
-        // cell selection first; the exact backend mass gate still rejects heavier materials.
-        if (!localCapture && liftedCapture) budget = Math.min(budget, KineticStructureControl.massBudget(tier));
+        // Only the diagnostic legacy traction controller still uses the old tier mass cap.
+        // Planned extraction supplies mass-scaled force and keeps the common cell budget.
+        if (!localCapture && liftedCapture && !StructureCaptureExtractions.enabled()) {
+            budget = Math.min(budget, KineticStructureControl.massBudget(tier));
+        }
         if (budgetOverride > 0) budget = Math.min(budget, budgetOverride);
         var cropped = liftedCapture ? cropToLiftBudget(positions, seed, budget)
                 : cropToBudget(positions, seed, budget);
@@ -803,6 +802,10 @@ public final class VectorStructureService {
                         program ? StructureCaptureExtractions.NODE_HANDOFF_TICKS : KineticThrow.HOVER_TICKS)
                 : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
+        if (reference != null) {
+            plan = new CapturePlan(plan.seed(), plan.tier(),
+                    StructureCaptureExtractions.sourcePositions(player, reference).orElse(plan.positions()));
+        }
         if (result.pending()) {
             if (reference == null) {
                 return StructureCaptureResult.failure(result.transactionId(),

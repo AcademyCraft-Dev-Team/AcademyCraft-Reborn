@@ -10,6 +10,8 @@ allprojects {
         neoForge.runs.named(providers.gradleProperty('academyStructureProvenanceRun').getOrElse('clientDev')) {
             gameDirectory.set(smokeDirectory)
             systemProperty 'academy.structureDefaultProvenanceSmoke', 'true'
+            systemProperty 'academy.structureDefaultProvenanceSoftOrigin',
+                    providers.gradleProperty('academyStructureDefaultProvenanceSoftOrigin').getOrElse('false')
             programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer',
                     providers.gradleProperty('academySubLevelSmokeWorld').getOrElse('test'))
         }

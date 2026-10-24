@@ -1,0 +1,16 @@
+allprojects {
+    afterEvaluate {
+        def game = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!game.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !game.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Soft capture smoke requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academySoftCaptureRun').getOrElse('clientDev')) {
+            gameDirectory.set(game)
+            systemProperty 'academy.structureSoftCaptureSmoke', 'true'
+            systemProperty 'academy.sablePayloadCapabilityProbe',
+                    providers.gradleProperty('academySablePayloadCapabilityProbe').getOrElse('false')
+            programArguments.addAll('--quickPlaySingleplayer', 'test', '--width', '1280', '--height', '720')
+        }
+    }
+}

@@ -239,6 +239,11 @@ public final class HighSpeedJetStructureService {
                 ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, captureRequest, 1.0,
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
                 : StructureTransactions.capture(level, captureRequest);
+        if (result.structure().isPresent()) {
+            positions = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .sourcePositions(player, result.structure().orElseThrow()).orElse(positions);
+            rebaseMounts(nozzles, origin, minimumCorner(positions));
+        }
         if (result.pending()) {
             var reference = result.structure().orElse(null);
             if (reference == null) return ProgramResult.rejected("pending_without_reference");
@@ -653,6 +658,11 @@ public final class HighSpeedJetStructureService {
                 ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, captureRequest, 1.0,
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
                 : StructureTransactions.capture(level, captureRequest);
+        if (result.structure().isPresent()) {
+            positions = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .sourcePositions(player, result.structure().orElseThrow()).orElse(positions);
+            rebaseMounts(nozzles, origin, minimumCorner(positions));
+        }
         if (result.pending() || result.succeeded() && result.structure()
                 .map(org.academy.api.common.structure.upgrade.StructureCaptureExtractions::tracked).orElse(false)) {
             var reference = result.structure().orElse(null);
@@ -1834,6 +1844,12 @@ public final class HighSpeedJetStructureService {
 
     private static boolean sable(ServerLevel level) {
         return StructureBackendRouter.status(level.getServer()).mode() == StructureBackendStatus.Mode.SABLE;
+    }
+
+    private static void rebaseMounts(List<NozzleMount> mounts, BlockPos oldOrigin, BlockPos newOrigin) {
+        var offset = oldOrigin.subtract(newOrigin);
+        if (offset.equals(BlockPos.ZERO)) return;
+        mounts.replaceAll(mount -> new NozzleMount(mount.nozzle(), mount.supportOffset().offset(offset), mount.face()));
     }
 
     static BlockPos minimumCorner(List<BlockPos> positions) {

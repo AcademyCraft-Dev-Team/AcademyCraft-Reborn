@@ -135,6 +135,8 @@ public final class MagneticStructureService {
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
                 : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
+        if (reference != null) cropped = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                .sourcePositions(player, reference).orElse(cropped);
         if (result.pending()) {
             if (reference == null) {
                 reject(player, "pending_without_reference");
@@ -410,6 +412,8 @@ public final class MagneticStructureService {
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
                 : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
+        if (reference != null) selection = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                .sourcePositions(player, reference).orElse(selection);
         if (result.pending()) {
             if (reference == null) return ProgramResult.rejected("pending_without_reference");
             var pendingSession = new Session(reference, result.transactionId(), selection, level.getGameTime()).trackExtraction(player);

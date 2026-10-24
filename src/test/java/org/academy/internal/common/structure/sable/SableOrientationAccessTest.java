@@ -21,10 +21,11 @@ class SableOrientationAccessTest {
     }
 
     @Test
-    void coarseDistantCoordinatesDisableTheExemptionInsteadOfWideningIt() {
+    void roundingDoesNotDisappearAtExponentBoundariesOrGrowBeyondOneMillimetre() {
         assertTrue(SableOrientationAccess.positionRounding(1024) <= 1E-4);
-        assertEquals(0, SableOrientationAccess.positionRounding(2048));
-        assertEquals(0, SableOrientationAccess.positionRounding(-30_000_000));
+        assertEquals(1.220703125E-4, SableOrientationAccess.positionRounding(2048));
+        assertTrue(SableOrientationAccess.positionRounding(-2137) >= 0.0001200661063);
+        assertEquals(1E-3, SableOrientationAccess.positionRounding(-30_000_000));
         assertEquals(0, SableOrientationAccess.positionRounding(Double.NaN));
         assertEquals(0, SableOrientationAccess.positionRounding(Double.POSITIVE_INFINITY));
     }

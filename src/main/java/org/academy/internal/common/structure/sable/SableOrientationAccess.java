@@ -43,7 +43,7 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
     private static final int MAX_SCANNED_BODIES = 4_096;
     private static final int MAX_GEOMETRY_CELLS = 65_536;
     private static final int MAX_CACHED_BODIES = 256;
-    private static final double MAX_POSITION_ROUNDING = 1E-4;
+    private static final double MAX_POSITION_ROUNDING = 1E-3;
     private static final OrientationTargets.Baselines NO_BASELINE =
             new OrientationTargets.Baselines(Optional.empty(), Optional.empty());
     // Handles retain identity equality. Access order preserves hot bodies when another body arrives.
@@ -59,14 +59,15 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
     /**
      * The pinned Rapier bridge publishes a float world COM, then subtracts the double local COM.
      * Half a float ULP bounds that position observation, independently on each world axis.
-     * Never widen a contact beyond 0.0001 blocks: a coordinate whose half-ULP exceeds that cap
-     * gets no exemption. Thus ordinary coordinates below |2048| qualify, while coarse distant
-     * observations fail closed instead of turning centimetres of penetration into rounding.
+     * Saturate at one millimetre instead of dropping the tolerance to zero at a float exponent
+     * boundary (the old 0.0001 cutoff broke lifts at |X/Z| >= 2048). This is only an existing
+     * host-contact observation allowance: the sweep still forbids any increased penetration,
+     * new contacts and moving-body envelope overlap. Coarser errors beyond the cap remain blocked.
      */
     static double positionRounding(double coordinate) {
         if (!Double.isFinite(coordinate)) return 0;
         double halfUlp = Math.ulp((float) coordinate) * .5;
-        return Double.isFinite(halfUlp) && halfUlp <= MAX_POSITION_ROUNDING ? halfUlp : 0;
+        return Double.isFinite(halfUlp) ? Math.min(halfUlp, MAX_POSITION_ROUNDING) : 0;
     }
 
     @Override public Optional<Body> observe(ServerLevel host, StructureRef reference) {
