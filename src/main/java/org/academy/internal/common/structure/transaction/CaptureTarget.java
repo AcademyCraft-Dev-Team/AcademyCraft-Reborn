@@ -21,7 +21,16 @@ import java.util.UUID;
  */
 public interface CaptureTarget {
     /**
-     * Allocates a target for the selected origin and accepts the first content cell in capture
+     * Read-only allocation seed admission, evaluated after all source cells are validated.
+     * A body backend may require a positive-mass collision cell to survive its first write.
+     * Choosing a different seed never removes other admitted cells from the transaction.
+     */
+    default boolean canSeed(ServerLevel host, BlockPos position, BlockState state) {
+        return !state.isAir();
+    }
+
+    /**
+     * Allocates a target for the selected origin and accepts the first seedable cell in capture
      * order. A backend that can make the target non-empty in the same call chain writes that
      * seed before returning so a zero-mass allocation window never exists; a backend that
      * ignores it lets the coordinator fill the cell during the copy stage instead.

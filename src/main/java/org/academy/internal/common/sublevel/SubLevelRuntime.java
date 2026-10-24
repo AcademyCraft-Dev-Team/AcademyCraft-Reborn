@@ -10,6 +10,7 @@ import org.academy.api.common.structure.StructureSimulationBudget;
 import org.academy.internal.common.structure.physics.PhysicsBox;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation;
+import org.academy.internal.common.structure.upgrade.control.LiveStructureExtraction;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -488,9 +489,12 @@ public final class SubLevelRuntime {
                     host.dimension().identifier());
             terrainBlocked = false;
         }
-        if (LiveStructureOrientation.hasActive(host, false)) {
+        if (LiveStructureOrientation.hasActive(host, false) || LiveStructureExtraction.hasActive(host, false)) {
             universe.stepCovered(duration, substeps, terrainUpdated, blocked,
-                    seconds -> LiveStructureOrientation.beforeSubstep(host, false, seconds));
+                    seconds -> {
+                        LiveStructureOrientation.beforeSubstep(host, false, seconds);
+                        LiveStructureExtraction.beforeSubstep(host, false, seconds);
+                    });
         } else {
             universe.stepCovered(duration, substeps, terrainUpdated, blocked);
         }
@@ -564,6 +568,7 @@ public final class SubLevelRuntime {
                 // rotation envelope now even when the currently observed omega is still zero.
                 swept = angularTerrainBounds(managed.subLevel.localBounds(), motion, duration);
             }
+            swept = LiveStructureExtraction.terrainBounds(host, budgetReference(managed.subLevel), swept, duration);
             demands.add(new TerrainDemand(managed.subLevel.id(), swept,
                     terrainDistanceBand(swept, players), terrain == null || terrain.covers(swept)));
         }

@@ -10,6 +10,8 @@ allprojects {
         neoForge.runs.named(providers.gradleProperty('academyStructureCapturePreviewRun').getOrElse('clientDev')) {
             gameDirectory.set(smokeDirectory)
             systemProperty 'academy.structureCapturePreviewSmoke', 'true'
+            systemProperty 'academy.structureExtractionMotionSmoke',
+                    providers.gradleProperty('academyStructureExtractionMotion').getOrElse('false')
             systemProperty 'academy.structureCapturePreviewDisconnected',
                     providers.gradleProperty('academyCapturePreviewDisconnected').getOrElse('false')
             programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')

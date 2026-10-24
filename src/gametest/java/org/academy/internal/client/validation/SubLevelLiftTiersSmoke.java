@@ -1,5 +1,6 @@
 package org.academy.internal.client.validation;
 
+import com.google.gson.GsonBuilder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -9,6 +10,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.FarmlandBlock;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -22,7 +24,9 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.common.structure.StructureTransactions;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
@@ -30,11 +34,23 @@ import org.academy.internal.common.ability.accelerator.movement.VectorStructureS
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.sublevel.SubLevelServer;
 import org.academy.internal.common.sublevel.SubLevelStructureRefs;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Opt-in client validation of the live kinetic-throw lift for the three design gradients.
@@ -101,6 +117,11 @@ public final class SubLevelLiftTiersSmoke {
     private static double maximumRise;
     private static final List<BlockPos> hardRoof = new ArrayList<>();
     private static StructureRef pendingDiscardObservation;
+    private static Map<BlockPos, BlockState> roofSourceSnapshot = Map.of();
+    private static Set<String> roofStructureSnapshot = Set.of();
+    private static CaptureRejectionObserver rejectionObserver;
+    private static LoggerConfig rejectionLoggerConfig;
+    private static Path output;
 
     private SubLevelLiftTiersSmoke() {
     }
@@ -131,6 +152,7 @@ public final class SubLevelLiftTiersSmoke {
                 case 2 -> tickCapturing(server);
                 case 3 -> tickHovering(server);
                 case 4 -> tickLaunching(server);
+                case 5 -> tickRoofRejection(server);
                 default -> throw new IllegalStateException("unexpected phase " + phase);
             }
         } catch (Throwable failure) {
@@ -212,7 +234,7 @@ public final class SubLevelLiftTiersSmoke {
             }
         }
         if (VEGETATION && tier == 0) {
-            NativeStructureTerrainAdmissionSmoke.run(level, new BlockPos(x + 7, y + 3, z + 7));
+            NativeStructureTerrainAdmissionSmoke.run(level, new BlockPos(x + 7, y + 6, z + 7));
         }
         for (int dx = -PLATFORM_RADIUS; dx <= PLATFORM_RADIUS; dx++) {
             for (int dz = -PLATFORM_RADIUS; dz <= PLATFORM_RADIUS; dz++) {
@@ -268,11 +290,122 @@ public final class SubLevelLiftTiersSmoke {
 
     private static void tickCharging(MinecraftServer server) {
         if (player.level().getGameTime() - chargeStart < CHARGE_TICKS[tier]) return;
+        boolean expectRoofRejection = HARD_ROOF && StructureCaptureExtractions.enabled();
+        if (expectRoofRejection) beginRoofRejection(server);
         var release = KineticThrow.ReleasePacket.INSTANCE;
         release.setPacketListener(player.connection);
         KineticThrow.Server.handleRelease(release);
         releaseAt = server.getTickCount();
-        phase = 2;
+        phase = expectRoofRejection ? 5 : 2;
+    }
+
+    private static void beginRoofRejection(MinecraftServer server) {
+        var snapshot = new LinkedHashMap<BlockPos, BlockState>();
+        for (int dx = -10; dx <= 10; dx++) {
+            for (int dz = -10; dz <= 10; dz++) {
+                for (int dy = -8; dy <= 10; dy++) {
+                    var position = new BlockPos(platformX + dx, platformY + dy, platformZ + dz);
+                    snapshot.put(position, player.level().getBlockState(position));
+                }
+            }
+        }
+        roofSourceSnapshot = Map.copyOf(snapshot);
+        if (hardRoof.isEmpty() || hardRoof.stream().anyMatch(position -> !snapshot.get(position).is(Blocks.BEDROCK))) {
+            throw new IllegalStateException("Hard roof fixture is incomplete before release");
+        }
+        roofStructureSnapshot = structureIdentities(server);
+        // Observe the rejection emitted by the real H release. An absent session alone cannot
+        // distinguish BLOCKED from a missed ray, unavailable backend or another failed check.
+        var logger = LogManager.getLogger(AcademyCraft.LOGGER.getName());
+        if (!(logger instanceof org.apache.logging.log4j.core.Logger coreLogger)) {
+            throw new IllegalStateException("Hard roof fixture cannot observe actual capture rejection");
+        }
+        // Attach to the existing effective config rather than Logger.addAppender(), which
+        // can create a new non-additive child config and hide the normal academy appenders.
+        rejectionLoggerConfig = coreLogger.getContext().getConfiguration()
+                .getLoggerConfig(AcademyCraft.LOGGER.getName());
+        rejectionObserver = new CaptureRejectionObserver(player.getUUID().toString());
+        rejectionObserver.start();
+        rejectionLoggerConfig.addAppender(rejectionObserver, null, null);
+    }
+
+    private static void tickRoofRejection(MinecraftServer server) {
+        for (var entry : roofSourceSnapshot.entrySet()) {
+            if (!player.level().getBlockState(entry.getKey()).equals(entry.getValue())) {
+                throw new IllegalStateException("Rejected lift modified source/roof block at " + entry.getKey());
+            }
+        }
+        var currentStructures = structureIdentities(server);
+        var added = new HashSet<>(currentStructures);
+        added.removeAll(roofStructureSnapshot);
+        if (!added.isEmpty()) throw new IllegalStateException("Rejected lift created structures: " + added);
+        if (VectorStructureService.diagnostic(player).isPresent() || VectorStructureService.session(player).isPresent()) {
+            throw new IllegalStateException("Rejected lift retained a vector session");
+        }
+        var reasons = List.copyOf(rejectionObserver.reasons);
+        int elapsed = server.getTickCount() - releaseAt;
+        if (reasons.isEmpty()) {
+            if (elapsed > 10) throw new IllegalStateException("Real H release emitted no observable rejection");
+            return;
+        }
+        String blockedPrefix = "REJECTED:extraction_preview:BLOCKED:";
+        if (reasons.size() != 1 || !reasons.getFirst().startsWith(blockedPrefix)
+                || reasons.getFirst().substring(blockedPrefix.length()).isBlank()) {
+            throw new IllegalStateException("Roof rejection was not the actual BLOCKED preview: " + reasons);
+        }
+        if (elapsed < 5) return;
+        var result = new LinkedHashMap<String, Object>();
+        result.put("tier", tier);
+        result.put("height", HEIGHTS[tier]);
+        result.put("terrain", TERRAIN);
+        result.put("extraction_gameplay_enabled", true);
+        result.put("rejection", reasons.getFirst());
+        result.put("unchanged_source_cells", roofSourceSnapshot.size());
+        result.put("unchanged_bedrock_cells", hardRoof.size());
+        result.put("structures_before", roofStructureSnapshot.size());
+        result.put("structures_after", currentStructures.size());
+        result.put("new_structures", 0);
+        result.put("observation_ticks", elapsed);
+        result.put("pass", true);
+        results.add(result);
+        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT_ROOF_NEGATIVE_PASSED preview_rejection={} "
+                        + "unchanged_source_cells={} unchanged_bedrock_cells={} new_structures=0 observation_ticks={}",
+                reasons.getFirst(), roofSourceSnapshot.size(), hardRoof.size(), elapsed);
+        finish();
+    }
+
+    private static Set<String> structureIdentities(MinecraftServer server) {
+        var identities = new HashSet<String>();
+        SubLevelServer.runtime(player.level()).ifPresent(runtime -> runtime.subLevels().forEach(body ->
+                identities.add("academy:sublevel:" + body.id().value())));
+        if (StructureSpaces.status(server).sableQueriesAvailable()) SableEvidence.addIdentities(identities);
+        return Set.copyOf(identities);
+    }
+
+    /** Fixture-local evidence only; no production diagnostic or capture behavior is changed. */
+    private static final class CaptureRejectionObserver extends AbstractAppender {
+        private final String prefix;
+        private final ConcurrentLinkedQueue<String> reasons = new ConcurrentLinkedQueue<>();
+
+        private CaptureRejectionObserver(String actorId) {
+            super("AcademyLiftRoofRejection", null, null, true, Property.EMPTY_ARRAY);
+            prefix = "Kinetic Throw capture rejected for " + actorId + ": ";
+        }
+
+        @Override
+        public void append(LogEvent event) {
+            if (!AcademyCraft.LOGGER.getName().equals(event.getLoggerName())) return;
+            String message = event.getMessage().getFormattedMessage();
+            if (message.startsWith(prefix)) reasons.add(message.substring(prefix.length()));
+        }
+    }
+
+    private static void stopRejectionObserver() {
+        if (rejectionObserver == null) return;
+        if (rejectionLoggerConfig != null) rejectionLoggerConfig.removeAppender(rejectionObserver.getName());
+        rejectionObserver.stop();
+        rejectionObserver = null;
+        rejectionLoggerConfig = null;
     }
 
     private static void tickCapturing(MinecraftServer server) {
@@ -359,17 +492,18 @@ public final class SubLevelLiftTiersSmoke {
             }
         }
         if (VEGETATION) {
-            var runtime = SubLevelServer.runtime(player.level()).orElseThrow();
-            var id = SubLevelStructureRefs.id(reference).orElseThrow();
-            capturedPlants = (int) runtime.view(id).cells().stream()
-                    .filter(cell -> cell.state().is(Blocks.SHORT_GRASS) || cell.state().is(Blocks.WHEAT)).count();
+            var world = StructureSpaces.resolve(server, reference).orElseThrow().world();
+            var sourceMinimum = BlockPos.containing(sourceOrigin);
+            capturedPlants = (int) sourceCells.stream().map(cell -> world.read(cell.subtract(sourceMinimum)).state())
+                    .filter(state -> state.is(Blocks.SHORT_GRASS) || state.is(Blocks.WHEAT)).count();
             if (capturedPlants == 0) throw new IllegalStateException("capture discarded all grass/crops");
             canopy.clear();
             leafBreakEvents = 0;
             leafDropEvents = 0;
             for (int dx = -PLATFORM_RADIUS; dx <= PLATFORM_RADIUS; dx++) {
                 for (int dz = -PLATFORM_RADIUS; dz <= PLATFORM_RADIUS; dz++) {
-                    var position = new BlockPos(platformX + dx, platformY + 2, platformZ + dz);
+                    var position = new BlockPos(platformX + dx,
+                            platformY + (EMBEDDED ? terrainHeight(dx, dz) : 0) + 2, platformZ + dz);
                     player.level().setBlock(position,
                             Blocks.OAK_LEAVES.defaultBlockState().setValue(LeavesBlock.DISTANCE, 1), 2);
                     canopy.add(position);
@@ -417,6 +551,14 @@ public final class SubLevelLiftTiersSmoke {
         }
     }
 
+    private static final class SableEvidence {
+        static void addIdentities(Set<String> identities) {
+            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            if (container == null) throw new IllegalStateException("Sable structure inventory is unavailable");
+            for (var body : container.getAllSubLevels()) identities.add("academy:sable:" + body.getUniqueId());
+        }
+    }
+
     private static void tickHovering(MinecraftServer server) {
         var motion = StructureDynamics.motion(player.level(), reference).orElse(null);
         if (motion == null) {
@@ -457,7 +599,6 @@ public final class SubLevelLiftTiersSmoke {
                 AcademyCraft.LOGGER.info("SUBLEVEL_LIFT_ROOF_NEGATIVE_PASSED rise={} max_rise={} max_xz_drift={} "
                                 + "max_angular={} terrain_covered={}", rise, maximumRise, maximumHorizontalDrift,
                         maximumAngularSpeed, terrainCoverage());
-                complete = true;
                 finish();
             }
             return;
@@ -496,9 +637,13 @@ public final class SubLevelLiftTiersSmoke {
                             + "max_orientation_error_deg={} angular_reversals={}",
                     tier, HEIGHTS[tier], rise, hoverTicks, maximumOrientationErrorDegrees, angularReversals);
             player.connection.teleport(player.getX(), player.getY(), player.getZ(),
-                    player.getYRot() + 180.0F, player.getXRot());
+                    player.getYRot() + 180.0F, VEGETATION ? -15.0F : player.getXRot());
+            // The ground-selection pitch points down into the solid step (confirmed at 50 m/s
+            // in sable vegetation r8). Test release into open space on BOTH backends; do not
+            // require a body fired at a hard floor to travel through it. Terrain stays intact.
             player.setYHeadRot(player.getYRot());
             if (!VectorStructureService.launch(player)) throw new IllegalStateException("tier launch refused");
+            traceFlight(0);
             launchOrigin = center;
             phase = 4;
             releaseAt = server.getTickCount();
@@ -510,11 +655,16 @@ public final class SubLevelLiftTiersSmoke {
     }
 
     private static void tickLaunching(MinecraftServer server) {
+        int flightTicks = server.getTickCount() - releaseAt;
+        if (flightTicks == 1 || flightTicks == 5 || flightTicks == 20) traceFlight(flightTicks);
         if (server.getTickCount() - releaseAt < 20) return;
         if (VEGETATION) {
             var motion = StructureDynamics.motion(player.level(), reference).orElseThrow();
             double distance = motion.pose().localToWorldPoint(motion.localCenterOfMass()).distanceTo(launchOrigin);
             if (distance < 3.0) throw new IllegalStateException("vegetation launch remained stuck: " + distance);
+            results.getLast().put("launch_distance", distance);
+            results.getLast().put("launch_pitch", -15.0F);
+            results.getLast().put("flight_pass", true);
             AcademyCraft.LOGGER.info("SUBLEVEL_VEGETATION_LAUNCH_PASSED tier={} distance={}", tier, distance);
         }
         if (DISCARD_BETWEEN_TIERS) {
@@ -537,12 +687,38 @@ public final class SubLevelLiftTiersSmoke {
         }
         tier++;
         if (tier > 2 || ONLY_TIER >= 0) {
-            complete = true;
             finish();
             return;
         }
         buildPlatform();
         phase = 1;
+    }
+
+    private static void traceFlight(int ticks) {
+        if (!VEGETATION) return;
+        var motion = StructureDynamics.motion(player.level(), reference).orElseThrow();
+        var access = org.academy.internal.common.structure.StructureBackendRouter.orientationAccess(player.level(), reference).orElseThrow();
+        var body = access.observe(player.level(), reference).orElseThrow();
+        var boxes = body.localBoxes().stream().map(box ->
+                org.academy.internal.common.structure.NativeStructureCollisionBoxes.transformBox(box, motion.pose())).toList();
+        var bounds = boxes.stream().reduce(net.minecraft.world.phys.AABB::minmax).orElseThrow();
+        var contacts = new ArrayList<String>();
+        int visited = 0;
+        for (var position : BlockPos.betweenClosed(BlockPos.containing(bounds.minX, bounds.minY, bounds.minZ),
+                BlockPos.containing(bounds.maxX, bounds.maxY, bounds.maxZ))) {
+            if (++visited > 4096 || contacts.size() >= 24) break;
+            var state = player.level().getBlockState(position);
+            for (var shape : state.getCollisionShape(player.level(), position).toAabbs()) {
+                if (boxes.stream().anyMatch(box -> box.intersects(shape.move(position)))) {
+                    contacts.add(position + ":" + state);
+                    break;
+                }
+            }
+        }
+        AcademyCraft.LOGGER.info("SUBLEVEL_VEGETATION_FLIGHT tier={} ticks={} center={} linear={} angular={} look={}"
+                        + " bounds={} host_aabb_contacts={} player_bounds={}", tier, ticks,
+                motion.pose().localToWorldPoint(motion.localCenterOfMass()), motion.linearVelocity(), motion.angularVelocity(),
+                player.getLookAngle(), bounds, contacts, player.getBoundingBox());
     }
 
     private static String terrainCoverage() {
@@ -603,28 +779,83 @@ public final class SubLevelLiftTiersSmoke {
             return;
         }
         if (minecraft.level == null || minecraft.player == null || minecraft.getConnection() == null) return;
-        if (!minecraft.gameDirectory.toPath().toAbsolutePath().normalize().getFileName().toString()
-                .startsWith("native-sublevel-direct-smoke")) {
+        var directory = minecraft.gameDirectory.toPath().toAbsolutePath().normalize();
+        if (!directory.getFileName().toString().startsWith("native-sublevel-direct-smoke")) {
             fail(new IllegalStateException("lift tiers smoke requires an isolated run directory"));
             return;
+        }
+        if (output == null) {
+            output = directory.resolve("sublevel-lift-tiers-result.json");
+            try {
+                // Overwrite any old result before the server starts. Abrupt exit must not
+                // leave a previous run's passed=true report as apparent current evidence.
+                writeResult(false, "running", null);
+            } catch (IOException | RuntimeException error) {
+                fail(error);
+                return;
+            }
         }
         clientReady = true;
     }
 
     private static void finish() {
+        try {
+            writeResult(true, "passed", null);
+        } catch (IOException | RuntimeException error) {
+            fail(error);
+            return;
+        }
+        stopRejectionObserver();
         AcademyCraft.LOGGER.info("SUBLEVEL_LIFT357_SMOKE_PASSED tiers={} results={}", results.size(), results);
         restore();
+        // Publish termination only after the independent evidence has reached the file.
+        complete = true;
     }
 
     private static void fail(Throwable failure) {
         if (failed || complete) return;
-        failed = true;
+        try {
+            if (output != null) writeResult(false, "failed", failure);
+        } catch (IOException | RuntimeException reportError) {
+            failure.addSuppressed(reportError);
+        }
+        stopRejectionObserver();
         AcademyCraft.LOGGER.error("SUBLEVEL_LIFT357_SMOKE_FAILED tier={} phase={} age={} best={} results={}",
                 tier, phase, age, hoverBest, results, failure);
         restore();
+        failed = true;
+    }
+
+    private static void writeResult(boolean passed, String status, Throwable failure) throws IOException {
+        if (output == null) throw new IllegalStateException("Lift tiers report path is unavailable");
+        var report = new LinkedHashMap<String, Object>();
+        report.put("passed", passed);
+        report.put("status", status);
+        report.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
+        report.put("terrain", TERRAIN);
+        report.put("embedded", EMBEDDED);
+        report.put("vegetation", VEGETATION);
+        report.put("disturbance", DISTURBANCE);
+        report.put("disturbance_mode", DISTURBANCE_MODE);
+        report.put("discard_between_tiers", DISCARD_BETWEEN_TIERS);
+        report.put("only_tier", ONLY_TIER);
+        report.put("tier", tier);
+        report.put("phase", phase);
+        report.put("age_ticks", age);
+        report.put("hover_best", hoverBest);
+        report.put("cases", List.copyOf(results));
+        report.put("roof_observed_rejections", rejectionObserver == null ? List.of()
+                : List.copyOf(rejectionObserver.reasons));
+        report.put("roof_source_snapshot_cells", roofSourceSnapshot.size());
+        report.put("roof_structure_count_before", roofStructureSnapshot.size());
+        report.put("failure", failure == null ? "" : failure.toString());
+        report.put("failure_stack", failure == null ? List.of()
+                : Arrays.stream(failure.getStackTrace()).map(StackTraceElement::toString).toList());
+        Files.writeString(output, new GsonBuilder().setPrettyPrinting().create().toJson(report));
     }
 
     private static void restore() {
+        stopRejectionObserver();
         if (player == null) return;
         try {
             player.resetFallDistance();

@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.BiPredicate;
+import java.util.function.IntPredicate;
 
 /**
  * Server-thread staged capture coordinator. A capture reserves its target, persists a
@@ -267,6 +268,12 @@ public final class StructureCaptureCoordinator {
             states.add(state);
         }
         CaptureTimings.record(transactionId.toString(), "capture_validate_cells", validateStarted);
+        int seedIndex = firstSeedIndex(states.size(), index ->
+                backend.canSeed(host, ordered.get(index), states.get(index)));
+        if (seedIndex < 0) {
+            return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.REJECTED,
+                    "capture_no_seedable_content");
+        }
         long claimStarted = CaptureTimings.begin();
         boolean claimed = claims.tryClaim(host.dimension().identifier(), ordered, transactionId);
         CaptureTimings.record(transactionId.toString(), "capture_claim_cells", claimStarted);
@@ -296,9 +303,8 @@ public final class StructureCaptureCoordinator {
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_prepare_failed");
             }
-            // The first content cell in capture order seeds the allocation in the same call
-            // chain so a backend that destroys zero-mass bodies never sees an empty target.
-            var seedIndex = firstContentIndex(states);
+            // Keep every admitted cell, but seed with one the selected backend can sustain.
+            // Plants may precede the first positive-mass collision cell in capture order.
             var seedOffset = ordered.get(seedIndex).subtract(origin);
             var seedState = states.get(seedIndex);
             long allocateStarted = CaptureTimings.begin();
@@ -1137,12 +1143,12 @@ public final class StructureCaptureCoordinator {
         return null;
     }
 
-    /** Index of the first non-air cell in capture order; every admitted cell is non-air. */
-    private static int firstContentIndex(List<BlockState> states) {
-        for (int index = 0; index < states.size(); index++) {
-            if (!states.get(index).isAir()) return index;
+    /** Selects only an allocation seed index; copy/source order and contents stay intact. */
+    static int firstSeedIndex(int cellCount, IntPredicate canSeed) {
+        for (int index = 0; index < cellCount; index++) {
+            if (canSeed.test(index)) return index;
         }
-        return 0;
+        return -1;
     }
 
     /** Whether the backend wrote the seed cell during allocation, checked against the target. */
@@ -1298,6 +1304,9 @@ public final class StructureCaptureCoordinator {
             this.seedIndex = seedIndex;
             this.seeded = seeded;
             this.physical = physical;
+            // Rollback high-water mark, not the copy cursor: stepCopy starts at zero and
+            // sliced copying uses its separate zero-initialized sliceCursor. A later support
+            // seed must remain inside rollback coverage if copying earlier plants fails.
             this.copyProgress = seeded ? seedIndex + 1 : 0;
             this.transactionId = record.transactionId();
         }

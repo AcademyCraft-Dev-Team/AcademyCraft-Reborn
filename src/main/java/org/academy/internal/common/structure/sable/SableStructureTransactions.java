@@ -15,6 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.academy.AcademyCraft;
@@ -59,6 +60,18 @@ public final class SableStructureTransactions implements CaptureTarget {
     @Override
     public Identifier backendId() {
         return StructureBackendRouter.SABLE_ID;
+    }
+
+    @Override
+    public @Nullable String rejectionDetail(ServerLevel host, BlockPos position, BlockState state,
+                                             @Nullable BlockEntity blockEntity) {
+        return SableCaptureAdmission.rejectionDetail(host, position, state, blockEntity);
+    }
+
+    @Override
+    public boolean canSeed(ServerLevel host, BlockPos position, BlockState state) {
+        return SableCaptureAdmission.seedable(!state.getCollisionShape(host, position).isEmpty(),
+                PhysicsBlockPropertyHelper.getMass(host, position, state));
     }
 
     @Override

@@ -295,6 +295,7 @@ public final class StructureBackendRouter {
                     && selected.bridge.launch(host, reference, direction, speed);
         }
         if (launched) org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.launched(host, reference);
+        if (launched) org.academy.internal.common.structure.upgrade.control.LiveStructureExtraction.launched(host, reference);
         return launched;
     }
 

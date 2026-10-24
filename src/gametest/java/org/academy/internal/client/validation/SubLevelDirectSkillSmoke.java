@@ -1,5 +1,6 @@
 package org.academy.internal.client.validation;
 
+import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
@@ -12,8 +13,10 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
+import org.academy.api.common.ability.program.ProgramStructureOperationResult;
 import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureQueries;
@@ -26,6 +29,7 @@ import org.academy.api.common.structure.StructurePhysicsControl;
 import org.academy.api.common.structure.StructurePhysicsLease;
 import org.academy.api.common.structure.StructurePhysicsRegion;
 import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
@@ -35,6 +39,7 @@ import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStruct
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.electromaster.magnet.MagneticStructureService;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
+import org.academy.internal.common.ability.program.ProgramStructureExtraction;
 import org.academy.internal.common.structure.physics.PhysicsVector;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
@@ -81,6 +86,10 @@ final class SubLevelDirectSkillSmoke {
     private static boolean originalPlayerNoGravity;
     private static double peakJetSpeed;
     private static BlockPos magneticShapeOccluder;
+    private static UUID jetExtractionControl;
+    private static UUID magneticExtractionControl;
+    private static Vec3 kineticSourceCenter;
+    private static boolean kineticEarlyPressChecked;
 
     private SubLevelDirectSkillSmoke() {
     }
@@ -108,6 +117,7 @@ final class SubLevelDirectSkillSmoke {
                     StructureDynamics.motion(level, reference));
         }
         if (phase == 0) {
+            require(StructureCaptureExtractions.enabled(), "default skills must use production extraction routing");
             originalPlayerPosition = player.position();
             originalPlayerVelocity = player.getDeltaMovement();
             originalPlayerYaw = player.getYRot();
@@ -140,16 +150,28 @@ final class SubLevelDirectSkillSmoke {
             jet = HighSpeedJetStructureService.launch(player,
                     new HighSpeedJetStructureService.LaunchRequest(seed, Direction.NORTH, null, 2, 1, 120, true),
                     1).orElseThrow(() -> new IllegalStateException("direct jet rejected"));
+            var capture = HighSpeedJetStructureService.diagnostic(player).orElseThrow();
+            require(capture.stage() == HighSpeedJetStructureService.Stage.CAPTURING
+                            && !capture.controlActive() && nozzle.activeTicks() == 0,
+                    "jet thrust began before extraction");
+            jetExtractionControl = StructureCaptureExtractions.controlId(capture.reference()).orElseThrow(
+                    () -> new IllegalStateException("jet default capture bypassed extraction"));
             advance();
         } else if (phase == 1 && target == null) {
             var diagnostic = HighSpeedJetStructureService.diagnostic(player).orElseThrow(
                     () -> new IllegalStateException("direct jet capture or adoption failed"));
             require(ticks <= 200, "direct jet transaction did not complete");
-            if (diagnostic.stage() == HighSpeedJetStructureService.Stage.CAPTURING) return;
+            if (diagnostic.stage() == HighSpeedJetStructureService.Stage.CAPTURING) {
+                require(!diagnostic.controlActive() && nozzle.activeTicks() == 0,
+                        "jet thrust activated while extraction was pending");
+                return;
+            }
             reference = diagnostic.reference();
             id = SubLevelStructureRefs.id(reference).orElseThrow();
             require(nozzle.isAttachedTo(reference), "jet nozzle failed to follow captured structure");
             start = runtime.get(id).orElseThrow().worldCenter();
+            requireExtractionHandoff(player, reference, jetExtractionControl, start.y - (jetSource.getY() + 0.5),
+                    diagnostic.controlActive() && nozzle.activeTicks() > 0, "jet");
             target = net.minecraft.world.entity.EntityTypes.COW.create(level, EntitySpawnReason.COMMAND);
             require(target != null, "cannot create impact target");
             target.setPos(start.x, start.y - 0.5, start.z + 2.5);
@@ -193,6 +215,8 @@ final class SubLevelDirectSkillSmoke {
             player.setXRot(0);
             var seed = player.blockPosition().offset(0, 4, -6);
             level.setBlock(seed, Blocks.IRON_BLOCK.defaultBlockState(), 3);
+            kineticSourceCenter = Vec3.atCenterOf(seed);
+            kineticEarlyPressChecked = false;
             aim(player, Vec3.atCenterOf(seed));
             var press = KineticThrow.PressPacket.INSTANCE;
             press.setPacketListener(player.connection);
@@ -212,11 +236,34 @@ final class SubLevelDirectSkillSmoke {
             id = SubLevelStructureRefs.id(reference).orElseThrow();
             start = runtime.get(id).orElseThrow().worldCenter();
             ticks = 0;
-        } else if (phase == 3 && ticks >= 20) {
+        } else if (phase == 3) {
             var center = runtime.get(id).orElseThrow().worldCenter();
-            require(VectorStructureService.diagnostic(player).orElseThrow().controlActive(),
-                    "kinetic held control was not reported active");
+            var diagnostic = VectorStructureService.diagnostic(player).orElseThrow();
+            require(ticks <= StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS,
+                    "kinetic extraction did not reach its lift target: " + diagnostic + " center=" + center);
+            require(!diagnostic.flying(), "kinetic structure launched before the completed-extraction H press");
+            if (!diagnostic.lifted()) {
+                if (!kineticEarlyPressChecked && diagnostic.stage() == VectorStructureService.Stage.LIFTING
+                        && diagnostic.controlActive()) {
+                    requireForeignActorRejected(player, center);
+                    aim(player, center);
+                    var earlyPress = KineticThrow.PressPacket.INSTANCE;
+                    earlyPress.setPacketListener(player.connection);
+                    KineticThrow.Server.handlePress(earlyPress);
+                    var afterPress = VectorStructureService.diagnostic(player).orElseThrow();
+                    require(reference.equals(afterPress.reference()) && !afterPress.flying()
+                                    && afterPress.stage() == VectorStructureService.Stage.LIFTING,
+                            "early H press interrupted or launched a pending extraction");
+                    kineticEarlyPressChecked = true;
+                }
+                return;
+            }
+            require(kineticEarlyPressChecked, "kinetic early H-press rejection was not exercised");
+            require(diagnostic.controlActive(), "kinetic held control was not reported active");
+            var rise = center.y - kineticSourceCenter.y;
+            require(Math.abs(rise - 3.0) <= 0.15, "kinetic tier-zero extraction did not reach three blocks: " + rise);
             require(center.y > start.y + 0.5, "kinetic anchor did not lift captured structure");
+            AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_KINETIC_EXTRACTION_PASSED rise={} early_h_retained=true", rise);
             aim(player, center);
             var eye = player.getEyePosition();
             var range = Skills.KINETIC_THROW.get().scaledRange(player, KineticThrow.TARGET_RANGE);
@@ -253,13 +300,24 @@ final class SubLevelDirectSkillSmoke {
                     () -> new IllegalStateException("magnetic default capture rejected"));
             reference = magnetic.reference();
             id = SubLevelStructureRefs.id(reference).orElseThrow();
+            magneticExtractionControl = StructureCaptureExtractions.controlId(reference).orElseThrow(
+                    () -> new IllegalStateException("magnetic default capture bypassed extraction"));
+            require(!magnetic.controlActive(), "magnetic pull began before extraction");
             magneticTicks = 0;
             advance();
         } else if (phase == 5) {
             require(magnetic.tick(player, start.add(0, 3, 0), new Vec3(0, 1, 0), 0.8, 0.2, 32, 0),
                     "magnetic existing structure control ended");
             require(ticks <= 200, "magnetic transaction did not complete");
-            if (magnetic.stage() == MagneticStructureService.Stage.CAPTURING) return;
+            if (magnetic.stage() == MagneticStructureService.Stage.CAPTURING) {
+                require(!magnetic.controlActive(), "magnetic pull activated while extraction was pending");
+                return;
+            }
+            if (magneticTicks == 0) {
+                requireExtractionHandoff(player, reference, magneticExtractionControl,
+                        runtime.get(id).orElseThrow().worldCenter().y - start.y,
+                        magnetic.controlActive(), "magnetic");
+            }
             if (++magneticTicks >= 15) {
                 require(runtime.get(id).orElseThrow().worldCenter().y > start.y + 0.5,
                         "magnetic control did not move the existing structure");
@@ -475,6 +533,70 @@ final class SubLevelDirectSkillSmoke {
                     + " consumed_force_lease_preserved=true both_bodies_ready=true retained=true");
             advance();
         }
+    }
+
+    private static void requireForeignActorRejected(ServerPlayer owner, Vec3 center) {
+        var level = owner.level();
+        var owned = StructureCaptureExtractions.owned(owner, reference).orElseThrow();
+        var control = StructureCaptureExtractions.controlId(reference).orElseThrow();
+        var runtimeId = StructureSpaces.resolve(level.getServer(), reference).orElseThrow().runtimeId();
+        var before = StructureDynamics.motion(level, reference).orElseThrow();
+        var foreign = FakePlayerFactory.get(level, new GameProfile(UUID.randomUUID(), "extract-foreign"));
+        // A factory-only fake player has no Academy data until the normal login hook runs.
+        // Direct H reads proficiency before attempting the lease, just like the real player path.
+        AbilitySystemServer.getSystem(foreign).onPlayerLogin(foreign);
+        require(!foreign.getUUID().equals(owner.getUUID()) && foreign != owner,
+                "foreign extraction fixture reused the owner identity");
+        require(StructureCaptureExtractions.owned(foreign, reference).isEmpty(),
+                "foreign actor received the owner's extraction handle");
+        var polled = ProgramStructureExtraction.poll(foreign, reference);
+        require(polled.status() == ProgramStructureOperationResult.Status.REJECTED
+                        && polled.detail().equals("extraction_session_foreign_actor"),
+                "foreign actor poll did not reject ownership: " + polled);
+        StructureCaptureExtractions.release(foreign, reference);
+
+        // FakePlayer has no network player entry; its dummy connection's teleport is a no-op.
+        foreign.setPos(owner.getX(), owner.getY(), owner.getZ());
+        var delta = center.subtract(foreign.getEyePosition());
+        foreign.setYRot((float) Math.toDegrees(Math.atan2(-delta.x, delta.z)));
+        foreign.setXRot((float) -Math.toDegrees(Math.atan2(delta.y, Math.hypot(delta.x, delta.z))));
+        var thrown = VectorStructureService.press(foreign);
+        require(thrown.status() == VectorStructureService.PressStatus.REJECTED
+                        && thrown.detail().equals("structure_controlled"),
+                "foreign direct H did not reject the occupied extraction lease: " + thrown);
+        require(VectorStructureService.diagnostic(foreign).isEmpty(), "foreign direct H created a session");
+        require(StructureCaptureExtractions.tracked(reference)
+                        && StructureCaptureExtractions.owned(owner, reference).orElseThrow() == owned
+                        && StructureCaptureExtractions.controlId(reference).orElseThrow().equals(control),
+                "foreign poll/cancel/throw changed the owner's extraction session");
+        require(StructureDirectControl.matches(reference, owner.getUUID(), control, runtimeId),
+                "foreign poll/cancel/throw removed the owner's control lease");
+        var diagnostic = VectorStructureService.diagnostic(owner).orElseThrow();
+        require(reference.equals(diagnostic.reference()) && diagnostic.controlActive()
+                        && diagnostic.stage() == VectorStructureService.Stage.LIFTING && !diagnostic.flying(),
+                "foreign actor interrupted the owner's H extraction");
+        var after = StructureDynamics.motion(level, reference).orElseThrow();
+        require(after.pose().equals(before.pose())
+                        && after.linearVelocity().equals(before.linearVelocity())
+                        && after.angularVelocity().equals(before.angularVelocity()),
+                "foreign rejected action changed structure motion");
+        AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_FOREIGN_EXTRACTION_REJECTED foreign_actor_rejected=true"
+                + " poll_rejected=true cancel_ignored=true direct_h_occupied=true owner_session_retained=true"
+                + " owner_lease_retained=true motion_unchanged=true");
+        AbilitySystemServer.getSystem(foreign).onPlayerLogout(foreign);
+    }
+
+    private static void requireExtractionHandoff(ServerPlayer player, StructureRef ref, UUID extractionControl,
+                                                 double rise, boolean successorActive, String skill) {
+        require(Math.abs(rise - 1.0) <= 0.15,
+                skill + " handed off before completing its one-block extraction: rise=" + rise);
+        require(!StructureCaptureExtractions.tracked(ref), skill + " handoff retained the extraction session");
+        var handle = StructureSpaces.resolve(player.level().getServer(), ref).orElseThrow();
+        require(!StructureDirectControl.matches(ref, player.getUUID(), extractionControl, handle.runtimeId()),
+                skill + " handoff retained the extraction lease");
+        require(successorActive, skill + " did not acquire its original control after extraction");
+        AcademyCraft.LOGGER.info("CLIENT_SUBLEVEL_DEFAULT_EXTRACTION_HANDOFF_PASSED skill={} rise={}"
+                + " extraction_released=true successor_active=true", skill, rise);
     }
 
     private static int hostObstacles(ServerPlayer player, AABB bounds) {

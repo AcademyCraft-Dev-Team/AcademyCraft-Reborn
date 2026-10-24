@@ -10,6 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructureCaptureRequest;
@@ -21,7 +22,6 @@ import org.academy.api.common.structure.upgrade.StructureExtraction;
 import org.academy.api.common.structure.upgrade.StructureOperation;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.transaction.StructureCaptureCoordinator;
-import org.academy.internal.common.structure.upgrade.ScaffoldStructureControls;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -41,12 +41,14 @@ import java.util.UUID;
  * <p>Binding re-reads the committed structure's content on its local grid and compares the
  * digest with the previewed source and the completed transaction's retained evidence, so a forged preview, a different capture or a silently
  * changed selection cannot be turned into a plan. The plan is re-planned from the body's actual
- * pose and collision geometry. Nothing here moves a body or acquires a second lease: extraction
- * motion, status and cancellation remain scaffolded until their sub-step control is wired.</p>
+ * pose and collision geometry. Planning and binding never move a body or acquire a second lease.
+ * A begun operation advances only in the owning solver's pre-substep hook.</p>
  *
  * <p>Pre-capture previews carry terrain revision {@code 0} because no structural terrain version
- * exists before a body is created; the content digest is the authoritative evidence in that
- * phase. Structural plans in later slices replace it with a real registered revision.</p>
+ * exists before a body is created; the content digest is the authoritative source evidence.
+ * Bound and existing-body plans also retain this sentinel: begin rechecks the full path, and
+ * each solver step uses its own loaded-only snapshot and verifies that snapshot before applying
+ * velocity. A zero revision never bypasses the live terrain check.</p>
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class LiveStructureExtraction implements StructureExtraction {
@@ -54,7 +56,6 @@ public final class LiveStructureExtraction implements StructureExtraction {
     private static final int PLAN_TTL_TICKS = 1_200;
     private static final long UNVERSIONED_TERRAIN = 0L;
     private static final Map<MinecraftServer, CapturePlanRegistry> REGISTRIES = new IdentityHashMap<>();
-    private static final ScaffoldStructureControls SCAFFOLD = new ScaffoldStructureControls();
 
     private LiveStructureExtraction() {
     }
@@ -252,30 +253,110 @@ public final class LiveStructureExtraction implements StructureExtraction {
         };
     }
 
-    /** Extraction motion is not wired yet; the scaffold keeps returning explicit UNSUPPORTED. */
     @Override
     public StructureOperation.Result<Plan> plan(StructureOperation.Context context, PlanRequest request) {
-        return SCAFFOLD.plan(context, request);
+        requireThread(context.host());
+        if (request.sourceKind() != SourceKind.EXISTING_STRUCTURE) {
+            return failure(StructureOperation.Status.DENIED, "extraction_capture_binding_required");
+        }
+        var linear = LiveExtractionMotion.authorized(context, request.controlId()).orElse(null);
+        if (linear == null) return failure(StructureOperation.Status.DENIED, "extraction_authority_unavailable");
+        var body = linear.body();
+        if (!body.terrainReady()) return failure(StructureOperation.Status.TERRAIN_PENDING, "extraction_terrain_pending");
+        if (!request.sourcePose().equals(body.motion().pose())
+                || !request.localCenterOfMass().equals(body.motion().localCenterOfMass())) {
+            return failure(StructureOperation.Status.STALE, "extraction_source_observation_stale");
+        }
+        var outcome = replan(context.host(), request, body);
+        if (outcome.status() != StructureOperation.Status.READY) return failure(outcome.status(), outcome.detail());
+        var plan = new Plan(UUID.randomUUID(), context.reference(), body.runtimeId(), body.contentRevision(),
+                body.poseRevision(), outcome.terrainRevision(), context.host().getGameTime() + PLAN_TTL_TICKS,
+                request, outcome.worldPath(), outcome.blockedCells());
+        return LiveExtractionMotion.save(context, plan);
     }
 
     @Override
     public StructureOperation.Result<Snapshot> begin(StructureOperation.Context context, BeginRequest request) {
-        return SCAFFOLD.begin(context, request);
+        requireThread(context.host());
+        var repeated = LiveExtractionMotion.repeated(context, request);
+        if (repeated != null) return repeated;
+        var plan = LiveExtractionMotion.plan(context, request.controlId(), request.planId()).orElse(null);
+        if (plan == null) {
+            var lookup = registry(context.host().getServer()).resolve(request.planId(), context.actor().getUUID(),
+                    context.host().getGameTime());
+            if (lookup.entry() != null) plan = lookup.entry().boundPlan().orElse(null);
+        }
+        if (plan == null || !plan.request().controlId().equals(request.controlId())) {
+            return failure(StructureOperation.Status.DENIED, "extraction_plan_unknown_or_foreign");
+        }
+        var linear = LiveExtractionMotion.authorized(context, request.controlId()).orElse(null);
+        if (linear == null) return failure(StructureOperation.Status.STALE, "extraction_authority_unavailable");
+        var body = linear.body();
+        if (!plan.reference().equals(context.reference()) || !plan.runtimeId().equals(body.runtimeId())
+                || plan.contentRevision() != body.contentRevision() || plan.poseRevision() != body.poseRevision()
+                || context.host().getGameTime() > plan.expiresAtGameTime()) {
+            return failure(StructureOperation.Status.STALE, "extraction_plan_stale");
+        }
+        // Terrain has no global version: repeat the bounded path query against current loaded
+        // cells and bodies before admitting the saved plan, then recheck every solver step.
+        var outcome = replan(context.host(), plan.request(), body);
+        if (outcome.status() != StructureOperation.Status.READY) return failure(outcome.status(), outcome.detail());
+        if (!outcome.worldPath().equals(plan.worldPath())) return failure(StructureOperation.Status.STALE, "extraction_path_changed");
+        return LiveExtractionMotion.begin(context, plan);
     }
 
     @Override
     public StructureOperation.Result<Snapshot> status(StructureOperation.Context context, StatusRequest request) {
-        return SCAFFOLD.status(context, request);
+        requireThread(context.host());
+        return LiveExtractionMotion.status(context, request.controlId(), request.operationId());
     }
 
     @Override
     public StructureOperation.Result<Snapshot> cancel(StructureOperation.Context context, CancelRequest request) {
-        return SCAFFOLD.cancel(context, request);
+        requireThread(context.host());
+        return LiveExtractionMotion.cancel(context, request.controlId(), request.operationId());
     }
 
     @SubscribeEvent
     public static void stopped(ServerStoppedEvent event) {
         REGISTRIES.remove(event.getServer());
+        LiveExtractionMotion.stopped(event.getServer());
+    }
+
+    @SubscribeEvent
+    public static void afterTick(ServerTickEvent.Post event) { LiveExtractionMotion.afterTick(event.getServer()); }
+
+    /** Both the local Post solver and Sable's level solver see these writes before terrain preparation. */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
+    public static void beforeTick(ServerTickEvent.Pre event) { LiveExtractionMotion.beforeTerrain(event.getServer()); }
+
+    public static boolean hasActive(ServerLevel host, boolean sable) { return LiveExtractionMotion.hasActive(host, sable); }
+    public static boolean controls(ServerLevel host, StructureRef reference) { return LiveExtractionMotion.controls(host, reference); }
+    public static boolean controls(ServerLevel host, StructureRef reference, UUID control) {
+        return LiveExtractionMotion.controls(host, reference, control);
+    }
+    public static AABB terrainBounds(ServerLevel host, StructureRef reference, AABB bounds, double duration) {
+        return LiveExtractionMotion.terrainBounds(host, reference, bounds, duration);
+    }
+    public static void beforeSubstep(ServerLevel host, boolean sable, double seconds) {
+        requireThread(host);
+        LiveExtractionMotion.beforeSubstep(host, sable, seconds);
+    }
+    public static void cancel(ServerLevel host, StructureRef reference, UUID control) {
+        requireThread(host);
+        LiveExtractionMotion.cancel(host, reference, control);
+    }
+    public static void cancel(StructureRef reference, UUID control) { LiveExtractionMotion.cancel(reference, control); }
+    public static void launched(ServerLevel host, StructureRef reference) {
+        requireThread(host);
+        LiveExtractionMotion.launched(host, reference);
+    }
+
+    private static ExtractionPlanBuilder.Outcome replan(ServerLevel host, PlanRequest request, OrientationBackendAccess.Body body) {
+        var geometry = new ExtractionPlanBuilder.Geometry(request.sourcePose(), body.motion().pose(),
+                body.motion().localCenterOfMass(), body.localBoxes(), body.contentRevision(), body.poseRevision());
+        return plan(host, request.limits(), request.liftHeight(), request.hoverTicks(), geometry, List.of(),
+                body.localBoxes(), body.motion().pose(), request.limits().maxRetreatDistance(), body.reference());
     }
 
     /**

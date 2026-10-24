@@ -19,6 +19,13 @@ public final class NativePhysicsWorld implements AutoCloseable {
     private int boxes;
     private boolean failed;
     private boolean closed;
+    private final NativePhysicsTrace trace = NativePhysicsTrace.open();
+
+    void traceGravity(PhysicsVector gravity) { trace("WORLD", 0, gravity.array()); }
+
+    private void trace(String operation, long body, double[] values) {
+        if (trace != null) trace.write(operation, body, values);
+    }
 
     NativePhysicsWorld(NativePhysicsLibrary library, PhysicsNativeAccess access, long handle, PhysicsVector origin) {
         if (handle == 0) throw new IllegalStateException("Native physics returned a null world");
@@ -74,6 +81,13 @@ public final class NativePhysicsWorld implements AutoCloseable {
             failed = true;
             throw new IllegalStateException("Native physics returned a null body");
         }
+        if (trace != null) {
+            var payload = new double[1 + description.length + data.length];
+            payload[0] = type.code;
+            System.arraycopy(description, 0, payload, 1, description.length);
+            System.arraycopy(data, 0, payload, 1 + description.length, data.length);
+            trace("CREATE", bodyHandle, payload);
+        }
         var body = new NativePhysicsBody(this, bodyHandle, type, count, ccd);
         bodies.add(body);
         boxes += count;
@@ -92,6 +106,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
         run(() -> access.createFixedJoint(handle, first.handle, second.handle, new double[]{
                 firstAnchor.x(), firstAnchor.y(), firstAnchor.z(),
                 secondAnchor.x(), secondAnchor.y(), secondAnchor.z()}));
+        if (trace != null) trace("JOINT", first.handle, new double[]{second.handle, firstAnchor.x(), firstAnchor.y(), firstAnchor.z(), secondAnchor.x(), secondAnchor.y(), secondAnchor.z()});
     }
 
     public void step(double duration, int substeps) {
@@ -101,12 +116,14 @@ public final class NativePhysicsWorld implements AutoCloseable {
             throw new IllegalArgumentException("Physics step requires dt in (0, 0.1], 1..16 substeps and substep >= 1e-6 seconds");
         }
         run(() -> access.step(handle, duration, substeps));
+        if (trace != null) trace("STEP", 0, new double[]{duration, substeps});
     }
 
     PhysicsBodyState state(NativePhysicsBody body) {
         requireBody(body);
         return call(() -> {
             var data = access.state(handle, body.handle);
+            trace("STATE", body.handle, data);
             if (data.length != 26 || data[25] != body.type.code || data[24] != 0 && data[24] != 1) {
                 throw new IllegalStateException("Malformed native physics state");
             }
@@ -121,6 +138,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
         requireBody(body);
         var values = relativePose(Objects.requireNonNull(pose, "pose"));
         run(() -> access.setPose(handle, body.handle, values));
+        trace("POSE", body.handle, values);
     }
 
     public void setVelocity(NativePhysicsBody body, PhysicsVector linear, PhysicsVector angular) {
@@ -129,6 +147,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
         PhysicsLimits.vector(Objects.requireNonNull(angular, "angular"), 1.0E4, "angular velocity");
         run(() -> access.setVelocity(handle, body.handle,
                 new double[]{linear.x(), linear.y(), linear.z(), angular.x(), angular.y(), angular.z()}));
+        if (trace != null) trace("VELOCITY", body.handle, new double[]{linear.x(), linear.y(), linear.z(), angular.x(), angular.y(), angular.z()});
     }
 
     public void impulse(NativePhysicsBody body, PhysicsVector impulse, PhysicsVector worldPoint) {
@@ -138,16 +157,18 @@ public final class NativePhysicsWorld implements AutoCloseable {
         PhysicsLimits.vector(point, 1.0E6, "relative impulse point");
         run(() -> access.impulse(handle, body.handle,
                 new double[]{impulse.x(), impulse.y(), impulse.z(), point.x(), point.y(), point.z()}));
+        if (trace != null) trace("IMPULSE", body.handle, new double[]{impulse.x(), impulse.y(), impulse.z(), point.x(), point.y(), point.z()});
     }
 
-    void sleep(NativePhysicsBody body) { requireSimulatingDynamic(body); run(() -> access.sleep(handle, body.handle)); }
-    void wake(NativePhysicsBody body) { requireSimulatingDynamic(body); run(() -> access.wake(handle, body.handle)); }
+    void sleep(NativePhysicsBody body) { requireSimulatingDynamic(body); run(() -> access.sleep(handle, body.handle)); if (trace != null) trace("SLEEP", body.handle, new double[0]); }
+    void wake(NativePhysicsBody body) { requireSimulatingDynamic(body); run(() -> access.wake(handle, body.handle)); if (trace != null) trace("WAKE", body.handle, new double[0]); }
 
     void setSimulationPaused(NativePhysicsBody body, boolean paused) {
         requireDynamic(body);
         if (body.simulationPaused == paused) return;
         run(() -> access.setSimulationPaused(handle, body.handle, paused));
         body.simulationPaused = paused;
+        if (trace != null) trace("PAUSE", body.handle, new double[]{paused ? 1 : 0});
     }
 
     void remove(NativePhysicsBody body) {
@@ -155,6 +176,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
         if (body.removed) return;
         requireBody(body);
         run(() -> access.removeBody(handle, body.handle));
+        if (trace != null) trace("REMOVE", body.handle, new double[0]);
         body.removed = true;
         bodies.remove(body);
         boxes -= body.boxCount;
@@ -210,6 +232,7 @@ public final class NativePhysicsWorld implements AutoCloseable {
             failed = true;
             throw failure;
         }
+        if (trace != null) trace.close();
         closed = true;
         for (var body : bodies) body.removed = true;
         bodies.clear();

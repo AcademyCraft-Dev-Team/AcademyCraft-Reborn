@@ -127,15 +127,19 @@ public final class MagneticStructureService {
             reject(player, "budget_crop_lost_seed");
             return Optional.empty();
         }
-        var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                cropped, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
+        var request = new StructureCaptureRequest(
+                cropped, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+        var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled()
+                ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, request, 1.0,
+                        org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
+                : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) {
                 reject(player, "pending_without_reference");
                 return Optional.empty();
             }
-            return Optional.of(new Session(reference, result.transactionId(), cropped, level.getGameTime()));
+            return Optional.of(new Session(reference, result.transactionId(), cropped, level.getGameTime()).trackExtraction(player));
         }
         if (!result.succeeded()) {
             reject(player, result.status() + ":" + result.detail());
@@ -145,7 +149,7 @@ public final class MagneticStructureService {
             reject(player, "committed_without_reference");
             return Optional.empty();
         }
-        return Optional.of(new Session(reference, null, cropped, level.getGameTime()));
+        return Optional.of(new Session(reference, null, cropped, level.getGameTime()).trackExtraction(player));
     }
 
     /** Adopts a visible magnetic cell without recapturing or using its projected host address. */
@@ -397,12 +401,16 @@ public final class MagneticStructureService {
         var selection = magneticSelection(player, immutableSeed, limit, forceMagnetize);
         if (selection.isEmpty()) return ProgramResult.rejected("selection_empty");
         var magneticCells = countMagnetic(level, selection);
-        var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
+        var request = new StructureCaptureRequest(
+                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+        var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled()
+                ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, request, 1.0,
+                        org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
+                : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) return ProgramResult.rejected("pending_without_reference");
-            var pendingSession = new Session(reference, result.transactionId(), selection, level.getGameTime());
+            var pendingSession = new Session(reference, result.transactionId(), selection, level.getGameTime()).trackExtraction(player);
             pendingSession.report = false;
             pendingSession.program = true;
             registerProgram(player, pendingSession, magneticCells, forceMagnetize);
@@ -410,7 +418,7 @@ public final class MagneticStructureService {
         }
         if (!result.succeeded()) return ProgramResult.rejected(result.status() + ":" + result.detail());
         if (reference == null) return ProgramResult.rejected("committed_without_reference");
-        var session = new Session(reference, null, selection, level.getGameTime());
+        var session = new Session(reference, null, selection, level.getGameTime()).trackExtraction(player);
         session.report = false;
         session.program = true;
         registerProgram(player, session, magneticCells, forceMagnetize);
@@ -945,6 +953,7 @@ public final class MagneticStructureService {
         private @Nullable UUID transactionId;
         private @Nullable StructurePhysicsRegion region;
         private @Nullable StructurePhysicsLease lease;
+        private org.academy.api.common.structure.upgrade.StructureCaptureExtractions.@Nullable Handle extractionHandle;
         private Stage stage = Stage.CAPTURING;
         private int unavailableTicks;
         private boolean closed;
@@ -960,6 +969,13 @@ public final class MagneticStructureService {
             this.transactionId = transactionId;
             this.positions = List.copyOf(positions);
             this.startedAt = startedAt;
+        }
+
+        /** Existing hit/adoption sessions never own another capture's extraction lifecycle. */
+        private Session trackExtraction(ServerPlayer actor) {
+            extractionHandle = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .owned(actor, reference).orElse(null);
+            return this;
         }
 
         private Session(StructureRef reference, List<BlockPos> positions, long startedAt,
@@ -1049,6 +1065,15 @@ public final class MagneticStructureService {
                 }
             }
             if (stage == Stage.CAPTURING) {
+                if (!program && extractionHandle != null) {
+                    var result = org.academy.internal.common.ability.program.ProgramStructureExtraction.poll(player, reference);
+                    if (result.status() == org.academy.api.common.ability.program.ProgramStructureOperationResult.Status.PENDING) return true;
+                    if (result.status() != org.academy.api.common.ability.program.ProgramStructureOperationResult.Status.COMPLETED) {
+                        fail(player, result.detail());
+                        close();
+                        return false;
+                    }
+                }
                 if (sable(reference) || SubLevelStructureRefs.isSubLevel(reference)) {
                     if (!program) {
                         return startSableSkillPull(player, destination, fallback, maxSpeedPerTick, stopDistance, range);
@@ -1344,6 +1369,10 @@ public final class MagneticStructureService {
         public void close() {
             if (closed) return;
             closed = true;
+            if (extractionHandle != null) {
+                org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(extractionHandle);
+                extractionHandle = null;
+            }
             try {
                 if (lease != null) lease.close();
             } catch (RuntimeException failure) {

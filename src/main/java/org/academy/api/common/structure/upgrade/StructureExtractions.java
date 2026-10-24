@@ -16,7 +16,7 @@ public final class StructureExtractions {
     private StructureExtractions() {
     }
 
-    /** The live service; extraction motion still reports UNSUPPORTED until it is wired. */
+    /** Live planned extraction; motion advances only at validated solver substeps. */
     public static StructureExtraction service() {
         return LiveStructureExtraction.INSTANCE;
     }

@@ -17,6 +17,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.accelerator.KineticLiftProfile;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.BlockStructureApi;
@@ -587,6 +588,7 @@ public final class VectorStructureService {
         var held = SESSIONS.get(player.getUUID());
         if (held != null && held.stage == Stage.LIFTING && held.usableBy(player)
                 && held.controlActive() && held.manualHover) {
+            if (held.plannedExtraction && !held.lifted) return new PressResult(PressStatus.PREPARING, "extracting");
             return launchHeld(player, held) ? PressResult.thrown("held")
                     : PressResult.rejected("held_launch_rejected");
         }
@@ -666,11 +668,24 @@ public final class VectorStructureService {
         StructurePhysicsRegion region = null;
         if (direct) {
             var owned = SESSIONS.get(player.getUUID());
-            if (owned != null && owned.reference.equals(reference)) {
-                StructureOrientations.cancel(level, reference, owned.controllerId);
+            if (owned != null && owned.reference.equals(reference) && owned.plannedExtraction && !owned.lifted) {
+                return new PressResult(PressStatus.PREPARING, "extracting");
             }
-            if (!StructureBackendRouter.launch(level, reference, direction, speed)) {
-                return PressResult.rejected("sable_launch_rejected");
+            var launchControl = UUID.randomUUID();
+            var status = StructureDirectControl.acquire(level, reference, player, launchControl);
+            if (status != StructureDirectControl.Status.ACTIVE) {
+                return PressResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                        ? "structure_controlled" : "structure_unavailable");
+            }
+            try {
+                if (owned != null && owned.reference.equals(reference)) {
+                    StructureOrientations.cancel(level, reference, owned.controllerId);
+                }
+                if (!StructureBackendRouter.launch(level, reference, direction, speed)) {
+                    return PressResult.rejected("sable_launch_rejected");
+                }
+            } finally {
+                StructureDirectControl.release(reference, launchControl);
             }
         } else {
             region = StructurePhysics.activeRegion(level, reference).orElse(null);
@@ -731,17 +746,21 @@ public final class VectorStructureService {
         var playerSafeSelection = BlockStructureApi.cropToForwardHalfSpace(
                 selection.positions(), player.position(), forward, KineticThrow.PLAYER_CLEARANCE);
         boolean localCapture = !sableMode(level);
-        // A backend's cell filter must run before clearance validation. Otherwise a selected
-        // partial block can hide a real ceiling and then be left behind by the backend crop.
-        if (!localCapture) playerSafeSelection = BlockStructureApi.cropNonFullBlocks(level, playerSafeSelection);
+        // The live Sable capture target preserves admitted plants and partial terrain states.
+        // Keep the pointed-at plant and its supporting column; the preview and transaction
+        // both enforce backend admission instead of silently removing the selected seed.
+        if (!localCapture && !StructureCaptureExtractions.enabled()) {
+            playerSafeSelection = BlockStructureApi.cropNonFullBlocks(level, playerSafeSelection);
+        }
         var positions = BlockStructureApi.cropImmediatelyBlocked(
                 level, playerSafeSelection, Direction.UP,
-                position -> localCapture && org.academy.internal.common.sublevel.SubLevelTerrainBreaker
+                position -> (localCapture || StructureCaptureExtractions.enabled())
+                        && org.academy.internal.common.sublevel.SubLevelTerrainBreaker
                         .canClearObstacle(level, player, position));
         boolean seedUnblocked = positions.contains(seed);
         // Preserve selected plants and partial collision shapes with their supporting cells.
         // The capture backend validates the complete body before any source cell is removed.
-        // The optional Sable bridge still uses its curated full-cell transaction contract.
+        // Sable retains its curated admission gates, including the supported terrain extension.
         if (positions.isEmpty() || !positions.contains(seed)) {
             AcademyCraft.LOGGER.debug("Kinetic capture selection rejected seed={} player={} yaw={} forward={}"
                             + " selected={} seed_selected={} forward_cells={} seed_forward={} seed_unblocked={}"
@@ -776,8 +795,12 @@ public final class VectorStructureService {
                                                        boolean report, boolean program) {
         var level = player.level();
         var budget = cellBudget(level);
-        var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true));
+        var request = new StructureCaptureRequest(
+                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+        var result = StructureCaptureExtractions.enabled()
+                ? StructureCaptureExtractions.capture(level, player, request, KineticThrow.liftHeight(plan.tier()),
+                        program ? StructureCaptureExtractions.NODE_HANDOFF_TICKS : KineticThrow.HOVER_TICKS)
+                : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) {
@@ -888,6 +911,7 @@ public final class VectorStructureService {
     /** Shared validation for an explicit launch command. */
     private static boolean launchHeld(ServerPlayer player, Session held) {
         if (!(player.level() instanceof ServerLevel level)) return false;
+        if (held.plannedExtraction && !held.lifted) return false;
         var direction = KineticThrow.throwDirection(player.getLookAngle());
         if (direction.lengthSqr() <= 1.0e-8) return false;
         StructureOrientations.cancel(level, held.reference, held.controllerId);
@@ -944,7 +968,8 @@ public final class VectorStructureService {
     public static void clear(ServerPlayer player) {
         if (player == null) return;
         var playerId = player.getUUID();
-        CAPTURES.remove(playerId);
+        var capture = CAPTURES.remove(playerId);
+        if (capture != null) StructureCaptureExtractions.release(player, capture.reference);
         terminate(playerId);
     }
 
@@ -964,6 +989,10 @@ public final class VectorStructureService {
     private static void beginLift(ServerPlayer player, StructureRef reference, int tier,
                                   List<BlockPos> positions, boolean report, boolean program) {
         terminate(player.getUUID());
+        if (StructureCaptureExtractions.tracked(reference) && !program) {
+            beginPlannedLift(player, reference, tier, positions);
+            return;
+        }
         if (SubLevelStructureRefs.isSubLevel(reference)) {
             if (program) beginIndependentProgramExtract(player, reference, tier, positions);
             else beginSubLevelLift(player, reference, tier, positions);
@@ -1043,6 +1072,37 @@ public final class VectorStructureService {
         var motion = region.motion(reference).orElse(null);
         playKineticCue(level, motion == null ? region.bounds().getCenter()
                 : motion.pose().localToWorldPoint(motion.localCenterOfMass()));
+    }
+
+    private static void beginPlannedLift(ServerPlayer player, StructureRef reference, int tier,
+                                         List<BlockPos> positions) {
+        var level = (ServerLevel) player.level();
+        var motion = StructureDynamics.motion(level, reference).orElse(null);
+        if (motion == null) {
+            StructureCaptureExtractions.release(player, reference);
+            return;
+        }
+        var held = new Session(reference, level.dimension(), tier, positions.size(), null, null);
+        held.extractionHandle = StructureCaptureExtractions.owned(player, reference).orElse(null);
+        held.plannedExtraction = true;
+        held.directControl = true;
+        held.sableBody = true;
+        held.manualHover = true;
+        held.capturedCells = List.copyOf(positions);
+        held.stage = Stage.LIFTING;
+        var sourceOrigin = new Vec3(positions.stream().mapToInt(BlockPos::getX).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getY).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
+        var plan = liftProfile().planTarget(tier, new KineticLiftProfile.SourceBaseline(
+                StructurePose.identity(sourceOrigin), motion.localCenterOfMass()));
+        held.liftPlan = plan;
+        held.liftStartY = plan.sourceWorldCenterOfMass().y;
+        held.liftTarget = plan.targetWorldCenterOfMass();
+        held.controlTarget = held.liftTarget;
+        held.expiresAt = level.getGameTime() + StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS;
+        SESSIONS.put(player.getUUID(), held);
+        tickPlannedLift(player, held);
+        playKineticCue(level, plan.sourceWorldCenterOfMass());
     }
 
     private static void beginSubLevelLift(ServerPlayer player, StructureRef reference, int tier,
@@ -1150,7 +1210,9 @@ public final class VectorStructureService {
         held.capturedCells = List.copyOf(positions);
         held.sableBody = true;
         held.stage = Stage.LIFTING;
-        held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
+        held.expiresAt = level.getGameTime() + (StructureCaptureExtractions.tracked(reference)
+                ? StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS + StructureCaptureExtractions.NODE_HANDOFF_TICKS
+                : KineticThrow.HOVER_TICKS);
         SESSIONS.put(player.getUUID(), held);
     }
 
@@ -1190,11 +1252,13 @@ public final class VectorStructureService {
                 || !capture.dimension.equals(player.level().dimension())
                 || !player.isAlive() || player.hasDisconnected()) {
             CAPTURES.remove(playerId);
+            StructureCaptureExtractions.release(player, capture.reference);
             return;
         }
         var result = StructureTransactions.poll(level.getServer(), capture.transactionId);
         if (result.isEmpty()) {
             CAPTURES.remove(playerId);
+            StructureCaptureExtractions.release(player, capture.reference);
             rejectCapture(player, "transaction_evicted", capture.report);
             return;
         }
@@ -1202,6 +1266,7 @@ public final class VectorStructureService {
         if (current.pending()) {
             if (level.getGameTime() - capture.startedAt > CAPTURE_TIMEOUT_TICKS) {
                 CAPTURES.remove(playerId);
+                StructureCaptureExtractions.release(player, capture.reference);
                 AcademyCraft.LOGGER.warn("Kinetic Throw capture {} exceeded its tracking window; structure retained",
                         capture.transactionId);
             }
@@ -1212,6 +1277,7 @@ public final class VectorStructureService {
             beginLift(player, current.structure().orElse(capture.reference), capture.tier,
                     capture.positions, capture.report, capture.program);
         } else {
+            StructureCaptureExtractions.release(player, capture.reference);
             rejectCapture(player, current.status() + ":" + current.detail(), capture.report);
         }
     }
@@ -1283,6 +1349,10 @@ public final class VectorStructureService {
     }
 
     private static void tickLifting(ServerPlayer player, Session held) {
+        if (held.plannedExtraction) {
+            tickPlannedLift(player, held);
+            return;
+        }
         if (held.directControl) {
             if (!directControlActive(player, held)) {
                 terminate(player.getUUID());
@@ -1373,6 +1443,24 @@ public final class VectorStructureService {
         if (!(player.level() instanceof ServerLevel level)) return false;
         return StructureDirectControl.validate(level, held.reference, player, held.controllerId)
                 == StructureDirectControl.Status.ACTIVE;
+    }
+
+    private static void tickPlannedLift(ServerPlayer player, Session held) {
+        var level = (ServerLevel) player.level();
+        var result = StructureCaptureExtractions.advance(level, player, held.reference);
+        var snapshot = result.value().orElse(null);
+        if (StructureCaptureExtractions.failed(result)
+                || snapshot != null && snapshot.phase() == org.academy.api.common.structure.upgrade.StructureExtraction.Phase.RELEASED) {
+            AcademyCraft.LOGGER.info("Kinetic extraction ended for {}: {}", held.reference, result.detail());
+            terminate(player.getUUID());
+            return;
+        }
+        var motion = StructureDynamics.motion(level, held.reference).orElse(null);
+        if (motion != null) held.velocity = motion.linearVelocity();
+        if (!held.lifted && StructureCaptureExtractions.arrived(result)) {
+            held.lifted = true;
+            held.expiresAt = hoverDeadline(level.getGameTime());
+        }
     }
 
     private static void tickSableLift(ServerPlayer player, Session held) {
@@ -1892,8 +1980,8 @@ public final class VectorStructureService {
         private final ResourceKey<Level> dimension;
         private final int tier;
         private final int blockCount;
-        private final UUID controllerId = UUID.randomUUID();
-        private final ProgramOrientationHandoff angularHandoff = new ProgramOrientationHandoff(controllerId);
+        private final UUID controllerId;
+        private final ProgramOrientationHandoff angularHandoff;
         private final Map<UUID, Long> impactTicks = new HashMap<>();
         private final StructurePhysicsRegion region;
         private final StructureTractionSession traction;
@@ -1914,6 +2002,8 @@ public final class VectorStructureService {
         private int unavailableTicks;
         private boolean programMove;
         private boolean manualHover;
+        private boolean plannedExtraction;
+        private StructureCaptureExtractions.@Nullable Handle extractionHandle;
         private boolean sableBody;
         private boolean directControl;
         private Vec3 velocity = Vec3.ZERO;
@@ -1924,6 +2014,8 @@ public final class VectorStructureService {
         private Session(StructureRef reference, ResourceKey<Level> dimension, int tier, int blockCount,
                         @Nullable StructurePhysicsRegion region, @Nullable StructureTractionSession traction) {
             this.reference = reference;
+            this.controllerId = StructureCaptureExtractions.controlId(reference).orElseGet(UUID::randomUUID);
+            this.angularHandoff = new ProgramOrientationHandoff(controllerId);
             this.dimension = dimension;
             this.tier = tier;
             this.blockCount = blockCount;
@@ -1987,6 +2079,11 @@ public final class VectorStructureService {
         }
 
         private void closeControl() {
+            if (plannedExtraction) {
+                if (extractionHandle != null) StructureCaptureExtractions.release(extractionHandle);
+                extractionHandle = null;
+                plannedExtraction = false;
+            }
             try {
                 if (lease != null) lease.close();
             } catch (RuntimeException failure) {

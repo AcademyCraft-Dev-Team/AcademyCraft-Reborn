@@ -223,6 +223,8 @@ public final class SableStructureTraction {
         var system = event.getPhysicsSystem();
         org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.beforeSubstep(
                 system.getLevel(), true, event.getTimeStep());
+        org.academy.internal.common.structure.upgrade.control.LiveStructureExtraction.beforeSubstep(
+                system.getLevel(), true, event.getTimeStep());
         var slots = SERVERS.get(system.getLevel().getServer());
         if (slots == null || slots.isEmpty()) return;
         SableStructureAccess.requireThread(system.getLevel().getServer());

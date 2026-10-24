@@ -1,6 +1,7 @@
 package org.academy.internal.common.sublevel;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -35,7 +36,7 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
     public Sweep scan(ServerLevel host, StructureRef reference, StructurePose previousPose,
                       StructurePose currentPose, List<AABB> localCollisionBoxes, Limits limits) {
         requireHost(host);
-        requireReference(host, reference);
+        requireReference(host.dimension().identifier(), reference);
         var checked = requireLimits(limits);
         if (localCollisionBoxes == null || localCollisionBoxes.isEmpty() || previousPose == null
                 || currentPose == null || previousPose.equals(currentPose)) {
@@ -111,7 +112,7 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
             var state = host.getBlockState(position);
             if (!state.equals(candidate.observedState()) || !eligible(host, position, state)) continue;
             var player = playerOrNull(actor);
-            if (player != null && !host.mayInteract(player, position)) continue;
+            if (!mayBreak(host, actor, position)) continue;
             permitted.add(new Candidate(position, state));
         }
         return new BreakPlan(sweep, actor.getUUID(), List.copyOf(permitted), dropItems);
@@ -127,9 +128,20 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
                 || !SubLevelTerrainBreaker.actorAllowed(host, actor)) {
             return new BreakResult(List.of(), List.of(), false);
         }
+        return applyCandidates(host, actor, plan.permitted(), plan.dropItems(), checked, plan.sweep().budgetExhausted());
+    }
+
+    /** Explicit skill clearance uses the same permissions, events and drops as moving bodies. */
+    public static BreakResult applyCandidates(ServerLevel host, Entity actor, List<Candidate> candidates,
+                                              boolean dropItems, Limits limits, boolean budgetExhausted) {
+        requireHost(host);
+        var checked = requireLimits(limits);
+        if (!SubLevelTerrainBreaker.actorAllowed(host, actor)) return new BreakResult(List.of(), List.of(), false);
         var destroyed = new ArrayList<BlockPos>();
         var rejected = new ArrayList<BlockPos>();
-        for (var candidate : plan.permitted()) {
+        int visited = 0;
+        for (var candidate : candidates) {
+            if (++visited > checked.visitedCells()) { budgetExhausted = true; break; }
             if (destroyed.size() >= checked.destroyedBlocks()) {
                 rejected.add(candidate.position());
                 continue;
@@ -142,7 +154,7 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
             var state = host.getBlockState(position);
             var player = playerOrNull(actor);
             if (!state.equals(candidate.observedState()) || !eligible(host, position, state)
-                    || player != null && !host.mayInteract(player, position)) {
+                    || !mayBreak(host, actor, position)) {
                 rejected.add(position);
                 continue;
             }
@@ -157,11 +169,11 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
             // A protection listener may replace the cell or revoke the actor's permission.
             if (!host.getBlockState(position).equals(state)
                     || !SubLevelTerrainBreaker.actorAllowed(host, actor)
-                    || player != null && !host.mayInteract(player, position)) {
+                    || !mayBreak(host, actor, position)) {
                 rejected.add(position);
                 continue;
             }
-            if (!host.destroyBlock(position, plan.dropItems(), actor)) {
+            if (!host.destroyBlock(position, dropItems, actor)) {
                 rejected.add(position);
                 continue;
             }
@@ -169,7 +181,7 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
             SubLevelServer.onBlockChanged(host, position);
         }
         return new BreakResult(List.copyOf(destroyed), List.copyOf(rejected),
-                plan.sweep().budgetExhausted() || destroyed.size() >= checked.destroyedBlocks());
+                budgetExhausted || destroyed.size() >= checked.destroyedBlocks());
     }
 
     static boolean eligible(ServerLevel host, BlockPos position, BlockState state) {
@@ -179,6 +191,14 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
         float hardness = state.getDestroySpeed(host, position);
         if (!Float.isFinite(hardness) || hardness < 0.0f || hardness >= MAX_SOFT_HARDNESS) return false;
         return state.is(SubLevelEnhancementBootstrap.MOTION_BREAKABLE) || defaultSoft(state);
+    }
+
+    private static boolean mayBreak(ServerLevel host, Entity actor, BlockPos position) {
+        if (!SubLevelTerrainBreaker.actorAllowed(host, actor) || !host.isInWorldBounds(position)
+                || !host.getWorldBorder().isWithinBounds(position) || !actor.mayInteract(host, position)
+                || !host.mayInteract(actor, position)) return false;
+        return !(actor instanceof net.minecraft.server.level.ServerPlayer player)
+                || !player.isSpectator() && player.getAbilities().mayBuild;
     }
 
     /** Default eligibility mirrors low-hardness vegetation; the allow tag widens it. */
@@ -263,10 +283,11 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
         return limits;
     }
 
-    private static void requireReference(ServerLevel host, StructureRef reference) {
-        if (reference == null || !SubLevelStructureRefs.isSubLevel(reference)
-                || !reference.dimension().equals(host.dimension().identifier())) {
-            throw new IllegalArgumentException("Terrain sweep requires a SubLevel reference in this host");
+    static void requireReference(Identifier dimension, StructureRef reference) {
+        // Geometry is supplied by the authoritative backend adapter. The host-terrain policy
+        // does not resolve or decode its identity; Sable and local bodies share this event path.
+        if (reference == null || !reference.dimension().equals(dimension)) {
+            throw new IllegalArgumentException("Terrain sweep requires a structure reference in this host");
         }
     }
 

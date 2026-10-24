@@ -36,6 +36,11 @@ if ($Fresh) {
     }
 }
 Copy-Item -LiteralPath (Join-Path $sourceRoot 'options.txt') -Destination $auditRoot
+# Keep isolated automated runs progressing when another application receives focus.
+$auditOptions = Join-Path $auditRoot 'options.txt'
+$auditOptionsText = [System.IO.File]::ReadAllText($auditOptions)
+$auditOptionsText = $auditOptionsText -replace '(?m)^pauseOnLostFocus:true\r?$', 'pauseOnLostFocus:false'
+[System.IO.File]::WriteAllText($auditOptions, $auditOptionsText)
 Copy-Item -LiteralPath (Join-Path $sourceRoot 'config') -Destination $auditRoot -Recurse
 $hashBefore | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $auditRoot 'source-world-sha256.json')
 Write-Output $auditRoot

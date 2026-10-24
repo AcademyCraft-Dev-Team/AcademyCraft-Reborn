@@ -27,6 +27,8 @@ import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
+import org.academy.internal.common.ability.program.ProgramStructureExtraction;
 import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.common.structure.StructureTransactions;
 import org.academy.api.common.util.ViewTargetScanner;
@@ -279,11 +281,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                     .map(state -> state.reference()).orElse(null);
             captureMonitor.track(MagneticStructureService.pendingProgramCapture(player));
             pendingForceMagnetize = forceMagnetize;
-            extractionDeadline = player.level().getGameTime() + 400;
+            extractionDeadline = player.level().getGameTime() + (StructureCaptureExtractions.enabled() ? 800 : 400);
             if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
         }
         var captureFailure = captureMonitor.pollFailure(id -> StructureTransactions.poll(player.level().getServer(), id));
         if (captureFailure.isPresent()) {
+            StructureCaptureExtractions.release(player, pendingExtraction);
             pendingExtraction = null;
             return StructureOperation.result(captureFailure.get());
         }
@@ -291,6 +294,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         var state = MagneticStructureService.programSession(player).orElse(null);
         if (state == null || !state.reference().equals(reference)
                 || player.level().getGameTime() > extractionDeadline) {
+            StructureCaptureExtractions.release(player, pendingExtraction);
             pendingExtraction = null;
             return StructureOperation.rejected("capture_session_ended");
         }
@@ -299,6 +303,14 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 || org.academy.api.common.structure.StructureDynamics.motion(
                         (ServerLevel) player.level(), reference).isEmpty()) {
             return StructureOperation.result(ProgramStructureOperationResult.pending("capture_pending"));
+        }
+        var extraction = ProgramStructureExtraction.poll(player, reference);
+        if (extraction.status() == ProgramStructureOperationResult.Status.PENDING) {
+            return StructureOperation.result(extraction);
+        }
+        if (extraction.status() != ProgramStructureOperationResult.Status.COMPLETED) {
+            pendingExtraction = null;
+            return StructureOperation.result(extraction);
         }
         pendingExtraction = null;
         if (SubLevelStructureRefs.isSubLevel(reference)) {
@@ -398,6 +410,8 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     @Override
     public void closeOrientationCommands() {
         orientationControls.close();
+        if (pendingExtraction != null) StructureCaptureExtractions.release(player, pendingExtraction);
+        pendingExtraction = null;
     }
 
     @Override

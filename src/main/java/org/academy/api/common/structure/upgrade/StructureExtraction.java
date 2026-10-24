@@ -75,6 +75,12 @@ public interface StructureExtraction {
     /** Initialization is legal only before the first physics step of this new capture. */
     enum SourceKind { NEW_CAPTURE, EXISTING_STRUCTURE }
 
+    /**
+     * Linear limits include gravity compensation and use aggregate solver mass. The live
+     * implementation also holds the authenticated source rotation using at most 2 rad/s,
+     * 8 rad/s² and min(10,000, maxForce * collision radius) torque; contact admission still
+     * checks the complete angular sweep. These bounds never grant pose-reset permission.
+     */
     record Limits(double maxLinearSpeed, double maxLinearAcceleration, double maxForce,
                   double maxRetreatDistance, int maxShapeTests) {
         public Limits {

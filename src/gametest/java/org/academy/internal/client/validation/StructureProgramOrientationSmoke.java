@@ -20,10 +20,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.*;
 import org.academy.api.common.structure.*;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.movement.VectorStructureService;
+import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
 import org.academy.internal.common.ability.accelerator.program.ServerAcceleratorProgramRuntime;
 import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService;
 import org.academy.internal.common.ability.aeromanip.program.ServerAeromanipProgramRuntime;
@@ -75,6 +77,8 @@ public final class StructureProgramOrientationSmoke {
     private static Throwable settlementFailure;
     private static HighSpeedJetNozzle nozzle;
     private static double rotationError, resetError, lateSpinSpeed;
+    private static double actualExtractionRise, expectedExtractionRise;
+    private static long extractionWaitTicks, capturePublishedAt;
     private static int spinSamplesAfter200;
 
     private StructureProgramOrientationSmoke() {}
@@ -156,6 +160,7 @@ public final class StructureProgramOrientationSmoke {
         reference = null; control = null; hoverCenter = null; termination = null; settlementFailure = null;
         runtime = null; key = null; transaction = null;
         rotationError = resetError = Double.NaN; lateSpinSpeed = 0; spinSamplesAfter200 = 0; age = 0;
+        actualExtractionRise = Double.NaN; extractionWaitTicks = -1; capturePublishedAt = -1;
         arenaWaitTicks = arenaStableTicks = 0;
         awaitingArena = true;
         arenaSetup = new ArenaSetup(++arenaGeneration, position, seed, aimYaw, aimPitch);
@@ -241,9 +246,26 @@ public final class StructureProgramOrientationSmoke {
                 }
             }
             // Observation delegates every call to the actual registered production executor.
+            if (id.equals(action("extract"))) observePublishedCapture(now);
             var step = actual.execute(context, configuration, inputs);
+            if (id.equals(action("extract"))) observePublishedCapture(now);
             if (id.equals(action("extract")) && step.outputs().containsKey("structure")) {
                 reference = ((ProgramStructureReference) step.outputs().get("structure").value()).reference();
+                var state = motion();
+                actualExtractionRise = state.pose().localToWorldPoint(state.localCenterOfMass()).y
+                        - Vec3.atCenterOf(seed).y;
+                extractionWaitTicks = now - STARTED.get(context.nodeId());
+                if (StructureCaptureExtractions.enabled()) {
+                    check(Math.abs(actualExtractionRise - expectedExtractionRise) <= 0.1,
+                            "extract handed off before reaching source-relative target: rise=" + actualExtractionRise
+                                    + " expected=" + expectedExtractionRise);
+                    check(extractionWaitTicks > 0 && capturePublishedAt >= 0 && now > capturePublishedAt,
+                            "extract handed off immediately after capture: wait=" + extractionWaitTicks
+                                    + " published_at=" + capturePublishedAt + " now=" + now);
+                }
+                AcademyCraft.LOGGER.info("STRUCTURE_PROGRAM_EXTRACTION_HANDOFF category={} enabled={} rise={} expected={} wait_ticks={} post_capture_ticks={}",
+                        category, StructureCaptureExtractions.enabled(), actualExtractionRise, expectedExtractionRise,
+                        extractionWaitTicks, capturePublishedAt < 0 ? -1 : now - capturePublishedAt);
             }
             if (id.equals(action("control")) && step.outputs().containsKey("control")) {
                 control = (ProgramStructureControl) step.outputs().get("control").value();
@@ -284,6 +306,22 @@ public final class StructureProgramOrientationSmoke {
         check(center.distanceTo(hoverCenter) < 1.0, "linear support could not isolate angular test");
     }
 
+    /** Observe publication without acquiring authority or helping the extraction move. */
+    private static void observePublishedCapture(long now) {
+        if (capturePublishedAt >= 0) return;
+        var observed = switch (categoryIndex) {
+            case 0 -> VectorStructureService.diagnostic(player).map(state -> state.reference());
+            case 1 -> MagneticStructureService.programSession(player).map(state -> state.reference());
+            default -> HighSpeedJetStructureService.diagnostic(player).map(state -> state.reference());
+        };
+        observed.ifPresent(candidate -> {
+            var handle = StructureSpaces.resolve(player.level().getServer(), candidate).orElse(null);
+            if (handle != null && handle.lifecycle() == StructureLifecycle.ACTIVE
+                    && StructureDynamics.motion(player.level(), candidate).isPresent()
+                    && player.level().getBlockState(seed).isAir()) capturePublishedAt = now;
+        });
+    }
+
     private static void finishCategory(MinecraftServer server) {
         check(settlementFailure == null, "VM settlement failed: " + settlementFailure);
         check(termination.kind() == ProgramSessionScheduler.TerminationKind.COMPLETED,
@@ -292,6 +330,9 @@ public final class StructureProgramOrientationSmoke {
         check(control != null && !StructureDirectControl.occupied(reference, control.structureRuntimeId()), "release retained control");
         var row = new LinkedHashMap<String, Object>();
         row.put("category", category.toString()); row.put("backend", reference.backend().toString());
+        row.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
+        row.put("actual_extraction_rise", actualExtractionRise); row.put("expected_extraction_rise", expectedExtractionRise);
+        row.put("wait_ticks", extractionWaitTicks);
         row.put("node_completion_order", List.copyOf(COMPLETED)); row.put("rotate_angle_error", rotationError);
         row.put("reset_up_error", resetError); row.put("spin_requested_ticks", SPIN_TICKS);
         row.put("spin_samples_after_200", spinSamplesAfter200); row.put("late_spin_speed", lateSpinSpeed);
@@ -313,6 +354,7 @@ public final class StructureProgramOrientationSmoke {
         if (categoryIndex == 0) extract.addProperty("tier", 0);
         else if (categoryIndex == 1) extract.addProperty("force_magnetize", false);
         else extract.addProperty("radius", 2);
+        expectedExtractionRise = categoryIndex == 0 ? KineticThrow.liftHeight(extract.get("tier").getAsInt()) : 1.0;
         var axis = new JsonObject(); axis.addProperty("x", 0); axis.addProperty("y", 0); axis.addProperty("z", 1);
         var angle = new JsonObject(); angle.addProperty("value", -Math.PI / 4);
         var spinAxis = new JsonObject(); spinAxis.addProperty("x", 0); spinAxis.addProperty("y", 1); spinAxis.addProperty("z", 0);
@@ -367,7 +409,8 @@ public final class StructureProgramOrientationSmoke {
         try {
             Files.writeString(output, new GsonBuilder().setPrettyPrinting().create().toJson(
                     Map.of("passed", passed, "cases", RESULTS, "failure", detail, "actual_node_vm", true,
-                            "actual_save_execute_packets", false, "linear_gravity_support_only", true)));
+                            "actual_save_execute_packets", false, "linear_gravity_support_only", true,
+                            "extraction_gameplay_enabled", StructureCaptureExtractions.enabled())));
         } catch (Exception error) { AcademyCraft.LOGGER.error("Could not save program orientation report", error); }
     }
     private static void fail(Throwable error) {

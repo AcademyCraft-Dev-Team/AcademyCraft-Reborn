@@ -9,10 +9,12 @@ import org.academy.internal.common.physics.PhysicsProviderCatalog;
 
 import java.util.EnumMap;
 
-/** Draft services stay disabled; the separately enabled orientation service uses existing solvers. */
+/** Draft services stay disabled; live extraction and orientation use the existing solvers. */
 public final class StructureUpgradeBootstrap {
     public static final boolean DRAFT_GAMEPLAY_ENABLED = false;
     public static final boolean ORIENTATION_ENABLED = true;
+    public static final boolean EXTRACTION_ENABLED =
+            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled();
     public static final StructureUpgradeServices DRAFT = createScaffold();
     public static final StructureUpgradeServices LIVE = createLive();
     public static final PhysicsProviderCatalog PROVIDERS = PhysicsProviderCatalog.defaults();
@@ -24,7 +26,7 @@ public final class StructureUpgradeBootstrap {
         entries.put(StructureCapabilities.Capability.ORIENTATION, new StructureCapabilities.Support(
                 StructureCapabilities.Readiness.EXPERIMENTAL, true, "sublevel_sable_bounded_angular_control"));
         entries.put(StructureCapabilities.Capability.EXTRACTION, new StructureCapabilities.Support(
-                StructureCapabilities.Readiness.EXPERIMENTAL, false, "capture_preview_and_binding_only"));
+                StructureCapabilities.Readiness.EXPERIMENTAL, EXTRACTION_ENABLED, "sublevel_sable_bounded_extraction"));
         return new StructureUpgradeServices(new StructureCapabilities(entries),
                 org.academy.api.common.structure.upgrade.StructureExtractions.service(),
                 org.academy.api.common.structure.upgrade.StructureOrientations.service(), DRAFT.provenance(),
@@ -52,8 +54,8 @@ public final class StructureUpgradeBootstrap {
     private static void setup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> AcademyCraft.LOGGER.info(
                 "Structure upgrade: SCAFFOLD_REGISTERED; draft services disabled; live orientation EXPERIMENTAL; "
-                        + "live extraction preview/binding EXPERIMENTAL and not gameplay-enabled; {} capabilities, "
+                        + "live extraction EXPERIMENTAL gameplay={}; {} capabilities, "
                         + "{} provider descriptors",
-                DRAFT.capabilities().entries().size(), PROVIDERS.descriptors().size()));
+                EXTRACTION_ENABLED, DRAFT.capabilities().entries().size(), PROVIDERS.descriptors().size()));
     }
 }

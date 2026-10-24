@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.upgrade.control.LiveStructureExtraction;
 import org.academy.internal.common.sublevel.SubLevelDirectControl;
 import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.jspecify.annotations.Nullable;
@@ -161,7 +162,8 @@ public final class StructureDirectControl {
                     continue;
                 }
                 boolean local = SubLevelStructureRefs.isSubLevel(reference);
-                if (local || !org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)) {
+                if (local || !(org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)
+                        || LiveStructureExtraction.controls(host, reference))) {
                     var probe = local ? leaseProbe(host, reference) : StructureBackendRouter.probeDirectControl(host, reference);
                     if (probeRevokesLease(probe, lease.runtimeId(), local)) release(reference, lease.controlId());
                 }
@@ -180,13 +182,15 @@ public final class StructureDirectControl {
 
     private static void cancel(StructureRef reference, UUID controlId) {
         org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.cancel(reference, controlId);
+        LiveStructureExtraction.cancel(reference, controlId);
         if (SubLevelStructureRefs.isSubLevel(reference)) SubLevelDirectControl.cancel(reference, controlId);
     }
 
     private static Probe leaseProbe(ServerLevel host, StructureRef reference) {
         var probe = StructureBackendRouter.probeDirectControl(host, reference);
         if (probe.state() == Probe.State.UNAVAILABLE && SubLevelStructureRefs.isSubLevel(reference)
-                && org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)) {
+                && (org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)
+                || LiveStructureExtraction.controls(host, reference))) {
             // Keep the exact existing lease while this body alone waits for terrain. No impulse
             // can pass the paused native body, and the angular registry still enforces timeout.
             var body = org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE.observe(host, reference);
@@ -212,6 +216,7 @@ public final class StructureDirectControl {
         Objects.requireNonNull(control, "control");
         if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
                 || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
+        if (LiveStructureExtraction.controls(host, reference)) return false;
         return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control,
                 holdOrientation);
     }
@@ -227,6 +232,7 @@ public final class StructureDirectControl {
         Objects.requireNonNull(holdPose, "holdPose");
         if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
                 || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
+        if (LiveStructureExtraction.controls(host, reference)) return false;
         return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control, holdPose);
     }
 

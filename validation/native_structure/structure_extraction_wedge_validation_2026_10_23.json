@@ -1,0 +1,1016 @@
+{
+  "schema": "academy-structure-extraction-validation-v1",
+  "date": "2026-10-23",
+  "source_baseline": "6383946a75bf81954da5b14a3cf32f806f3cadbc",
+  "status": "functional_checks_passed_with_open_stress_failures",
+  "scope": "列明的提取、三系交接及构建已完成验证；原生 S0 压力与完整 content 矩阵仍失败，未声明任意地形或性能验收。",
+  "save_isolation": {
+    "run_directory_prefix": "run/native-sublevel-direct-smoke-",
+    "fresh_source_world": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke",
+    "original_worlds": [
+      "run/saves/test",
+      "run/saves/test2"
+    ],
+    "original_worlds_used_as_run_directories": false,
+    "original_world_write_performed": false,
+    "hash_unchanged_claim": false,
+    "note": "测试在独立副本运行；未对 test/test2 原存档执行写入。本记录不宣称已完成两原存档的全文件前后哈希对照。"
+  },
+  "execution": {
+    "initialization": ". ./build/native-physics-p16-env.ps1",
+    "prepare": "./validation/native_structure/prepare_default_skill_smoke.ps1 -Name <unique-name> -Fresh",
+    "native_task": "runClientDev",
+    "sable_task": "runClientSable",
+    "gradle_common_arguments": [
+      "-DisDev=true",
+      "@physicsNativeArgs",
+      "--console=plain"
+    ],
+    "skill_fixture_uses_real_packet_handlers": true,
+    "manual_keyboard_input": false,
+    "performance_comparison_performed": false
+  },
+  "checks": [
+    {
+      "id": "native_vm_final",
+      "status": "passed",
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vm-native-final/structure-program-orientation-result.json",
+      "log": "build/extraction-vm-native-final.log",
+      "init_script": "validation/native_structure/structure_program_orientation.init.gradle",
+      "actual_node_vm": true,
+      "actual_save_execute_packets": false,
+      "extraction_gameplay_enabled": true,
+      "node_completion_order": [
+        2,
+        3,
+        4,
+        8,
+        9,
+        10
+      ],
+      "cases": [
+        {
+          "category": "academy:accelerator",
+          "backend": "academy:sublevel",
+          "expected_rise": 3,
+          "actual_rise": 2.9787865395054496,
+          "wait_ticks": 23,
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "passed": true
+        },
+        {
+          "category": "academy:electromaster",
+          "backend": "academy:sublevel",
+          "expected_rise": 1,
+          "actual_rise": 0.9762646488762243,
+          "wait_ticks": 17,
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "passed": true
+        },
+        {
+          "category": "academy:aeromanip",
+          "backend": "academy:sublevel",
+          "expected_rise": 1,
+          "actual_rise": 0.9798103654334795,
+          "wait_ticks": 16,
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "sable_vm_final",
+      "status": "passed",
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vm-sable-final/structure-program-orientation-result.json",
+      "log": "build/extraction-vm-sable-final.log",
+      "init_script": "validation/native_structure/structure_program_orientation.init.gradle",
+      "run_selection_property": "academyStructureOrientationRun=clientSable",
+      "actual_node_vm": true,
+      "actual_save_execute_packets": false,
+      "extraction_gameplay_enabled": true,
+      "node_completion_order": [
+        2,
+        3,
+        4,
+        8,
+        9,
+        10
+      ],
+      "cases": [
+        {
+          "category": "academy:accelerator",
+          "backend": "academy:sable",
+          "expected_rise": 3,
+          "actual_rise": 2.976470947265625,
+          "wait_ticks": 22,
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "passed": true
+        },
+        {
+          "category": "academy:electromaster",
+          "backend": "academy:sable",
+          "expected_rise": 1,
+          "actual_rise": 0.984344482421875,
+          "wait_ticks": 17,
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "passed": true
+        },
+        {
+          "category": "academy:aeromanip",
+          "backend": "academy:sable",
+          "expected_rise": 1,
+          "actual_rise": 0.978240966796875,
+          "wait_ticks": 15,
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "roof_r3",
+      "status": "passed",
+      "source_kind": "json",
+      "evidence": [
+        "run/native-sublevel-direct-smoke-extraction-roof-native-r3/sublevel-lift-tiers-result.json",
+        "run/native-sublevel-direct-smoke-extraction-roof-sable-r3/sublevel-lift-tiers-result.json"
+      ],
+      "logs": [
+        "build/extraction-roof-native-r3.log",
+        "build/extraction-roof-sable-r3.log"
+      ],
+      "init_script": "validation/native_structure/sublevel_lift_tiers.init.gradle",
+      "backends": [
+        "academy:sublevel",
+        "academy:sable"
+      ],
+      "extraction_gameplay_enabled": true,
+      "rejection": "REJECTED:extraction_preview:BLOCKED:extraction_path_blocked",
+      "unchanged_source_cells_per_backend": 8379,
+      "unchanged_bedrock_cells_per_backend": 9,
+      "structures_before_per_backend": 0,
+      "structures_after_per_backend": 0,
+      "new_structures_per_backend": 0,
+      "observation_ticks_per_backend": 5,
+      "note": "真实 H 释放返回 BLOCKED，并观察源区域保持不变；不以 CONFLICT、未命中或没有结构代替该负例。"
+    },
+    {
+      "id": "native_default_focused_r2",
+      "status": "passed",
+      "source_kind": "json_and_log",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-default-focused-r2/sublevel-default-skills-result.json",
+      "log": "build/extraction-default-focused-r2.log",
+      "init_script": "validation/native_structure/sublevel_default_skills_focused.init.gradle",
+      "extraction_gameplay_enabled": true,
+      "explicit_extraction_enable_property": false,
+      "direct_complete": true,
+      "content_matrix_executed": false,
+      "server_ticks": 122,
+      "jet": {
+        "rise": 0.9710125758928143,
+        "extraction_released": true,
+        "successor_active": true,
+        "entity_impact": true,
+        "rotated_reactivation": true,
+        "retained_after_close": true
+      },
+      "kinetic": {
+        "rise": 2.9871856126244154,
+        "early_h_retained": true,
+        "actual_h_packet": true,
+        "launch_speed_above_20": true,
+        "travel_above_1": true
+      },
+      "magnetic": {
+        "rise": 0.9762646488762527,
+        "extraction_released": true,
+        "successor_active": true,
+        "actual_r_start_stop_packets": true,
+        "collider_validation": true,
+        "outline_occluded": true,
+        "retained_after_stop": true
+      },
+      "note": "完整执行现有 SubLevelDirectSkillSmoke 的 direct 案例；此结果不代表 content/plot 完整矩阵通过。"
+    },
+    {
+      "id": "native_vegetation_r5",
+      "status": "passed",
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vegetation-native-r5/sublevel-lift-tiers-result.json",
+      "log": "build/extraction-vegetation-native-r5.log",
+      "init_script": "validation/native_structure/sublevel_lift_tiers.init.gradle",
+      "extraction_gameplay_enabled": true,
+      "terrain": "step",
+      "embedded": true,
+      "vegetation": true,
+      "disturbance": false,
+      "discard_between_tiers": false,
+      "cases": [
+        {
+          "tier": 0,
+          "height": 3,
+          "rise": 3.022992187499952,
+          "hover_ticks": 200,
+          "captured_plants": 32,
+          "cleared_leaves": 52,
+          "leaf_break_events": 47,
+          "leaf_drop_events": 52,
+          "max_xz_drift": 0,
+          "max_orientation_error_deg": 0,
+          "passed": true
+        },
+        {
+          "tier": 1,
+          "height": 5,
+          "rise": 5.022992187499895,
+          "hover_ticks": 200,
+          "captured_plants": 24,
+          "cleared_leaves": 42,
+          "leaf_break_events": 39,
+          "leaf_drop_events": 42,
+          "max_xz_drift": 0,
+          "max_orientation_error_deg": 0,
+          "passed": true
+        },
+        {
+          "tier": 2,
+          "height": 7,
+          "rise": 7.022992187499895,
+          "hover_ticks": 200,
+          "captured_plants": 24,
+          "cleared_leaves": 42,
+          "leaf_break_events": 39,
+          "leaf_drop_events": 42,
+          "max_xz_drift": 0,
+          "max_orientation_error_deg": 0,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "sable_vegetation",
+      "status": "superseded_by_sable_vegetation_r9",
+      "last_attempt": {
+        "id": "sable_vegetation_r5",
+        "status": "failed",
+        "source_kind": "json",
+        "evidence": "run/native-sublevel-direct-smoke-extraction-vegetation-sable-r5/sublevel-lift-tiers-result.json",
+        "log": "build/extraction-vegetation-sable-r5.log",
+        "failure": "java.lang.IllegalStateException: capture did not start",
+        "tier": 0,
+        "phase": 2,
+        "age_ticks": 85,
+        "cases_completed": 0,
+        "hover_best": 0
+      },
+      "note": "r5 准入失败，r6量化接触误拒；r7/r8已抬升并200tick，但向下发射撞实体地面。r9改为两后端共同的向上15度开阔发射验收，保留地形与正常碰撞。"
+    },
+    {
+      "id": "native_h_r3",
+      "status": "passed",
+      "source_kind": "log",
+      "evidence": "build/extraction-h-native-r3.log",
+      "completion_line": 4234,
+      "run_directory": "run/native-sublevel-direct-smoke-extraction-h-native-r3-20261023",
+      "init_script": "validation/native_structure/sublevel_lift_tiers.init.gradle",
+      "terrain": "step",
+      "embedded": true,
+      "fixed_anchor": [
+        -156,
+        123,
+        61
+      ],
+      "disturbance": {
+        "linear_delta": [
+          0.2,
+          0,
+          0
+        ],
+        "angular_delta": [
+          0,
+          0,
+          0.05
+        ]
+      },
+      "discard_between_tiers": false,
+      "slip_used": false,
+      "cases": [
+        {
+          "tier": 0,
+          "height": 3,
+          "rise": 3.022992187499952,
+          "hover_ticks": 200,
+          "max_orientation_error_deg": 0,
+          "angular_reversals": 0
+        },
+        {
+          "tier": 1,
+          "height": 5,
+          "rise": 5.022992187499909,
+          "hover_ticks": 200,
+          "max_orientation_error_deg": 0,
+          "angular_reversals": 0
+        },
+        {
+          "tier": 2,
+          "height": 7,
+          "rise": 7.022992187499909,
+          "hover_ticks": 200,
+          "max_orientation_error_deg": 0,
+          "angular_reversals": 0
+        }
+      ],
+      "note": "该次运行早于独立结果 JSON 接入，来源是明确的三档和整体通过日志。"
+    },
+    {
+      "id": "sable_h_r5",
+      "status": "passed",
+      "source_kind": "log",
+      "evidence": "build/extraction-h-sable-r5.log",
+      "completion_line": 5273,
+      "run_directory": "run/native-sublevel-direct-smoke-extraction-h-sable-r5",
+      "init_script": "validation/native_structure/sublevel_lift_tiers.init.gradle",
+      "run_selection_property": "academySubLevelLiftRun=clientSable",
+      "terrain": "step",
+      "embedded": true,
+      "fixed_anchor": [
+        -156,
+        123,
+        61
+      ],
+      "disturbance": {
+        "linear_delta": [
+          0.2,
+          0,
+          0
+        ],
+        "angular_delta": [
+          0,
+          0,
+          0.05
+        ]
+      },
+      "discard_between_tiers": false,
+      "slip_used": false,
+      "cases": [
+        {
+          "tier": 0,
+          "height": 3,
+          "rise": 3.032447814941463,
+          "hover_ticks": 200,
+          "max_xz_drift": 1.0536737249213628E-08,
+          "max_orientation_error_deg": 2.4148365394514667E-06,
+          "angular_reversals": 0
+        },
+        {
+          "tier": 1,
+          "height": 5,
+          "rise": 5.032447814941463,
+          "hover_ticks": 200,
+          "max_xz_drift": 8.33000552092746E-09,
+          "max_orientation_error_deg": 0,
+          "angular_reversals": 0
+        },
+        {
+          "tier": 2,
+          "height": 7,
+          "rise": 7.032409667968892,
+          "hover_ticks": 200,
+          "max_xz_drift": 1.899532931914542E-08,
+          "max_orientation_error_deg": 0,
+          "angular_reversals": 0
+        }
+      ],
+      "note": "该次运行来源为日志，无既有结果 JSON；不包含植被。"
+    },
+    {
+      "id": "full_default_content_matrix",
+      "status": "failed_unresolved",
+      "evidence": "build/extraction-default-skills-final.log",
+      "failure_line": 4232,
+      "failure": "SubLevel content conservation: fixture did not reuse the freed plot",
+      "assertion": "src/gametest/java/org/academy/internal/client/validation/SubLevelContentSmoke.java:117",
+      "magnetic_and_jet_direct_cases_reached": false,
+      "new_extraction_helper_on_failing_capture_path": false,
+      "suspected_mechanism": "PlotStorage.allocate 优先消费预热 FIFO；默认预热 2 个地块，第二次捕获不保证重用刚释放的地块。PlotAllocator 使用 nextClearBit(0)，没有递增分配游标。",
+      "cause_confirmed": false,
+      "baseline_comparison_performed": false,
+      "note": "未记录失败时预热队列及两次 plot 身份，原因尚未查明；不能称为既有问题或用 focused 通过替代完整矩阵通过。"
+    },
+    {
+      "id": "rust_default_baseline",
+      "status": "failed",
+      "evidence": "build/extraction-final-rust-baseline.log",
+      "command": "cargo test --manifest-path native/academy_physics/Cargo.toml --locked --offline -- --nocapture",
+      "diagnostic_environment_variables_set": [],
+      "passed": 23,
+      "failed": 5,
+      "ignored": 1,
+      "filtered_out": 0,
+      "seconds": 144.01,
+      "exit_code": 101,
+      "failed_tests": [
+        "tests::disturbed_step_socket_production_startup_and_angular_servo_require_full_lift",
+        "tests::disturbed_step_socket_raw_angular_reaches_solver_and_requires_full_lift",
+        "tests::disturbed_step_socket_raw_both_reach_solver_and_require_full_lift",
+        "tests::disturbed_step_socket_raw_linear_reaches_solver_and_requires_full_lift",
+        "tests::disturbed_step_socket_settle10_clean_without_repeated_pose_reset_lifts_with_com_force"
+      ],
+      "note": "保留未授权原始 S0 诊断的失败。新 Java 提取控制器的实机通过不等于原生解算器通用楔紧问题已根治。"
+    },
+    {
+      "id": "rust_exact_trace_replay",
+      "status": "passed",
+      "evidence": "build/extraction-final-rust-replay.log",
+      "command": "cargo test --manifest-path native/academy_physics/Cargo.toml --locked --offline replay_client_trace -- --ignored --nocapture",
+      "environment": {
+        "ACADEMY_PHYSICS_TRACE": "build/wedge-native-trace-1.txt"
+      },
+      "removal_or_contact_overrides_set": false,
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "filtered_out": 28,
+      "seconds": 13.22,
+      "exit_code": 0,
+      "replay_steps": 503,
+      "maximum_state_error": 0,
+      "diagnostic_environment_cleared_after_run": true,
+      "note": "重放历史失败轨迹，验证原生记录/重放的一致性；不是新控制器通过证据。"
+    },
+    {
+      "status": "passed",
+      "result": {
+        "passed": true,
+        "status": "passed",
+        "extraction_gameplay_enabled": true,
+        "terrain": "step",
+        "embedded": true,
+        "vegetation": true,
+        "disturbance": false,
+        "disturbance_mode": "both",
+        "discard_between_tiers": false,
+        "only_tier": -1,
+        "tier": 3,
+        "phase": 4,
+        "age_ticks": 798,
+        "hover_best": 200,
+        "cases": [
+          {
+            "tier": 0,
+            "height": 3,
+            "rise": 3.032445271810019,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 5.233177706153776E-06,
+            "max_angular_speed": 0.0,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 32,
+            "cleared_leaves": 49,
+            "leaf_break_events": 47,
+            "leaf_drop_events": 49,
+            "pass": true,
+            "launch_distance": 46.77469841324515,
+            "launch_pitch": -15.0,
+            "flight_pass": true
+          },
+          {
+            "tier": 1,
+            "height": 5,
+            "rise": 5.032404042608874,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 1.0768666709527154E-06,
+            "max_angular_speed": 0.0,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 39,
+            "cleared_leaves": 55,
+            "leaf_break_events": 52,
+            "leaf_drop_events": 55,
+            "pass": true,
+            "launch_distance": 46.774786094349736,
+            "launch_pitch": -15.0,
+            "flight_pass": true
+          },
+          {
+            "tier": 2,
+            "height": 7,
+            "rise": 7.032411627813389,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 1.5735019438235727E-06,
+            "max_angular_speed": 3.11018293697519E-07,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 38,
+            "cleared_leaves": 54,
+            "leaf_break_events": 51,
+            "leaf_drop_events": 54,
+            "pass": true,
+            "launch_distance": 46.774738011162874,
+            "launch_pitch": -15.0,
+            "flight_pass": true
+          }
+        ],
+        "roof_observed_rejections": [],
+        "roof_source_snapshot_cells": 0,
+        "roof_structure_count_before": 0,
+        "failure": "",
+        "failure_stack": []
+      },
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vegetation-sable-r9/sublevel-lift-tiers-result.json",
+      "id": "sable_vegetation_r9",
+      "log": "build/extraction-vegetation-sable-r9.log"
+    },
+    {
+      "status": "passed",
+      "result": {
+        "passed": true,
+        "status": "passed",
+        "extraction_gameplay_enabled": true,
+        "terrain": "step",
+        "embedded": true,
+        "vegetation": true,
+        "disturbance": false,
+        "disturbance_mode": "both",
+        "discard_between_tiers": false,
+        "only_tier": -1,
+        "tier": 3,
+        "phase": 4,
+        "age_ticks": 801,
+        "hover_best": 200,
+        "cases": [
+          {
+            "tier": 0,
+            "height": 3,
+            "rise": 3.022992187499952,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 0.0,
+            "max_angular_speed": 0.0,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 32,
+            "cleared_leaves": 51,
+            "leaf_break_events": 47,
+            "leaf_drop_events": 51,
+            "pass": true,
+            "launch_distance": 48.95553015417857,
+            "launch_pitch": -15.0,
+            "flight_pass": true
+          },
+          {
+            "tier": 1,
+            "height": 5,
+            "rise": 5.022992187499895,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 0.0,
+            "max_angular_speed": 0.0,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 24,
+            "cleared_leaves": 44,
+            "leaf_break_events": 39,
+            "leaf_drop_events": 44,
+            "pass": true,
+            "launch_distance": 48.955530154178504,
+            "launch_pitch": -15.0,
+            "flight_pass": true
+          },
+          {
+            "tier": 2,
+            "height": 7,
+            "rise": 7.022992187499895,
+            "terrain": "step",
+            "discard_between_tiers": false,
+            "max_xz_drift": 0.0,
+            "max_angular_speed": 0.0,
+            "max_orientation_error_deg": 0.0,
+            "angular_reversals": 0,
+            "hover_ticks": 200,
+            "hover_best": 200,
+            "captured_plants": 24,
+            "cleared_leaves": 43,
+            "leaf_break_events": 39,
+            "leaf_drop_events": 43,
+            "pass": true,
+            "launch_distance": 48.95553015417845,
+            "launch_pitch": -15.0,
+            "flight_pass": true
+          }
+        ],
+        "roof_observed_rejections": [],
+        "roof_source_snapshot_cells": 0,
+        "roof_structure_count_before": 0,
+        "failure": "",
+        "failure_stack": []
+      },
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vegetation-native-r6/sublevel-lift-tiers-result.json",
+      "id": "native_vegetation_r6",
+      "log": "build/extraction-vegetation-native-r6.log"
+    },
+    {
+      "status": "passed",
+      "result": {
+        "passed": true,
+        "status": "passed",
+        "fixture": "SubLevelDirectSkillSmoke",
+        "direct_complete": true,
+        "content_matrix_executed": false,
+        "extraction_gameplay_enabled": true,
+        "server_ticks": 122,
+        "maximum_server_ticks": 1500,
+        "failure": "",
+        "failure_stack": []
+      },
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-default-focused-r4/sublevel-default-skills-result.json",
+      "id": "native_default_focused_r4",
+      "log": "build/extraction-default-focused-r4.log"
+    },
+    {
+      "status": "passed",
+      "result": {
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "actual_extraction_rise": 2.9787865395054496,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 23,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "actual_extraction_rise": 0.9762646488762243,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 17,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "actual_extraction_rise": 0.9798103654334795,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 16,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "actual_node_vm": true,
+        "linear_gravity_support_only": true,
+        "failure": ""
+      },
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vm-native-owner-final/structure-program-orientation-result.json",
+      "id": "native_vm_owner_final",
+      "log": "build/extraction-vm-native-owner-final.log"
+    },
+    {
+      "status": "passed",
+      "result": {
+        "actual_save_execute_packets": false,
+        "failure": "",
+        "linear_gravity_support_only": true,
+        "actual_node_vm": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "actual_extraction_rise": 2.976470947265625,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 22,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "actual_extraction_rise": 0.984344482421875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 17,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "extraction_gameplay_enabled": true,
+        "passed": true
+      },
+      "source_kind": "json",
+      "evidence": "run/native-sublevel-direct-smoke-extraction-vm-sable-owner-final/structure-program-orientation-result.json",
+      "id": "sable_vm_owner_final",
+      "log": "build/extraction-vm-sable-owner-final.log"
+    }
+  ],
+  "native_boundary": {
+    "source_file": "native/academy_physics/src/lib.rs",
+    "preexisting_uncommitted_diff": {
+      "additions": 374,
+      "deletions": 56
+    },
+    "this_round_lib_additions": 2,
+    "this_round_lib_change": "#[cfg(test)] mod trace_replay",
+    "current_combined_diff": {
+      "additions": 376,
+      "deletions": 56
+    },
+    "preexisting_content_preserved_after_removing_module": true,
+    "production_prefix_matches_baseline": true,
+    "new_test_file": "native/academy_physics/src/trace_replay.rs",
+    "slip_candidate": "withdrawn",
+    "slip_production_api_or_ffi_remaining": false,
+    "bundled_dll_or_manifest_modified": false,
+    "bundled": {
+      "envelope": "src/main/resources/academy/native_physics/windows-x86_64/academy_physics.dll.b64",
+      "manifest": "src/main/resources/academy/native_physics/windows-x86_64/academy_physics.properties",
+      "abi": 2,
+      "engine": "rapier3d-f64-0.36.1",
+      "decoded_bytes": 2735616,
+      "decoded_sha256": "f68c901911b18be6f92a9ea9e44b1e09cea8d34dd75ff08af50f035f6dcf4a06",
+      "manifest_sha256_matches": true,
+      "manifest_source_sha256": "73ee343cfdd623da3d5c1ea2cf5198c6a5c02d4662abd267c3420b2e6c0c5656"
+    },
+    "workspace_source_sha256": "1218241d100cecdf6e68ab1ec0fd8943688120f9093ce5de9a858f5cf93d892b",
+    "prepared_artifact_manifest_source_matches_workspace": true,
+    "source_fingerprint_difference": "源码指纹包括 cfg(test) 内容；工作区测试诊断及 trace_replay 使其不同于既有 bundled 清单，不代表新增生产 slip 或解算器修改。",
+    "final_packaged_jar_verification": "passed_for_dev_and_release"
+  },
+  "pending": [
+    {
+      "id": "sable_default_magnetic_and_jet_packet_entry",
+      "status": "pending",
+      "reason": "Sable 三系 VM 已验提取交接，默认磁/气包入口尚未独立专项验证。"
+    },
+    {
+      "status": "unverified",
+      "reason": "对应轴float半ULP超过1e-4格时不启用数值豁免；|COM|>=2048等远坐标仍可能拒绝贴墙提取",
+      "id": "far_coordinate_sable_contact"
+    },
+    {
+      "status": "unverified",
+      "reason": "本地不同actor拒绝已验；真实多TCP客户端、卸载/断线/主体死亡/外部模组竞争完整矩阵未跑",
+      "id": "full_network_multiplayer_and_lifecycle"
+    },
+    {
+      "status": "unverified",
+      "reason": "正常Break/BlockDrops实测通过；受保护区域事件取消实机矩阵待测",
+      "id": "protection_event_cancellation"
+    }
+  ],
+  "limitations": [
+    "Rust默认压力为23通过5失败1ignored；这5项未由本轮技能控制器通过自动关闭，开发FFM命令明确排除了Rust前置并单独报告。",
+    "完整control/content/direct矩阵曾在ContentSmoke地块复用断言失败；独立默认技能回归不替代完整矩阵，尚无旧基线对照。",
+    "两后端使用相同地形和向上15度飞行场景，但实际选区植物数量不同；没有做等体积/FPS/吞吐性能配对，不能据此宣称性能等价。",
+    "未进行任意地形、任意模组方块、受保护事件取消及所有远坐标验收。",
+    "原test/test2未作为运行目录，未对它们执行写入；不宣称已做全文件前后哈希对照。",
+    "日志、原始JSON、构建产物位于忽略的build/run目录；本机器汇总保留命令、数值、真实来源和失败记录。"
+  ],
+  "updated_date": "2026-10-24",
+  "fixture_corrections": [
+    {
+      "log": "build/extraction-vegetation-sable-r6.log",
+      "reason": "嵌套Handle类型Nullable注解位置，已修正",
+      "status": "compile_failed"
+    },
+    {
+      "log": "build/extraction-vegetation-sable-r6-retry.log",
+      "reason": "float COM回读导致固定Z误差1.2814998627e-6格，贴台阶新接触误判",
+      "status": "gameplay_failed"
+    },
+    {
+      "log": "build/extraction-vegetation-sable-r7.log",
+      "reason": "tier0已完成3格/200tick，向下发射撞地",
+      "status": "gameplay_failed"
+    },
+    {
+      "log": "build/extraction-vegetation-sable-r8.log",
+      "reason": "真实速度已写入；一tick后碰到台阶草方块反弹，20tick位移0.8539格，非提取控制残留",
+      "status": "gameplay_failed",
+      "launch_velocity": [
+        0,
+        -11.459604263305664,
+        -48.66905975341797
+      ]
+    },
+    {
+      "log": "build/extraction-default-focused-r3.log",
+      "reason": "新增FakePlayer未调用Academy登录初始化，读取熟练度NPE；r4补正常登录/退出hook后通过",
+      "status": "fixture_failed"
+    }
+  ],
+  "owner_isolation": {
+    "status": "passed",
+    "checks": [
+      "foreign poll rejected",
+      "foreign cancel ignored",
+      "foreign direct H occupied",
+      "owner session and lease retained",
+      "pose and velocities unchanged"
+    ],
+    "actor": "Local FakePlayer with distinct UUID and normal Academy login data; no network player",
+    "evidence": "build/extraction-default-focused-r4.log"
+  },
+  "final_gradle": [
+    {
+      "status": "passed",
+      "variant": "dev",
+      "log": "build/extraction-final-dev.log",
+      "command": "./gradlew.bat test sableCompatTest nativePhysicsTest build -x testNativePhysicsRust -DisDev=true @physicsNativeArgs --console=plain"
+    },
+    {
+      "status": "passed",
+      "variant": "release",
+      "log": "build/extraction-final-release.log",
+      "command": "./gradlew.bat build -DisDev=false @physicsNativeArgs --console=plain"
+    }
+  ],
+  "jvm_suites": [
+    {
+      "skipped": 0,
+      "xml_files": 672,
+      "task": "test",
+      "errors": 0,
+      "failures": 0,
+      "tests": 3032
+    },
+    {
+      "skipped": 0,
+      "xml_files": 5,
+      "task": "sableCompatTest",
+      "errors": 0,
+      "failures": 0,
+      "tests": 28
+    },
+    {
+      "skipped": 0,
+      "xml_files": 4,
+      "task": "nativePhysicsTest",
+      "errors": 0,
+      "failures": 0,
+      "tests": 36
+    },
+    {
+      "skipped": 0,
+      "xml_files": 18,
+      "task": "editorTest",
+      "errors": 0,
+      "failures": 0,
+      "tests": 104
+    }
+  ],
+  "artifacts": [
+    {
+      "sha256": "c8f1ae1e2447baf3a27d16c4965b371a57a79bb85dae7a18625e5d47d0511dea",
+      "native_manifest_matches": true,
+      "bytes": 31031215,
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "native_sha256": "f68c901911b18be6f92a9ea9e44b1e09cea8d34dd75ff08af50f035f6dcf4a06"
+    },
+    {
+      "sha256": "b9a5de87f1ad24a38acaf16703404b4dffa4a75f8ab113ce7cf9b14cfe418720",
+      "native_manifest_matches": true,
+      "bytes": 23560114,
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "native_sha256": "f68c901911b18be6f92a9ea9e44b1e09cea8d34dd75ff08af50f035f6dcf4a06"
+    }
+  ]
+}

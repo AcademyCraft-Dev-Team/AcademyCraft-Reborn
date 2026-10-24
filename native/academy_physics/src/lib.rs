@@ -1,6 +1,8 @@
 //! Bounded standalone Rapier binding. No Minecraft state or foreign-owned objects are retained.
 
 mod contact_surface;
+#[cfg(test)]
+mod trace_replay;
 
 use rapier3d_f64::prelude::*;
 use std::collections::HashMap;

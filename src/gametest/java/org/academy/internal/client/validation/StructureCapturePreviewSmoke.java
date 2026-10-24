@@ -35,6 +35,7 @@ import java.util.UUID;
 public final class StructureCapturePreviewSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureCapturePreviewSmoke");
     private static final boolean DISCONNECTED = Boolean.getBoolean("academy.structureCapturePreviewDisconnected");
+    private static final boolean MOTION = Boolean.getBoolean("academy.structureExtractionMotionSmoke");
     private static final StructureExtraction.Limits LIMITS = new StructureExtraction.Limits(8, 32, 1_000, 0, 65_536);
     private static final List<Map<String, Object>> RESULTS = new ArrayList<>();
     private static final List<BlockPos> PLACED = new ArrayList<>();
@@ -60,6 +61,10 @@ public final class StructureCapturePreviewSmoke {
     private static int tier, age, waitTicks;
     private static boolean impostor;
     private static String backend = "capture_pending";
+    private static UUID extractionOperation;
+    private static StructureExtraction.Plan extractionPlan;
+    private static int motionTicks, observedStableHover;
+    private static double observedRise;
 
     private StructureCapturePreviewSmoke() {}
 
@@ -73,6 +78,7 @@ public final class StructureCapturePreviewSmoke {
             player.setNoGravity(true);
             player.setDeltaMovement(Vec3.ZERO);
             player.resetFallDistance();
+            if (extractionOperation != null) { tickMotion(); return; }
             if (transaction == null) { startTier(); return; }
             if (reference == null) {
                 var result = StructureTransactions.poll(event.getServer(), transaction).orElseThrow();
@@ -191,6 +197,18 @@ public final class StructureCapturePreviewSmoke {
                 check(foreign.status() == StructureOperation.Status.DENIED, "foreign actor read binding");
                 record("foreign_actor_rejected", foreign);
             } finally { otherActor.discard(); }
+            if (MOTION) {
+                var begun = service.begin(context.get(), new StructureExtraction.BeginRequest(control, plan.planId()));
+                check(begun.status() == StructureOperation.Status.RUNNING, "extraction did not start: " + begun);
+                extractionOperation = begun.operationId().orElseThrow();
+                extractionPlan = plan;
+                motionTicks = observedStableHover = 0;
+                observedRise = 0;
+                var retry = service.begin(context.get(), new StructureExtraction.BeginRequest(control, plan.planId()));
+                check(retry.operationId().filter(extractionOperation::equals).isPresent(), "begin retry replaced operation");
+                record("extraction_begin", begun);
+                return;
+            }
             if (tier == 2) {
                 var world = StructureSpaces.resolve(event.getServer(), reference).orElseThrow().world();
                 var before = world.read(BlockPos.ZERO);
@@ -220,6 +238,7 @@ public final class StructureCapturePreviewSmoke {
     }
 
     private static void prepare(MinecraftServer server) {
+        check(!MOTION || !DISCONNECTED, "Motion and disconnected-source fixtures must run separately");
         player = server.getPlayerList().getPlayers().getFirst();
         oldPosition = player.position();
         oldVelocity = player.getDeltaMovement();
@@ -310,6 +329,45 @@ public final class StructureCapturePreviewSmoke {
 
     private static int lift() { return 3 + 2 * tier; }
 
+    private static void tickMotion() {
+        check(++motionTicks < 520, "extraction motion timeout");
+        var context = StructureExtractions.context(player.level(), reference, player).orElseThrow();
+        var service = StructureExtractions.service();
+        var receipt = service.status(context, new StructureExtraction.StatusRequest(control, extractionOperation));
+        var motion = StructureDynamics.motion(player.level(), reference).orElseThrow();
+        var origin = extractionPlan.request().sourcePose().localToWorldPoint(extractionPlan.request().localCenterOfMass());
+        observedRise = motion.pose().localToWorldPoint(motion.localCenterOfMass()).y - origin.y;
+        boolean hovering = receipt.value().map(value -> value.phase() == StructureExtraction.Phase.HOVERING).orElse(false);
+        if (hovering) {
+            check(Math.abs(observedRise - lift()) <= 0.1, "reported hover outside target: " + observedRise);
+            observedStableHover++;
+        }
+        if (motionTicks % 40 == 0) AcademyCraft.LOGGER.info(
+                "STRUCTURE_EXTRACTION_MOTION_PROGRESS tier={} ticks={} rise={} hover={} receipt={}",
+                tier, motionTicks, observedRise, observedStableHover, receipt);
+        check(receipt.status() == StructureOperation.Status.RUNNING || receipt.status() == StructureOperation.Status.COMPLETED,
+                "extraction terminated without success: " + receipt);
+        if (receipt.status() != StructureOperation.Status.COMPLETED) return;
+        check(Math.abs(observedRise - lift()) <= 0.1, "completed extraction height incorrect: " + observedRise);
+        check(receipt.value().orElseThrow().stableHoverTicks() == 200, "incomplete 200 tick hover: " + receipt);
+        // The final hover sample can be observed as COMPLETED after the service's tick transition.
+        check(observedStableHover >= 199, "actual observed hover was too short: " + observedStableHover);
+        RESULTS.add(Map.of("scenario", "actual_extraction_and_hover", "tier", tier, "lift", lift(),
+                "rise", observedRise, "ticks", motionTicks, "observed_hover_ticks", observedStableHover,
+                "reported_hover_ticks", receipt.value().orElseThrow().stableHoverTicks(), "passed", true));
+        extractionOperation = null;
+        extractionPlan = null;
+        discard();
+        transaction = null;
+        waitTicks = 0;
+        if (++tier == 3) {
+            cleanup();
+            writeResult(true, "");
+            complete = true;
+            AcademyCraft.LOGGER.info("STRUCTURE_EXTRACTION_MOTION_PASSED backend={} cases={}", backend, RESULTS.size());
+        }
+    }
+
     private static void startCapture(StructureCaptureRequest request) {
         var capture = StructureTransactions.capture(player.level(), request);
         check(capture.succeeded() || capture.pending(), "capture rejected: " + capture);
@@ -360,7 +418,7 @@ public final class StructureCapturePreviewSmoke {
             report.put("passed", passed);
             report.put("backend", backend);
             report.put("actual_capture_transactions", true);
-            report.put("extraction_motion_exercised", false);
+            report.put("extraction_motion_exercised", MOTION);
             report.put("disconnected_source_regression", DISCONNECTED);
             report.put("split_source_cells", SPLIT_CELLS);
             report.put("removed_fixture_sable_bodies", removedSableBodies);

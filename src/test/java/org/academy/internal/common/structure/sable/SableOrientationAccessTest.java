@@ -12,6 +12,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SableOrientationAccessTest {
     @Test
+    void positionRoundingBoundsTheObservedFloatComErrorPerAxis() {
+        double x = -154.5416666790843, z = 57.47916665673256;
+        assertTrue(Math.abs((double) (float) x - x) <= SableOrientationAccess.positionRounding(x));
+        assertTrue(Math.abs((double) (float) z - z) <= SableOrientationAccess.positionRounding(z));
+        assertEquals(7.62939453125E-6, SableOrientationAccess.positionRounding(x));
+        assertEquals(1.9073486328125E-6, SableOrientationAccess.positionRounding(z));
+    }
+
+    @Test
+    void coarseDistantCoordinatesDisableTheExemptionInsteadOfWideningIt() {
+        assertTrue(SableOrientationAccess.positionRounding(1024) <= 1E-4);
+        assertEquals(0, SableOrientationAccess.positionRounding(2048));
+        assertEquals(0, SableOrientationAccess.positionRounding(-30_000_000));
+        assertEquals(0, SableOrientationAccess.positionRounding(Double.NaN));
+        assertEquals(0, SableOrientationAccess.positionRounding(Double.POSITIVE_INFINITY));
+    }
+
+    @Test
     void inertiaBoundIncludesOffDiagonalTermsOfAnAsymmetricAssembly() {
         var tensor = new Matrix3d(10, -4, 0, -4, 10, 0, 0, 0, 2);
         double bound = SableOrientationAccess.inertiaBound(tensor);

@@ -10,6 +10,10 @@ allprojects {
         neoForge.runs.named(providers.gradleProperty('academyStructureOrientationRun').getOrElse('clientDev')) {
             gameDirectory.set(smokeDirectory)
             systemProperty 'academy.structureProgramOrientationSmoke', 'true'
+            if (providers.gradleProperty('academyStructureExtractionGameplay').isPresent()) {
+                systemProperty 'academy.structureExtractionGameplay',
+                        providers.gradleProperty('academyStructureExtractionGameplay').get()
+            }
             programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer',
                     providers.gradleProperty('academySubLevelSmokeWorld').getOrElse('test'))
         }

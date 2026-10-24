@@ -61,6 +61,22 @@ public final class TranslationSweep {
             return bounds.minmax(bounds.move(displacement));
         }
 
+        double minimumProjection(Vec3 axis) { return center.dot(axis) - radius(axis); }
+        double maximumProjection(Vec3 axis) { return center.dot(axis) + radius(axis); }
+
+        /** SAT axes, copied for continuous contact admission; geometry itself stays immutable. */
+        java.util.List<Vec3> separatingAxes(Box other) {
+            var result = new java.util.ArrayList<Vec3>(15);
+            result.addAll(java.util.List.of(axes));
+            result.addAll(java.util.List.of(other.axes));
+            for (var first : axes) for (var second : other.axes) {
+                var cross = first.cross(second);
+                double length = cross.length();
+                if (length > 0) result.add(cross.scale(1 / length));
+            }
+            return result;
+        }
+
         private double radius(Vec3 axis) {
             return Math.abs(axis.dot(axes[0])) * half.x
                     + Math.abs(axis.dot(axes[1])) * half.y

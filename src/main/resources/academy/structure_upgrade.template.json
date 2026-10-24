@@ -3,6 +3,10 @@
   "status": "UNVERIFIED",
   "gameplay_enabled": false,
   "runtime_configuration": false,
+  "live_services": {
+    "extraction": {"readiness": "EXPERIMENTAL", "gameplay_default": true},
+    "orientation": {"readiness": "EXPERIMENTAL", "gameplay_default": true}
+  },
   "ports": ["extraction", "orientation", "provenance", "restoration", "damage", "impact_feed", "fracture"],
   "native_provider_candidates": ["academy_rapier", "mps"],
   "future_physics_kinds": ["rigid", "soft", "fluid"],

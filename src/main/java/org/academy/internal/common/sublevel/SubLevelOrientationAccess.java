@@ -101,6 +101,34 @@ public final class SubLevelOrientationAccess implements OrientationBackendAccess
         return subLevel.state() == SubLevelState.ACTIVE || subLevel.state() == SubLevelState.SLEEPING;
     }
 
+    @Override public Optional<LinearBody> observeLinear(ServerLevel host, StructureRef reference) {
+        var body = observe(host, reference);
+        var runtime = SubLevelServer.runtime(host).orElse(null);
+        if (body.isEmpty() || runtime == null) return Optional.empty();
+        return runtime.universe().motion(new SubLevelId(reference.id()))
+                .map(motion -> new LinearBody(body.get(), motion.mass()));
+    }
+
+    @Override public void cancelQueuedTranslation(ServerLevel host, StructureRef reference, java.util.UUID controlId) {
+        requireServerThread(host);
+        SubLevelDirectControl.cancel(reference, controlId);
+    }
+
+    @Override public boolean applyLinear(ServerLevel host, LinearBody expected, Vec3 linearVelocity) {
+        return applyMotion(host, expected, linearVelocity, expected.body().motion().angularVelocity());
+    }
+
+    @Override public boolean applyMotion(ServerLevel host, LinearBody expected, Vec3 linearVelocity, Vec3 angularVelocity) {
+        requireServerThread(host);
+        var current = observeLinear(host, expected.body().reference()).orElse(null);
+        if (current == null || current.mass() != expected.mass() || !expected.body().terrainReady()
+                || !expected.body().sameObservation(current.body())) return false;
+        return SubLevelServer.runtime(host).orElseThrow().universe().setVelocity(
+                new SubLevelId(expected.body().reference().id()),
+                new PhysicsVector(linearVelocity.x, linearVelocity.y, linearVelocity.z),
+                new PhysicsVector(angularVelocity.x, angularVelocity.y, angularVelocity.z));
+    }
+
     private static StructurePose pose(PhysicsPose pose) {
         var rotation = pose.rotation();
         return new StructurePose(vector(pose.position()), rotation.x(), rotation.y(), rotation.z(), rotation.w());

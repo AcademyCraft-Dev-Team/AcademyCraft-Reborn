@@ -14,11 +14,35 @@ import java.util.UUID;
 public interface OrientationBackendAccess {
     Optional<Body> observe(ServerLevel host, StructureRef reference);
 
+    /** Backend observation uncertainty only; never changes geometry or permits added penetration. */
+    default Vec3 positionRounding(Body body) { return Vec3.ZERO; }
+
     /** All already loaded bodies intersecting the bounds, including non-controllable obstacles. */
     Nearby nearby(ServerLevel host, AABB bounds, int maximumBodies);
 
     /** Compare the full observed activation/content/pose/motion before correcting angular velocity. */
     boolean apply(ServerLevel host, Body expected, Vec3 angularVelocity);
+
+    /** Translation uses the same exact observation, plus aggregate mass for a real force bound. */
+    default Optional<LinearBody> observeLinear(ServerLevel host, StructureRef reference) { return Optional.empty(); }
+
+    /** Correct aggregate COM velocity, preserving angular motion; never change the pose. */
+    default boolean applyLinear(ServerLevel host, LinearBody expected, Vec3 linearVelocity) { return false; }
+
+    /** Atomic COM/angular correction for extraction's bounded pose hold. */
+    default boolean applyMotion(ServerLevel host, LinearBody expected, Vec3 linearVelocity, Vec3 angularVelocity) {
+        return expected.body().motion().angularVelocity().equals(angularVelocity) && applyLinear(host, expected, linearVelocity);
+    }
+
+    /** Transfer this exact token from older queued translation commands into planned extraction. */
+    default void cancelQueuedTranslation(ServerLevel host, StructureRef reference, UUID controlId) {}
+
+    record LinearBody(Body body, double mass) {
+        public LinearBody {
+            Objects.requireNonNull(body, "body");
+            if (!Double.isFinite(mass) || mass <= 0) throw new IllegalArgumentException("Invalid aggregate mass");
+        }
+    }
 
     record Body(StructureRef reference, UUID runtimeId, long contentRevision, long poseRevision,
                 OrientationController.State motion, Vec3 linearVelocity, Vec3 freeAcceleration, List<AABB> localBoxes,

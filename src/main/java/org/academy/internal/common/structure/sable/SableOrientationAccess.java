@@ -43,11 +43,30 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
     private static final int MAX_SCANNED_BODIES = 4_096;
     private static final int MAX_GEOMETRY_CELLS = 65_536;
     private static final int MAX_CACHED_BODIES = 256;
+    private static final double MAX_POSITION_ROUNDING = 1E-4;
     private static final OrientationTargets.Baselines NO_BASELINE =
             new OrientationTargets.Baselines(Optional.empty(), Optional.empty());
     private final Map<SableStructureHandle, Geometry> geometry = new IdentityHashMap<>();
 
     private SableOrientationAccess() {}
+
+    @Override public Vec3 positionRounding(Body body) {
+        var center = body.motion().pose().localToWorldPoint(body.motion().localCenterOfMass());
+        return new Vec3(positionRounding(center.x), positionRounding(center.y), positionRounding(center.z));
+    }
+
+    /**
+     * The pinned Rapier bridge publishes a float world COM, then subtracts the double local COM.
+     * Half a float ULP bounds that position observation, independently on each world axis.
+     * Never widen a contact beyond 0.0001 blocks: a coordinate whose half-ULP exceeds that cap
+     * gets no exemption. Thus ordinary coordinates below |2048| qualify, while coarse distant
+     * observations fail closed instead of turning centimetres of penetration into rounding.
+     */
+    static double positionRounding(double coordinate) {
+        if (!Double.isFinite(coordinate)) return 0;
+        double halfUlp = Math.ulp((float) coordinate) * .5;
+        return Double.isFinite(halfUlp) && halfUlp <= MAX_POSITION_ROUNDING ? halfUlp : 0;
+    }
 
     @Override public Optional<Body> observe(ServerLevel host, StructureRef reference) {
         SableStructureAccess.requireThread(host.getServer());
@@ -122,6 +141,41 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
     public static void shutdown(MinecraftServer server) {
         SableStructureAccess.requireThread(server);
         INSTANCE.geometry.keySet().removeIf(handle -> handle.host().getServer() == server);
+    }
+
+    @Override public Optional<LinearBody> observeLinear(ServerLevel host, StructureRef reference) {
+        var body = observe(host, reference);
+        var handle = SableStructureAccess.resolveHandle(host.getServer(), reference).orElse(null);
+        if (body.isEmpty() || handle == null || handle.subLevel().getMassTracker() == null) return Optional.empty();
+        double mass = handle.subLevel().getMassTracker().getMass();
+        return Double.isFinite(mass) && mass > 0 ? Optional.of(new LinearBody(body.get(), mass)) : Optional.empty();
+    }
+
+    @Override public void cancelQueuedTranslation(ServerLevel host, StructureRef reference, java.util.UUID controlId) {
+        SableStructureDirectControl.cancel(host, reference, controlId);
+    }
+
+    @Override public boolean applyLinear(ServerLevel host, LinearBody expected, Vec3 linearVelocity) {
+        return applyMotion(host, expected, linearVelocity, expected.body().motion().angularVelocity());
+    }
+
+    @Override public boolean applyMotion(ServerLevel host, LinearBody expected, Vec3 linearVelocity, Vec3 angularVelocity) {
+        SableStructureAccess.requireThread(host.getServer());
+        finite(linearVelocity, "linearVelocity");
+        finite(angularVelocity, "angularVelocity");
+        if (SableStructureDirectControl.probe(host, expected.body().reference()).state()
+                != StructureDirectControl.Probe.State.READY) return false;
+        var current = observeLinear(host, expected.body().reference()).orElse(null);
+        if (current == null || current.mass() != expected.mass() || !expected.body().terrainReady()
+                || !expected.body().sameObservation(current.body())) return false;
+        var handle = SableStructureAccess.resolveHandle(host.getServer(), expected.body().reference()).orElse(null);
+        var system = SubLevelPhysicsSystem.get(host);
+        if (handle == null || !readable(system, handle)) return false;
+        var correction = linearVelocity.subtract(current.body().linearVelocity());
+        var angular = angularCorrection(current.body().motion().angularVelocity(), angularVelocity);
+        system.getPhysicsHandle(handle.subLevel()).addLinearAndAngularVelocity(
+                new Vector3d(correction.x, correction.y, correction.z), new Vector3d(angular.x, angular.y, angular.z));
+        return true;
     }
 
     private Optional<Body> observation(SableStructureHandle handle) {

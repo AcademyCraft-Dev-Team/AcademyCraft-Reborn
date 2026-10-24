@@ -72,6 +72,9 @@ public final class LiveStructureOrientation implements StructureOrientation {
             Kind kind, BaselineSource baseline, Optional<org.academy.api.common.structure.StructurePose> target,
             Optional<SpinRequest> spin, Limits limits) {
         requireThread(context.host());
+        if (LiveStructureExtraction.controls(context.host(), context.reference())) {
+            return failure(StructureOperation.Status.CONFLICT, "orientation_extraction_active");
+        }
         var access = StructureBackendRouter.orientationAccess(context.host(), context.reference());
         if (access.isEmpty()) return failure(StructureOperation.Status.UNSUPPORTED, "orientation_backend_unavailable");
         var body = authorized(context, control);
