@@ -5,6 +5,11 @@
   "compatibilityLevel": "JAVA_25",
   "plugin": "org.academy.mixin.plugin.MixinPlugin",
   "mixins": [
+    "common.MixinTransferLevelIsolation",
+    "common.MixinTransferScheduledIsolation",
+    "common.MixinTransferContainerIsolation",
+    "common.MixinTransferLootIsolation",
+    "common.MixinTransferCellIsolation",
     "common.compat.MixinWorldWeaverWorldConfig",
     "common.compat.MixinBetterEndWorldConfig",
     "common.compat.MixinSablePhysicsStaffHandler",

@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
+import org.academy.api.common.structure.StructureBlockData;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,8 +36,26 @@ public interface CaptureTarget {
     /** Idempotent source retirement, including its persistent owner and allocation. */
     default boolean retireRestored(StructureRef reference, net.minecraft.nbt.CompoundTag evidence) { return false; }
 
-    record RestorationCell(BlockPos localPosition, BlockState state) {
-        public RestorationCell { localPosition = localPosition.immutable(); }
+    record RestorationCell(BlockPos localPosition, StructureBlockData data) {
+        public RestorationCell { localPosition = localPosition.immutable(); data = StructureCellPayload.normalize(data); }
+        public RestorationCell(BlockPos position, BlockState state) { this(position, new StructureBlockData(state)); }
+        public BlockState state() { return data.state(); }
+    }
+
+    /** Storage-address isolation; identity survives retained transactions and is released only after durability. */
+    default void lockPayload(StructureRef target, List<BlockPos> localPositions, UUID operation) {}
+
+    default StructureWriteResult writeData(StructureRef target, BlockPos local, StructureBlockData data) {
+        return data.blockEntityData() == null ? writeCell(target, local, data.state()) : StructureWriteResult.REJECTED;
+    }
+
+    default Optional<StructureBlockData> readData(StructureRef target, BlockPos local) {
+        return readCell(target, local).map(StructureBlockData::new);
+    }
+
+    default StructureWriteResult clearData(StructureRef target, BlockPos local, StructureBlockData expected) {
+        if (!readData(target, local).filter(StructureCellPayload.normalize(expected)::equals).isPresent()) return StructureWriteResult.CONFLICT;
+        return clearCell(target, local, expected.state());
     }
     /**
      * Read-only allocation seed admission, evaluated after all source cells are validated.

@@ -13,6 +13,7 @@ allprojects {
         }
         neoForge.runs.named(providers.gradleProperty('academyStructureRestorationRun').getOrElse('clientDev')) {
             gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.structurePayloadRoutes', providers.gradleProperty('academyStructurePayloadRoutes').getOrElse('false')
             systemProperty 'academy.structureRestorationSmoke', 'true'
             systemProperty 'academy.structureRestorationSmokeMode', mode
             systemProperty 'academy.structureRestorationSmokeDirectory', smokeDirectory.absolutePath

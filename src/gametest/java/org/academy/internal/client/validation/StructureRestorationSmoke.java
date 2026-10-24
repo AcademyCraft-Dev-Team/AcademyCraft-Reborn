@@ -162,6 +162,7 @@ public final class StructureRestorationSmoke {
         sourceCells = MODE.equals("canopy") ? List.of(seed, seed.east(), seed.east(2), seed.east(3))
                 : MODE.equals("multiblock") ? List.of(seed, seed.east(), seed.south(), seed.above()) : List.of(seed);
         for (var position : sourceCells) place(position, Blocks.IRON_BLOCK.defaultBlockState());
+        if (StructurePayloadFixtureSupport.ENABLED && StructureRestorationCrashSmoke.crashMode()) StructurePayloadFixtureSupport.chest(player, seed);
         var request = new StructureCaptureRequest(sourceCells, 8, 8, StructureCaptureRequest.ALLOW, true);
         if (scenario != 0) request = request.withSkillCreation(attributedOwner, skill());
         var capture = StructureTransactions.capture(player.level(), request);
@@ -523,6 +524,7 @@ public final class StructureRestorationSmoke {
         var minecraft = Minecraft.getInstance();
         if (complete || failed) { closing = true; minecraft.stop(); return; }
         if (minecraft.player == null || minecraft.level == null || minecraft.getConnection() == null) return;
+        if (StructurePayloadFixtureSupport.ENABLED && minecraft.gui.screen() instanceof net.minecraft.client.gui.screens.PauseScreen) minecraft.gui.setScreen(null);
         directory = minecraft.gameDirectory.toPath().toAbsolutePath().normalize();
         if (!directory.getFileName().toString().startsWith("native-sublevel-direct-smoke")) {
             fail(new IllegalStateException("Restoration smoke requires isolated native-sublevel-direct-smoke* directory")); return;

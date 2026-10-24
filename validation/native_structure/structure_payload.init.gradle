@@ -1,0 +1,12 @@
+allprojects {
+    afterEvaluate {
+        def game = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!game.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !game.name.startsWith('native-sublevel-direct-smoke')) throw new GradleException('Isolated payload fixture directory required')
+        neoForge.runs.named(providers.gradleProperty('academyPayloadRun').getOrElse('clientDev')) {
+            gameDirectory.set(game)
+            systemProperty 'academy.structurePayloadSmoke', 'true'
+            programArguments.addAll('--quickPlaySingleplayer', 'test', '--width', '1280', '--height', '720')
+        }
+    }
+}

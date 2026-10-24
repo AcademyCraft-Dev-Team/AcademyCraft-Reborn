@@ -77,7 +77,9 @@ public final class StructureLocalRestorationSmoke {
     private static Fixture create(ServerLevel host, BlockPos pos, BlockPos remote, boolean inactive, boolean chest) {
         host.getChunkAt(pos);
         check(host.getBlockState(pos).isAir(), "local fixture source occupied");
-        host.setBlock(pos, (chest ? Blocks.CHEST : Blocks.IRON_BLOCK).defaultBlockState(), 3);
+        host.setBlock(pos, chest ? Blocks.CHEST.defaultBlockState().setValue(
+                net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true)
+                : Blocks.IRON_BLOCK.defaultBlockState(), 3);
         if (chest) ((net.minecraft.world.level.block.entity.ChestBlockEntity) host.getBlockEntity(pos))
                 .setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 3));
         var runtime = SubLevelServer.runtime(host).orElseThrow();
@@ -122,20 +124,15 @@ public final class StructureLocalRestorationSmoke {
         if (status.running()) return Optional.empty();
         check(!FAULT, "administrator interruption checkpoint not reached: " + status);
         check(status.recoveryPending() == 0, "normal command left recovery work");
-        check(status.retained().size() == (retry ? 1 : 2), "unexpected retained items: " + status);
-        check(status.restored() == (retry ? 1 : 4), "wrong restoration count: " + status);
+        check(status.retained().size() == (retry ? 0 : 1), "unexpected retained items: " + status);
+        check(status.restored() == (retry ? 1 : 5), "wrong restoration count: " + status);
         check(player.level().getBlockState(leaf).is(Blocks.OAK_LEAVES)
                 && player.level().getBlockState(leaf.above()).is(Blocks.IRON_BLOCK), "clearance lift overwrote leaves or failed to restore above them");
         for (var fixture : FIXTURES) {
             var runtime = SubLevelServer.runtime(fixture.host()).orElseThrow();
-            boolean retained = fixture.chest() || !retry && fixture.reference().id().equals(cancelled);
+            boolean retained = !retry && fixture.reference().id().equals(cancelled);
             var body = runtime.get(new SubLevelId(fixture.reference().id()));
             check(body.isPresent() == retained, "source owner mismatch: " + fixture);
-            if (fixture.chest()) {
-                var entity = (net.minecraft.world.level.block.entity.ChestBlockEntity) runtime.storage().blockEntity(body.orElseThrow().plot(), BlockPos.ZERO);
-                check(entity != null && entity.getItem(0).is(net.minecraft.world.item.Items.DIAMOND) && entity.getItem(0).getCount() == 3,
-                        "retained container lost inventory");
-            }
             if (!retained) {
                 check(!runtime.hasPersisted(new SubLevelId(fixture.reference().id())), "manifest still owns restored source");
                 check(LiveStructureProvenance.metadata(server, fixture.reference()).isEmpty(), "restored source still marked");
@@ -143,7 +140,14 @@ public final class StructureLocalRestorationSmoke {
                 check(placements != null && placements.size() == 1, "missing placement receipt");
                 for (var placement : placements) {
                     fixture.host().getChunkAt(placement.targetPosition());
-                    check(fixture.host().getBlockState(placement.targetPosition()).is(Blocks.IRON_BLOCK), "missing restored block");
+                    check(fixture.host().getBlockState(placement.targetPosition()).is(fixture.chest() ? Blocks.CHEST : Blocks.IRON_BLOCK), "missing restored block");
+                    if (fixture.chest()) {
+                        var entity = (net.minecraft.world.level.block.entity.ChestBlockEntity) fixture.host().getBlockEntity(placement.targetPosition());
+                        check(entity != null && entity.getItem(0).is(net.minecraft.world.item.Items.DIAMOND) && entity.getItem(0).getCount() == 3,
+                                "administrator restoration changed inventory");
+                        check(entity.getBlockState().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED),
+                                "administrator restoration lost waterlogging");
+                    }
                 }
                 check(SubLevelCollisionRuntime.index(fixture.host()).flatMap(index -> index.entry(
                         new SubLevelId(fixture.reference().id()))).isEmpty(), "ghost collider remained");

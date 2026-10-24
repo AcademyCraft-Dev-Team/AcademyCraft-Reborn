@@ -1,5 +1,7 @@
 # Sable／航空学组合中的技能构建、抬升与方块准入
 
+后续箱子与含水方块的实际接入、当前支持范围和恢复验证见 [payload 接入记录](structure_payload_capture_2026_10_24.zh-CN.md)。下文保留本次提交时的诊断与方案，箱子／含水方块“当前拒绝”的描述属于接入前状态。
+
 基于 `37a7b9b8`。本轮修复 ACR 的捕获与提取接线；没有修改航空学、Sable 的 JAR，也没有修改原存档或替换 PID 48132 已加载的模组。机器证据见 [JSON](../validation/native_structure/structure_sable_suite_capture_2026_10_24.json)。
 
 ## 现场与已修复原因

@@ -135,7 +135,7 @@ public final class StructureProgramOrientationSmoke {
             system.getAeromanipResourceManager().onPlayerLogin(player);
             system.setPlayerCurrMP(player.getUUID(), system.getAeromanipResourceManager().getCapacity(player));
         }
-        seed = new BlockPos((int) Math.floor(oldPosition.x) + 6,
+        seed = new BlockPos((int) Math.floor(oldPosition.x) + 6 + (StructurePayloadFixtureSupport.ENABLED ? categoryIndex * 24 : 0),
                 player.level().getMaxY() - 48, (int) Math.floor(oldPosition.z));
         for (var pos : BlockPos.betweenClosed(seed.offset(-8, -6, -6), seed.offset(6, 6, 6))) {
             player.level().getChunkAt(pos);
@@ -151,6 +151,7 @@ public final class StructureProgramOrientationSmoke {
         // yaw=0 can otherwise overwrite a server-only setYRot before the extract node runs.
         player.connection.teleport(position.x, position.y, position.z, aimYaw, aimPitch);
         check(player.level().setBlock(seed, Blocks.IRON_BLOCK.defaultBlockState(), 3), "seed placement failed");
+        if (StructurePayloadFixtureSupport.ENABLED) StructurePayloadFixtureSupport.chest(player, seed);
         if (categoryIndex == 2) {
             nozzle = new HighSpeedJetNozzle(EntityTypes.HIGH_SPEED_JET_NOZZLE.get(), player.level());
             nozzle.attach(player.getUUID(), seed, Direction.DOWN);
@@ -172,7 +173,8 @@ public final class StructureProgramOrientationSmoke {
         var setup = arenaSetup;
         var teleportPending = ((MixinServerGamePacketListenerNativeStructureAccess) player.connection)
                 .academy$awaitingPositionFromClient() != null;
-        check(player.level().getBlockState(seed).is(Blocks.IRON_BLOCK), "seed changed before the VM started");
+        check(player.level().getBlockState(seed).is(StructurePayloadFixtureSupport.ENABLED ? Blocks.CHEST : Blocks.IRON_BLOCK),
+                "seed changed before the VM started");
         boolean serverAligned = aligned(player.position(), player.getYRot(), player.getXRot(), setup);
         boolean clientReady = clientArenaReadyGeneration == setup.generation();
         check(++arenaWaitTicks <= ARENA_READY_TIMEOUT_TICKS,
@@ -257,8 +259,9 @@ public final class StructureProgramOrientationSmoke {
                     default -> "high_speed_jet";
                 }));
                 var state = motion();
-                actualExtractionRise = state.pose().localToWorldPoint(state.localCenterOfMass()).y
-                        - Vec3.atCenterOf(seed).y;
+                actualExtractionRise = StructurePayloadFixtureSupport.ENABLED
+                        ? state.pose().worldOrigin().y - seed.getY()
+                        : state.pose().localToWorldPoint(state.localCenterOfMass()).y - Vec3.atCenterOf(seed).y;
                 extractionWaitTicks = now - STARTED.get(context.nodeId());
                 if (StructureCaptureExtractions.enabled()) {
                     check(Math.abs(actualExtractionRise - expectedExtractionRise) <= 0.1,
@@ -333,7 +336,9 @@ public final class StructureProgramOrientationSmoke {
                 "VM terminated: " + termination + " completed=" + COMPLETED);
         check(COMPLETED.equals(List.of(2, 3, 4, 8, 9, 10)), "node completion order changed: " + COMPLETED);
         check(control != null && !StructureDirectControl.occupied(reference, control.structureRuntimeId()), "release retained control");
+        if (StructurePayloadFixtureSupport.ENABLED) StructurePayloadFixtureSupport.verify(player, reference, BlockPos.ZERO);
         var row = new LinkedHashMap<String, Object>();
+        row.put("payload_checked", StructurePayloadFixtureSupport.ENABLED);
         row.put("category", category.toString()); row.put("backend", reference.backend().toString());
         row.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
         row.put("skill_provenance_verified", true);
@@ -358,7 +363,7 @@ public final class StructureProgramOrientationSmoke {
         position.addProperty("x", seed.getX()); position.addProperty("y", seed.getY()); position.addProperty("z", seed.getZ());
         var extract = new JsonObject(); extract.addProperty("budget", 1);
         if (categoryIndex == 0) extract.addProperty("tier", 0);
-        else if (categoryIndex == 1) extract.addProperty("force_magnetize", false);
+        else if (categoryIndex == 1) extract.addProperty("force_magnetize", StructurePayloadFixtureSupport.ENABLED);
         else extract.addProperty("radius", 2);
         expectedExtractionRise = categoryIndex == 0 ? KineticThrow.liftHeight(extract.get("tier").getAsInt()) : 1.0;
         var axis = new JsonObject(); axis.addProperty("x", 0); axis.addProperty("y", 0); axis.addProperty("z", 1);
@@ -401,7 +406,8 @@ public final class StructureProgramOrientationSmoke {
 
     private static void cleanupBody() {
         if (runtime != null) runtime.closeOrientationCommands();
-        if (reference != null) check(StructureTransactions.discard(player.level().getServer(), reference), "body cleanup failed");
+        if (reference != null) check(StructurePayloadFixtureSupport.ENABLED ? StructurePayloadFixtureSupport.cleanup(player, reference)
+                : StructureTransactions.discard(player.level().getServer(), reference), "body cleanup failed");
         VectorStructureService.clear(player); HighSpeedJetStructureService.clear(player); MagneticStructureService.releasePrograms(player);
         if (nozzle != null) { nozzle.discard(); nozzle = null; }
         if (seed != null) player.level().setBlock(seed, Blocks.AIR.defaultBlockState(), 3);
@@ -442,12 +448,16 @@ public final class StructureProgramOrientationSmoke {
             fail(new IllegalStateException("program orientation probe requires isolated native-sublevel-direct-smoke* directory")); return;
         }
         output = directory.resolve("structure-program-orientation-result.json");
+        if (StructurePayloadFixtureSupport.ENABLED && client.gui.screen() instanceof net.minecraft.client.gui.screens.PauseScreen) {
+            client.gui.setScreen(null);
+        }
         client.player.setNoGravity(true); client.player.setDeltaMovement(Vec3.ZERO); client.player.resetFallDistance();
         var setup = arenaSetup;
         if (setup != null) {
             // Observe receipt of the actual teleport and seed before pinning the test aim.
             clientArenaReadyGeneration = aligned(client.player.position(), client.player.getYRot(), client.player.getXRot(), setup)
-                    && client.level.hasChunkAt(setup.seed()) && client.level.getBlockState(setup.seed()).is(Blocks.IRON_BLOCK)
+                    && client.level.hasChunkAt(setup.seed()) && client.level.getBlockState(setup.seed()).is(
+                            StructurePayloadFixtureSupport.ENABLED ? Blocks.CHEST : Blocks.IRON_BLOCK)
                     ? setup.generation() : -1;
             client.player.setYRot(setup.yaw()); client.player.setXRot(setup.pitch());
         }

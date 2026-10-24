@@ -25,6 +25,8 @@ import org.academy.api.common.structure.upgrade.*;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.BlockStructureOrientedBox;
 import org.academy.internal.common.structure.transaction.CaptureTarget;
+import org.academy.internal.common.structure.transaction.StructureCellPayload;
+import org.academy.internal.common.structure.transaction.PayloadIsolation;
 import org.academy.internal.common.structure.transaction.StructureTransactionJournal;
 import org.academy.internal.common.structure.transaction.SubLevelCaptureTarget;
 import org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess;
@@ -164,10 +166,7 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
                     throw new IllegalStateException("Target changed during restoration");
                 }
                 written.add(cell);
-                if (!access.host().setBlock(cell.target(), cell.placed(), SubLevelCaptureService.TRANSACTION_FLAGS)
-                        || !access.host().getBlockState(cell.target()).equals(cell.placed())) {
-                    throw new IllegalStateException("Target write rejected");
-                }
+                StructureCellPayload.write(access.host(), cell.target(), cell.placedData(), SubLevelCaptureService.TRANSACTION_FLAGS);
             }
             if (owner != null && NeoForge.EVENT_BUS.post(new BlockEvent.EntityMultiPlaceEvent(snapshots,
                     Blocks.AIR.defaultBlockState(), owner)).isCanceled()) throw new IllegalStateException("Placement event cancelled");
@@ -217,6 +216,7 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
             registry.recoveryOrder.addLast(operationId);
             if (!record.hostDimension().equals(host.dimension().identifier())) continue;
             try {
+                registry.isolate(record);
                 var cells = decodeCells(host, record);
                 if (record.stage().compareTo(StructureTransactionJournal.Stage.COMMIT_DECIDED) < 0) {
                     var source = target(host, reference(record)).orElse(null);
@@ -407,8 +407,9 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
                     obstructed = true;
                 }
                 var state = item.state().rotate(candidate.rotation());
-                if (state.hasBlockEntity() || !state.getFluidState().isEmpty()) return null;
-                cells.add(new Cell(item.localPosition(), destination, item.state(), state));
+                var placed = new StructureBlockData(state, item.data().blockEntityData());
+                org.academy.internal.common.structure.BlockStructureTransferState.validateWrite(host, destination, state, placed.blockEntityData());
+                cells.add(new Cell(item.localPosition(), destination, item.data(), placed));
             }
             if (!obstructed) return targetsSafe(access, cells) ? new Plan(body, candidate, List.copyOf(cells)) : null;
         }
@@ -482,6 +483,7 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
     private static StructureOperation.Result<Progress> finish(ServerLevel host, Registry registry, StructureTransactionJournal.Record record) throws IOException {
         var reference = reference(record);
         var target = target(host, reference).orElse(null);
+        if (!matchesTargets(host, decodeCells(host, record))) return progress(record, Phase.RECOVERY_REQUIRED, StructureOperation.Status.RUNNING, "restoration_target_image_changed");
         if (target == null || !target.retireRestored(reference, record.cells().getFirst().payload().getCompound("source_evidence").orElseThrow())) {
             return progress(record, Phase.RECOVERY_REQUIRED, StructureOperation.Status.RUNNING, "restoration_source_cleanup_pending");
         }
@@ -498,6 +500,7 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
         for (var cell : decodeCells(host, record)) {
             if (!loaded(host, cell.target())) continue;
             host.updateNeighborsAt(cell.target(), cell.placed().getBlock());
+            if (!cell.placed().getFluidState().isEmpty()) host.scheduleTick(cell.target(), cell.placed().getFluidState().getType(), 1);
             StructureBackendRouter.onBlockChanged(host, cell.target());
         }
         trim(registry);
@@ -508,9 +511,11 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
         var cells = new ArrayList<StructureTransactionJournal.Cell>();
         for (var cell : plan.cells()) {
             var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, access.host().registryAccess());
-            output.store("source_state", BlockState.CODEC, cell.source());
+            output.store("source_state", BlockState.CODEC, cell.sourceData().state());
             output.store("state", BlockState.CODEC, cell.placed());
             var payload = output.buildResult();
+            if (cell.sourceData().blockEntityData() != null) payload.put("source_block_entity", cell.sourceData().blockEntityData());
+            if (cell.placedData().blockEntityData() != null) payload.put("block_entity", cell.placedData().blockEntityData());
             payload.putInt("local_x", cell.local().getX()); payload.putInt("local_y", cell.local().getY()); payload.putInt("local_z", cell.local().getZ());
             access.actor().ownerId().ifPresent(owner -> payload.putString("owner", owner.toString()));
             if (metadata != null) payload.putString("creation_operation", metadata.creationOperationId().toString());
@@ -527,7 +532,8 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
             var payload = entry.payload();
             var input = TagValueInput.create(ProblemReporter.DISCARDING, host.registryAccess(), payload);
             return new Cell(new BlockPos(payload.getInt("local_x").orElseThrow(), payload.getInt("local_y").orElseThrow(), payload.getInt("local_z").orElseThrow()),
-                    entry.position(), input.read("source_state", BlockState.CODEC).orElseThrow(), input.read("state", BlockState.CODEC).orElseThrow());
+                    entry.position(), StructureCellPayload.normalize(new StructureBlockData(input.read("source_state", BlockState.CODEC).orElseThrow(),
+                            payload.getCompound("source_block_entity").orElse(null))), StructureCellPayload.decode(host, payload));
         }).toList();
     }
 
@@ -535,23 +541,21 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
         // Missing cells may already have produced drops or moved elsewhere after a crash.
         // Only a complete exact image proves rollback ownership; ambiguity keeps the source isolated.
         return RestorationRollback.clear(cells,
-                cell -> loaded(host, cell.target()) && host.getBlockState(cell.target()).equals(cell.placed())
-                        && host.getBlockEntity(cell.target()) == null,
-                cell -> host.setBlock(cell.target(), Blocks.AIR.defaultBlockState(), SubLevelCaptureService.TRANSACTION_FLAGS),
+                cell -> loaded(host, cell.target()) && StructureCellPayload.read(host, cell.target()).equals(cell.placedData()),
+                cell -> { StructureCellPayload.write(host, cell.target(), new StructureBlockData(Blocks.AIR.defaultBlockState()), SubLevelCaptureService.TRANSACTION_FLAGS); return true; },
                 () -> TargetedChunkDurability.saveAround(host, cells.stream().map(Cell::target).toList()));
     }
 
     private static boolean matchesTargets(ServerLevel host, List<Cell> cells) {
-        return cells.stream().allMatch(cell -> loaded(host, cell.target()) && host.getBlockState(cell.target()).equals(cell.placed())
-                && host.getBlockEntity(cell.target()) == null);
+        return cells.stream().allMatch(cell -> loaded(host, cell.target()) && StructureCellPayload.read(host, cell.target()).equals(cell.placedData()));
     }
 
     private static boolean matchesSource(CaptureTarget backend, StructureRef reference, List<Cell> cells) {
         var source = backend.restorationCells(reference).orElse(null);
         if (source == null || source.size() != cells.size()) return false;
-        var expected = new HashMap<BlockPos, BlockState>();
-        for (var cell : cells) expected.put(cell.local(), cell.source());
-        return source.stream().allMatch(cell -> cell.state().equals(expected.get(cell.localPosition())));
+        var expected = new HashMap<BlockPos, StructureBlockData>();
+        for (var cell : cells) expected.put(cell.local(), cell.sourceData());
+        return source.stream().allMatch(cell -> cell.data().equals(expected.get(cell.localPosition())));
     }
 
     private static boolean loaded(ServerLevel host, BlockPos position) {
@@ -594,7 +598,7 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
             var journal = StructureTransactionJournal.atomicOnly(server.getWorldPath(LevelResource.ROOT).resolve("data/academy/marked_restoration"));
             var records = journal.records();
             if (!journal.healthy() || !journal.corruptFiles().isEmpty()) throw new IOException("Restoration journal unavailable or corrupt");
-            var registry = new Registry(journal);
+            var registry = new Registry(server, journal);
             for (var record : records) registry.put(record);
             SERVERS.put(server, registry);
             return registry;
@@ -628,7 +632,9 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
         OBSERVERS.remove(event.getServer());
     }
 
-    private record Cell(BlockPos local, BlockPos target, BlockState source, BlockState placed) {}
+    private record Cell(BlockPos local, BlockPos target, StructureBlockData sourceData, StructureBlockData placedData) {
+        BlockState placed() { return placedData.state(); }
+    }
     private record Plan(OrientationBackendAccess.Body body, RestorationGrid.Alignment alignment, List<Cell> cells) {
         boolean same(Plan other) { return body.sameObservation(other.body) && alignment.equals(other.alignment) && cells.equals(other.cells); }
     }
@@ -646,8 +652,18 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
         final Set<Key> pending = new HashSet<>();
         final Set<Key> committed = new HashSet<>();
         final Deque<UUID> recoveryOrder = new ArrayDeque<>();
-        Registry(StructureTransactionJournal journal) { this.journal = journal; }
+        final MinecraftServer server;
+        Registry(MinecraftServer server, StructureTransactionJournal journal) { this.server = server; this.journal = journal; }
+        void isolate(StructureTransactionJournal.Record record) {
+            if (record.stage() == StructureTransactionJournal.Stage.PUBLISHED) { PayloadIsolation.release(server, record.transactionId()); return; }
+            var host = server.getLevel(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, record.hostDimension()));
+            if (host == null) return;
+            PayloadIsolation.lock(host, record.cells().stream().map(StructureTransactionJournal.Cell::position).toList(), record.transactionId());
+            var backend = target(host, reference(record)).orElse(null);
+            if (backend != null) backend.lockPayload(reference(record), decodeCells(host, record).stream().map(Cell::local).toList(), record.transactionId());
+        }
         void put(StructureTransactionJournal.Record record) {
+            isolate(record);
             var previous = records.put(record.transactionId(), record);
             var key = Key.of(record);
             if (record.stage() == StructureTransactionJournal.Stage.PUBLISHED) {
@@ -659,6 +675,7 @@ public final class MarkedGridRestoration implements StructureGridRestoration {
             }
         }
         void remove(UUID id) {
+            PayloadIsolation.release(server, id);
             var record = records.remove(id);
             if (record != null) { pending.remove(Key.of(record)); committed.remove(Key.of(record)); recoveryOrder.remove(id); }
         }

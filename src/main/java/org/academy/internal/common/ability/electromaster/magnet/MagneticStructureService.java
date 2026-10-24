@@ -211,7 +211,8 @@ public final class MagneticStructureService {
         var state = level.getBlockState(pos);
         if (state.isAir()) return "empty_cell";
         if (!MagneticTargets.isMagnetic(state) && !allowNonMagnetic) return "not_magnetic";
-        if (state.hasBlockEntity()) return "block_entity_not_supported";
+        var payloadProblem = org.academy.internal.common.structure.transaction.StructureCellPayload.rejection(level, pos, state, level.getBlockEntity(pos));
+        if (payloadProblem != null) return payloadProblem;
         if (state.getDestroySpeed(level, pos) < 0.0f) return "indestructible";
         return null;
     }

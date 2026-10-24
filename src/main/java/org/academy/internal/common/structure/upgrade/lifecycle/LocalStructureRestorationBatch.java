@@ -119,8 +119,9 @@ public final class LocalStructureRestorationBatch {
                     return;
                 }
                 var image = runtime.view(id).cells();
-                if (image.stream().anyMatch(cell -> cell.state().hasBlockEntity() || !cell.state().getFluidState().isEmpty())) {
-                    retain(job, "unsupported_block_entity_or_fluid"); return;
+                if (new org.academy.internal.common.structure.transaction.SubLevelCaptureTarget(server)
+                        .restorationCells(job.current).isEmpty()) {
+                    retain(job, "unsupported_or_unavailable_payload"); return;
                 }
                 if (image.size() > org.academy.internal.common.structure.transaction.StructureTransactionJournal.MAX_CELLS) {
                     retain(job, "content_budget_exceeded"); return;

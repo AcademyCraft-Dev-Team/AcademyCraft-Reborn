@@ -1829,9 +1829,10 @@ public final class HighSpeedJetStructureService {
     private static BlockStructureCaptureOptions.CapturePolicy capturePolicy(ServerPlayer player) {
         return (level, position, state, blockEntity) ->
                 level.mayInteract(player, position)
-                        && blockEntity == null
+                        && (blockEntity == null && !state.hasBlockEntity()
+                        || org.academy.internal.common.structure.transaction.StructureCellPayload.container(state))
                         && BlockStructureCaptureOptions.CapturePolicy.MOVABLE.canCapture(
-                        level, position, state, null);
+                        level, position, state, blockEntity);
     }
 
     private static BiPredicate<ServerLevel, BlockPos> capturePermission(ServerPlayer player) {

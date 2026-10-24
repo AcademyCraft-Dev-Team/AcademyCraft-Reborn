@@ -1,0 +1,14 @@
+allprojects {
+    afterEvaluate {
+        def game = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!game.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !game.name.startsWith('native-sublevel-direct-smoke')) throw new GradleException('Isolated capture fault fixture required')
+        def mode = providers.gradleProperty('academyCapturePayloadCrash').get()
+        if (!(mode in ['copied_saved','commit_saved','verify'])) throw new GradleException('Unknown capture fault phase')
+        neoForge.runs.named(providers.gradleProperty('academyPayloadRun').getOrElse('clientDev')) {
+            gameDirectory.set(game)
+            systemProperty 'academy.structureCapturePayloadCrash', mode
+            programArguments.addAll('--quickPlaySingleplayer', 'test', '--width', '1280', '--height', '720')
+        }
+    }
+}

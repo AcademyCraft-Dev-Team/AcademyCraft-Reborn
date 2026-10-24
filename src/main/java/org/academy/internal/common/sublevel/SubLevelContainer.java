@@ -43,6 +43,23 @@ final class SubLevelContainer implements Container {
     @Override public void setItem(int slot, ItemStack stack) { chest.setItem(slot, stack); }
     @Override public void setChanged() { chest.setChanged(); }
     @Override public boolean stillValid(Player player) {
+        var runtime = SubLevelServer.runtime(host).orElse(null);
+        var body = runtime == null ? null : runtime.get(subLevelId).orElse(null);
+        var entity = body == null ? null : runtime.storage().blockEntity(body.plot(), local);
+        if (entity == null || entity.isRemoved() || !SubLevelServer.published(body)
+                || org.academy.internal.common.structure.transaction.PayloadIsolation.denied(entity)
+                || !(entity instanceof Container container)
+                || !(chest == entity || chest instanceof net.minecraft.world.CompoundContainer pair && pair.contains(container))) return false;
+        if (chest instanceof net.minecraft.world.CompoundContainer pair) {
+            var state = entity.getBlockState();
+            if (!(state.getBlock() instanceof net.minecraft.world.level.block.ChestBlock)
+                    || state.getValue(net.minecraft.world.level.block.ChestBlock.TYPE)
+                    == net.minecraft.world.level.block.state.properties.ChestType.SINGLE) return false;
+            var partner = entity.getLevel().getBlockEntity(entity.getBlockPos().relative(
+                    net.minecraft.world.level.block.ChestBlock.getConnectedDirection(state)));
+            if (!(partner instanceof Container other) || partner.isRemoved() || !pair.contains(other)
+                    || org.academy.internal.common.structure.transaction.PayloadIsolation.denied(partner)) return false;
+        }
         return player.level() == host
                 && player.distanceToSqr(worldCenter.get()) <= 64.0;
     }

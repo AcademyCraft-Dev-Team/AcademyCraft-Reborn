@@ -71,6 +71,7 @@ public final class CaptureSoftClearance {
                 solid |= !state.getCollisionShape(host, position).isEmpty() && backend.canSeed(host, position, state);
             }
         }
+        if (!org.academy.internal.common.structure.transaction.StructureCellPayload.completePairs(host, retained)) return rejected("incomplete_double_chest");
         if (!solid) return rejected("capture_no_seedable_content");
         if (!soft.isEmpty()) {
             SubLevelTerrainBreakPolicy.applyCandidates(host, actor, soft,

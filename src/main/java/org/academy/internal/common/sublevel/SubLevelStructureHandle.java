@@ -116,6 +116,7 @@ public final class SubLevelStructureHandle implements StructureHandle {
         @Override
         public StructureWriteResult compareAndSet(BlockPos localPosition, StructureBlockData expected,
                                                   StructureBlockData replacement) {
+            if (org.academy.internal.common.structure.transaction.PayloadIsolation.denied(storage.level(), storage.worldPosition(subLevel.plot(), localPosition))) return StructureWriteResult.NOT_READY;
             var current = read(localPosition);
             if (!same(current, expected)) return StructureWriteResult.CONFLICT;
             if (current.state() != replacement.state()

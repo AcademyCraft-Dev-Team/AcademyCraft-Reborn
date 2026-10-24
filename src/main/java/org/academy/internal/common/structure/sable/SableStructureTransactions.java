@@ -26,6 +26,9 @@ import org.academy.api.common.structure.StructureWriteResult;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.transaction.CaptureCheckpointPolicy;
 import org.academy.internal.common.structure.transaction.CaptureTarget;
+import org.academy.internal.common.structure.transaction.StructureCellPayload;
+import org.academy.internal.common.structure.transaction.PayloadIsolation;
+import org.academy.api.common.structure.StructureBlockData;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 import org.jspecify.annotations.Nullable;
@@ -161,10 +164,9 @@ public final class SableStructureTransactions implements CaptureTarget {
                     .anyMatch(section -> section.getEntities().anyMatch(entity -> !entity.isRemoved()))) return Optional.empty();
             var state = chunk.getBlockState(position);
             if (state.isAir()) continue;
-            if (state.hasBlockEntity() || !state.getFluidState().isEmpty()
-                    || chunk.getBlockEntities().containsKey(position)
+            if (StructureCellPayload.rejection(ship.getLevel(), position, state, chunk.getBlockEntity(position)) != null
                     || cells.size() >= StructureCaptureRequest.MAXIMUM_BLOCKS) return Optional.empty();
-            cells.add(new RestorationCell(position.subtract(plot.getCenterBlock()), state));
+            cells.add(new RestorationCell(position.subtract(plot.getCenterBlock()), StructureCellPayload.read(ship.getLevel(), position)));
         }
         return cells.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(cells));
     }
@@ -381,6 +383,56 @@ public final class SableStructureTransactions implements CaptureTarget {
     }
 
     @Override
+    public void lockPayload(StructureRef target, List<BlockPos> positions, UUID operation) {
+        var ship = ship(target);
+        if (ship != null) PayloadIsolation.lock(ship.getLevel(), positions.stream()
+                .map(pos -> ship.getPlot().getCenterBlock().offset(pos)).toList(), operation);
+    }
+
+    @Override
+    public Optional<StructureBlockData> readData(StructureRef target, BlockPos local) {
+        var ship = ship(target);
+        if (ship == null) return Optional.empty();
+        var position = plotPosition(ship.getPlot(), ship.getLevel(), local);
+        return position == null || chunk(ship.getPlot(), position) == null ? Optional.empty()
+                : Optional.of(StructureCellPayload.read(ship.getLevel(), position));
+    }
+
+    @Override
+    public StructureWriteResult writeData(StructureRef target, BlockPos local, StructureBlockData data) {
+        var ship = ship(target);
+        if (ship == null) return StructureWriteResult.NOT_READY;
+        var position = plotPosition(ship.getPlot(), ship.getLevel(), local);
+        if (position == null) return StructureWriteResult.OUT_OF_BOUNDS;
+        var chunk = chunk(ship.getPlot(), position);
+        if (chunk == null) return StructureWriteResult.NOT_READY;
+        var current = chunk.getBlockState(position);
+        // The allocation seed is already present; only its still-empty BE may be initialized.
+        if (!current.isAir()) {
+            if (!current.equals(data.state()) || data.blockEntityData() == null) return StructureWriteResult.CONFLICT;
+            var empty = ((net.minecraft.world.level.block.EntityBlock) current.getBlock()).newBlockEntity(position, current);
+            if (empty == null || !StructureCellPayload.read(ship.getLevel(), position).equals(StructureCellPayload.normalize(
+                    new StructureBlockData(current, empty.saveWithFullMetadata(ship.getLevel().registryAccess()))))) return StructureWriteResult.CONFLICT;
+        }
+        StructureCellPayload.write(ship.getLevel(), position, data, WRITE_FLAGS);
+        return StructureWriteResult.APPLIED;
+    }
+
+    @Override
+    public StructureWriteResult clearData(StructureRef target, BlockPos local, StructureBlockData expected) {
+        var ship = ship(target);
+        if (ship == null) return StructureWriteResult.NOT_READY;
+        var position = plotPosition(ship.getPlot(), ship.getLevel(), local);
+        if (position == null) return StructureWriteResult.OUT_OF_BOUNDS;
+        if (chunk(ship.getPlot(), position) == null) return StructureWriteResult.NOT_READY;
+        var current = StructureCellPayload.read(ship.getLevel(), position);
+        if (current.state().isAir()) return StructureWriteResult.APPLIED;
+        if (!current.equals(StructureCellPayload.normalize(expected))) return StructureWriteResult.CONFLICT;
+        StructureCellPayload.write(ship.getLevel(), position, new StructureBlockData(Blocks.AIR.defaultBlockState()), WRITE_FLAGS);
+        return StructureWriteResult.APPLIED;
+    }
+
+    @Override
     public boolean quarantined(StructureRef target) {
         var ship = ship(target);
         return ship == null || emptyBounds(ship.getPlot());
@@ -433,9 +485,16 @@ public final class SableStructureTransactions implements CaptureTarget {
     public boolean releaseEmpty(StructureRef target) {
         SableStructureAccess.requireThread(server);
         var container = container(target.dimension());
-        if (container == null) return true;
+        if (container == null) return false;
         var subLevel = container.getSubLevel(target.id());
-        if (subLevel == null) return true;
+        if (subLevel == null) return false;
+        if (subLevel instanceof ServerSubLevel saved && saved.getLastSerializationPointer() != null) {
+            var evidence = restorationEvidence(target).orElseThrow(() -> new IllegalStateException("Missing Sable rollback ownership evidence"));
+            // Queueing backend deletion is not a durability receipt. The source will become
+            // usable as soon as its capture journal is removed, so retire the exact saved copy first.
+            if (!retireRestored(target, evidence)) throw new IllegalStateException("Sable rollback retirement is not durable");
+            return true;
+        }
         try {
             var executed = SableContainerGuard.containerMutation("sable.capture.release",
                     () -> container.removeSubLevel(subLevel, SubLevelRemovalReason.REMOVED));
@@ -444,6 +503,15 @@ public final class SableStructureTransactions implements CaptureTarget {
             AcademyCraft.LOGGER.error("Sable capture could not remove target {}", target.id(), failure);
             return false;
         }
+    }
+
+    @Override
+    public boolean save(StructureRef target, List<BlockPos> sourcePositions) {
+        var ship = ship(target);
+        if (ship == null || !save(target) || !checkpointRestoration(target)) return false;
+        // Both the pre-decision source image and the post-decision source removal must survive
+        // a crash. Sable's holding map only saves its plot, never these ordinary host chunks.
+        return org.academy.internal.common.sublevel.TargetedChunkDurability.saveAround(ship.getLevel(), sourcePositions);
     }
 
     @Override

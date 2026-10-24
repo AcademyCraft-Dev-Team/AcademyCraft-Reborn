@@ -41,25 +41,14 @@ final class LevelCaptureSource {
         try {
             for (var position : request.positions()) {
                 var state = view.getBlockState(position);
-                // The transaction persists block states only. Do not certify a digest that
-                // silently drops inventories or other block-entity payloads.
-                if (state.hasBlockEntity() || view.getBlockEntity(position) != null) {
-                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_block_entity_unsupported");
-                }
-                if (!state.getFluidState().isEmpty()) {
-                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_fluid_unsupported");
-                }
-                if (LoadedChunkView.inspectShape(() -> state.getDestroySpeed(view, position)) < 0.0f) {
-                    throw new Rejected(StructureOperation.Status.DENIED, "capture_source_unbreakable");
-                }
-                if (host.getBlockTicks().hasScheduledTick(position, state.getBlock())) {
-                    throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_scheduled_tick_pending");
-                }
+                var rejection = org.academy.internal.common.structure.transaction.StructureCellPayload.rejection(host, position, state, view.getBlockEntity(position));
+                if (rejection != null) throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_" + rejection);
                 var stateId = state.toString();
                 if (stateId.isBlank() || stateId.length() > CaptureSourceSnapshot.MAX_STATE_LENGTH) {
                     throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_state_id_unsupported");
                 }
-                cells.add(new CaptureSourceSnapshot.Cell(position, stateId));
+                cells.add(new CaptureSourceSnapshot.Cell(position, stateId, org.academy.internal.common.structure.transaction.StructureCellPayload.digest(
+                        org.academy.internal.common.structure.transaction.StructureCellPayload.read(host, position))));
                 for (var box : LoadedChunkView.inspectShape(() -> state.getCollisionShape(view, position).toAabbs())) {
                     if (boxes.size() >= ExtractionPlanner.MAX_LOCAL_BOXES) {
                         throw new Rejected(StructureOperation.Status.CONFLICT, "capture_source_shape_budget_exhausted");
@@ -77,6 +66,8 @@ final class LevelCaptureSource {
         } catch (LoadedChunkView.ShapeFailure unavailable) {
             throw new Rejected(StructureOperation.Status.UNSUPPORTED, "capture_source_geometry_unavailable");
         }
+        if (!org.academy.internal.common.structure.transaction.StructureCellPayload.completePairs(host, request.positions()))
+            throw new Rejected(StructureOperation.Status.UNSUPPORTED, "incomplete_double_chest");
         if (!view.current()) {
             throw new Rejected(StructureOperation.Status.STALE, "capture_source_changed_during_preview");
         }

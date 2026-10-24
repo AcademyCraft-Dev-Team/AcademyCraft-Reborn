@@ -18,8 +18,11 @@ import java.util.UUID;
 public record StructureCaptureEvidence(Identifier hostDimension, StructureRef target,
                                        StructureCaptureRequest request, List<Cell> cells,
                                        UUID runtimeId, long contentRevision) {
-    public record Cell(BlockPos position, String state) {
+    public record Cell(BlockPos position, String state, String payloadDigest) {
+        public Cell(BlockPos position, String state) { this(position, state, ""); }
         public Cell {
+            Objects.requireNonNull(payloadDigest, "payloadDigest");
+            if (!payloadDigest.isEmpty() && !payloadDigest.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Invalid payload digest");
             position = Objects.requireNonNull(position, "position").immutable();
             Objects.requireNonNull(state, "state");
         }

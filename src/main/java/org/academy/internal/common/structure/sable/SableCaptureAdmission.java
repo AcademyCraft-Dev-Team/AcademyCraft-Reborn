@@ -24,6 +24,10 @@ final class SableCaptureAdmission {
 
     static @Nullable String rejectionDetail(ServerLevel host, BlockPos position, BlockState state,
                                              @Nullable BlockEntity blockEntity) {
+        if (org.academy.internal.common.structure.transaction.StructureCellPayload.container(state)
+                || state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)) {
+            return org.academy.internal.common.structure.transaction.StructureCellPayload.rejection(host, position, state, blockEntity);
+        }
         return allowTerrain(NativeCaptureWhitelist.rejectionDetail(host, position, state, blockEntity),
                 Terrain.BLOCKS.contains(state.getBlock()), state.getDestroySpeed(host, position));
     }

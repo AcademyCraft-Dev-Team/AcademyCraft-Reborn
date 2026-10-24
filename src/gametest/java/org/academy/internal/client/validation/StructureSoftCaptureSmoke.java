@@ -34,7 +34,7 @@ import java.util.Map;
 public final class StructureSoftCaptureSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureSoftCaptureSmoke");
     private static final List<String> CASES = List.of("snow", "grass", "flower", "powder_snow", "dry_grass", "snow_block", "cancel_break",
-            "permission", "chest", "waterlogged", "unbreakable");
+            "permission", "furnace", "water", "unbreakable");
     private static final List<Map<String, Object>> RESULTS = new ArrayList<>();
     private static volatile boolean ready, complete, failed, closing;
     private static Path directory;
@@ -104,8 +104,8 @@ public final class StructureSoftCaptureSmoke {
                 case "powder_snow" -> Blocks.POWDER_SNOW.defaultBlockState();
                 case "dry_grass" -> Blocks.SHORT_DRY_GRASS.defaultBlockState();
                 case "snow_block" -> Blocks.SNOW_BLOCK.defaultBlockState();
-                case "chest" -> Blocks.CHEST.defaultBlockState();
-                case "waterlogged" -> Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+                case "furnace" -> Blocks.FURNACE.defaultBlockState();
+                case "water" -> Blocks.WATER.defaultBlockState();
                 case "unbreakable" -> Blocks.BEDROCK.defaultBlockState();
                 default -> Blocks.SNOW.defaultBlockState();
             };

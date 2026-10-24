@@ -161,6 +161,12 @@ public final class SubLevelInteractionService {
         var state = level.getBlockState(world);
         if (!level.hasChunkAt(world) || state.isAir()) return InteractionResult.FAIL;
         if (!level.mayInteract(player, world)) return InteractionResult.FAIL;
+        var payloadEntity = storage.blockEntity(subLevel.plot(), local);
+        if (payloadEntity != null && org.academy.internal.common.structure.transaction.PayloadIsolation.denied(payloadEntity)) return InteractionResult.FAIL;
+        if (payloadEntity instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity container) {
+            if (!container.canOpen(player)) return InteractionResult.FAIL;
+            if (!(container instanceof ChestBlockEntity)) container.unpackLootTable(player);
+        }
         if ((state.is(Blocks.CHEST) || state.is(Blocks.TRAPPED_CHEST))
                 && runtime.storage().blockEntity(subLevel.plot(), local) instanceof ChestBlockEntity chest) {
             Container container = chest;
@@ -169,11 +175,15 @@ public final class SubLevelInteractionService {
             if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
                 var otherPos = ChestBlock.getConnectedBlockPos(local, state);
                 if (runtime.storage().blockEntity(subLevel.plot(), otherPos) instanceof ChestBlockEntity other) {
+                    if (org.academy.internal.common.structure.transaction.PayloadIsolation.denied(other)
+                            || !other.canOpen(player)) return InteractionResult.FAIL;
+                    other.unpackLootTable(player);
                     container = new CompoundContainer(chest, other);
                     rows = 6;
                     title = Component.translatable("container.chestDouble");
                 }
             }
+            chest.unpackLootTable(player);
             final var menuContainer = container(runtime, subLevel, local, container);
             final int menuRows = rows;
             final var menuTitle = title;

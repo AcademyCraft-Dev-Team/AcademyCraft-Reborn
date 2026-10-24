@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructureHandle;
+import org.academy.api.common.structure.StructureBlockData;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
@@ -83,10 +84,11 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
                 (int) Math.ceil(bounds.maxY) - 1, (int) Math.ceil(bounds.maxZ) - 1)) {
             var state = runtime.storage().blockState(body.plot(), position);
             if (state.isAir()) continue;
-            if (state.hasBlockEntity() || !state.getFluidState().isEmpty()
-                    || runtime.storage().blockEntity(body.plot(), position) != null
+            var world = runtime.storage().worldPosition(body.plot(), position);
+            if (StructureCellPayload.rejection(runtime.storage().level(), world, state,
+                    runtime.storage().blockEntity(body.plot(), position)) != null
                     || cells.size() >= StructureTransactionJournal.MAX_CELLS) return Optional.empty();
-            cells.add(new RestorationCell(position, state));
+            cells.add(new RestorationCell(position, StructureCellPayload.read(runtime.storage().level(), world)));
         }
         return cells.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(cells));
     }
@@ -99,10 +101,7 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
         var tag = new net.minecraft.nbt.CompoundTag();
         var images = new net.minecraft.nbt.ListTag();
         for (var cell : cells) {
-            var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(
-                    net.minecraft.util.ProblemReporter.DISCARDING, runtime.host().registryAccess());
-            output.store("state", BlockState.CODEC, cell.state());
-            var image = output.buildResult();
+            var image = StructureCellPayload.encode(runtime.host(), cell.data());
             image.putInt("x", cell.localPosition().getX()); image.putInt("y", cell.localPosition().getY()); image.putInt("z", cell.localPosition().getZ());
             images.add(image);
         }
@@ -138,28 +137,25 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
             // until its manifest ownership is actually retired, rather than losing cleanup.
             if (body == null) return !runtime.hasPersisted(id);
             var images = evidence.getList("cells").orElseThrow();
-            var cells = new java.util.LinkedHashMap<BlockPos, BlockState>();
+            var cells = new java.util.LinkedHashMap<BlockPos, StructureBlockData>();
             for (var item : images) {
                 if (!(item instanceof net.minecraft.nbt.CompoundTag image)) return false;
                 var local = new BlockPos(image.getInt("x").orElseThrow(), image.getInt("y").orElseThrow(), image.getInt("z").orElseThrow());
-                var input = net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING,
-                        runtime.host().registryAccess(), image);
-                cells.put(local, input.read("state", BlockState.CODEC).orElseThrow());
+                cells.put(local, StructureCellPayload.decode(runtime.host(), image));
             }
             // The durable commit owns only these source images. A partial prior cleanup is
             // idempotent, but an unexpected edit or block entity retains the reservation.
             for (var cell : cells.entrySet()) {
-                var current = runtime.storage().blockState(body.plot(), cell.getKey());
-                if (!current.isAir() && !current.equals(cell.getValue())
-                        || runtime.storage().blockEntity(body.plot(), cell.getKey()) != null) return false;
+                var current = StructureCellPayload.read(runtime.storage().level(), runtime.storage().worldPosition(body.plot(), cell.getKey()));
+                if (!current.state().isAir() && !current.equals(cell.getValue())) return false;
             }
             for (var cell : cells.entrySet()) {
                 var position = runtime.storage().worldPosition(body.plot(), cell.getKey());
                 var area = new net.minecraft.world.level.levelgen.structure.BoundingBox(position);
                 runtime.storage().level().getBlockTicks().clearArea(area);
                 runtime.storage().level().getFluidTicks().clearArea(area);
-                if (!runtime.storage().blockState(body.plot(), cell.getKey()).isAir()
-                        && !runtime.storage().setBlock(body.plot(), cell.getKey(), Blocks.AIR.defaultBlockState(), SubLevelCaptureService.TRANSACTION_FLAGS)) return false;
+                if (!runtime.storage().blockState(body.plot(), cell.getKey()).isAir())
+                    StructureCellPayload.write(runtime.storage().level(), position, new StructureBlockData(Blocks.AIR.defaultBlockState()), SubLevelCaptureService.TRANSACTION_FLAGS);
             }
             if (!runtime.flushPlotChunks(id)) return false;
             return runtime.remove(id);
@@ -171,25 +167,7 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
     @Override
     public @Nullable String rejectionDetail(ServerLevel host, BlockPos position, BlockState state,
                                              @Nullable BlockEntity blockEntity) {
-        return classifyAdmission(blockEntity != null || state.hasBlockEntity(),
-                state.hasProperty(BlockStateProperties.WATERLOGGED)
-                        && state.getValue(BlockStateProperties.WATERLOGGED),
-                !state.getFluidState().isEmpty(),
-                host.getBlockTicks().hasScheduledTick(position, state.getBlock()),
-                state.getDestroySpeed(host, position));
-    }
-
-    /** The shared transaction persists block states; richer payloads remain an explicit rejection. */
-    static @Nullable String classifyAdmission(boolean blockEntity, boolean waterlogged, boolean fluid,
-                                               boolean scheduledTick, float destroySpeed) {
-        if (blockEntity) return "block_entity_not_supported";
-        if (waterlogged) return "waterlogged_not_supported";
-        if (fluid) return "fluid_not_supported";
-        if (scheduledTick) return "scheduled_tick_pending";
-        if (destroySpeed < 0.0f) return "unbreakable";
-        // Decorative cells move with their supporting structure and retain their render/state
-        // data. verifyCopy still rejects a wholly empty collision body before source removal.
-        return null;
+        return StructureCellPayload.rejection(host, position, state, blockEntity);
     }
 
     @Override
@@ -228,6 +206,43 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
         storage.setBlock(subLevel.plot(), local, replacement, SubLevelCaptureService.TRANSACTION_FLAGS);
         return storage.blockState(subLevel.plot(), local).equals(replacement)
                 ? StructureWriteResult.APPLIED : StructureWriteResult.REJECTED;
+    }
+
+    @Override
+    public void lockPayload(StructureRef target, List<BlockPos> positions, UUID operation) {
+        var runtime = runtime(target);
+        var body = runtime == null ? null : runtime.get(new SubLevelId(target.id())).orElse(null);
+        if (body != null) PayloadIsolation.lock(runtime.storage().level(), positions.stream()
+                .map(pos -> runtime.storage().worldPosition(body.plot(), pos)).toList(), operation);
+    }
+
+    @Override
+    public Optional<StructureBlockData> readData(StructureRef target, BlockPos local) {
+        var runtime = runtime(target);
+        var body = runtime == null ? null : runtime.get(new SubLevelId(target.id())).orElse(null);
+        return body == null || !inside(body, local) ? Optional.empty()
+                : Optional.of(StructureCellPayload.read(runtime.storage().level(), runtime.storage().worldPosition(body.plot(), local)));
+    }
+
+    @Override
+    public StructureWriteResult writeData(StructureRef target, BlockPos local, StructureBlockData data) {
+        var runtime = runtime(target);
+        var body = runtime == null ? null : runtime.get(new SubLevelId(target.id())).orElse(null);
+        if (body == null || !ready(target)) return StructureWriteResult.NOT_READY;
+        if (!inside(body, local)) return StructureWriteResult.OUT_OF_BOUNDS;
+        if (!runtime.storage().blockState(body.plot(), local).isAir()) return StructureWriteResult.CONFLICT;
+        StructureCellPayload.write(runtime.storage().level(), runtime.storage().worldPosition(body.plot(), local), data, SubLevelCaptureService.TRANSACTION_FLAGS);
+        return StructureWriteResult.APPLIED;
+    }
+
+    @Override
+    public StructureWriteResult clearData(StructureRef target, BlockPos local, StructureBlockData expected) {
+        if (!readData(target, local).filter(StructureCellPayload.normalize(expected)::equals).isPresent()) return StructureWriteResult.CONFLICT;
+        var runtime = runtime(target);
+        var body = runtime.get(new SubLevelId(target.id())).orElseThrow();
+        StructureCellPayload.write(runtime.storage().level(), runtime.storage().worldPosition(body.plot(), local),
+                new StructureBlockData(Blocks.AIR.defaultBlockState()), SubLevelCaptureService.TRANSACTION_FLAGS);
+        return StructureWriteResult.APPLIED;
     }
 
     @Override

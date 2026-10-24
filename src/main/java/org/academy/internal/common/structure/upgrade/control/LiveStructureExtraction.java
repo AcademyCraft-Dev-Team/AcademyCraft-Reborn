@@ -174,7 +174,7 @@ public final class LiveStructureExtraction implements StructureExtraction {
             return failure(StructureOperation.Status.DENIED, "capture_submission_mismatch");
         }
         var committedSource = CaptureSourceSnapshot.of(evidence.cells().stream()
-                .map(cell -> new CaptureSourceSnapshot.Cell(cell.position(), cell.state())).toList());
+                .map(cell -> new CaptureSourceSnapshot.Cell(cell.position(), cell.state(), cell.payloadDigest())).toList());
         if (!committedSource.digest().equals(entry.source().digest())) {
             return failure(StructureOperation.Status.DENIED, "capture_source_digest_mismatch");
         }
@@ -225,6 +225,8 @@ public final class LiveStructureExtraction implements StructureExtraction {
                 body.localBoxes(), body.motion().pose(), entry.preview().request().limits().maxRetreatDistance(),
                 context.reference());
         if (outcome.status() != StructureOperation.Status.READY) {
+            AcademyCraft.LOGGER.debug("Capture binding path unavailable: reference={} pose={} boxes={} outcome={}",
+                    context.reference(), body.motion().pose(), body.localBoxes(), outcome);
             return new StructureOperation.Result<>(outcome.status(), outcome.detail(),
                     Optional.empty(), Optional.empty());
         }
@@ -377,10 +379,7 @@ public final class LiveStructureExtraction implements StructureExtraction {
         try {
             for (var cell : expected.cells()) {
                 var data = access.read(cell.position());
-                if (data.state().hasBlockEntity() || data.blockEntityData() != null) {
-                    return StructureOperation.Status.DENIED;
-                }
-                actual.add(new CaptureSourceSnapshot.Cell(cell.position(), data.state().toString()));
+                actual.add(new CaptureSourceSnapshot.Cell(cell.position(), data.state().toString(), org.academy.internal.common.structure.transaction.StructureCellPayload.digest(data)));
             }
         } catch (IllegalStateException | IllegalArgumentException unavailable) {
             return StructureOperation.Status.TERRAIN_PENDING;

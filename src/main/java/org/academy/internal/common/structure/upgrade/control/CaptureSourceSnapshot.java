@@ -19,7 +19,7 @@ import java.util.Objects;
  * can prove that its plan belongs to the same source instead of trusting a caller's record.
  *
  * <p>Cells carry host-world positions and the exact loaded block states. Block-entity content
- * is unsupported by this snapshot and must be rejected at admission, never silently omitted.
+ * is represented by a canonical full-payload digest, including unopened loot and item components.
  * Neighbour-dependent shapes are observed separately by the bounded planner. This value is
  * evidence only; it neither loads chunks nor grants a capture, a lease or a world write.</p>
  */
@@ -32,8 +32,11 @@ public record CaptureSourceSnapshot(List<Cell> cells) {
             .thenComparingInt(cell -> cell.position().getZ());
 
     /** One host cell and the id of its current block state; positions are immutable copies. */
-    public record Cell(BlockPos position, String state) {
+    public record Cell(BlockPos position, String state, String payloadDigest) {
+        public Cell(BlockPos position, String state) { this(position, state, ""); }
         public Cell {
+            Objects.requireNonNull(payloadDigest, "payloadDigest");
+            if (!payloadDigest.isEmpty() && !payloadDigest.matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Invalid payload digest");
             position = Objects.requireNonNull(position, "position").immutable();
             Objects.requireNonNull(state, "state");
             if (state.isBlank() || state.length() > MAX_STATE_LENGTH) {
@@ -43,7 +46,7 @@ public record CaptureSourceSnapshot(List<Cell> cells) {
 
         /** Stable text form; the digest must not depend on record formatting or hash order. */
         String canonical() {
-            return position.getX() + "," + position.getY() + "," + position.getZ() + "=" + state;
+            return position.getX() + "," + position.getY() + "," + position.getZ() + "=" + state + (payloadDigest.isEmpty() ? "" : "#" + payloadDigest);
         }
     }
 
@@ -94,7 +97,7 @@ public record CaptureSourceSnapshot(List<Cell> cells) {
             if (local.getX() < 0 || local.getY() < 0 || local.getZ() < 0) {
                 throw new IllegalArgumentException("Source cell lies outside the capture origin");
             }
-            rebased.add(new Cell(local, cell.state()));
+            rebased.add(new Cell(local, cell.state(), cell.payloadDigest()));
         }
         return new CaptureSourceSnapshot(rebased);
     }

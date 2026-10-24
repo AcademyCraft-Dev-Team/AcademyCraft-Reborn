@@ -14,7 +14,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -60,6 +59,20 @@ import java.util.function.IntPredicate;
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class StructureCaptureCoordinator {
+    public enum CheckpointPhase { COPIED_SAVED, COMMIT_SAVED }
+    public record Checkpoint(ServerLevel host, StructureRef target, UUID operation, CheckpointPhase phase) {}
+    private static final Map<MinecraftServer, java.util.function.Consumer<Checkpoint>> OBSERVERS = new IdentityHashMap<>();
+
+    /** Internal fault-injection boundary; production installs no listener. */
+    public static void observeCheckpoints(MinecraftServer server, java.util.function.Consumer<Checkpoint> observer) {
+        if (!server.isSameThread()) throw new IllegalStateException("Capture observation requires the server thread");
+        OBSERVERS.put(server, Objects.requireNonNull(observer));
+    }
+
+    private static void checkpoint(PendingCapture capture, CheckpointPhase phase) {
+        var observer = OBSERVERS.get(capture.host.getServer());
+        if (observer != null) observer.accept(new Checkpoint(capture.host, capture.target, capture.transactionId, phase));
+    }
     private static final int ACTIVATION_TIMEOUT_TICKS = 200;
     private static final int SAVE_TIMEOUT_TICKS = 600;
     private static final int MAX_FINISHED_RESULTS = 256;
@@ -205,6 +218,10 @@ public final class StructureCaptureCoordinator {
         var backend = targetFor(server, reference.backend());
         if (backend == null) return false;
         try {
+            var content = backend.restorationCells(reference);
+            if (content.isEmpty() && !reference.backend().equals(NativeCaptureTarget.ID)) return false;
+            if (content.isPresent() && content.get().stream().anyMatch(cell -> cell.data().blockEntityData() != null
+                    || !cell.state().getFluidState().isEmpty())) return false;
             return backend.releaseEmpty(reference);
         } catch (RuntimeException | LinkageError failure) {
             AcademyCraft.LOGGER.error("Cannot discard the uncommitted structure {}", reference, failure);
@@ -264,6 +281,7 @@ public final class StructureCaptureCoordinator {
             }
         }
         var states = new ArrayList<BlockState>(ordered.size());
+        var data = new ArrayList<org.academy.api.common.structure.StructureBlockData>(ordered.size());
         long validateStarted = CaptureTimings.begin();
         for (var position : ordered) {
             if (!host.isInWorldBounds(position)) {
@@ -286,7 +304,16 @@ public final class StructureCaptureCoordinator {
                         position, rejection);
             }
             states.add(state);
+            try {
+                var image = StructureCellPayload.read(host, position);
+                BlockStructureTransferState.validateWrite(host, position, image.state(), image.blockEntityData());
+                data.add(image);
+            } catch (RuntimeException invalid) {
+                return StructureCaptureResult.failure(transactionId, StructureCaptureResult.Status.REJECTED, position, "payload_roundtrip_failed");
+            }
         }
+        if (!StructureCellPayload.completePairs(host, ordered)) return StructureCaptureResult.failure(transactionId,
+                StructureCaptureResult.Status.REJECTED, "incomplete_double_chest");
         CaptureTimings.record(transactionId.toString(), "capture_validate_cells", validateStarted);
         int seedIndex = firstSeedIndex(states.size(), index ->
                 backend.canSeed(host, ordered.get(index), states.get(index)));
@@ -309,7 +336,7 @@ public final class StructureCaptureCoordinator {
             long encodeStarted = CaptureTimings.begin();
             for (int index = 0; index < ordered.size(); index++) {
                 cells.add(new StructureTransactionJournal.Cell(ordered.get(index),
-                        encodeState(host, states.get(index))));
+                        StructureCellPayload.encode(host, data.get(index))));
             }
             CaptureTimings.record(transactionId.toString(), "capture_encode_cells", encodeStarted);
             var record = new StructureTransactionJournal.Record(transactionId, backend.backendId(),
@@ -321,6 +348,7 @@ public final class StructureCaptureCoordinator {
             CaptureTimings.record(transactionId.toString(), "journal_prepare", journalStarted);
             if (!journalWritten) {
                 claims.release(transactionId);
+                PayloadIsolation.release(server, transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_prepare_failed");
             }
@@ -328,16 +356,19 @@ public final class StructureCaptureCoordinator {
             // Plants may precede the first positive-mass collision cell in capture order.
             var seedOffset = ordered.get(seedIndex).subtract(origin);
             var seedState = states.get(seedIndex);
+            PayloadIsolation.lock(host, ordered, transactionId);
             long allocateStarted = CaptureTimings.begin();
             var allocated = backend.allocate(host, origin, seedOffset, seedState, ordered, transactionId);
             CaptureTimings.record(transactionId.toString(), "target_allocate", allocateStarted);
             if (allocated.isEmpty()) {
                 recycleQuietly(transactionId);
                 claims.release(transactionId);
+                PayloadIsolation.release(server, transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.BACKEND_UNAVAILABLE, backend.allocationFailureDetail());
             }
             var target = allocated.get();
+            backend.lockPayload(target, ordered.stream().map(pos -> pos.subtract(origin)).toList(), transactionId);
             record = record.withTarget(target.id());
             long targetJournalStarted = CaptureTimings.begin();
             boolean targetJournalWritten = persistNew(record);
@@ -347,6 +378,7 @@ public final class StructureCaptureCoordinator {
                 recycleQuietly(transactionId);
                 discardEmptyQuietly(backend, target);
                 claims.release(transactionId);
+                PayloadIsolation.release(server, transactionId);
                 return StructureCaptureResult.failure(transactionId,
                         StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "journal_allocation_failed");
             }
@@ -383,6 +415,7 @@ public final class StructureCaptureCoordinator {
             }
             recycleQuietly(transactionId);
             claims.release(transactionId);
+            PayloadIsolation.release(server, transactionId);
             AcademyCraft.LOGGER.error("Structure capture could not start: {}", transactionId, failure);
             return StructureCaptureResult.failure(transactionId,
                     StructureCaptureResult.Status.BACKEND_UNAVAILABLE, "capture_start_failed");
@@ -408,6 +441,7 @@ public final class StructureCaptureCoordinator {
     }
 
     private void drive(PendingCapture capture) {
+        capture.backend.lockPayload(capture.target, capture.positions.stream().map(pos -> pos.subtract(capture.origin)).toList(), capture.transactionId);
         if (capture.recovery) loadRecoverySourceChunks(capture);
         for (int transitions = 0; transitions < 8 && capture.result == null; transitions++) {
             var phase = capture.phase;
@@ -444,6 +478,7 @@ public final class StructureCaptureCoordinator {
 
     private void stepAwaitActivation(PendingCapture capture) {
         if (resolveHandle(capture) == null) {
+            if (capture.recovery && ++capture.waited <= ACTIVATION_TIMEOUT_TICKS) return;
             retain(capture, "target_handle_unavailable", null);
             return;
         }
@@ -463,9 +498,9 @@ public final class StructureCaptureCoordinator {
     private void stepCopy(PendingCapture capture) {
         if (!copyPreconditions(capture)) return;
         for (int index = 0; index < capture.positions.size(); index++) {
-            if (capture.seeded && index == capture.seedIndex) continue;
+            if (capture.seeded && index == capture.seedIndex && capture.data.get(index).blockEntityData() == null) continue;
             var offset = capture.positions.get(index).subtract(capture.origin);
-            var write = capture.backend.writeCell(capture.target, offset, capture.states.get(index));
+            var write = capture.backend.writeData(capture.target, offset, capture.data.get(index));
             if (write == StructureWriteResult.RECOVERY_REQUIRED) {
                 retain(capture, "target_backend_quarantined_during_copy", null);
                 return;
@@ -502,8 +537,8 @@ public final class StructureCaptureCoordinator {
         long verifyStarted = CaptureTimings.begin();
         for (int index = 0; index < capture.positions.size(); index++) {
             var offset = capture.positions.get(index).subtract(capture.origin);
-            var current = capture.backend.readCell(capture.target, offset);
-            if (current.isEmpty() || !current.get().equals(capture.states.get(index))) {
+            var current = capture.backend.readData(capture.target, offset);
+            if (current.isEmpty() || !current.get().equals(capture.data.get(index))) {
                 abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "target_verify_mismatch");
                 return;
             }
@@ -533,12 +568,22 @@ public final class StructureCaptureCoordinator {
             return;
         }
         CaptureTimings.record(capture.transactionId.toString(), "journal_copied", copiedJournalStarted);
+        // Full payloads must be durable on the target before the source-removal decision.
+        // A crash now can safely roll back; a crash after COMMIT has a complete target image.
+        if (capture.data.stream().anyMatch(data -> data.blockEntityData() != null || !data.state().getFluidState().isEmpty())) {
+            if (!capture.backend.save(capture.target, capture.positions)) {
+                abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "payload_checkpoint_failed");
+                return;
+            }
+            checkpoint(capture, CheckpointPhase.COPIED_SAVED);
+        }
         long decisionJournalStarted = CaptureTimings.begin();
         if (!persistStage(capture, StructureTransactionJournal.Stage.COMMIT_DECIDED)) {
             abort(capture, StructureCaptureResult.Status.TARGET_WRITE_FAILED, "journal_decision_persist_failed");
             return;
         }
         CaptureTimings.record(capture.transactionId.toString(), "journal_commit_decision", decisionJournalStarted);
+        checkpoint(capture, CheckpointPhase.COMMIT_SAVED);
         capture.phase = Phase.REMOVE_SOURCE;
     }
 
@@ -591,9 +636,9 @@ public final class StructureCaptureCoordinator {
         int size = capture.positions.size();
         while (capture.sliceCursor < size && copied < maximumCells) {
             int index = capture.sliceCursor;
-            if (!(capture.seeded && index == capture.seedIndex)) {
+            if (!(capture.seeded && index == capture.seedIndex && capture.data.get(index).blockEntityData() == null)) {
                 var offset = capture.positions.get(index).subtract(capture.origin);
-                var write = capture.backend.writeCell(capture.target, offset, capture.states.get(index));
+                var write = capture.backend.writeData(capture.target, offset, capture.data.get(index));
                 if (write == StructureWriteResult.RECOVERY_REQUIRED) {
                     retain(capture, "target_backend_quarantined_during_copy", null);
                     return copied;
@@ -661,13 +706,14 @@ public final class StructureCaptureCoordinator {
             // A durable ownership decision is not proof that the target's persisted copy is
             // still intact. Never remove a surviving source after a failed/corrupt restore.
             if (resolveHandle(capture) == null || !capture.backend.ready(capture.target)) {
-                retain(capture, "recovery_target_unavailable_before_source_removal", null);
+                // Sable reactivates a saved plot asynchronously after its host chunks arrive.
+                if (++capture.waited > ACTIVATION_TIMEOUT_TICKS) retain(capture, "recovery_target_unavailable_before_source_removal", null);
                 return;
             }
             for (int index = 0; index < capture.positions.size(); index++) {
                 var offset = capture.positions.get(index).subtract(capture.origin);
-                var copied = capture.backend.readCell(capture.target, offset);
-                if (copied.isEmpty() || !copied.get().equals(capture.states.get(index))) {
+                var copied = capture.backend.readData(capture.target, offset);
+                if (copied.isEmpty() || !copied.get().equals(capture.data.get(index))) {
                     retain(capture, "recovery_target_mismatch_before_source_removal", null);
                     return;
                 }
@@ -682,13 +728,12 @@ public final class StructureCaptureCoordinator {
         try {
             for (int index = 0; index < capture.positions.size(); index++) {
                 var position = capture.positions.get(index);
-                var state = capture.states.get(index);
                 if (!capture.host.isLoaded(position)) {
                     throw new IllegalStateException("Unloaded source cell during removal at " + position);
                 }
                 var current = capture.host.getBlockState(position);
                 if (capture.recovery && current.isAir()) continue;
-                if (!current.equals(state) || capture.host.getBlockEntity(position) != null) {
+                if (!StructureCellPayload.read(capture.host, position).equals(capture.data.get(index))) {
                     if (capture.recovery) {
                         retain(capture, "recovery_found_unknown_source_content", null);
                         return;
@@ -739,14 +784,13 @@ public final class StructureCaptureCoordinator {
                 }
                 for (int index = 0; index < capture.copyProgress; index++) {
                     var offset = capture.positions.get(index).subtract(capture.origin);
-                    var expected = capture.states.get(index);
-                    var current = capture.backend.readCell(capture.target, offset);
-                    if (current.isPresent() && current.get().isAir()) continue;
-                    if (current.isEmpty() || !current.get().equals(expected)) {
+                    var current = capture.backend.readData(capture.target, offset);
+                    if (current.isPresent() && current.get().state().isAir()) continue;
+                    if (current.isEmpty() || !current.get().equals(capture.data.get(index))) {
                         retain(capture, "rollback_found_unknown_target_content", null);
                         return;
                     }
-                    var cleared = capture.backend.clearCell(capture.target, offset, expected);
+                    var cleared = capture.backend.clearData(capture.target, offset, capture.data.get(index));
                     if (cleared != StructureWriteResult.APPLIED) {
                         retain(capture, "rollback_target_clear_failed:" + cleared.name().toLowerCase(Locale.ROOT), null);
                         return;
@@ -754,8 +798,8 @@ public final class StructureCaptureCoordinator {
                 }
                 for (int index = 0; index < capture.copyProgress; index++) {
                     var offset = capture.positions.get(index).subtract(capture.origin);
-                    var current = capture.backend.readCell(capture.target, offset);
-                    if (current.isEmpty() || !current.get().isAir()) {
+                    var current = capture.backend.readData(capture.target, offset);
+                    if (current.isEmpty() || !current.get().state().isAir()) {
                         retain(capture, "rollback_target_clear_verify_failed", null);
                         return;
                     }
@@ -842,6 +886,7 @@ public final class StructureCaptureCoordinator {
         retainedTargets.remove(StructureProvenanceLedger.stable(capture.target));
         pending.remove(capture.transactionId);
         claims.release(capture.transactionId);
+        PayloadIsolation.release(server, capture.transactionId);
         if (capture.reportResults) {
             expireExtractionPreviews();
             var interest = capture.submittedRequest == null ? null : extractionPreviews.get(capture.submittedRequest);
@@ -856,7 +901,7 @@ public final class StructureCaptureCoordinator {
                         var source = new ArrayList<StructureCaptureEvidence.Cell>(capture.positions.size());
                         for (int index = 0; index < capture.cells.size(); index++) {
                             source.add(new StructureCaptureEvidence.Cell(capture.cells.get(index).position(),
-                                    capture.states.get(index).toString()));
+                                    capture.states.get(index).toString(), StructureCellPayload.digest(capture.data.get(index))));
                         }
                         finishedEvidence.put(capture.transactionId, new StructureCaptureEvidence(
                                 capture.record.hostDimension(), capture.target, capture.submittedRequest, source,
@@ -878,6 +923,7 @@ public final class StructureCaptureCoordinator {
         retainedTargets.remove(StructureProvenanceLedger.stable(capture.target));
         pending.remove(capture.transactionId);
         claims.release(capture.transactionId);
+        PayloadIsolation.release(server, capture.transactionId);
         AcademyCraft.LOGGER.info("Structure capture transaction {} recovered and resolved", capture.transactionId);
     }
 
@@ -1043,8 +1089,7 @@ public final class StructureCaptureCoordinator {
         for (int index = 0; index < capture.positions.size(); index++) {
             var position = capture.positions.get(index);
             if (!capture.host.isLoaded(position)) return false;
-            if (!capture.host.getBlockState(position).equals(capture.states.get(index))) return false;
-            if (capture.host.getBlockEntity(position) != null) return false;
+            if (!StructureCellPayload.read(capture.host, position).equals(capture.data.get(index))) return false;
         }
         return true;
     }
@@ -1108,6 +1153,7 @@ public final class StructureCaptureCoordinator {
                     record.transactionId());
             return;
         }
+        PayloadIsolation.lock(host, record.cells().stream().map(StructureTransactionJournal.Cell::position).toList(), record.transactionId());
         List<BlockState> states;
         try {
             states = decodeStates(host, record);
@@ -1141,6 +1187,7 @@ public final class StructureCaptureCoordinator {
         if (org.academy.internal.common.sublevel.SubLevelStructureRefs.BACKEND.equals(record.backend())) {
             target = backend.resolve(target, true).map(StructureHandle::reference).orElse(target);
         }
+        backend.lockPayload(target, positions.stream().map(pos -> pos.subtract(record.origin())).toList(), record.transactionId());
         var capture = new PendingCapture(record, host, record.origin(), target, backend, positions,
                 record.cells(), states, null, true, 0, false, false);
         capture.copyProgress = record.stage() == StructureTransactionJournal.Stage.TARGET_ALLOCATED
@@ -1162,6 +1209,7 @@ public final class StructureCaptureCoordinator {
             return;
         }
         claims.release(record.transactionId());
+        PayloadIsolation.release(server, record.transactionId());
         AcademyCraft.LOGGER.info("Prepared structure transaction {} rolled back before any copy", record.transactionId());
     }
 
@@ -1205,12 +1253,6 @@ public final class StructureCaptureCoordinator {
                     new IllegalStateException("Missing structure transaction state payload")));
         }
         return List.copyOf(states);
-    }
-
-    private static CompoundTag encodeState(ServerLevel host, BlockState state) {
-        var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, host.registryAccess());
-        output.store("state", BlockState.CODEC, state);
-        return output.buildResult();
     }
 
     private static BlockPos minimumCorner(List<BlockPos> positions) {
@@ -1262,6 +1304,8 @@ public final class StructureCaptureCoordinator {
 
     @SubscribeEvent
     public static void stopped(ServerStoppedEvent event) {
+        OBSERVERS.remove(event.getServer());
+        PayloadIsolation.stop(event.getServer());
         StructureCaptureCoordinator coordinator;
         synchronized (SERVERS) { coordinator = SERVERS.remove(event.getServer()); }
         if (coordinator == null) return;
@@ -1302,6 +1346,7 @@ public final class StructureCaptureCoordinator {
         private final List<BlockPos> positions;
         private final List<StructureTransactionJournal.Cell> cells;
         private final List<BlockState> states;
+        private final List<org.academy.api.common.structure.StructureBlockData> data;
         private final @Nullable BiPredicate<ServerLevel, BlockPos> permission;
         private final boolean recovery;
         private final boolean reportResults;
@@ -1332,6 +1377,7 @@ public final class StructureCaptureCoordinator {
             this.positions = positions;
             this.cells = cells;
             this.states = states;
+            this.data = cells.stream().map(cell -> StructureCellPayload.decode(host, cell.payload())).toList();
             this.permission = permission;
             this.recovery = recovery;
             this.reportResults = !recovery;

@@ -59,6 +59,8 @@ public final class StructureRestorationCrashSmoke {
         var destination = placements.getFirst().targetPosition();
         var metadata = LiveStructureProvenance.metadata(player.level().getServer(), reference).orElse(null);
         var runtime = StructureSpaces.resolve(player.level().getServer(), reference).orElseThrow().runtimeId();
+        var originalPayload = StructurePayloadFixtureSupport.ENABLED
+                ? StructureSpaces.resolve(player.level().getServer(), reference).orElseThrow().world().read(BlockPos.ZERO) : null;
         var expected = MODE.endsWith("crash_targets_saved") ? MarkedGridRestoration.CheckpointPhase.TARGET_SAVED
                 : MarkedGridRestoration.CheckpointPhase.COMMIT_SAVED;
         int exitCode = expected == MarkedGridRestoration.CheckpointPhase.TARGET_SAVED ? 81 : 82;
@@ -70,6 +72,10 @@ public final class StructureRestorationCrashSmoke {
             saved.put("id", reference.id().toString()); saved.put("backend", reference.backend().toString());
             saved.put("dimension", reference.dimension().toString()); saved.put("operation", checkpoint.operationId().toString());
             saved.put("marked", metadata != null);
+            if (StructurePayloadFixtureSupport.ENABLED) {
+                saved.put("payload_digest", org.academy.internal.common.structure.transaction.StructureCellPayload.digest(originalPayload));
+                saved.put("payload_state", originalPayload.state().toString());
+            }
             if (metadata != null) saved.put("creation", metadata.creationOperationId().toString());
             saved.put("owner", player.getUUID().toString());
             saved.put("runtime", runtime.toString()); saved.put("target", List.of(destination.getX(), destination.getY(), destination.getZ()));
@@ -158,15 +164,21 @@ public final class StructureRestorationCrashSmoke {
         player.connection.teleport(target.getX() - 3, target.getY() + 3, target.getZ() - 3, 0, 0);
     }
 
+    private static boolean owned(StructureBlockData data) {
+        if (!evidence.has("payload_digest")) return data.state().is(Blocks.IRON_BLOCK);
+        return data.state().toString().equals(evidence.get("payload_state").getAsString())
+                && org.academy.internal.common.structure.transaction.StructureCellPayload.digest(data).equals(evidence.get("payload_digest").getAsString());
+    }
+
     static Optional<Map<String, Object>> verify(ServerPlayer player) {
         check(failure == null, "recovery visibility failed: " + failure);
         var server = player.level().getServer();
         check(LiveStructureProvenance.healthy(server), "recovery provenance ledger unavailable");
         var live = LiveStructureProvenance.liveReference(server, stable);
         var metadata = LiveStructureProvenance.metadata(server, stable);
-        boolean targetOwned = player.level().getBlockState(target).is(Blocks.IRON_BLOCK);
+        boolean targetOwned = owned(org.academy.internal.common.structure.transaction.StructureCellPayload.read(player.level(), target));
         boolean sourceOwned = live.flatMap(ref -> StructureSpaces.resolve(server, ref))
-                .map(handle -> handle.world().read(BlockPos.ZERO).state().is(Blocks.IRON_BLOCK)).orElse(false);
+                .map(handle -> owned(handle.world().read(BlockPos.ZERO))).orElse(false);
         var status = MarkedGridRestoration.INSTANCE.status(player.level(), new StructureGridRestoration.RestorationActor(
                 Optional.of(player.getUUID()), MarkedGridRestoration.POLICY_ID), UUID.fromString(evidence.get("operation").getAsString()));
         boolean done;
@@ -196,6 +208,7 @@ public final class StructureRestorationCrashSmoke {
         report.put("pre_tick_visibility_observations", preTickObservations); report.put("quarantined_raw_source_observations", rawSourceObservations);
         report.put("sable_post_tick_detachment_observations", postTickIsolationObservations);
         report.put("new_automatic_attempts_blocked", blockedNewAttempts); report.put("verified_stable_ticks", stableTicks);
+        report.put("payload_verified", evidence.has("payload_digest"));
         report.put("receipt", status.toString()); report.put("ordinary_shutdown_used", false);
         return Optional.of(report);
     }

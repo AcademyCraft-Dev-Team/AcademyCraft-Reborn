@@ -9,6 +9,7 @@ allprojects {
         }
         neoForge.runs.named(providers.gradleProperty('academyStructureOrientationRun').getOrElse('clientDev')) {
             gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.structurePayloadRoutes', providers.gradleProperty('academyStructurePayloadRoutes').getOrElse('false')
             systemProperty 'academy.structureProgramOrientationSmoke', 'true'
             if (providers.gradleProperty('academyStructureExtractionGameplay').isPresent()) {
                 systemProperty 'academy.structureExtractionGameplay',

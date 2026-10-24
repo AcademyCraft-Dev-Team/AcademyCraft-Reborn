@@ -11,6 +11,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CaptureSourceSnapshotTest {
     @Test
+    void inventoryChangeInvalidatesPreviewAndLocalizationRetainsItsIdentity() {
+        var host = new BlockPos(18, 70, -23);
+        var first = CaptureSourceSnapshot.of(List.of(new CaptureSourceSnapshot.Cell(host, "minecraft:chest", "a".repeat(64))));
+        var changed = CaptureSourceSnapshot.of(List.of(new CaptureSourceSnapshot.Cell(host, "minecraft:chest", "b".repeat(64))));
+        assertNotEquals(first.digest(), changed.digest());
+        assertEquals("a".repeat(64), first.localize(host).cells().getFirst().payloadDigest());
+        assertThrows(IllegalArgumentException.class, () -> new CaptureSourceSnapshot.Cell(host, "minecraft:chest", "unbounded payload"));
+    }
+
+    @Test
     void digestIsIndependentOfInputOrderButSensitiveToStateAndPosition() {
         var first = new CaptureSourceSnapshot.Cell(new BlockPos(1, 2, 3), "minecraft:stone");
         var second = new CaptureSourceSnapshot.Cell(new BlockPos(0, 2, 3), "minecraft:dirt");

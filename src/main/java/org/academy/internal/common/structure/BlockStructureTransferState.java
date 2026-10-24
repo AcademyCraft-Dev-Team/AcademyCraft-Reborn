@@ -151,6 +151,16 @@ public final class BlockStructureTransferState {
 
     private static void writePrepared(ServerLevel level, BlockPos position, PreparedWrite prepared,
                                        int flags) {
+        org.academy.internal.common.structure.transaction.PayloadIsolation.write(level, position,
+                () -> writePermitted(level, position, prepared, flags));
+    }
+
+    private static void writePermitted(ServerLevel level, BlockPos position, PreparedWrite prepared, int flags) {
+        var old = level.getBlockEntity(position);
+        if (old instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity container) {
+            container.setLootTable(null);
+            container.clearContent();
+        }
         var state = prepared.image.state;
         var restored = prepared.blockEntity;
         // setBlock returns false for a no-op. The state and BE still require verification/restoration.

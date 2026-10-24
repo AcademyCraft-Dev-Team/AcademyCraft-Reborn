@@ -86,6 +86,9 @@ public final class StructureCaptureExtractions {
         if ((result.pending() || result.succeeded()) && result.structure().isPresent()) {
             var reference = result.structure().orElseThrow();
             SESSIONS.put(reference, new Session(host, actor, preview.value().orElseThrow(), result));
+            // Bind a completed capture before the next solver tick can settle a partial-height
+            // block into its support. The source-grid path was just verified in this call.
+            if (result.succeeded()) advance(host, actor, reference);
         }
         return result;
     }
