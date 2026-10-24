@@ -32,7 +32,6 @@ logs
 *.nar
 *.ear
 *.zip
-!/archives/tests/2026-09-22/test-sources.zip
 *.tar.gz
 *.rar
 
@@ -54,6 +53,12 @@ hs_err_pid*
 .nfs*
 
 # General
+# Local archives, agent configuration, examples and helper scripts.
+/archives/
+/.agents/
+/examples/
+/scripts/
+
 .DS_Store
 .AppleDouble
 .LSOverride
