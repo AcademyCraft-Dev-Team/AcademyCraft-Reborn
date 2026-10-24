@@ -19,8 +19,8 @@ public final class PlotGeometry {
     }
 
     /**
-     * The returned boxes are relative to {@code localBounds.min}; use that minimum as the body
-     * pose origin. The block scan is bounded by the plot footprint and the physics box budget.
+     * Boxes retain the structure's stable local origin, including negative coordinates after
+     * expansion. Changing content bounds must never translate the body or its collision shapes.
      */
     public static Capture capture(PlotStorage storage, PlotPos plot, AABB localBounds) {
         Objects.requireNonNull(storage, "storage");
@@ -32,9 +32,9 @@ public final class PlotGeometry {
         int maxX = (int) Math.ceil(localBounds.maxX);
         int maxY = (int) Math.ceil(localBounds.maxY);
         int maxZ = (int) Math.ceil(localBounds.maxZ);
-        int side = storage.layout().sideChunks() * 16;
-        if (minX < 0 || minY < storage.level().getMinY() || minZ < 0
-                || maxX > side || maxZ > side || maxY > storage.level().getMaxY()) {
+        if (!storage.layout().containsLocal(plot, minX, minZ)
+                || !storage.layout().containsLocal(plot, maxX - 1, maxZ - 1)
+                || minY < storage.level().getMinY() || maxY > storage.level().getMaxY()) {
             throw new IllegalArgumentException("Geometry bounds are outside the plot footprint or build height");
         }
         var boxes = new ArrayList<PhysicsBox>();
@@ -60,8 +60,7 @@ public final class PlotGeometry {
             var half = new PhysicsVector(localBounds.getXsize() / 2.0, localBounds.getYsize() / 2.0,
                     localBounds.getZsize() / 2.0);
             return new Capture(List.of(new PhysicsBox(
-                    new PhysicsVector(center.x - localBounds.minX, center.y - localBounds.minY,
-                            center.z - localBounds.minZ),
+                    new PhysicsVector(center.x, center.y, center.z),
                     PhysicsQuaternion.IDENTITY, half)), (maxX - minX) * (maxY - minY) * (maxZ - minZ));
         }
         for (int x = minX; x < maxX; x++) {
@@ -79,9 +78,7 @@ public final class PlotGeometry {
                         }
                         var local = box.move(x, y, z);
                         boxes.add(new PhysicsBox(
-                                new PhysicsVector(local.getCenter().x - localBounds.minX,
-                                        local.getCenter().y - localBounds.minY,
-                                        local.getCenter().z - localBounds.minZ),
+                                new PhysicsVector(local.getCenter().x, local.getCenter().y, local.getCenter().z),
                                 PhysicsQuaternion.IDENTITY,
                                 new PhysicsVector(local.getXsize() / 2.0, local.getYsize() / 2.0,
                                         local.getZsize() / 2.0)));

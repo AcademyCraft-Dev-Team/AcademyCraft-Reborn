@@ -10,8 +10,8 @@ import java.util.Objects;
 /** Runtime description of a plot-backed structure; physics state lives in the universe. */
 public final class SubLevel {
     private final SubLevelId id;
-    private final PlotPos plot;
-    private final AABB localBounds;
+    private PlotPos plot;
+    private AABB localBounds;
     private StructurePose pose;
     private StructurePose previousPose;
     private StructurePose carryPose;
@@ -37,6 +37,9 @@ public final class SubLevel {
     public SubLevelState state() { return state; }
     public long revision() { return revision; }
     public long geometryRevision() { return geometryRevision; }
+
+    void setLocalBounds(AABB bounds) { localBounds = Objects.requireNonNull(bounds); }
+    void relocateStorage(PlotPos destination) { plot = Objects.requireNonNull(destination); }
 
     public void geometryChanged() {
         geometryRevision = Math.incrementExact(geometryRevision);

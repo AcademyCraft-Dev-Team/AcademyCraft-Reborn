@@ -77,7 +77,8 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
         var body = runtime == null ? null : runtime.get(new SubLevelId(target.id())).orElse(null);
         if (body == null || !runtime.storage().loadedEntities(body.plot()).map(List::isEmpty).orElse(false)) return Optional.empty();
         var bounds = body.localBounds();
-        if (bounds.getXsize() * bounds.getYsize() * bounds.getZsize() > 32768) return Optional.empty();
+        if (!org.academy.internal.common.sublevel.SubLevelGrowth.valid(bounds,
+                runtime.storage().level().getMinY(), runtime.storage().level().getMaxY())) return Optional.empty();
         var cells = new java.util.ArrayList<RestorationCell>();
         for (var position : BlockPos.betweenClosed((int) Math.floor(bounds.minX), (int) Math.floor(bounds.minY),
                 (int) Math.floor(bounds.minZ), (int) Math.ceil(bounds.maxX) - 1,

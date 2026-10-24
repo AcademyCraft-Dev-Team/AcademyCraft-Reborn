@@ -1,6 +1,6 @@
 # 箱子、含水方块的技能捕获与归块接入
 
-本轮从本地提交 `e2cec71f`（修复物理结构提取抬升并统一软方块清理）继续，落实此前 `structure_sable_suite_capture_2026_10_24.zh-CN.md` 的 payload 方案。此次新增实现尚未提交。运行测试只使用 `run/native-sublevel-direct-smoke-payload-*` 的独立副本，没有替换用户客户端的模组或修改原 test/test2。
+本轮从本地提交 `e2cec71f`（修复物理结构提取抬升并统一软方块清理）继续，落实此前 `structure_sable_suite_capture_2026_10_24.zh-CN.md` 的 payload 方案。该实现已单独提交为 `c3b9fc5d`（接入物理结构容器和含水方块的安全捕获归块）。以下验证记录对应这次 payload 实现；后续本地结构扩建的验证另见 `sublevel_growth_2026_10_24.zh-CN.md`。运行测试只使用 `run/native-sublevel-direct-smoke-payload-*` 的独立副本，没有替换用户客户端的模组或修改原 test/test2。
 
 ## 支持边界
 

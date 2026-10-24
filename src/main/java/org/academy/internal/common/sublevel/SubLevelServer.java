@@ -101,7 +101,7 @@ public final class SubLevelServer {
             var reservations = new HashMap<SubLevelId, PlotStorage.Lease>();
             for (var saved : manifests.values()) for (var entry : saved.entries()) {
                 if (entry.state() == SubLevelState.REMOVED) continue;
-                var lease = storage.claim(entry.plot()).orElseThrow(() ->
+                var lease = storage.claim(entry.plot(), entry.localBounds()).orElseThrow(() ->
                         new IllegalStateException("Cannot reserve persisted SubLevel plot " + entry.plot()));
                 reservations.put(entry.id(), lease);
             }

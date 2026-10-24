@@ -1,0 +1,327 @@
+{
+  "format": "academy-sublevel-growth-validation-v1",
+  "date": "2026-10-24",
+  "base_commit": "c3b9fc5d",
+  "runtime": {
+    "java": 25,
+    "minecraft": "26.2",
+    "neoforge": "26.2.0.70"
+  },
+  "builds": [
+    {
+      "command": "./gradlew.bat test sableCompatTest build -DisDev=true",
+      "passed": true,
+      "log": "build/growth-build-dev.log"
+    },
+    {
+      "command": "./gradlew.bat build -DisDev=false",
+      "passed": true,
+      "log": "build/growth-build-release.log"
+    }
+  ],
+  "unit_tests": [
+    {
+      "task": "test",
+      "tests": 3201,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "sableCompatTest",
+      "tests": 32,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "runtime_reports": [
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-final-guards-20261024/growth-prepare-result.json",
+      "sha256": "86A491EE23E0455DB4BDED90EA306E61908DF3834D538E2ACC16A3BC5B444E1A",
+      "mode": "prepare",
+      "result": {
+        "server_ticks": 72,
+        "checks": [
+          "wide_view_codec_preserves_signed_coordinates",
+          "outer_survival_mining_emits_global_drop_event_and_one_host_drop",
+          "six_direction_growth_crosses_original_32_block_storage",
+          "placement_cancel_preserves_stack_and_door_keeps_both_halves",
+          "removal_shrinks_view_and_collision_without_rebasing",
+          "legacy_menu_defers_storage_migration",
+          "legacy_migration_preserves_inventory_and_world_pose",
+          "outer_survival_mining_emits_global_drop_event_and_one_host_drop",
+          "six_direction_growth_crosses_original_32_block_storage",
+          "placement_cancel_preserves_stack_and_door_keeps_both_halves",
+          "removal_shrinks_view_and_collision_without_rebasing",
+          "client_snapshot_contains_negative_and_cross_chunk_cells"
+        ],
+        "failure": "",
+        "passed": true
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-final-guards-20261024/growth-verify-result.json",
+      "sha256": "C7C592C8D014815284EE9693A52A99325E935D8372AC4B8141B91BAC8E70ECE2",
+      "mode": "verify",
+      "result": {
+        "passed": true,
+        "failure": "",
+        "checks": [
+          "restart_restores_all_expanded_cells_and_full_chest_payload",
+          "expanded_marked_structure_auto_restored_with_inventory"
+        ],
+        "server_ticks": 242
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-final-crash-COPY_SAVED-20261024/growth-crash_COPY_SAVED-result.json",
+      "sha256": "8408A1D487DE38C8F2A93B09FDF3AD1EECB177525A28595EB26657131A9B49D8",
+      "mode": "expected_exit_86",
+      "result": {
+        "checks": [
+          "wide_view_codec_preserves_signed_coordinates",
+          "legacy_menu_defers_storage_migration",
+          "durable_migration_checkpoint_COPY_SAVED"
+        ],
+        "failure": "",
+        "passed": true,
+        "server_ticks": 70
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-final-crash-COPY_SAVED-20261024/growth-recover_COPY_SAVED-result.json",
+      "sha256": "04C8FC15AF3F7805472A299A4FB908A1AD14A1FC9D1CC79EAFB2AC810B7DF92D",
+      "mode": "restart_after_forced_exit",
+      "result": {
+        "failure": "",
+        "passed": true,
+        "server_ticks": 72,
+        "checks": [
+          "restart_restores_all_expanded_cells_and_full_chest_payload",
+          "wide_view_codec_preserves_signed_coordinates",
+          "legacy_menu_defers_storage_migration",
+          "legacy_migration_preserves_inventory_and_world_pose",
+          "outer_survival_mining_emits_global_drop_event_and_one_host_drop",
+          "six_direction_growth_crosses_original_32_block_storage",
+          "placement_cancel_preserves_stack_and_door_keeps_both_halves",
+          "removal_shrinks_view_and_collision_without_rebasing",
+          "client_snapshot_contains_negative_and_cross_chunk_cells"
+        ]
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-final-crash-OWNER_SAVED-20261024/growth-crash_OWNER_SAVED-result.json",
+      "sha256": "5DE3B9298C61D1AF775EAFBC53B426827585F997E85BE018075FADFEBDAB79BA",
+      "mode": "expected_exit_86",
+      "result": {
+        "passed": true,
+        "failure": "",
+        "checks": [
+          "wide_view_codec_preserves_signed_coordinates",
+          "legacy_menu_defers_storage_migration",
+          "durable_migration_checkpoint_OWNER_SAVED"
+        ],
+        "server_ticks": 70
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-final-crash-OWNER_SAVED-20261024/growth-recover_OWNER_SAVED-result.json",
+      "sha256": "A97F62CABEF61EFED7234E840670FAB9894A731140ED6D4CCDFD9955793C5097",
+      "mode": "restart_after_forced_exit",
+      "result": {
+        "failure": "",
+        "passed": true,
+        "server_ticks": 71,
+        "checks": [
+          "restart_restores_all_expanded_cells_and_full_chest_payload",
+          "wide_view_codec_preserves_signed_coordinates",
+          "outer_survival_mining_emits_global_drop_event_and_one_host_drop",
+          "six_direction_growth_crosses_original_32_block_storage",
+          "placement_cancel_preserves_stack_and_door_keeps_both_halves",
+          "removal_shrinks_view_and_collision_without_rebasing",
+          "client_snapshot_contains_negative_and_cross_chunk_cells"
+        ]
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-payload-native-20261024/structure-payload-result.json",
+      "sha256": "555529E5ED907A6C4F9EED78A246D2550B57C10979A0F95FF2F8009636E25450",
+      "mode": "payload_regression_native",
+      "result": {
+        "server_ticks": 1361,
+        "cases": [
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sublevel",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "chest",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sublevel",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "barrel",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sublevel",
+            "cells": 2,
+            "automatic_restoration": true,
+            "case": "double_trapped_chest",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sublevel",
+            "cells": 3,
+            "automatic_restoration": true,
+            "case": "waterlogged",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": false,
+            "passed": true,
+            "backend": "academy:sublevel",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "unopened_loot",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sublevel",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "placement_cancel_retry",
+            "drops": 0
+          }
+        ],
+        "failure": "",
+        "passed": true
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-growth-payload-suite-20261024/structure-payload-result.json",
+      "sha256": "A96BC57F8668B7CEF0E1855E449E3EE0B233790283474149EE559256BD9CB1D8",
+      "mode": "payload_regression_suite",
+      "result": {
+        "server_ticks": 1281,
+        "cases": [
+          {
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "chest",
+            "drops": 0,
+            "inventory_after_live_edit": true
+          },
+          {
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "barrel",
+            "drops": 0,
+            "inventory_after_live_edit": true
+          },
+          {
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 2,
+            "automatic_restoration": true,
+            "case": "double_trapped_chest",
+            "drops": 0,
+            "inventory_after_live_edit": true
+          },
+          {
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 3,
+            "automatic_restoration": true,
+            "case": "waterlogged",
+            "drops": 0,
+            "inventory_after_live_edit": true
+          },
+          {
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "unopened_loot",
+            "drops": 0,
+            "inventory_after_live_edit": false
+          },
+          {
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "placement_cancel_retry",
+            "drops": 0,
+            "inventory_after_live_edit": true
+          }
+        ],
+        "failure": "",
+        "passed": true
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "sha256": "D155B880E31CE7ABD52ED740C51880CD06A3F708DD1D476B8D5EFE89A0A20201",
+      "native_dll_sha256": "F68C901911B18BE6F92A9EA9E44B1E09CEA8D34DD75FF08AF50F035F6DCF4A06"
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "sha256": "6C4BA02B1D1F241F6E71A28EA24F4315EF3FAA62444D4A063397755C0B2A27EE",
+      "native_dll_sha256": "F68C901911B18BE6F92A9EA9E44B1E09CEA8D34DD75FF08AF50F035F6DCF4A06"
+    }
+  ],
+  "source_sha256": {
+    "src/gametest/java/org/academy/internal/client/validation/SubLevelGrowthSmoke.java": "42D5C5D5E5CB90D8BF109F5004DED541F642682095441BB3DAF6CB2D267ABFC7",
+    "src/main/java/org/academy/internal/common/structure/space/NativeStructureView.java": "C0E122D9E6E63D1673083F0F23428BC241C0790012F9F430D5CF5D204EB0C9B0",
+    "src/main/java/org/academy/internal/common/structure/transaction/SubLevelCaptureTarget.java": "9CC10F046C16385B9FA9877B79005906A0F4F2568652C08547FCECB9FE5C0C5C",
+    "src/main/java/org/academy/internal/common/sublevel/PlotGeometry.java": "70EF1A1F9A1586732C66B3E3006926CA7FE602249225DBE47F1965F1C56003CA",
+    "src/main/java/org/academy/internal/common/sublevel/PlotLayout.java": "DA3471D32C284FC7674EBFDBE4A0808BFC3FD633EE6A4667B58CBA747C36BD7D",
+    "src/main/java/org/academy/internal/common/sublevel/PlotStorage.java": "C04E41F0D373766ED0AF66D69006FDF09D290DF1437B373896E572389790F74F",
+    "src/main/java/org/academy/internal/common/sublevel/PlotView.java": "CC7487CB2167E62DB352E3EE78FF0CB293CC36F50DBCE67698D77DE8D4E77392",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevel.java": "26801F56073ACD32C41547C3ABED8E5336E44B887446493AC5F2FA3C93BA41DB",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelGrowth.java": "E62A44670261D59149EC3AA7AC6D6C9EED9C8130B505D73ACB18D68D1C84DCE4",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelInteractionController.java": "038644E6BDE70547635B680E489920EFD3CE220EB9AC5800B957605AA93493C3",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelInteractionService.java": "83F81A97C5A6B4B7B71030419E6EFA702FB64559CAA2C3E2477A5BB7A0C6D536",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelRuntime.java": "5FBB0AAAE8547043D10E8BBBD88913918FD282264750A482A1CB0D5A55002D8E",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelServer.java": "67F5DDB381EE418A400DABF1300721879D7F820A1EC89F5E170D9C1DCC9C5A38",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelStructureHandle.java": "8B33AA9A6C91D2DCD4B0C907652205CC9B4068323C41A3388557254B289FF6E4",
+    "src/test/java/org/academy/internal/common/structure/space/NativeStructureViewTest.java": "28223FE109B146980F26B34869EDED999DF38044ACB40475DD788BBE203EEA3A",
+    "src/test/java/org/academy/internal/common/sublevel/SubLevelGrowthTest.java": "FDC9AB2AFC9798902C96B497046299969017F99E7A65DEF638329A7CA987A1D5",
+    "src/test/java/org/academy/internal/common/sublevel/SubLevelManifestTest.java": "FBC4F078A8DA65FBC22C88D8A861BFA1BF489C97CEE40BB8998585786361D297"
+  },
+  "preserved_unrelated": {
+    "path": "native/academy_physics/src/lib.rs",
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+    "committed": false
+  },
+  "evidence_scope": "Final growth, restart and forced-exit fixtures use the final sources. Payload regressions preceded only the legacy-menu and over-budget removal guards; their tested capture/restoration paths did not change.",
+  "unverified": [
+    "Long-running large-server performance benchmark",
+    "Arbitrary mod callbacks that write beyond the reserved placement neighborhood",
+    "Real filesystem I/O failure; process-termination recovery was tested"
+  ],
+  "notes": [
+    "Original test/test2 and installed client mods were not changed",
+    "Existing storage namespace and manifest version remain readable",
+    "Finite cell/span/scan budgets remain; see docs/sublevel_growth_2026_10_24.zh-CN.md"
+  ]
+}

@@ -29,6 +29,8 @@ public final class NativeStructureView implements BlockGetter {
     public static final int MAX_CELLS = 4_096;
     public static final int MIN_Y = -64;
     public static final int HEIGHT = 384;
+    public static final int HORIZONTAL_RADIUS = 512;
+    private static final int WIDE_COORDINATES = 65_536;
     private static final Comparator<Cell> CELL_ORDER = Comparator
             .comparingInt((Cell cell) -> cell.position().getY())
             .thenComparingInt(cell -> cell.position().getX())
@@ -140,18 +142,24 @@ public final class NativeStructureView implements BlockGetter {
     }
 
     private static void encode(RegistryFriendlyByteBuf buffer, NativeStructureView view) {
+        boolean wide = view.cells.stream().anyMatch(cell -> cell.position().getX() < -128 || cell.position().getX() > 127
+                || cell.position().getZ() < -128 || cell.position().getZ() > 127);
+        // Keep the existing compact encoding for legacy views; extended views are explicit.
+        if (wide) buffer.writeVarInt(WIDE_COORDINATES);
         buffer.writeVarInt(view.cells.size());
         if (!view.cells.isEmpty()) buffer.writeBoolean(view.solid);
         for (var cell : view.cells) {
-            buffer.writeByte(cell.position().getX());
+            if (wide) buffer.writeShort(cell.position().getX()); else buffer.writeByte(cell.position().getX());
             buffer.writeShort(cell.position().getY());
-            buffer.writeByte(cell.position().getZ());
+            if (wide) buffer.writeShort(cell.position().getZ()); else buffer.writeByte(cell.position().getZ());
             buffer.writeVarInt(Block.getId(cell.state()));
         }
     }
 
     private static NativeStructureView decode(RegistryFriendlyByteBuf buffer) {
         var size = buffer.readVarInt();
+        boolean wide = size == WIDE_COORDINATES;
+        if (wide) size = buffer.readVarInt();
         if (size < 0 || size > MAX_CELLS) {
             throw new DecoderException("Native view cell count out of bounds: " + size);
         }
@@ -160,7 +168,8 @@ public final class NativeStructureView implements BlockGetter {
         var cells = new ArrayList<Cell>(size);
         try {
             for (var index = 0; index < size; index++) {
-                var position = new BlockPos(buffer.readByte(), buffer.readShort(), buffer.readByte());
+                var position = new BlockPos(wide ? buffer.readShort() : buffer.readByte(), buffer.readShort(),
+                        wide ? buffer.readShort() : buffer.readByte());
                 var stateId = buffer.readVarInt();
                 var state = Block.BLOCK_STATE_REGISTRY.byId(stateId);
                 if (state == null) throw new DecoderException("Unknown block state " + stateId);
@@ -176,8 +185,8 @@ public final class NativeStructureView implements BlockGetter {
         public Cell {
             position = Objects.requireNonNull(position, "position").immutable();
             Objects.requireNonNull(state, "state");
-            if (position.getX() < -32 || position.getX() >= 32
-                    || position.getZ() < -32 || position.getZ() >= 32
+            if (position.getX() < -HORIZONTAL_RADIUS || position.getX() >= HORIZONTAL_RADIUS
+                    || position.getZ() < -HORIZONTAL_RADIUS || position.getZ() >= HORIZONTAL_RADIUS
                     || position.getY() < MIN_Y || position.getY() >= MIN_Y + HEIGHT) {
                 throw new IllegalArgumentException("Native view cell is outside its storage domain");
             }

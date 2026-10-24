@@ -51,6 +51,18 @@ class SubLevelManifestTest {
     }
 
     @Test
+    void expandedAndLegacyPlotsCoexistWithoutRebasing() throws Exception {
+        var manifest = new SubLevelManifest(directory);
+        var old = entry(new Vec3(10,20,30), SubLevelState.ACTIVE, 5);
+        var grown = new SubLevelManifest.Entry(SubLevelId.random(), new PlotPos(PlotLayout.SPACIOUS_MARKER,1),
+                new AABB(-33,-4,-2,34,6,3), old.pose(), SubLevelState.ACTIVE, 8);
+        manifest.put(old); manifest.put(grown); manifest.persist();
+        var loaded = new SubLevelManifest(directory);
+        assertEquals(old, loaded.get(old.id()).orElseThrow());
+        assertEquals(grown, loaded.get(grown.id()).orElseThrow());
+    }
+
+    @Test
     void unknownVersionAndDuplicateIdentityAreRejected() {
         var entry = entry(Vec3.ZERO, SubLevelState.INACTIVE, 0);
         var root = SubLevelManifest.encode(List.of(entry));

@@ -266,11 +266,15 @@ public final class SubLevelInteractionService {
         var world = runtime.storage().worldPosition(subLevel.plot(), local);
         if (!level.hasChunkAt(world) || !level.mayInteract(player, world)) return InteractionResult.FAIL;
         var stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof BlockItem)) return InteractionResult.FAIL;
+        if (!(stack.getItem() instanceof BlockItem blockItem)) return InteractionResult.FAIL;
         var hitResult = plotHit(storage, subLevel, local, face, hit);
         var context = new SubLevelPlaceContext(level, player, hand, stack, hitResult, subLevel.pose(),
                 storage.worldPosition(subLevel.plot(), BlockPos.ZERO));
-        var result = ((BlockItem) stack.getItem()).place(context);
+        var target = storage.localPosition(subLevel.plot(), context.getClickedPos());
+        if (!runtime.prepareEdit(id, target, 1, SubLevelGrowth.placementCells(blockItem))) return InteractionResult.FAIL;
+        context = new SubLevelPlaceContext(level, player, hand, stack, plotHit(storage, subLevel, local, face, hit),
+                subLevel.pose(), storage.worldPosition(subLevel.plot(), BlockPos.ZERO));
+        var result = blockItem.place(context);
         if (result.consumesAction()) runtime.refreshGeometry(id);
         return result;
     }

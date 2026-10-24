@@ -253,6 +253,9 @@ public final class SubLevelRuntime {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         if (managed == null || restorationIsolation.containsKey(id)) return;
         emptyMarkedCleanup.remove(id);
+        var previousBounds = managed.subLevel.localBounds();
+        var contentBounds = SubLevelGrowth.contentBounds(storage, managed.subLevel.plot(), previousBounds);
+        managed.subLevel.setLocalBounds(contentBounds);
         var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
         var motion = universe.motion(id).orElse(null);
         universe.remove(id);
@@ -274,6 +277,7 @@ public final class SubLevelRuntime {
             subLevels.put(id, new Managed(managed.subLevel, managed.lease, List.of(),
                     remainingView));
             remember(managed.subLevel);
+            if (!previousBounds.equals(contentBounds) && TargetedChunkDurability.save(storage.level(), managed.lease.chunks())) persist();
             return;
         }
         var localBoxes = localBoxes(geometry.boxes());
@@ -285,6 +289,113 @@ public final class SubLevelRuntime {
                 managed.subLevel.revision());
         subLevels.put(id, new Managed(managed.subLevel, managed.lease, localBoxes, view));
         remember(managed.subLevel);
+        if (!previousBounds.equals(contentBounds) && TargetedChunkDurability.save(storage.level(), managed.lease.chunks())) persist();
+    }
+
+    /** Reserve and persist the editable envelope before vanilla can write or consume an item. */
+    public boolean prepareEdit(SubLevelId id, net.minecraft.core.BlockPos target, int padding, int additions) {
+        if (!host.getServer().isSameThread()) throw new IllegalStateException("SubLevel edits require the server thread");
+        if (padding < 0 || padding > 1 || additions < 0 || additions > 2) return false;
+        var managed = subLevels.get(id);
+        if (managed == null || !SubLevelServer.published(managed.subLevel) || restorationIsolation.containsKey(id)
+                || org.academy.internal.common.structure.transaction.StructureCaptureCoordinator.isPending(host.getServer(), budgetReference(managed.subLevel))
+                || target.getY() < storage.level().getMinY() || target.getY() >= storage.level().getMaxY()) return false;
+        var bounds = SubLevelGrowth.include(managed.subLevel.localBounds(), target, padding, storage.level().getMinY(), storage.level().getMaxY());
+        if (!SubLevelGrowth.valid(bounds, storage.level().getMinY(), storage.level().getMaxY())) return false;
+        int count = 0;
+        int limit = org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.metadata(host.getServer(), budgetReference(managed.subLevel)).isPresent()
+                ? org.academy.api.common.structure.StructureCaptureRequest.MAXIMUM_BLOCKS
+                : org.academy.internal.common.structure.space.NativeStructureView.MAX_CELLS;
+        var current = managed.subLevel.localBounds();
+        for (var pos : net.minecraft.core.BlockPos.betweenClosed((int) current.minX, (int) current.minY, (int) current.minZ,
+                (int) current.maxX - 1, (int) current.maxY - 1, (int) current.maxZ - 1)) {
+            if (!storage.blockState(managed.subLevel.plot(), pos).isAir()) count++;
+        }
+        if (!SubLevelGrowth.blockBudgetAllows(count, additions, !storage.blockState(managed.subLevel.plot(), target).isAir(), limit)) return false;
+        if (!PlotLayout.spacious(managed.subLevel.plot()) && !relocateLegacy(managed, bounds)) return false;
+        managed = subLevels.get(id);
+        if (!storage.ensureBounds(managed.subLevel.plot(), bounds)) return false;
+        var before = managed.subLevel.localBounds();
+        if (before.equals(bounds)) return true;
+        managed.subLevel.setLocalBounds(bounds);
+        remember(managed.subLevel);
+        try { persist(); return true; }
+        catch (RuntimeException failure) {
+            managed.subLevel.setLocalBounds(before); remember(managed.subLevel);
+            AcademyCraft.LOGGER.error("SubLevel edit envelope could not be persisted for {}", id, failure);
+            return false;
+        }
+    }
+
+    public enum MigrationPhase { COPY_SAVED, OWNER_SAVED }
+    public record MigrationCheckpoint(SubLevelId id, PlotPos source, PlotPos destination, MigrationPhase phase) {}
+    private java.util.function.Consumer<MigrationCheckpoint> migrationObserver;
+    public void observeMigration(java.util.function.Consumer<MigrationCheckpoint> observer) { migrationObserver = observer; }
+
+    /** The atomic manifest is the sole owner: no block or local coordinate changes during migration. */
+    private boolean relocateLegacy(Managed managed, AABB requested) {
+        if (manifest == null || SubLevelEnhancementBootstrap.INTERACTIONS.restorationBusy(host, budgetReference(managed.subLevel))) return false;
+        // The compatibility USE path can open a menu without a controller tracking record.
+        if (host.players().stream().anyMatch(player -> player.containerMenu != player.inventoryMenu
+                && player.containerMenu.slots.stream().anyMatch(slot -> slot.container instanceof SubLevelContainer container
+                && container.subLevelId().equals(managed.subLevel.id())))) return false;
+        var source = managed.subLevel.plot();
+        if (storage.loadedEntities(source).filter(java.util.List::isEmpty).isEmpty()) return false;
+        var destination = storage.allocateMigration(source).orElse(null);
+        if (destination == null) return false;
+        var sourceLock = java.util.UUID.randomUUID();
+        var targetLock = java.util.UUID.randomUUID();
+        var images = new java.util.LinkedHashMap<net.minecraft.core.BlockPos, org.academy.api.common.structure.StructureBlockData>();
+        boolean committed = false;
+        boolean deciding = false;
+        try {
+            if (!storage.ensureBounds(destination.plot(), requested)) return false;
+            var bounds = managed.subLevel.localBounds();
+            for (var pos : net.minecraft.core.BlockPos.betweenClosed((int) bounds.minX, (int) bounds.minY, (int) bounds.minZ,
+                    (int) bounds.maxX - 1, (int) bounds.maxY - 1, (int) bounds.maxZ - 1)) {
+                if (storage.blockState(source, pos).isAir()) continue;
+                images.put(pos.immutable(), org.academy.internal.common.structure.transaction.StructureCellPayload.read(storage.level(), storage.worldPosition(source, pos)));
+            }
+            org.academy.internal.common.structure.transaction.PayloadIsolation.lock(storage.level(), images.keySet().stream()
+                    .map(pos -> storage.worldPosition(source, pos)).toList(), sourceLock);
+            org.academy.internal.common.structure.transaction.PayloadIsolation.lock(storage.level(), images.keySet().stream()
+                    .map(pos -> storage.worldPosition(destination.plot(), pos)).toList(), targetLock);
+            if (!TargetedChunkDurability.save(storage.level(), managed.lease.chunks())) return false;
+            for (var entry : images.entrySet()) org.academy.internal.common.structure.transaction.StructureCellPayload.write(storage.level(),
+                    storage.worldPosition(destination.plot(), entry.getKey()), entry.getValue(), SubLevelCaptureService.TRANSACTION_FLAGS);
+            if (!TargetedChunkDurability.save(storage.level(), destination.chunks())) return false;
+            if (migrationObserver != null) migrationObserver.accept(new MigrationCheckpoint(managed.subLevel.id(), source, destination.plot(), MigrationPhase.COPY_SAVED));
+            deciding = true;
+            manifest.put(new SubLevelManifest.Entry(managed.subLevel.id(), destination.plot(), requested, managed.subLevel.pose(),
+                    managed.subLevel.state(), managed.subLevel.revision()));
+            persist();
+            committed = true;
+            managed.subLevel.relocateStorage(destination.plot());
+            managed.subLevel.setLocalBounds(requested);
+            subLevels.put(managed.subLevel.id(), new Managed(managed.subLevel, destination, managed.localBoxes, managed.view));
+            if (migrationObserver != null) migrationObserver.accept(new MigrationCheckpoint(managed.subLevel.id(), source, destination.plot(), MigrationPhase.OWNER_SAVED));
+            for (var pos : images.keySet()) org.academy.internal.common.structure.transaction.StructureCellPayload.write(storage.level(), storage.worldPosition(source, pos),
+                    new org.academy.api.common.structure.StructureBlockData(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()), SubLevelCaptureService.TRANSACTION_FLAGS);
+            if (!TargetedChunkDurability.save(storage.level(), managed.lease.chunks())) throw new IllegalStateException("Old plot cleanup did not become durable");
+            storage.release(managed.lease);
+            org.academy.internal.common.structure.transaction.PayloadIsolation.release(host.getServer(), sourceLock);
+            return true;
+        } catch (RuntimeException failure) {
+            AcademyCraft.LOGGER.error("SubLevel storage migration retained for {} (ownership committed={})", managed.subLevel.id(), committed, failure);
+            if (deciding && !committed) {
+                // An uncertain atomic replacement must keep both images unavailable until restart.
+                universe.remove(managed.subLevel.id()); collision.remove(managed.subLevel.id());
+                managed.subLevel.setState(SubLevelState.LOADING);
+            }
+            return committed;
+        } finally {
+            if (committed) org.academy.internal.common.structure.transaction.PayloadIsolation.release(host.getServer(), targetLock);
+            else if (!deciding) {
+                storage.release(destination);
+                org.academy.internal.common.structure.transaction.PayloadIsolation.release(host.getServer(), targetLock);
+                org.academy.internal.common.structure.transaction.PayloadIsolation.release(host.getServer(), sourceLock);
+            }
+        }
     }
 
     public Optional<SubLevel> get(SubLevelId id) {
@@ -710,7 +821,7 @@ public final class SubLevelRuntime {
         for (var entry : manifest.entries()) {
             if (subLevels.containsKey(entry.id()) || entry.state() == SubLevelState.REMOVED) continue;
             var lease = reservations.get(entry.id());
-            if (lease == null) lease = storage.claim(entry.plot()).orElse(null);
+            if (lease == null) lease = storage.claim(entry.plot(), entry.localBounds()).orElse(null);
             if (lease != null && (!lease.plot().equals(entry.plot())
                     || storage.lease(entry.plot()).filter(lease::equals).isEmpty())) {
                 throw new IllegalStateException("Saved SubLevel does not own its reserved plot");

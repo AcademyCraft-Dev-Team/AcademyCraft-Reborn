@@ -35,6 +35,7 @@ public final class PlotStorage {
     private final ServerLevel level;
     private final PlotLayout layout;
     private final PlotAllocator allocator;
+    private final PlotAllocator spaciousAllocator;
     private final Map<PlotPos, Lease> leases = new LinkedHashMap<>();
     /** Empty, cleared leases kept resident so a capture does not synchronously generate chunks. */
     private final ArrayDeque<Lease> ready = new ArrayDeque<>();
@@ -61,6 +62,7 @@ public final class PlotStorage {
             throw new IllegalStateException("Plot storage is server-thread confined");
         }
         this.allocator = new PlotAllocator(layout);
+        this.spaciousAllocator = new PlotAllocator(layout);
     }
 
     public ServerLevel level() {
@@ -72,7 +74,7 @@ public final class PlotStorage {
     }
 
     public int allocated() {
-        return allocator.allocated();
+        return allocator.allocated() + spaciousAllocator.allocated();
     }
 
     public int capacity() {
@@ -86,9 +88,22 @@ public final class PlotStorage {
         return allocateFresh();
     }
 
+    /** A legacy owner may temporarily hold one replacement slot even at the normal capacity. */
+    Optional<Lease> allocateMigration(PlotPos source) {
+        if (PlotLayout.spacious(source) || !leases.containsKey(source)) return Optional.empty();
+        if (!ready.isEmpty() || allocated() < capacity()) return allocate();
+        if (allocated() != capacity()) return Optional.empty();
+        var plot = spaciousAllocator.allocate().map(slot -> new PlotPos(slot.x() + PlotLayout.SPACIOUS_MARKER, slot.z()));
+        if (plot.isEmpty()) return Optional.empty();
+        var lease = open(plot.get()).orElse(null);
+        if (lease == null) return Optional.empty();
+        try { clearUnusedContent(lease); return Optional.of(lease); }
+        catch (RuntimeException failure) { release(lease); throw failure; }
+    }
+
     private Optional<Lease> allocateFresh() {
         long allocatorStarted = org.academy.internal.common.structure.transaction.CaptureTimings.begin();
-        var plot = allocator.allocate();
+        var plot = allocateAnchor();
         org.academy.internal.common.structure.transaction.CaptureTimings.record("plot-storage",
                 "plot_allocator", allocatorStarted);
         if (plot.isEmpty()) return Optional.empty();
@@ -111,7 +126,11 @@ public final class PlotStorage {
 
     /** Only a fresh allocation is cleared; claiming persisted content must retain its blocks. */
     private void clearUnusedContent(Lease lease) {
-        for (var chunkPos : lease.chunks()) {
+        clearChunks(lease.chunks());
+    }
+
+    private void clearChunks(java.util.Collection<ChunkPos> chunks) {
+        for (var chunkPos : chunks) {
             var chunk = level.getChunk(chunkPos.x(), chunkPos.z());
             var sections = chunk.getSections();
             for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
@@ -132,8 +151,26 @@ public final class PlotStorage {
     /** Reclaims a persisted plot identity without moving it; used by restart recovery. */
     public Optional<Lease> claim(PlotPos plot) {
         Objects.requireNonNull(plot, "plot");
-        if (leases.containsKey(plot) || !allocator.reserve(plot)) return Optional.empty();
+        if (leases.containsKey(plot) || !allocatorFor(plot).reserve(slot(plot))) return Optional.empty();
         return open(plot);
+    }
+
+    public Optional<Lease> claim(PlotPos plot, net.minecraft.world.phys.AABB bounds) {
+        var lease = claim(plot).orElse(null);
+        if (lease == null) return Optional.empty();
+        try {
+            if (!ensureBounds(plot, bounds, false)) { release(lease); return Optional.empty(); }
+            return Optional.of(lease);
+        } catch (RuntimeException failure) { release(lease); throw failure; }
+    }
+
+    private PlotAllocator allocatorFor(PlotPos plot) { return PlotLayout.spacious(plot) ? spaciousAllocator : allocator; }
+    private static PlotPos slot(PlotPos plot) {
+        return PlotLayout.spacious(plot) ? new PlotPos(plot.x() - PlotLayout.SPACIOUS_MARKER, plot.z()) : plot;
+    }
+    private Optional<PlotPos> allocateAnchor() {
+        if (allocated() >= capacity()) return Optional.empty();
+        return spaciousAllocator.allocate().map(plot -> new PlotPos(plot.x() + PlotLayout.SPACIOUS_MARKER, plot.z()));
     }
 
     private Optional<Lease> open(PlotPos plot) {
@@ -169,14 +206,14 @@ public final class PlotStorage {
             }
             var lease = new Lease(SERIALS.incrementAndGet(), plot, List.copyOf(chunks));
             leases.put(plot, lease);
-            pendingEntityLoads.addLast(new PendingEntityLoad(lease));
+            enqueueEntityLoads(lease);
             return lease;
         } catch (RuntimeException failure) {
             for (var chunk : acquired) {
                 try { NativeStructureTickets.release(level, chunk); }
                 catch (RuntimeException releaseFailure) { failure.addSuppressed(releaseFailure); }
             }
-            allocator.free(plot);
+            allocatorFor(plot).free(slot(plot));
             AcademyCraft.LOGGER.error("Could not reserve plot {}", plot, failure);
             return null;
         }
@@ -193,7 +230,7 @@ public final class PlotStorage {
         if (target <= 0) return;
         if (pendingPrewarm == null) {
             if (ready.size() >= target) return;
-            var plot = allocator.allocate().orElse(null);
+            var plot = allocateAnchor().orElse(null);
             if (plot == null) return;
             var lease = reserve(plot);
             if (lease == null) return;
@@ -255,13 +292,19 @@ public final class PlotStorage {
         if (pending != null) release(pending.lease);
     }
 
+    private void enqueueEntityLoads(Lease lease) {
+        if (pendingEntityLoads.stream().noneMatch(pending -> pending.lease == lease)) {
+            pendingEntityLoads.addLast(new PendingEntityLoad(lease));
+        }
+    }
+
     public boolean release(Lease lease) {
         Objects.requireNonNull(lease, "lease");
         if (pendingPrewarm != null && pendingPrewarm.lease == lease) pendingPrewarm = null;
         ready.remove(lease);
         if (!leases.remove(lease.plot(), lease)) return false;
         for (var chunk : lease.chunks()) NativeStructureTickets.release(level, chunk);
-        allocator.free(lease.plot());
+        allocatorFor(lease.plot()).free(slot(lease.plot()));
         return true;
     }
 
@@ -369,22 +412,22 @@ public final class PlotStorage {
     }
 
     public BlockState blockState(PlotPos plot, BlockPos local) {
-        return level.getBlockState(worldPosition(plot, local));
+        return resident(plot, local) ? level.getBlockState(worldPosition(plot, local)) : Blocks.AIR.defaultBlockState();
     }
 
     public boolean setBlock(PlotPos plot, BlockPos local, BlockState state, int flags) {
         Objects.requireNonNull(state, "state");
+        if (!resident(plot, local)) throw new IllegalArgumentException("Plot cell is not leased: " + local);
         return level.setBlock(worldPosition(plot, local), state, flags);
     }
 
     public BlockEntity blockEntity(PlotPos plot, BlockPos local) {
-        return level.getBlockEntity(worldPosition(plot, local));
+        return resident(plot, local) ? level.getBlockEntity(worldPosition(plot, local)) : null;
     }
 
     public BlockPos worldPosition(PlotPos plot, BlockPos local) {
         Objects.requireNonNull(local, "local");
-        int sideBlocks = layout.sideChunks() * 16;
-        if (local.getX() < 0 || local.getZ() < 0 || local.getX() >= sideBlocks || local.getZ() >= sideBlocks) {
+        if (!layout.containsLocal(plot, local.getX(), local.getZ())) {
             throw new IllegalArgumentException("Local plot position is outside the plot footprint");
         }
         return new BlockPos(layout.chunkMinX(plot) * 16 + local.getX(), local.getY(),
@@ -393,20 +436,66 @@ public final class PlotStorage {
 
     public BlockPos localPosition(PlotPos plot, BlockPos world) {
         Objects.requireNonNull(world, "world");
-        int sideBlocks = layout.sideChunks() * 16;
         int x = world.getX() - layout.chunkMinX(plot) * 16;
         int z = world.getZ() - layout.chunkMinZ(plot) * 16;
-        if (x < 0 || z < 0 || x >= sideBlocks || z >= sideBlocks) {
+        if (x < -PlotLayout.SPACIOUS_RADIUS || z < -PlotLayout.SPACIOUS_RADIUS
+                || x >= PlotLayout.SPACIOUS_RADIUS || z >= PlotLayout.SPACIOUS_RADIUS) {
             throw new IllegalArgumentException("World position is outside the plot footprint");
         }
         return new BlockPos(x, world.getY(), z);
     }
 
-    public record Lease(long serial, PlotPos plot, List<ChunkPos> chunks) {
-        public Lease {
-            Objects.requireNonNull(plot, "plot");
-            chunks = List.copyOf(chunks);
+    public boolean resident(PlotPos plot, BlockPos local) {
+        if (!layout.containsLocal(plot, local.getX(), local.getZ()) || local.getY() < level.getMinY() || local.getY() >= level.getMaxY()) return false;
+        var lease = leases.get(plot);
+        var world = worldPosition(plot, local);
+        return lease != null && lease.chunks.contains(new ChunkPos(world.getX() >> 4, world.getZ() >> 4));
+    }
+
+    /** Loads only the chunks containing the edited image, never the whole reserved virtual slot. */
+    public boolean ensureBounds(PlotPos plot, net.minecraft.world.phys.AABB bounds) {
+        return ensureBounds(plot, bounds, true);
+    }
+
+    private boolean ensureBounds(PlotPos plot, net.minecraft.world.phys.AABB bounds, boolean clearNewChunks) {
+        var lease = leases.get(plot);
+        if (lease == null || !SubLevelGrowth.valid(bounds, level.getMinY(), level.getMaxY())
+                || !layout.containsLocal(plot, (int) Math.floor(bounds.minX), (int) Math.floor(bounds.minZ))
+                || !layout.containsLocal(plot, (int) Math.ceil(bounds.maxX) - 1, (int) Math.ceil(bounds.maxZ) - 1)) return false;
+        var first = worldPosition(plot, BlockPos.containing(bounds.minX, bounds.minY, bounds.minZ));
+        var last = worldPosition(plot, new BlockPos((int) Math.ceil(bounds.maxX) - 1, (int) Math.ceil(bounds.maxY) - 1, (int) Math.ceil(bounds.maxZ) - 1));
+        var added = new ArrayList<ChunkPos>();
+        try {
+            for (int x = first.getX() >> 4; x <= (last.getX() >> 4); x++) for (int z = first.getZ() >> 4; z <= (last.getZ() >> 4); z++) {
+                var chunk = new ChunkPos(x, z);
+                if (lease.chunks.contains(chunk)) continue;
+                if (!NativeStructureTickets.acquire(level, chunk)) throw new IllegalStateException("Cannot expand plot residency");
+                added.add(chunk);
+                level.getChunk(x, z);
+            }
+            if (clearNewChunks) clearChunks(added);
+            lease.chunks.addAll(added);
+            if (!added.isEmpty()) enqueueEntityLoads(lease);
+            return true;
+        } catch (RuntimeException failure) {
+            for (var chunk : added) NativeStructureTickets.release(level, chunk);
+            AcademyCraft.LOGGER.error("Cannot expand plot {}", plot, failure);
+            return false;
+        }
+    }
+
+    public static final class Lease {
+        private final long serial;
+        private final PlotPos plot;
+        private final java.util.LinkedHashSet<ChunkPos> chunks;
+        public Lease(long serial, PlotPos plot, List<ChunkPos> chunks) {
+            this.serial = serial;
+            this.plot = Objects.requireNonNull(plot, "plot");
+            this.chunks = new java.util.LinkedHashSet<>(chunks);
             if (chunks.isEmpty()) throw new IllegalArgumentException("A plot lease requires chunks");
         }
+        public long serial() { return serial; }
+        public PlotPos plot() { return plot; }
+        public List<ChunkPos> chunks() { return List.copyOf(chunks); }
     }
 }

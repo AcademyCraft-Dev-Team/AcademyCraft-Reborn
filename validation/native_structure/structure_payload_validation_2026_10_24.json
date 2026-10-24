@@ -2,7 +2,8 @@
   "format": "academy-structure-payload-validation-v1",
   "date": "2026-10-24",
   "base_commit": "e2cec71f",
-  "new_implementation_committed": false,
+  "new_implementation_committed": true,
+  "implementation_commit": "c3b9fc5d",
   "supported": [
     "minecraft:chest",
     "minecraft:trapped_chest",

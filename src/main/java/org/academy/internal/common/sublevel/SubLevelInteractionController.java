@@ -233,17 +233,16 @@ public final class SubLevelInteractionController implements StructureInteraction
         var stack = actor.getItemInHand(request.hand());
         if (!(stack.getItem() instanceof BlockItem blockItem)) return actionRejected(request.requestId(), "not_a_block");
         if (!stack.getItem().isEnabled(actor.level().enabledFeatures())) return actionRejected(request.requestId(), "block_disabled");
-        var plot = subLevel.plot();
         var storage = runtime.storage();
-        var origin = storage.worldPosition(plot, BlockPos.ZERO);
-        var plotPoint = new Vec3(origin.getX() + hit.localPoint().x, hit.localPoint().y, origin.getZ() + hit.localPoint().z);
-        var plotPosition = storage.worldPosition(plot, hit.block().localPosition());
-        var plotHit = new BlockHitResult(plotPoint, hit.localFace(), plotPosition, hit.inside());
         var changed = new ArrayList<SpaceBlockRef>();
         String[] detail = {"rejected"};
         boolean[] applied = {false};
         try {
             StructureContexts.run(handle, context -> {
+                var plot = subLevel.plot();
+                var origin = storage.worldPosition(plot, BlockPos.ZERO);
+                var plotHit = new BlockHitResult(hit.localPoint().add(origin.getX(), 0, origin.getZ()),
+                        hit.localFace(), storage.worldPosition(plot, hit.block().localPosition()), hit.inside());
                 var placement = new SubLevelPlaceContext(storage.level(), actor, request.hand(), stack, plotHit,
                         hit.pose(), origin);
                 var targetWorld = placement.getClickedPos();
@@ -254,11 +253,21 @@ public final class SubLevelInteractionController implements StructureInteraction
                     detail[0] = "outside_bounds";
                     return;
                 }
-                if (!subLevel.localBounds().contains(targetLocal.getX() + 0.5, targetLocal.getY() + 0.5,
-                        targetLocal.getZ() + 0.5)) {
-                    detail[0] = "outside_bounds";
+                if (!hostAllows(actor, hit.pose(), targetLocal) || entityBlocksPlacement(actor, hit.pose(), targetLocal)) {
+                    detail[0] = "host_obstructed";
                     return;
                 }
+                if (!runtime.prepareEdit(id, targetLocal, 1, SubLevelGrowth.placementCells(blockItem))) {
+                    detail[0] = "growth_unavailable";
+                    return;
+                }
+                // Legacy storage may have moved; vanilla must receive the new physical positions.
+                plot = subLevel.plot();
+                origin = storage.worldPosition(plot, BlockPos.ZERO);
+                plotHit = new BlockHitResult(hit.localPoint().add(origin.getX(), 0, origin.getZ()),
+                        hit.localFace(), storage.worldPosition(plot, hit.block().localPosition()), hit.inside());
+                placement = new SubLevelPlaceContext(storage.level(), actor, request.hand(), stack, plotHit, hit.pose(), origin);
+                targetWorld = placement.getClickedPos();
                 var before = storage.blockState(plot, targetLocal);
                 if (!before.canBeReplaced(placement)) {
                     detail[0] = "not_replaceable";
@@ -463,9 +472,7 @@ public final class SubLevelInteractionController implements StructureInteraction
         var level = storage.level();
         var position = storage.worldPosition(session.subLevel.plot(), session.local);
         var origin = storage.worldPosition(session.subLevel.plot(), BlockPos.ZERO);
-        int side = storage.layout().sideChunks() * 16;
-        var bounds = new AABB(origin.getX(), level.getMinY(), origin.getZ(),
-                origin.getX() + side, level.getMaxY() + 1.0, origin.getZ() + side);
+        var bounds = session.subLevel.localBounds().move(origin.getX(), 0, origin.getZ()).inflate(2);
         var tool = actor.getMainHandItem();
         var toolBefore = tool.copy();
         // Keep vanilla callbacks, global loot modifiers and BlockDropsEvent in one scoped path.

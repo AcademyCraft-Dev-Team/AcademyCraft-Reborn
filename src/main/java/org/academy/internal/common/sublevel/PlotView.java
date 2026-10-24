@@ -49,10 +49,9 @@ public final class PlotView {
 
     /** Drops fully enclosed opaque cells; collision geometry remains complete in PlotGeometry. */
     private static boolean occluded(PlotStorage storage, PlotPos plot, BlockPos local) {
-        int side = storage.layout().sideChunks() * 16;
         for (var direction : net.minecraft.core.Direction.values()) {
             var offset = local.relative(direction);
-            if (offset.getX() < 0 || offset.getZ() < 0 || offset.getX() >= side || offset.getZ() >= side) {
+            if (!storage.resident(plot, offset)) {
                 return false;
             }
             var neighbor = storage.blockState(plot, offset);

@@ -116,9 +116,14 @@ public final class SubLevelStructureHandle implements StructureHandle {
         @Override
         public StructureWriteResult compareAndSet(BlockPos localPosition, StructureBlockData expected,
                                                   StructureBlockData replacement) {
-            if (org.academy.internal.common.structure.transaction.PayloadIsolation.denied(storage.level(), storage.worldPosition(subLevel.plot(), localPosition))) return StructureWriteResult.NOT_READY;
             var current = read(localPosition);
+            if (storage.resident(subLevel.plot(), localPosition)
+                    && org.academy.internal.common.structure.transaction.PayloadIsolation.denied(storage.level(), storage.worldPosition(subLevel.plot(), localPosition))) return StructureWriteResult.NOT_READY;
             if (!same(current, expected)) return StructureWriteResult.CONFLICT;
+            if (same(current, replacement)) return StructureWriteResult.APPLIED;
+            var runtime = SubLevelServer.runtime(storage.level().getServer(), subLevel.id()).orElse(null);
+            if (runtime == null || runtime.get(subLevel.id()).filter(value -> value == subLevel).isEmpty()
+                    || !runtime.prepareEdit(subLevel.id(), localPosition, 0, replacement.state().isAir() ? 0 : 1)) return StructureWriteResult.REJECTED;
             if (current.state() != replacement.state()
                     && !storage.setBlock(subLevel.plot(), localPosition, replacement.state(),
                     SubLevelCaptureService.TRANSACTION_FLAGS)) {
@@ -140,12 +145,7 @@ public final class SubLevelStructureHandle implements StructureHandle {
                 restoreExpected(localPosition, expected);
                 return StructureWriteResult.REJECTED;
             }
-            var runtime = SubLevelServer.runtime(storage.level().getServer(), subLevel.id()).orElse(null);
-            if (runtime != null && runtime.get(subLevel.id()).filter(value -> value == subLevel).isPresent()) {
-                runtime.refreshGeometry(subLevel.id());
-            } else {
-                subLevel.geometryChanged();
-            }
+            runtime.refreshGeometry(subLevel.id());
             return StructureWriteResult.APPLIED;
         }
 
@@ -163,9 +163,10 @@ public final class SubLevelStructureHandle implements StructureHandle {
 
         private void requireBounds(BlockPos local) {
             Objects.requireNonNull(local, "local");
-            if (!subLevel.localBounds().contains(local.getX() + 0.5, local.getY() + 0.5,
-                    local.getZ() + 0.5)) {
-                throw new IllegalArgumentException("Local position is outside the SubLevel bounds: " + local);
+            if (local.getX() < -PlotLayout.SPACIOUS_RADIUS || local.getX() >= PlotLayout.SPACIOUS_RADIUS
+                    || local.getZ() < -PlotLayout.SPACIOUS_RADIUS || local.getZ() >= PlotLayout.SPACIOUS_RADIUS
+                    || storage.level().isOutsideBuildHeight(local)) {
+                throw new IllegalArgumentException("Local position exceeds SubLevel storage limits: " + local);
             }
         }
 

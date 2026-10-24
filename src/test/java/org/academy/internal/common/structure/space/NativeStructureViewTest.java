@@ -56,6 +56,18 @@ class NativeStructureViewTest {
     }
 
     @Test
+    void extendedCoordinateHeaderStillRejectsUnboundedCounts() {
+        for (var size : new int[]{-1, NativeStructureView.MAX_CELLS + 1, Integer.MAX_VALUE}) {
+            var buffer = buffer();
+            try {
+                buffer.writeVarInt(65_536); buffer.writeVarInt(size); buffer.writeByte(97);
+                assertThrows(DecoderException.class, () -> NativeStructureView.STREAM_CODEC.decode(buffer));
+                assertEquals(1, buffer.readableBytes());
+            } finally { buffer.release(); }
+        }
+    }
+
+    @Test
     void smallHeaderPreservesPersistentAndRuntimeIdentitiesAndArbitraryPose() {
         var reference = new StructureRef(STRUCTURE_ID, Identifier.withDefaultNamespace("overworld"),
                 Identifier.fromNamespaceAndPath("academy", "native_level"), 7);
