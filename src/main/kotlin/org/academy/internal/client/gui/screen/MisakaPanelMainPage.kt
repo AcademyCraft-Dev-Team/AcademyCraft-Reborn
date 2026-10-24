@@ -153,6 +153,39 @@ internal object MisakaPanelMainPage {
         }
 
         val readOnly = !detailed
+        val ability = host.data.ability()
+        if (detailed && ability.level() > 0) {
+            body.addChild("ability_rule", host.sectionRule())
+            body.addChild("ability_title", host.sectionLabel(
+                Component.translatable("screen.academy.misaka_ability", ability.level()).string))
+            body.addChild("ability_cp", host.infoRow("CP",
+                "%.0f / %.0f".format(ability.availableCp(), ability.capacity())))
+            if (!ability.active()) body.addChild("ability_inactive", host.statusLine(
+                Component.translatable("screen.academy.misaka_ability_inactive").string,
+                MisakaNetworkPanelScreen.ACCENT_WARNING))
+            for (skill in ability.skills()) {
+                val name = Component.translatable("skill.${skill.id().namespace}.${skill.id().path}").string
+                val state = when {
+                    !skill.enabled() -> Component.translatable("screen.academy.misaka_skill_disabled").string
+                    skill.running() -> Component.translatable("screen.academy.misaka_skill_running").string
+                    skill.cooldown() > 0 -> Component.translatable("screen.academy.misaka_skill_cooldown",
+                        (skill.cooldown() + 19) / 20).string
+                    else -> Component.translatable("screen.academy.misaka_skill_ready").string
+                }
+                if (host.data.privilege()) {
+                    body.addChild("ability_${skill.id().path}", host.textActionButton("$name · $state") {
+                        org.misaka.MisakaNetworkClient.send(
+                            org.academy.internal.common.network.misaka.SetMisakaAbilityPacket(
+                                host.data.entityUuid(), skill.id().toString(), !skill.enabled()))
+                    })
+                } else body.addChild("ability_${skill.id().path}", host.infoRow(name, state))
+            }
+            body.addChild("ability_refresh", host.textActionButton(
+                Component.translatable("screen.academy.misaka_ability_refresh").string) {
+                org.misaka.MisakaNetworkClient.send(
+                    org.academy.internal.common.network.misaka.RequestMisakaPanelPacket(host.data.entityUuid()))
+            })
+        }
         if (readOnly) {
             body.addChild(
                 "locked",

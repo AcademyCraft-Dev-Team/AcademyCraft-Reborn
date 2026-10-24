@@ -1,5 +1,11 @@
 package org.academy.internal.common.ability.electromaster.skills.lv2;
 
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.api.server.team.TeamRelations;
+import org.academy.api.server.ability.electromaster.ElectromasterActions;
+import org.academy.api.server.ability.AbilityExecutionHandle;
+import org.academy.api.server.ability.AbilityCpAccount;
+import org.academy.api.server.ability.AbilityActorContext;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
@@ -7,7 +13,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraftClient;
@@ -17,17 +22,14 @@ import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilitySystemServer;
-import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -36,9 +38,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
 
 public class LightningNova extends Skill {
     private static final int MAX_RADIUS = 16;
@@ -127,109 +126,31 @@ public class LightningNova extends Skill {
     }
 
     public static final class Context extends ServerContext {
-        private static final java.util.concurrent.atomic.AtomicInteger NEXT_VISUAL_ID = new java.util.concurrent.atomic.AtomicInteger();
-        private final int visualId = NEXT_VISUAL_ID.getAndIncrement() & 0xFFFFFF;
-        private int ticks;
-        private int phaseTicks;
-        private final int milestone;
-        private final int maximumRadius;
-        private final int outwardDuration;
-        private boolean echo;
-        private final Set<UUID> outwardHits = new HashSet<>();
-        private final Set<UUID> echoHits = new HashSet<>();
-        private boolean ended;
-        private int nextVisualTick = 1;
-        private final long visualSeed;
         private final ServerLevel castLevel;
-        private final SkillDamageSource outwardSource;
-        private final SkillDamageSource echoSource;
+        private final AbilityExecutionHandle effect;
 
         private Context(ServerPlayer player, int milestone) {
             super(player);
-            this.milestone = milestone;
             castLevel = player.level();
-            visualSeed = castLevel.getRandom().nextLong();
-            outwardSource = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                    DamageTypes.ELECTRO_DAMAGE).withElectricalChargePoints(2);
-            echoSource = SkillDamageSource.of(player, Skills.LIGHTNING_NOVA.get(),
-                    DamageTypes.ELECTRO_DAMAGE).withElectricalChargePoints(1);
-            maximumRadius = Math.round(Skills.LIGHTNING_NOVA.get().scaledRange(player,
-                    milestone >= 2 ? Math.round(MAX_RADIUS * 1.25f) : MAX_RADIUS));
-            outwardDuration = milestone >= 2
-                    ? Math.max(1, Math.round(PULSE_DURATION * 1.25f / 1.15f))
-                    : PULSE_DURATION;
+            var actor = AbilityActorContext.of(player, Skills.LIGHTNING_NOVA.get(),
+                    new AbilityCpAccount(0));
+            effect = ElectromasterActions.lightningNova(actor,
+                    target -> target != player && target.isAlive()
+                            && !TeamRelations.areAllied(player, target)
+                            && !FriendlyFireSetting.shouldPrevent(player, target));
         }
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Pre event) {
-            ticks++;
-            if (ended) return;
-            if (player.hasDisconnected() || !player.isAlive() || level() != castLevel) {
-                end();
+            if (player.hasDisconnected() || !player.isAlive() || level() != castLevel || !effect.tick()) {
+                unregister();
                 return;
             }
             Skills.LIGHTNING_NOVA.get().reportActivity(player, false);
-
-            phaseTicks++;
-            if (!echo && phaseTicks >= outwardDuration) {
-                if (milestone < 3) {
-                    end();
-                    return;
-                }
-                echo = true;
-                phaseTicks = 0;
-                nextVisualTick = ticks;
-            } else if (echo && phaseTicks >= outwardDuration) {
-                end();
-                return;
-            }
-            var progress = Math.clamp((float) phaseTicks / outwardDuration, 0.0f, 1.0f);
-            var currentRadius = echo
-                    ? Math.max(0.0f, maximumRadius * (1.0f - progress))
-                    : 1.0f + progress * maximumRadius;
-            var innerRadius = Math.max(0, currentRadius - 1.5f);
-            var outerRadius = echo ? currentRadius + 1.5f : currentRadius;
-
-            if (ticks >= nextVisualTick) {
-                int visualTicks = Math.min(VISUAL_INTERVAL, outwardDuration - phaseTicks);
-                ElectromasterGraphEffects.spawnNovaRing(castLevel, player.position(), player.getId(), 1,
-                        currentRadius, (echo ? -1 : 1) * maximumRadius * 20f / outwardDuration,
-                        visualTicks / 20f, ticks / 20f, visualSeed, visualId);
-                nextVisualTick = ticks + visualTicks;
-            }
-            var phaseHits = echo ? echoHits : outwardHits;
-            double innerSquared = innerRadius * innerRadius;
-            double outerSquared = outerRadius * outerRadius;
-            var targets = castLevel.getEntitiesOfClass(LivingEntity.class,
-                    player.getBoundingBox().inflate(outerRadius),
-                    target -> target != player && target.isAlive() && !phaseHits.contains(target.getUUID())
-                            && withinWavefront(target.distanceToSqr(player), innerSquared, outerSquared));
-            if (!targets.isEmpty()) {
-                var system = AbilitySystemServer.getSystem(player);
-                var damage = Server.calculateDamage(
-                        system.getPlayerAbilityPowerMultiplier(player.getUUID()),
-                        system.getPlayerDamageMultiplier(player.getUUID())
-                );
-                var source = echo ? echoSource : outwardSource;
-                for (var target : targets) {
-                    phaseHits.add(target.getUUID());
-                    target.hurtServer(castLevel, source, damage * (echo ? 0.5f : 1.0f));
-                }
-            }
-        }
-
-        private void end() {
-            if (ended) return;
-            ended = true;
-            unregister();
         }
 
         @Override
-        protected void onUnregistered() {
-            ended = true;
-            outwardHits.clear();
-            echoHits.clear();
-        }
+        protected void onUnregistered() { effect.stop(); }
     }
 
     static boolean withinWavefront(double distanceSquared, double innerSquared, double outerSquared) {

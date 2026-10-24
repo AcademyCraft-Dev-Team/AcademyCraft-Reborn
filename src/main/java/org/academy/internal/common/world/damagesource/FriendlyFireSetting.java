@@ -16,6 +16,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -57,6 +58,8 @@ public final class FriendlyFireSetting {
         if (attacker == null || target == null) return false;
         if (PvpSetting.shouldPrevent(attacker, target)) return true;
         if (isFriendlyFireEnabled(attacker)) return false;
+        // Sisters are friendly NPCs without a tame owner, including before awakening.
+        if (target instanceof MisakaSisterEntity) return true;
         if (target instanceof Player victim && victim != attacker
                 && TeamRelations.areTeammates(attacker, victim)) return true;
         var owner = getOwnerEntity(target);

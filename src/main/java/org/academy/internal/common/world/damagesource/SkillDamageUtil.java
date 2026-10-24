@@ -36,7 +36,7 @@ public final class SkillDamageUtil {
         if (target == attacker || DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;
         }
-        if (PvpSetting.shouldPrevent(attacker, target)) return false;
+        if (FriendlyFireSetting.shouldPrevent(attacker, target)) return false;
         if (!(target.level() instanceof ServerLevel level)) return false;
 
         var source = SkillDamageSource.of(attacker, skill, type);
@@ -53,7 +53,7 @@ public final class SkillDamageUtil {
                                 ResourceKey<DamageType> type, float amount, float maximumHealthPart) {
         if (attacker == null || target == null || skill == null || type == null) return false;
         if (!(target.level() instanceof ServerLevel level) || !target.isAlive()
-                || target == attacker || PvpSetting.shouldPrevent(attacker, target)
+                || target == attacker || FriendlyFireSetting.shouldPrevent(attacker, target)
                 || DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)
                 || !(amount > 0.0f) || !Float.isFinite(amount)) return false;
         var source = SkillDamageSource.of(attacker, skill, type);
@@ -81,7 +81,7 @@ public final class SkillDamageUtil {
                 || !(amount > 0.0f) || !Float.isFinite(amount)
                 || source.getEntity() == target || source.getDirectEntity() == target) return false;
         var attacker = PvpSetting.resolveAttacker(source);
-        if (PvpSetting.shouldPrevent(attacker, target)
+        if (FriendlyFireSetting.shouldPrevent(attacker, target)
                 || DamageTypes.isImmunePlayer(target instanceof Player player ? player : null)) return false;
         if (DamageTypes.usesVerifiedTrueHealth(source)) return applyVerifiedTrueHealth(target, source, amount);
         return applyDirectDamage(level, attacker, target, null, source, amount);
@@ -117,7 +117,7 @@ public final class SkillDamageUtil {
         if (DarkmatterTargeting.isNetworkMember(target)
                 && DarkmatterTargeting.isDarkmatterDamage(source)) return false;
         if (!(source.getEntity() instanceof ServerPlayer attacker)) return false;
-        if (PvpSetting.shouldPrevent(attacker, target)) return false;
+        if (FriendlyFireSetting.shouldPrevent(attacker, target)) return false;
         if (DamageTypes.isImmunePlayer(target instanceof Player p ? p : null)) {
             return false;
         }
@@ -147,7 +147,7 @@ public final class SkillDamageUtil {
         if (!(target.level() instanceof ServerLevel)) return false;
         if (source.getEntity() == target || source.getDirectEntity() == target) return false;
         var attacker = PvpSetting.resolveAttacker(source);
-        if (attacker != null && PvpSetting.shouldPrevent(attacker, target)) return false;
+        if (FriendlyFireSetting.shouldPrevent(attacker, target)) return false;
         if (DamageTypes.isImmunePlayer(target instanceof Player player ? player : null)) return false;
         return new CTAEntityActuallyHurt(target).actuallyHurt(source, amount, true);
     }

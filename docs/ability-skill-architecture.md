@@ -54,3 +54,49 @@
 ## 6. 测试与验证约定
 
 测试包应与被测实现包一致，尤其是测试包内可见方法时。技能新增或支撑类迁移后，检查 Java、Kotlin、编辑器预览、数据资源中的引用，并完成测试、开发构建、发布构建；涉及游戏行为时再做客户端冒烟验证。
+
+## 7. 生物能力与御坂妹妹 LV2 电击使
+
+`EntityAbilityService` 是非玩家实体的服务端入口，必须在服务器线程调用。它不伪造玩家，也不改变既有玩家技能的计费、熟练度及事件入口。第一批执行器支持 `electrical_contact`、`arc_generate`、`thunder_lance`、`lightning_nova`；其他技能即使出现在模板中，也会返回 `UNSUPPORTED`，不会退回普通攻击。
+
+### 数据与调用
+
+`AbilityActorProfile(id, category, level, capacity, abilityPower, damageMultiplier, skills)` 描述实体模板：等级范围 0–6、CP 容量 0–1,000,000、两个倍率 0–1000、技能使用既有注册 ID。妹妹默认 `academy:misaka_lv2`、电击使 LV2、100 CP、倍率均为 1、四个技能全部启用，初始熟练度里程碑为 0。等级独立于知觉、MSk 和网络分配；本期没有 NPC 熟练度增长机制。
+
+```java
+// 普通非玩家实体：首次分配模板。assign 是管理员式重置，不应在每次施法前调用。
+EntityAbilityService.assign(mob, profile);
+var request = AbilityCastRequest.autonomous(Skills.ARC_GENERATE.get().getKey(), target);
+var admission = EntityAbilityService.checkCast(mob, request);
+var result = EntityAbilityService.tryCast(mob, request);
+var view = EntityAbilityService.snapshot(mob);
+EntityAbilityService.setEnabled(mob, Skills.ARC_GENERATE.get().getKey(), false);
+EntityAbilityService.stopAll(mob);
+```
+
+`inspect` 返回权威状态供服务器集成读取，展示端使用不可变 `snapshot`。状态变更应通过服务入口完成，避免遗漏脏标记或持续效果清理。`AbilityCastRequest.controller` 是可选的显式操作者，用于附加友伤/PVP限制；调用方须先验证操控权限。自主 AI 使用 `null`，不会把伤害自动归给妹妹的特权玩家。拒绝原因区分未拥有能力、不支持、已禁用、等级不足、当前不可行动、冷却、已有持续效果、目标无效、遮挡、CP不足及事件取消。
+
+普通实体使用持久化 attachment；妹妹通过 `AbilityActorProvider` 直接访问稳定 `misakaUuid` 对应的御坂档案，避免两份存档互相覆盖。旧档案缺少 `ability` 字段时按需补默认模板。技能开关、冷却、定时 CP 占用都会保存。卸载时停止效果并释放常驻占用，定时占用和冷却在卸载期间冻结；重新载入不恢复新星等效果会话。保存本身不会清除仍在工作的常驻占用。
+
+### 共性效果和数值
+
+`ElectromasterActions` 公开电弧/雷击之枪的线性命中与反射、接触电击单次命中和持续脉冲、雷电新星会话。玩家电弧、雷击之枪、接触电击脉冲、新星也复用这些公共核心。公共效果不二次收费，调用方负责授权和 CP；命中时重新执行目标策略。保留旧 `LinearAttackPayload.builder(ServerPlayer, ...)` 及 `attacker()`，新增 `LivingEntity` 重载和 `subject()`；非玩家调用者使用 `subject()`。
+
+| 技能 | 妹妹基础效果 | CP | 迭代点 / 冷却 |
+| --- | --- | --- | --- |
+| 接触电击 | 2 格范围，每 20 tick 脉冲 2 AD；受击时电击敌方攻击者 | 生效期间占用 10 | 停止即释放 |
+| 电弧激发 | 16 格内直线电弧，8 AD | 占用 10 | 5 点 / 40 tick |
+| 雷击之枪 | 最远 32 格，半径 2，20 AD；阻挡处截断 | 占用 20 | 10 点 / 120 tick |
+| 雷电新星 | 200 tick 扩张波，最大半径基值 16，每目标每波一次 4 AD | 占用 15 | 10 点 / 300 tick |
+
+非玩家基础迭代每点 20 tick，不依赖玩家 SP；计时结束释放对应占用，饥饿或不能行动时暂停 CP 迭代。主动技能共享 20 tick 全局冷却，每施术者最多一个新星。现有服务端技能配置的启用、伤害、范围、消耗和迭代参数仍生效；基础值不重复乘全局伤害倍率。额外实体能力包可通过 `register(AbilitySkillExecutor)` 提供效果、最低等级、冷却、距离、目标需求和持续类型，通过 `registerProvider` 接入其他权威存储与敌我规则。施法前发布可取消的 `EntityAbilityCastEvent`，在取消时不占 CP、不进入冷却。玩家已有事件保持不变。
+
+### 妹妹防卫与操作
+
+AI 每 10 tick 错峰决策，优先选择正在以自己为目标的生物，再按距离选择；范围内的敌对怪物及敌对关系玩家也可成为威胁。胆小、活泼、冷淡保留退避，勇敢性格在优势时接近并近战，四种性格都可主动电击。6 格内至少三个敌人时优先新星；远距离优先雷击之枪，其余优先电弧。勇敢性格近战每 20 tick 至多一次。
+
+未觉醒、饥饿、失能、睡眠、被携带或关闭 AI 时不施法；等待模式不自主施法并停止持续效果。目标策略排除妹妹自身、其他妹妹、队友、创造/旁观玩家以及非敌对关系玩家，范围效果也逐个检查。玩家关闭友伤后，妹妹在目标选择和技能伤害入口均受保护，不会因被阻止的技能伤害降低好感；普通攻击及环境伤害沿用原规则。
+
+妹妹面板在有详细信息权限时显示 LV、CP、技能状态与冷却快照，并提供刷新。特权玩家可逐项启停技能；修改包在服务端验证同维度实体、交互距离、特权及技能归属，不接受客户端提供的 CP、等级或倍率。
+
+后续扩展其他能力系时继续抽取公共效果，再注册执行器；玩家专用背包、按键持续上下文、真实伤害和精密操作权限不能仅靠替换实体类型视为已适配。本期只有上述四个非玩家执行器。

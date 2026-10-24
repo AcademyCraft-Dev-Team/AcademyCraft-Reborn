@@ -1,9 +1,10 @@
 package org.academy.internal.common.ability.electromaster.skills.lv1;
 
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.api.server.ability.electromaster.ElectromasterActions;
 import org.academy.api.common.damage.DamageComposition;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -169,10 +170,9 @@ public class ElectricalContact extends Skill {
                     system.getPlayerDamageMultiplier(player.getUUID())
             );
             for (var target : targets) {
-                target.hurtServer(serverLevel, damageSource, damage);
-                serverLevel.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                        target.getX(), target.getY(0.6), target.getZ(),
-                        8, 0.25, 0.45, 0.25, 0.04);
+                ElectromasterActions.contactHit(
+                        player, target, skill, damage, candidate -> !TeamRelations.areAllied(player, candidate)
+                                && !FriendlyFireSetting.shouldPrevent(player, candidate), true);
             }
         }
 

@@ -5,6 +5,7 @@ public final class MisakaPackets {
     }
 
     public static void initServer() {
+        SetMisakaAbilityPacket.initServer();
         SetMisakaWanderStylePacket.initServer();
         SetMisakaWanderAnchorPacket.initServer();
         SetMisakaNetworkNodePacket.initServer();

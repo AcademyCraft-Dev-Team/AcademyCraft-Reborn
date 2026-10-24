@@ -1,0 +1,6 @@
+package org.academy.api.server.ability;
+
+public enum AbilityCastResult {
+    ACCEPTED, NO_ABILITY, UNSUPPORTED, DISABLED, LEVEL_TOO_LOW, INACTIVE,
+    COOLDOWN, BUSY, INVALID_TARGET, BLOCKED, INSUFFICIENT_CP, CANCELED
+}

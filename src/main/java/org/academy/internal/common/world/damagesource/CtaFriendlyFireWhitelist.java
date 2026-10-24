@@ -7,6 +7,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +22,8 @@ public final class CtaFriendlyFireWhitelist {
 
     public static boolean shouldProtect(Player attacker, LivingEntity target) {
         if (attacker == null || target == null) return false;
+        // A sister retaliating against a player must not bypass the explicit friendly-fire switch.
+        if (target instanceof MisakaSisterEntity && FriendlyFireSetting.shouldPrevent(attacker, target)) return true;
         if (isHostileTowardPlayer(target)) return false;
         if (FriendlyFireSetting.shouldPrevent(attacker, target)) return true;
         for (var entry : getList(attacker)) {

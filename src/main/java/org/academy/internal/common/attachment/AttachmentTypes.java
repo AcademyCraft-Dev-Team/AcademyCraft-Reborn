@@ -21,6 +21,9 @@ import static org.academy.AcademyCraft.MOD_ID;
 
 public final class AttachmentTypes {
     public static final DeferredRegister<AttachmentType<?>> REGISTER = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, MOD_ID);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<java.util.Optional<org.academy.api.common.ability.AbilityActorState>>> ABILITY_ACTOR = REGISTER.register(
+            "ability_actor", () -> AttachmentType.<java.util.Optional<org.academy.api.common.ability.AbilityActorState>>builder(java.util.Optional::empty)
+                    .serialize(org.academy.api.common.ability.AbilityActorState.CODEC.optionalFieldOf("state")).build());
     /** Display-only projection, synchronized to tracking clients and never copied on death. */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> TRUE_HEALTH_CEILING = REGISTER.register(
             "true_health_ceiling", () -> AttachmentType.builder(() -> -1.0f).sync(ByteBufCodecs.FLOAT).build());

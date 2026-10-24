@@ -1,5 +1,6 @@
 package org.academy.internal.common.network.misaka;
 
+import org.academy.api.common.ability.AbilityActorSnapshot;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -41,6 +42,13 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
     private final boolean reconstructionBlocked;
     private final boolean networkBound;
     private final boolean incapacitated;
+    private AbilityActorSnapshot ability = AbilityActorSnapshot.EMPTY;
+
+    public AbilityActorSnapshot ability() { return ability; }
+    public MisakaPanelDataPacket withAbility(AbilityActorSnapshot snapshot) {
+        ability = snapshot;
+        return this;
+    }
 
     public MisakaPanelDataPacket(
             UUID entityUuid,
@@ -92,6 +100,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
         buf.writeBoolean(packet.reconstructionBlocked);
         buf.writeBoolean(packet.networkBound);
         buf.writeBoolean(packet.incapacitated);
+        AbilityActorSnapshot.CODEC.encode(buf, packet.ability);
     }
 
     private static MisakaPanelDataPacket decode(ByteBuf buf) {
@@ -111,7 +120,7 @@ public final class MisakaPanelDataPacket extends Packet<ClientPacketListener, Mi
                 buf.readBoolean(),
                 buf.readBoolean(),
                 buf.readBoolean()
-        );
+        ).withAbility(AbilityActorSnapshot.CODEC.decode(buf));
     }
 
     public static synchronized void initClient() {

@@ -31,6 +31,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.academy.api.common.damage.SkillDamageSource;
+import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
+import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaArcZapGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaCropGrazeGoal;
 import org.academy.internal.common.world.entity.misaka.ai.MisakaEscapeHazardGoal;
@@ -196,11 +199,10 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         goalSelector.addGoal(4, new MisakaForageFoodGoal(this));
         goalSelector.addGoal(5, new MisakaCropGrazeGoal(this));
         goalSelector.addGoal(6, new MisakaSleepInBedGoal(this));
-        goalSelector.addGoal(7, new MisakaPersonalityCombatGoal(this));
+        goalSelector.addGoal(3, new MisakaPersonalityCombatGoal(this));
         goalSelector.addGoal(8, followGoal = new MisakaFollowGoal(this));
         goalSelector.addGoal(9, networkWanderGoal = new MisakaNetworkWanderGoal(this));
         goalSelector.addGoal(10, new MisakaSocialGoal(this));
-        goalSelector.addGoal(11, new MisakaArcZapGoal(this));
         goalSelector.addGoal(12, new MisakaLivelyGoal(this));
         goalSelector.addGoal(13, new LookAtPlayerGoal(this, Player.class, 8.0f));
     }
@@ -466,6 +468,12 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
 
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
+        // Reject skill hits before incoming-damage events can lower favor or provoke retaliation.
+        if ((source instanceof SkillDamageSource
+                || org.academy.internal.common.world.damagesource.DamageTypes.isAcademyDamage(source))
+                && FriendlyFireSetting.shouldPrevent(PvpSetting.resolveAttacker(source), this)) {
+            return false;
+        }
         if (getVehicle() instanceof Player && source.is(DamageTypes.IN_WALL)) {
             return false;
         }

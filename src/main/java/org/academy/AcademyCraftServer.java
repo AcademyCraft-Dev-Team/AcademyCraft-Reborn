@@ -101,6 +101,7 @@ public final class AcademyCraftServer {
         temporalRuntime = new TemporalRuntime(server);
         vectorReflectionRuntime = new VectorReflectionRuntime(server);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
+        org.academy.internal.server.ability.EntityAbilityRuntime.install();
         WirelessManager.initServer();
         PvpSetting.initServer();
         FriendlyFireSetting.initServer();

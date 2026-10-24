@@ -111,7 +111,7 @@ public final class LinearAttackExecutor {
         var segmentHits = new HashSet<Entity>();
         var source = reflected
                 ? ReflectedSkillDamageSource.from(
-                payload.outgoingDamageSource(), reflector, payload.skill(), payload.attacker())
+                payload.outgoingDamageSource(), reflector, payload.skill(), payload.subject())
                 : payload.outgoingDamageSource();
         for (var target : candidates) {
             if (!segmentHits.add(target)) continue;

@@ -112,10 +112,12 @@ public final class MisakaSisterRecord {
             NetworkState.CODEC.fieldOf("network").forGetter(MisakaSisterRecord::networkSnapshot),
             AwakeState.CODEC.fieldOf("awake").forGetter(MisakaSisterRecord::awakeSnapshot),
             DailyState.CODEC.fieldOf("daily").forGetter(MisakaSisterRecord::dailySnapshot),
-            Codec.INT.fieldOf("rescued_day_index").forGetter(r -> r.rescuedDayIndex)
+            Codec.INT.fieldOf("rescued_day_index").forGetter(r -> r.rescuedDayIndex),
+            org.academy.api.common.ability.AbilityActorState.CODEC.optionalFieldOf("ability").forGetter(r -> Optional.ofNullable(r.ability))
     ).apply(instance, MisakaSisterRecord::fromCodec));
 
     public final UUID misakaUuid;
+    public org.academy.api.common.ability.@Nullable AbilityActorState ability;
     public final int serial;
     public MisakaPersonality personality;
     public boolean awakened;
@@ -167,9 +169,11 @@ public final class MisakaSisterRecord {
             NetworkState network,
             AwakeState awake,
             DailyState daily,
-            int rescuedDayIndex
+            int rescuedDayIndex,
+            Optional<org.academy.api.common.ability.AbilityActorState> ability
     ) {
         var record = new MisakaSisterRecord(misakaUuid, serial, personality, rescuedDayIndex);
+        record.ability = ability.orElse(null);
         record.awakened = status.awakened();
         record.promaxUsed = status.promaxUsed();
         record.highTierUnlocked = status.highTierUnlocked();

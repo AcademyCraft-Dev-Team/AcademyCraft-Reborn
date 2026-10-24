@@ -5,6 +5,7 @@ import org.academy.internal.common.ability.meltdowner.Meltdowner;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -18,6 +19,7 @@ public final class MeltdownerTargeting {
     public static boolean canAffectNegatively(ServerPlayer attacker, Entity target) {
         if (attacker == null || target == null || target == attacker) return false;
         if (PvpSetting.shouldPrevent(attacker, target)) return false;
+        if (target instanceof LivingEntity living && FriendlyFireSetting.shouldPrevent(attacker, living)) return false;
         return allowsTarget(
                 TeamRelations.areAllied(attacker, target),
                 target instanceof Player,

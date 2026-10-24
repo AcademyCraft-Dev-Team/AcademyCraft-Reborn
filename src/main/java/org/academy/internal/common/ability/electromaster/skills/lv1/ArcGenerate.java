@@ -1,12 +1,12 @@
 package org.academy.internal.common.ability.electromaster.skills.lv1;
 
+import org.academy.api.server.ability.electromaster.ElectromasterActions;
 import com.mojang.blaze3d.platform.InputConstants;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -29,16 +29,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.shared.linear.LinearAttackExecutor;
-import org.academy.internal.common.ability.shared.linear.LinearAttackPayload;
-import org.academy.internal.common.ability.shared.linear.LinearReflectionResolver;
-import org.academy.internal.common.ability.shared.linear.LinearSegment;
-import org.academy.internal.common.ability.shared.linear.ResolvedLinearAttack;
 import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcActions;
-import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcTargeting;
 import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
-import org.academy.internal.common.sounds.SoundEvents;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.misaka.MisakaNetworkClient;
@@ -168,54 +162,13 @@ public final class ArcGenerate extends Skill {
                         system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                         system.getPlayerDamageMultiplier(player.getUUID())
                 );
-                var payload = LinearAttackPayload.builder(
-                                player,
-                                Skills.ARC_GENERATE.get(),
-                                src,
-                                radius
-                        )
-                        .damage(_ -> damage)
-                        .targetFilter(ElectromasterArcTargeting::canDamageAlongArc)
-                        .build();
-                var resolved = LinearReflectionResolver.resolve(
-                        level,
-                        new LinearSegment(handPos, targetPos),
-                        payload
-                );
-
-                spawnArcVfx(level, handPos, targetPos, resolved);
-
-                var result = LinearAttackExecutor.execute(level, resolved, payload);
+                var result = ElectromasterActions.linearStrike(
+                        player, Skills.ARC_GENERATE.get(), src, handPos, targetPos, radius, damage,
+                        target -> true, ElectromasterGraphEffects.BoltStyle.ARC);
                 if (context.milestone() >= 3) {
                     chainArc(player, level, result, src, damage);
                 }
             });
-        }
-
-        private static void spawnArcVfx(ServerLevel level, Vec3 handPos, Vec3 targetPos,
-                                        ResolvedLinearAttack resolved) {
-            if (resolved.isReflected()) {
-                var mirrorPoint = resolved.mirrorPoint();
-                broadcastArc(level, handPos, mirrorPoint);
-                var returnEnd = resolved.returnSegment().orElseThrow().end();
-                broadcastArc(level, mirrorPoint, returnEnd);
-            } else {
-                broadcastArc(level, handPos, targetPos);
-            }
-            level.playSound(
-                    null,
-                    handPos.x,
-                    handPos.y,
-                    handPos.z,
-                    SoundEvents.ARC_WEAK.get(),
-                    SoundSource.PLAYERS,
-                    1.0f,
-                    1.0f
-            );
-        }
-
-        private static void broadcastArc(ServerLevel level, Vec3 from, Vec3 to) {
-            ElectromasterGraphEffects.spawnBolt(level, from, to, ElectromasterGraphEffects.BoltStyle.ARC);
         }
 
         private static void chainArc(ServerPlayer player,

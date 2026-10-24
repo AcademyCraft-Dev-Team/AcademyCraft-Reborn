@@ -239,6 +239,8 @@ public final class MisakaSisterGameTests {
             sister.getFoodData().setFoodLevel(10);
             sister.syncFoodLevel();
             sister.setNoAi(true);
+            // This fixture tests target selection, not knockback off its small platform.
+            sister.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE).setBaseValue(1);
             var zombie = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 2, 1, 1);
             zombie.setPersistenceRequired();
             spawned[0] = zombie;

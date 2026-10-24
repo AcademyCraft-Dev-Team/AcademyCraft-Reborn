@@ -3,6 +3,7 @@ package org.academy.internal.common.ability.shared.linear;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -12,7 +13,7 @@ import java.util.Objects;
 import java.util.function.Predicate;
 
 public final class LinearAttackPayload {
-    private final ServerPlayer attacker;
+    private final LivingEntity attacker;
     private final Skill skill;
     private final DamageSource outgoingDamageSource;
     private final float radius;
@@ -46,7 +47,14 @@ public final class LinearAttackPayload {
     }
 
     public ServerPlayer attacker() {
-        return attacker;
+        if (attacker instanceof ServerPlayer player) return player;
+        throw new IllegalStateException("Non-player payload: use subject()");
+    }
+
+    public LivingEntity subject() { return attacker; }
+
+    public static Builder builder(LivingEntity attacker, Skill skill, DamageSource source, float radius) {
+        return new Builder(attacker, skill, source, radius);
     }
 
     public Skill skill() {
@@ -74,7 +82,8 @@ public final class LinearAttackPayload {
     boolean canTarget(Entity target, boolean reflected, @Nullable ServerPlayer reflector) {
         if (target == null || !target.isAlive() || !targetFilter.test(target)) return false;
         var effectiveAttacker = reflected ? reflector : attacker;
-        if (PvpSetting.shouldPrevent(effectiveAttacker, target)) return false;
+        if (effectiveAttacker instanceof ServerPlayer player && target instanceof LivingEntity living
+                && org.academy.internal.common.world.damagesource.FriendlyFireSetting.shouldPrevent(player, living)) return false;
         if (reflected) {
             return reflector != null
                     && target != reflector
@@ -99,7 +108,7 @@ public final class LinearAttackPayload {
     }
 
     public static final class Builder {
-        private final ServerPlayer attacker;
+        private final LivingEntity attacker;
         private final Skill skill;
         private final DamageSource outgoingDamageSource;
         private final float radius;
@@ -112,7 +121,7 @@ public final class LinearAttackPayload {
         };
 
         private Builder(
-                ServerPlayer attacker,
+                LivingEntity attacker,
                 Skill skill,
                 DamageSource outgoingDamageSource,
                 float radius

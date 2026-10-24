@@ -1,5 +1,7 @@
 package org.academy.internal.server.misaka;
 
+import org.academy.api.common.ability.AbilityActorSnapshot;
+import org.academy.api.server.ability.EntityAbilityService;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -120,7 +122,8 @@ public final class MisakaPanelSupport {
                 reconstructionBlocked,
                 record.networkNodePos != null,
                 record.incapacitated || sister.isIncapacitated()
-        );
+        ).withAbility(detailed ? EntityAbilityService.snapshot(sister)
+                : AbilityActorSnapshot.EMPTY);
     }
 
     public static @Nullable MisakaSisterRecord resolveRecord(

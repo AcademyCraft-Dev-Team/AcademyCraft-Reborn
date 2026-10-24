@@ -144,6 +144,11 @@ import org.misaka.api.common.registries.MisakaNetworkRegistries;
 public final class PacketTypes {
     public static final DeferredRegister<PacketType<?, ?>> PACKET_TYPES =
             DeferredRegister.create(MisakaNetworkRegistries.Keys.PACKET_TYPES, AcademyCraft.MOD_ID);
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, org.academy.internal.common.network.misaka.SetMisakaAbilityPacket>>
+            SET_MISAKA_ABILITY = PACKET_TYPES.register("set_misaka_ability",
+            () -> new PacketType<>(org.academy.internal.common.network.misaka.SetMisakaAbilityPacket.class,
+                    org.academy.internal.common.network.misaka.SetMisakaAbilityPacket.CODEC));
+
 
     /**
      * Sync
