@@ -67,6 +67,11 @@ public final class ElectromasterProgramDefinition {
                 configuration.addProperty("target_type", "entity");
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
+            if (id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION)) {
+                configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetDefaults();
+            } else if (id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN)) {
+                configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.spinDefaults();
+            }
             var group = id.getPath().contains("/target/")
                     ? ProgramEditorNodeCatalog.Group.TARGET
                     : id.getPath().contains("/logic/")

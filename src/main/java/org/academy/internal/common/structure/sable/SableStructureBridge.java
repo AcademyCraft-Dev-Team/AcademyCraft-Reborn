@@ -34,6 +34,10 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
         return SableStructureTraction.motion(host, reference);
     }
 
+    @Override public Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess() {
+        return Optional.of(SableOrientationAccess.INSTANCE);
+    }
+
     @Override public Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to) {
         return SableStructureAccess.raycast(host, from, to);
     }
@@ -49,6 +53,11 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
 
     @Override public StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed) {
         return SableStructureAccess.validate(host, from, to, proposed);
+    }
+
+    @Override public StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed,
+                                                       net.minecraft.world.level.ClipContext.Block shape) {
+        return SableStructureAccess.validate(host, from, to, proposed, shape);
     }
 
     @Override public StructurePresentationStatus presentationStatus(MinecraftServer server, StructureRef reference) {
@@ -87,6 +96,7 @@ public final class SableStructureBridge implements StructureBackendRouter.Bridge
     }
 
     @Override public void shutdown(MinecraftServer server) {
+        SableOrientationAccess.shutdown(server);
         SableStructureTraction.shutdown(server);
         SableStructureDirectControl.shutdown(server);
         SableStaffCompatibility.shutdown(server);

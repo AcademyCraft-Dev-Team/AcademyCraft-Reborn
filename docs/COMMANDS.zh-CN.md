@@ -5,6 +5,10 @@
 - 服务端：`src/main/java/org/academy/internal/server/commands/AcademyCraftCommand.java`
 - 客户端：`src/main/java/org/academy/AcademyCraftClient.java`
 
+服务端 `/academy debug` 下的几棵子树由独立类注册：`CPDebugCommands`（`cp`）、`DarkmatterDebugCommands`（`darkmatter`）、`ControlDebugCommands`（`mental_control`）在 `AcademyCraftCommand.java` 内，`TemporalTickDebugCommands`（`tick`，独立文件）；`profile` 在 `AcademyCraftCommand.java` 的 `ClientProfileCommand` 内部类中。改动分支时应同时检查这些位置。
+
+核对基线：2026-10-18，HEAD `782d935b`。
+
 ## 阅读约定
 
 - `<参数>` 表示必填参数，`[参数]` 表示可选参数，`a|b` 表示任选其一。
@@ -20,6 +24,8 @@
 客户端命令在本地执行，不要求服务端管理员权限：
 
 - `/academy debug skillgui ...` 在普通客户端和开发客户端中都会注册。
+- `/academy debug textdump`、`atlasdump`、`font` 用于字形与图集调试，见下文“客户端字体调试”。
+- `/academy vfx spawn <graph> [<x> <y> <z>]` 在本地生成一个 VFXGraph 实例，见“客户端特效生成”。
 - `/academy debug imgui [on|off|toggle]` 在支持 ImGui 的构建中注册（`Dev.HAS_IM_GUI`），用于开关运行时控件检查器。
 
 ## 命令总览
@@ -36,15 +42,44 @@
 │  └─ max
 ├─ debug
 │  ├─ god
+│  ├─ vfxstats
 │  ├─ cp
 │  │  ├─ info [<target> [<broadcast>]]
 │  │  ├─ get <target> value|max|curr_sp|max_sp|level|timer|status
 │  │  ├─ set <target> <value> [<broadcast>]
 │  │  ├─ set_max <target> <value> [<broadcast>]
 │  │  └─ set_status <target> <status> [<timer> [<broadcast>]]
+│  ├─ darkmatter
+│  │  ├─ info [<target>]
+│  │  ├─ level <target> <level>
+│  │  ├─ phase <target> <alpha_points>
+│  │  ├─ mp <target> <natural> <created> <cp_debt> <reserved>
+│  │  ├─ gamma <target> <active>
+│  │  └─ proficiency <target> <skill_name> <value>
+│  ├─ mental_control <target>
+│  ├─ tick
+│  │  ├─ [<targets>]
+│  │  ├─ inspect [entities <targets> | position <dimension> <position>]
+│  │  ├─ field add save|dimension|sphere|entities …
+│  │  ├─ field list|remove <control_id>|clear
+│  │  ├─ immunity add <targets> …|list|remove <control_id>|clear
+│  │  ├─ list
+│  │  ├─ clear
+│  │  └─ help
+│  ├─ structure
+│  │  ├─ status
+│  │  └─ cleanup
+│  ├─ sublevel
+│  │  ├─ status
+│  │  ├─ probe
+│  │  ├─ capture
+│  │  ├─ shift <dx> <dy> <dz>
+│  │  ├─ rotate <yaw>
+│  │  └─ remove
 │  ├─ skillgui [on|off|toggle|reset|export]                 （客户端）
 │  ├─ textdump <px> <text>                                 （客户端）
 │  ├─ atlasdump [all|bitmap|msdf]                          （客户端）
+│  ├─ font [<text>]                                        （客户端）
 │  └─ imgui [on|off|toggle]                                （客户端，仅支持 ImGui 的构建）
 ├─ dev <state>
 ├─ ability_exp
@@ -58,11 +93,22 @@
 │  ├─ start [<interval_ms>]
 │  ├─ stop
 │  ├─ reset
+│  ├─ status
+│  ├─ zones [<thread> [<depth>]]
+│  ├─ sampler [<top>]
 │  ├─ snapshot
 │  └─ dump
 └─ vectorcompat
    ├─ inspect
    └─ mode [strict|safe|aggressive]
+```
+
+客户端另有独立的 `/academy` 命令树，只影响本机：
+
+```text
+/academy
+└─ vfx
+   └─ spawn <graph> [<x> <y> <z>]                           （客户端，仅开发/特效调试）
 ```
 
 ## P.R.O.P.S
@@ -113,6 +159,7 @@
 | 命令 | 执行者 | 作用 |
 | --- | --- | --- |
 | `/academy debug god` | 玩家 | 为当前玩家切换技能 God Mode。该状态按玩家保存，命令每次执行都会在开启和关闭之间切换。 |
+| `/academy debug vfxstats` | 玩家或控制台 | 打印技能特效运行时的实时统计：在途特效数、按类型的分布、待发送与已丢弃的包数、被预算裁剪的数量。用于确认特效是否在多人场景下被预算限制。 |
 | `/academy dev <state>` | 玩家或控制台 | 开启或关闭服务端能力系统的开发模式。`<state>` 为 `true` 或 `false`。 |
 
 ### CP 状态查看
@@ -149,6 +196,67 @@
 
 修改命令的 `<broadcast>` 为 `true` 时会向全部在线玩家广播结果；为 `false` 或省略时使用标准命令反馈。
 
+### 未元物质资源调试
+
+这组命令直接改写目标的未元物质资源池与相态点数，用于复现结算问题。全部要求游戏管理员权限。
+
+| 命令 | 参数限制 | 作用 |
+| --- | --- | --- |
+| `/academy debug darkmatter info [<target>]` | 省略 `<target>` 时取执行者 | 显示等级、α/β/γ 点数与比例、γ 是否激活，以及 MP 的自然量、创生量、总量、有效容量、基础容量、CP 欠账与预留量。 |
+| `/academy debug darkmatter level <target> <level>` | 与 `/academy level` 相同的等级范围 | 设置目标能力等级，并立即重新同步未元物质资源。 |
+| `/academy debug darkmatter phase <target> <alpha_points>` | 整数 `0`～`250` | 设置目标的 α 相态点数；服务端拒绝时命令失败并返回 0。 |
+| `/academy debug darkmatter mp <target> <natural> <created> <cp_debt> <reserved>` | 四个不小于 `0` 的浮点数 | 一次性设置自然物质、创生物质、CP 欠账与预留物质，随后打印资源概览。 |
+| `/academy debug darkmatter gamma <target> <active>` | `true` 或 `false` | 设置 γ 相态开关。 |
+| `/academy debug darkmatter proficiency <target> <skill_name> <value>` | 资源 ID；浮点 `0`～`3000` | 设置指定技能熟练度，候选值为目标已学习的技能。 |
+
+### 心理控制调试
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug mental_control <target>` | 打印目标生物当前生效的全部心理控制：每条控制的控制者 UUID、来源、作用域、优先级、到期 tick 与指令；另外输出工作指令、当前方块、待办量、移动状态、停滞 tick，以及生物寻路是否完成、路径节点数与可达性。命令返回值等于生效控制条目数，可配合 `/execute store result` 做断言。 |
+
+### 时间场调试
+
+`/academy debug tick` 用于在不改代码的前提下验证时停边界、免疫租约与各类时间场的作用范围。
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug tick` | 等同于 `inspect`，查看命令执行位置所在的时间场。 |
+| `/academy debug tick <targets>` | 查看目标实体受到的时间缩放。 |
+| `/academy debug tick inspect entities <targets>` | 逐实体列出生效的时间场、通道与暂停来源。 |
+| `/academy debug tick inspect position <dimension> <position>` | 查看指定维度坐标处生效的时间场。 |
+| `/academy debug tick field add save <scale> [<channels>] [<pause_source>]` | 在整份存档范围施加时间场。 |
+| `/academy debug tick field add dimension <dimension> <scale> …` | 在单个维度施加时间场。 |
+| `/academy debug tick field add sphere <dimension> <center> <radius> <scale> …` | 在球形区域施加时间场。 |
+| `/academy debug tick field add entities <targets> <scale> [<pause_source>]` / `… <scale> channels <channels> [<pause_source>]` | 对指定实体施加时间场。 |
+| `/academy debug tick field list` / `field remove <control_id>` / `field clear` | 列出、删除单个或清空全部时间场。 |
+| `/academy debug tick immunity add <targets> [<pause_source>]` 等 | 授予/查询/撤销时间场免疫租约，子命令为 `add`、`list`、`remove <control_id>`、`clear`。 |
+| `/academy debug tick list` / `clear` / `help` | 列出全部调试控制、清空全部调试控制、打印参数说明。 |
+
+`<scale>` 为 `0`～`TemporalScale.DEFAULT_MAX_SCALE` 的浮点数，`0` 表示完全暂停。`<channels>` 与 `<pause_source>` 均带补全：前者可选 `integrated`、`spatial`、`world`、`all` 或单个通道名，后者可选 `all` 或单个暂停来源名。
+
+### 原生结构投影调试
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug structure status` | 列出当前已加载的原生结构数、已 attach/已准备物理区域数与无区域影子数，并给出影子结构 ID 样例。 |
+| `/academy debug structure cleanup` | 只卸载没有活动或已准备物理区域的影子结构投影，保留其独立存储内容；不会还原或删除方块。 |
+
+旧世界残留的无刚体结构可先用 `status` 确认，再执行 `cleanup` 消除其不可见碰撞与投影；需要恢复方块时仍应使用后续的结构还原入口，不能把 `cleanup` 当作还原。
+
+### SubLevel Phase 1 调试
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy debug sublevel status` | 查看共享 plot 维度是否就绪、已分配 plot 数、活跃 SubLevel 数与物理刚体数。 |
+| `/academy debug sublevel probe` | 在 `academy:sublevel_plots` 分配一个 plot，写入一个石头方块，并创建一个真实 SubLevel 刚体；用于验证 plot/几何/统一物理链路。 |
+| `/academy debug sublevel capture` | 在玩家上方 5 格写入 2×2×2 石头，复制到 plot、创建 SubLevel 并移除源方块；用于验证 capture → plot → physics。 |
+| `/academy debug sublevel shift <dx> <dy> <dz>` | 测试/调试：平移第一个 SubLevel，并移除其物理 body 使姿态变化确定。 |
+| `/academy debug sublevel rotate <yaw>` | 测试/调试：绕第一个 SubLevel 局部中心 yaw 旋转。 |
+| `/academy debug sublevel remove` | 移除 probe 创建的子结构并释放 plot。 |
+
+`probe` 只用于开发验证；Phase 1 完成后由捕获事务自动创建 SubLevel。
+
 ## 性能分析
 
 | 命令 | 参数限制 | 作用 |
@@ -157,6 +265,12 @@
 | `/academy profile start <interval_ms>` | 整数 `1`～`1000` | 以指定毫秒间隔启动采样器，同时开启性能区段捕获。 |
 | `/academy profile stop` | 无 | 停止采样器和性能区段捕获，保留已收集的数据。 |
 | `/academy profile reset` | 无 | 清空采样数据和性能区段统计。 |
+| `/academy profile status` | 无 | 显示采样器是否运行、当前间隔与已收集的样本规模。 |
+| `/academy profile zones` | 无 | 按默认线程、默认深度 `8` 打印各区段耗时。 |
+| `/academy profile zones <thread>` | 线程名（带补全） | 只打印指定线程的性能区段。 |
+| `/academy profile zones <thread> <depth>` | 深度整数 `1`～`20` | 指定线程并限制展开深度。 |
+| `/academy profile sampler` | 无 | 打印默认前 `30` 条采样热点。 |
+| `/academy profile sampler <top>` | 整数 `1`～`200` | 打印指定条数的采样热点。 |
 | `/academy profile snapshot` | 无 | 在命令反馈中显示当前采样概况和各区段最耗时的前十项。 |
 | `/academy profile dump` | 无 | 将当前数据写入服务器目录下的 `logs/academy-profile-<时间戳>.txt`。 |
 
@@ -172,7 +286,7 @@
 | `/academy vectorcompat mode safe` | 切换到 `SAFE` 模式；这是默认模式。 |
 | `/academy vectorcompat mode aggressive` | 切换到 `AGGRESSIVE` 模式。 |
 
-兼容模式的行为、档案格式和安全边界参见 [第三方线性攻击矢量兼容](vector-compatibility.zh-CN.md)。
+兼容模式作用于第三方线性伤害的接管策略；`/academy vectorcompat inspect` 会打印当前模式、已加载档案数量、最近的诊断记录以及可复制的兼容档案模板。该机制的档案格式目前没有独立文档，以 `inspect` 输出和 `vectorcompat` 相关配置为准。
 
 ## 客户端技能 GUI 布局
 
@@ -198,10 +312,23 @@
 | `/academy debug atlasdump all` | 导出当前已构建的位图图集页与全部字体的 MSDF 图集页。 |
 | `/academy debug atlasdump bitmap` | 只导出共享位图图集页（R8）。 |
 | `/academy debug atlasdump msdf` | 只导出各字体 MSDF 图集页（RGBA）。 |
+| `/academy debug font` | 打印字体仓库快照（已加载字体、回退链）与最近 32 个分辨率缓存条目，不写文件。 |
+| `/academy debug font <text>` | 在上面的基础上，逐码点打印 `U+XXXX -> 字体资源 ID (glyphIndex=N)`，用于确认某个字符实际落到哪个字体、是否缺字形。 |
 
 导出目录为 `<gameDir>/academy/debug`：位图页命名 `bitmap_atlas_page<页码>.png`，MSDF 页命名 `msdf_<字体命名空间>_<字体路径>_page<页码>_0.png`。图集不存在时（尚未绘制过对应文本）会在命令反馈中说明，不会强制创建。整页导出保留字形槽位、gutter 与空白区域，便于直接观察排布。
 
 ## UI 控件检查器
 
 `/academy debug imgui [on|off|toggle]` 在支持 ImGui 的构建中开关运行时控件检查器，可查看当前界面的控件树、布局参数与状态。UI 布局已改为 Kotlin DSL 构建，不再有 JSON 布局文件或独立布局编辑器。
+
+## 客户端特效生成
+
+该命令只在本机生成一个 VFXGraph 实例，不影响服务器状态，也不要求任何权限；用于编辑器之外的快速预览与截图。
+
+| 命令 | 作用 |
+| --- | --- |
+| `/academy vfx spawn <graph>` | 在相机实体的眼睛位置生成一次 `academy:vfxgraph/<graph>`。未加载世界时失败。 |
+| `/academy vfx spawn <graph> <x> <y> <z>` | 在指定世界坐标生成同一个图。 |
+
+`<graph>` 只填图名，命令会自己补上 `academy:vfxgraph/` 前缀。生成只发生在客户端本地，其他玩家看不到；需要观察多人表现时，应由服务端技能触发，或使用 `tools/vfxgraph-editor/scripts/` 下的双客户端脚本。
 

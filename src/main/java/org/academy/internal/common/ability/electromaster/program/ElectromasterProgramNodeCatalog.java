@@ -72,6 +72,12 @@ public final class ElectromasterProgramNodeCatalog implements ProgramNodeLookup 
                 ProgramNodePurity.ACTION,
                 capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
         put(result, ElectromasterProgramNodeIds.STRUCTURE_MOVE, structureMoveType());
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetType(
+                        capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_SPIN,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.spinType(
+                        capabilityScope(ElectromasterProgramCapabilities.STRUCTURE)));
         put(result, ElectromasterProgramNodeIds.STRUCTURE_ROTATE, unitType(
                 structureRotateSchema(),
                 ProgramNodeRole.ACTION,

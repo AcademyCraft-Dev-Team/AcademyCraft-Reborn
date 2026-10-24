@@ -14,6 +14,7 @@ import org.academy.internal.common.structure.BlockStructureOrientedBox;
 import org.academy.internal.common.structure.NativeStructureRuntime;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
 import org.academy.internal.common.structure.space.NativeStructureManifest;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.*;
@@ -71,6 +72,136 @@ public final class NativeStructurePhysics implements AutoCloseable {
         region.status = StructurePhysicsRegion.Status.PAUSED;
         region.diagnostic = "awaiting_saved_geometry";
         return region;
+    }
+
+    public enum RecoveryStatus { RECOVERED, WAITING, REJECTED }
+
+    public record Recovery(RecoveryStatus status, @Nullable StructurePhysicsRegion region, String diagnostic) {}
+
+    /**
+     * Reconstructs a complete failed cohort at its last published poses, with fresh contacts and
+     * zero velocity. Preparation never changes stored blocks, identities or the old checkpoint.
+     * WAITING is retryable after ordinary storage/host chunk activation; no chunks are forced.
+     */
+    public Recovery recover(ServerLevel host, UUID id) {
+        requireHost(host);
+        Objects.requireNonNull(id, "regionId");
+        var expected = runtime.savedPhysicsEntries(host, id);
+        if (expected.isEmpty()) return new Recovery(RecoveryStatus.REJECTED, null, "unknown_saved_region");
+        var old = regions.get(id);
+        if (expected.stream().allMatch(entry -> entry.physicsAttachment().resumeAllowed())) {
+            return old != null && old.status == StructurePhysicsRegion.Status.READY
+                    ? new Recovery(RecoveryStatus.RECOVERED, old, "already_recovered")
+                    : new Recovery(RecoveryStatus.REJECTED, null, "region_does_not_require_recovery");
+        }
+        if (regions.values().stream().anyMatch(region -> region.busy || region.closing)) {
+            return new Recovery(RecoveryStatus.WAITING, null, "physics_busy");
+        }
+        if (old != null && (old.host != host || old.status != StructurePhysicsRegion.Status.FAILED)) {
+            return new Recovery(RecoveryStatus.REJECTED, null, "region_is_not_failed");
+        }
+        var handles = new ArrayList<StructureHandle>();
+        for (var entry : expected) {
+            if (!entry.active() || entry.quarantined()) {
+                return new Recovery(RecoveryStatus.REJECTED, null, "unavailable_saved_member:" + entry.reference().id());
+            }
+            var handle = runtime.resolve(entry.reference()).orElse(null);
+            if (handle == null || handle.lifecycle() == StructureLifecycle.LOADING) {
+                return new Recovery(RecoveryStatus.WAITING, null, "awaiting_structure_activation");
+            }
+            if (handle.lifecycle() != StructureLifecycle.ACTIVE) {
+                return new Recovery(RecoveryStatus.REJECTED, null, "member_requires_storage_recovery");
+            }
+            handles.add(handle);
+        }
+        if (!host.tickRateManager().runsNormally() || !runtime.beginPhysicsStep(handles)) {
+            return new Recovery(RecoveryStatus.WAITING, null, "host_or_structure_busy");
+        }
+        Region candidate = null;
+        boolean published = false;
+        try {
+            var captured = new LinkedHashMap<StructureHandle, NativeStructurePhysicsGeometry.Snapshot>();
+            var occupied = new ArrayList<AABB>();
+            int dynamicBoxes = 0;
+            for (var handle : handles) {
+                var geometry = StructureContexts.call(handle, ignored -> NativeStructurePhysicsGeometry.captureStructure(
+                        runtime.storageLevel(handle.reference()).orElseThrow()));
+                captured.put(handle, geometry);
+                dynamicBoxes = Math.addExact(dynamicBoxes, geometry.boxes().size());
+                if (!geometry.boxes().isEmpty()) {
+                    occupied.add(BlockStructureOrientedBox.transform(geometry.bounds(), handle.pose()).bounds());
+                }
+            }
+            var limits = new AABB(host.getWorldBorder().getMinX(), host.getMinY(), host.getWorldBorder().getMinZ(),
+                    host.getWorldBorder().getMaxX(), host.getMaxY(), host.getWorldBorder().getMaxZ());
+            var bounds = NativeStructureRecoveryBounds.plan(id, host.dimension().identifier(),
+                    expected.getFirst().physicsAttachment().bounds(), occupied, reservations(), limits);
+            if (library == null) library = NativePhysicsLibrary.openConfigured();
+            candidate = new Region(host, id, bounds);
+            candidate.busy = true;
+            var geometry = new LinkedHashMap<Member, NativeStructurePhysicsGeometry.Snapshot>();
+            for (var entry : captured.entrySet()) {
+                // A new Member has no published or restore motion: failed kinetic energy is never replayed.
+                var member = new Member(entry.getKey());
+                candidate.members.put(member.reference, member);
+                member.geometry = entry.getValue();
+                geometry.put(member, entry.getValue());
+            }
+            var terrain = candidate.terrainCache.capture(NativePhysicsWorld.MAX_BOXES - dynamicBoxes);
+            if (!candidate.normalTime(geometry)) return new Recovery(RecoveryStatus.WAITING, null, "temporal_scale");
+            candidate.replaceWorld(geometry, terrain);
+            candidate.terrain = terrain;
+            candidate.terrainBoxes = terrain.boxes();
+            candidate.geometryEpoch = 1;
+            candidate.terrainEpoch = 1;
+            var replacements = new ArrayList<NativeStructureManifest.Entry>();
+            for (var entry : expected) {
+                var member = candidate.members.get(entry.reference());
+                var motion = member.hasBody() ? candidate.snapshot(member) : null;
+                if (motion != null) {
+                    candidate.requireContained(member.geometry.bounds(), motion.pose());
+                    if (motion.linearVelocity().lengthSqr() != 0 || motion.angularVelocity().lengthSqr() != 0) {
+                        throw new IllegalStateException("Recovered bodies must start with zero velocity");
+                    }
+                }
+                member.published = motion;
+                replacements.add(entry.withPhysicsAttachment(candidate.attachment(member, motion)));
+            }
+            if (!terrain.stillValid() || geometry.values().stream().anyMatch(value -> !value.stillValid())
+                    || !candidate.normalTime(geometry)) {
+                return new Recovery(RecoveryStatus.WAITING, null, "geometry_changed_during_recovery");
+            }
+            // A failed cleanup must be discovered before replacing the durable checkpoint.
+            if (old != null) old.disposeWorld();
+            runtime.commitRecoveredPhysicsRegion(host, id, expected, replacements);
+            candidate.status = StructurePhysicsRegion.Status.READY;
+            candidate.diagnostic = "recovered_zero_velocity";
+            candidate.busy = false;
+            regions.put(id, candidate);
+            if (old != null) {
+                old.members.clear();
+                old.status = StructurePhysicsRegion.Status.CLOSED;
+                old.diagnostic = "replaced_by_recovery";
+            }
+            published = true;
+            return new Recovery(RecoveryStatus.RECOVERED, candidate, "recovered_zero_velocity");
+        } catch (NativeStructurePhysicsGeometry.GeometryException unavailable) {
+            boolean retry = unavailable.failure() == NativeStructurePhysicsGeometry.Failure.UNLOADED_CHUNK
+                    || unavailable.failure() == NativeStructurePhysicsGeometry.Failure.UNSTABLE_SOURCE;
+            return new Recovery(retry ? RecoveryStatus.WAITING : RecoveryStatus.REJECTED, null,
+                    unavailable.failure().name().toLowerCase(Locale.ROOT) + ": " + unavailable.getMessage());
+        } catch (IOException | RuntimeException | AssertionError | LinkageError failure) {
+            AcademyCraft.LOGGER.warn("Physics recovery {} rejected; previous checkpoint retained", id, failure);
+            return new Recovery(RecoveryStatus.REJECTED, null, failure.getClass().getSimpleName() + ": " + failure.getMessage());
+        } finally {
+            if (!published && candidate != null) {
+                try { candidate.disposeWorld(); }
+                catch (RuntimeException | AssertionError | LinkageError cleanup) {
+                    AcademyCraft.LOGGER.error("Could not release rejected recovery candidate {}", id, cleanup);
+                }
+            }
+            runtime.endPhysicsStep(handles);
+        }
     }
 
     public boolean discardSaved(ServerLevel host) {
@@ -191,7 +322,24 @@ public final class NativeStructurePhysics implements AutoCloseable {
             var member = region.members.get(reference);
             if (region.host == host && region.status == StructurePhysicsRegion.Status.READY && !region.closing
                     && !region.busy && member != null && !member.invalidated && member.handle != null
-                    && member.body != null && member.published != null) return Optional.of(region);
+                    && member.hasBody() && member.published != null) return Optional.of(region);
+        }
+        return Optional.empty();
+    }
+
+    public Optional<StructurePhysicsRegion> attachedRegion(ServerLevel host, StructureRef reference) {
+        requireThread();
+        Objects.requireNonNull(host, "host");
+        Objects.requireNonNull(reference, "reference");
+        if (closed || host.getServer() != server || server.getLevel(host.dimension()) != host
+                || !reference.dimension().equals(host.dimension().identifier())) return Optional.empty();
+        for (var region : regions.values()) {
+            var member = region.members.get(reference);
+            if (region.host == host && !region.closing
+                    && region.status != StructurePhysicsRegion.Status.CLOSED
+                    && region.status != StructurePhysicsRegion.Status.FAILED
+                    && member != null && !member.invalidated
+                    && member.handle != null) return Optional.of(region);
         }
         return Optional.empty();
     }
@@ -201,7 +349,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         return !closed && regions.values().stream().anyMatch(region -> {
             var member = region.members.get(reference);
             return region.status == StructurePhysicsRegion.Status.READY && !region.closing
-                    && member != null && !member.invalidated && member.body != null;
+                    && member != null && !member.invalidated && member.hasBody();
         });
     }
 
@@ -313,6 +461,10 @@ public final class NativeStructurePhysics implements AutoCloseable {
         @Override public AABB bounds() { requireThread(); return bounds; }
         @Override public Status status() { requireThread(); return status; }
         @Override public String diagnostic() { requireThread(); return diagnostic; }
+        @Override public boolean hasActiveControl() {
+            requireThread();
+            return members.values().stream().anyMatch(member -> member.controls.occupied());
+        }
 
         /**
          * Re-bases this live region onto different host bounds of a valid size. Persisted
@@ -356,7 +508,6 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     return false;
                 }
             }
-            disposeWorldForRebind();
             var previousBounds = bounds;
             try {
                 if (!runtime.rebindPhysicsAttachments(host, id, previousBounds, newBounds)) return false;
@@ -366,9 +517,18 @@ public final class NativeStructurePhysics implements AutoCloseable {
             }
             bounds = newBounds;
             origin = vector(bounds.getCenter());
-            terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
             status = Status.PAUSED;
             diagnostic = "awaiting_rebound_geometry";
+            try {
+                // Persistence refusal must leave the old solver and contacts untouched. Once
+                // committed, a release failure belongs to the new bounds and is terminal; callers
+                // must not interpret it as an unchanged region and try another adoption path.
+                disposeWorldForRebind();
+                terrainCache = new NativeStructureTerrainCache(host, bounds, origin);
+            } catch (RuntimeException | AssertionError | LinkageError failure) {
+                fail(failure);
+                throw new IllegalStateException("Physics region rebase committed but native release failed", failure);
+            }
             AcademyCraft.LOGGER.info("Physics region {} rebound from {} to {}", id, previousBounds, newBounds);
             return true;
         }
@@ -376,7 +536,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         public Diagnostics diagnostics() {
             requireThread();
             return new Diagnostics(sessionId, steps, geometryEpoch, terrainEpoch,
-                    (int) members.values().stream().filter(member -> member.body != null).count(),
+                    (int) members.values().stream().filter(member -> member.hasBody()).count(),
                     terrainBoxes.size(), rebuilds, terrainCache.diagnostics());
         }
 
@@ -431,8 +591,8 @@ public final class NativeStructurePhysics implements AutoCloseable {
             PhysicsLimits.vector(angularValue, 1.0E4, "angular velocity");
             try {
                 member.controls.clearUnleased();
-                member.body.setVelocity(linearValue, angularValue);
-                member.published = snapshot(member, member.body.state());
+                for (var body : member.bodies) body.setVelocity(linearValue, angularValue);
+                member.published = snapshot(member);
                 runtime.setPhysicsAttachment(reference, attachment(member, member.published));
             } catch (RuntimeException | AssertionError | LinkageError failure) { fail(failure); throw failure; }
         }
@@ -446,8 +606,9 @@ public final class NativeStructurePhysics implements AutoCloseable {
             PhysicsLimits.vector(point.subtract(origin), 1.0E6, "relative impulse point");
             try {
                 member.controls.clearUnleased();
-                member.body.applyImpulse(value, point);
-                member.published = snapshot(member, member.body.state());
+                // The fixed-jointed assembly transfers the impulse from its primary body.
+                member.primaryBody().applyImpulse(value, point);
+                member.published = snapshot(member);
                 runtime.setPhysicsAttachment(reference, attachment(member, member.published));
             } catch (RuntimeException | AssertionError | LinkageError failure) { fail(failure); throw failure; }
         }
@@ -575,7 +736,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             var member = members.get(Objects.requireNonNull(reference));
             return !closed && !closing && regions.values().stream().noneMatch(region -> region.busy)
                     && status == Status.READY && member != null && member.handle != null
-                    && member.body != null && !member.invalidated && runtime.physicsAvailable(member.handle)
+                    && member.hasBody() && !member.invalidated && runtime.physicsAvailable(member.handle)
                     && terrain != null && terrain.stillValid()
                     && members.values().stream().allMatch(current -> current.geometry != null && current.geometry.stillValid())
                     && normalTime();
@@ -584,7 +745,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private Member controllable(StructureRef reference) {
             requireMutable();
             var member = members.get(Objects.requireNonNull(reference));
-            if (status != Status.READY || member == null || member.handle == null || member.body == null || member.invalidated
+            if (status != Status.READY || member == null || member.handle == null || !member.hasBody() || member.invalidated
                     || !runtime.physicsAvailable(member.handle) || terrain == null || !terrain.stillValid()
                     || members.values().stream().anyMatch(current -> current.geometry == null || !current.geometry.stillValid())
                     || !normalTime()) {
@@ -715,24 +876,26 @@ public final class NativeStructurePhysics implements AutoCloseable {
                         || members.values().stream().anyMatch(member -> member.invalidated) || !normalTime()) {
                     pause("geometry_changed_before_step"); return;
                 }
-                if (members.values().stream().noneMatch(member -> member.body != null)) {
+                if (members.values().stream().noneMatch(member -> member.hasBody())) {
                     publish(Map.of());
                     status = Status.READY;
                     diagnostic = "empty_collision_geometry";
                     return;
                 }
                 stepWithControls();
-                var states = new LinkedHashMap<Member, PhysicsBodyState>();
+                var motions = new LinkedHashMap<Member, StructureMotionState>();
                 for (var member : members.values()) {
-                    if (member.body == null) { member.published = null; continue; }
-                    var state = member.body.state();
-                    var pose = pose(state.pose());
+                    if (!member.hasBody()) { member.published = null; continue; }
+                    var motion = snapshot(member);
                     // Leaving the sampled terrain domain is terminal for this session. Never publish
                     // an unvalidated partial step or replay it after rolling back only Java poses.
-                    requireContained(member.geometry.bounds(), pose);
-                    states.put(member, state);
+                    requireContained(member.geometry.bounds(), motion.pose());
+                    for (var body : member.bodies) {
+                        requireContained(member.geometry.bounds(), pose(body.state().pose()));
+                    }
+                    motions.put(member, motion);
                 }
-                publish(states);
+                publish(motions);
                 for (var member : members.values()) {
                     member.controls.consumeForce();
                 }
@@ -766,14 +929,14 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 var impulses = new ArrayList<ControlImpulse>();
                 for (var member : members.values()) {
                     var control = member.controls.control().orElse(null);
-                    if (control == null || member.body == null) continue;
-                    var motion = snapshot(member, member.body.state());
+                    if (control == null || !member.hasBody()) continue;
+                    var motion = snapshot(member);
                     var point = motion.pose().localToWorldPoint(control.localPoint());
                     var impulse = vector(StructurePhysicsControls.force(control, motion).scale(duration));
                     var worldPoint = vector(point);
                     PhysicsLimits.vector(impulse, 1.0E12, "control impulse");
                     PhysicsLimits.vector(worldPoint.subtract(origin), 1.0E6, "relative control point");
-                    impulses.add(new ControlImpulse(member.body, impulse, worldPoint));
+                    impulses.add(new ControlImpulse(member.primaryBody(), impulse, worldPoint));
                 }
                 // Compute and validate all commands before mutating any native body in this substep.
                 // There are no Minecraft callbacks; only the outer tick publishes the solved cohort.
@@ -783,8 +946,11 @@ public final class NativeStructurePhysics implements AutoCloseable {
                     }
                 }
                 world.step(duration, 1);
-                for (var member : members.values()) if (member.body != null) {
-                    requireContained(member.geometry.bounds(), pose(member.body.state().pose()));
+                for (var member : members.values()) if (member.hasBody()) {
+                    requireContained(member.geometry.bounds(), pose(member.primaryBody().state().pose()));
+                    for (var body : member.bodies) {
+                        requireContained(member.geometry.bounds(), pose(body.state().pose()));
+                    }
                 }
             }
         }
@@ -792,7 +958,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private void replaceWorld(Map<Member, NativeStructurePhysicsGeometry.Snapshot> geometry,
                                   NativeStructurePhysicsGeometry.Snapshot nextTerrain) {
             var candidate = library.createWorld(origin, new PhysicsVector(0, -9.81, 0));
-            var candidateBodies = new LinkedHashMap<Member, NativePhysicsBody>();
+            var candidateBodies = new LinkedHashMap<Member, List<NativePhysicsBody>>();
             try {
                 var fixedPose = new PhysicsPose(origin, PhysicsQuaternion.IDENTITY);
                 for (var batch : nextTerrain.batches()) {
@@ -801,25 +967,35 @@ public final class NativeStructurePhysics implements AutoCloseable {
                 for (var entry : geometry.entrySet()) {
                     var member = entry.getKey();
                     if (entry.getValue().boxes().isEmpty()) continue;
-                    var body = candidate.createBody(BodyType.DYNAMIC, pose(member.handle.pose()),
-                            entry.getValue().boxes(), 1, 0.6, 0, true);
+                    var bodyPose = pose(member.handle.pose());
+                    var bodies = new ArrayList<NativePhysicsBody>();
+                    for (var batch : entry.getValue().batches()) {
+                        bodies.add(candidate.createBody(BodyType.DYNAMIC, bodyPose, batch, 1, 0.6, 0, true));
+                    }
+                    // Every batch uses the same body frame. Welding their local origins keeps the
+                    // batches in one exact assembly while respecting Rapier's per-body shape budget.
+                    for (int index = 1; index < bodies.size(); index++) {
+                        candidate.createFixedJoint(bodies.getFirst(), bodies.get(index),
+                                PhysicsVector.ZERO, PhysicsVector.ZERO);
+                    }
                     var previous = member.published;
                     var restored = member.restoring ? member.restoreMotion : null;
                     if (restored != null || !member.restoring && previous != null) {
                         var oldCenter = restored != null ? restored.localCenterOfMass() : previous.localCenterOfMass();
                         var oldLinear = restored != null ? restored.linearVelocity() : previous.linearVelocity();
                         var angular = restored != null ? restored.angularVelocity() : previous.angularVelocity();
-                        // Preserve the old rigid velocity field at the new COM when geometry changes.
-                        var offset = member.handle.pose().localToWorldDirection(
-                                vec(body.localCenterOfMass()).subtract(oldCenter));
-                        var velocity = oldLinear.add(angular.cross(offset));
-                        body.setVelocity(vector(velocity), vector(angular));
-                        // Rebuilding contacts must wake sleepers when support or a neighbouring body changed.
+                        for (var body : bodies) {
+                            // Preserve the old rigid velocity field at each batch's actual COM.
+                            var offset = member.handle.pose().localToWorldDirection(
+                                    vec(body.localCenterOfMass()).subtract(oldCenter));
+                            var velocity = oldLinear.add(angular.cross(offset));
+                            body.setVelocity(vector(velocity), vector(angular));
+                        }
                     }
                     // The save contains an observation of sleep, not the solver's contact cache.
                     // A fresh world must rediscover support and is always resumed awake.
-                    if (member.restoring) body.wake();
-                    candidateBodies.put(member, body);
+                    if (member.restoring) for (var body : bodies) body.wake();
+                    candidateBodies.put(member, List.copyOf(bodies));
                 }
             } catch (RuntimeException | Error failure) {
                 try { candidate.close(); }
@@ -834,8 +1010,10 @@ public final class NativeStructurePhysics implements AutoCloseable {
             }
             world = candidate;
             for (var member : members.values()) {
-                member.body = candidateBodies.get(member);
-                if (member.body == null) member.published = null;
+                member.clearBodies();
+                var bodies = candidateBodies.get(member);
+                if (bodies != null) member.bodies.addAll(bodies);
+                if (!member.hasBody()) member.published = null;
             }
             rebuildRequired = false;
             rebuilds = Math.incrementExact(rebuilds);
@@ -864,13 +1042,29 @@ public final class NativeStructurePhysics implements AutoCloseable {
             if (!contains(bounds, occupied) || occupied.minY < host.getMinY() || occupied.maxY > host.getMaxY()
                     || !host.getWorldBorder().isWithinBounds(BlockPos.containing(occupied.minX, occupied.minY, occupied.minZ))
                     || !host.getWorldBorder().isWithinBounds(BlockPos.containing(occupied.maxX, occupied.maxY, occupied.maxZ))) {
-                throw new IllegalStateException("Structure left the bounded physics domain; last published pose retained");
+                throw new IllegalStateException("Structure left the bounded physics domain; last published pose retained"
+                        + "; occupied=" + occupied + "; region=" + bounds);
             }
         }
 
-        private StructureMotionState snapshot(Member member, PhysicsBodyState state) {
-            return new StructureMotionState(pose(state.pose()), vec(state.linearVelocity()), vec(state.angularVelocity()),
-                    vec(state.localCenterOfMass()), state.mass(), state.sleeping(), member.geometry.sourceRevision(), geometryEpoch);
+        private StructureMotionState snapshot(Member member) {
+            var primary = member.primaryBody().state();
+            double mass = 0.0;
+            double comX = 0.0, comY = 0.0, comZ = 0.0;
+            for (var body : member.bodies) {
+                var state = body.state();
+                if (!Double.isFinite(state.mass()) || state.mass() <= 0.0) {
+                    throw new IllegalStateException("Native assembly body reported invalid mass");
+                }
+                mass += state.mass();
+                comX += state.localCenterOfMass().x() * state.mass();
+                comY += state.localCenterOfMass().y() * state.mass();
+                comZ += state.localCenterOfMass().z() * state.mass();
+            }
+            if (!Double.isFinite(mass) || mass <= 0.0) throw new IllegalStateException("Native assembly has no mass");
+            return new StructureMotionState(pose(primary.pose()), vec(primary.linearVelocity()), vec(primary.angularVelocity()),
+                    new Vec3(comX / mass, comY / mass, comZ / mass), mass, primary.sleeping(),
+                    member.geometry.sourceRevision(), geometryEpoch);
         }
 
         private NativeStructurePhysicsAttachment attachment(Member member, StructureMotionState motion) {
@@ -881,19 +1075,16 @@ public final class NativeStructurePhysics implements AutoCloseable {
         }
 
         /** One coherent publication includes both moving and zero-collision attachments. */
-        private void publish(Map<Member, PhysicsBodyState> states) {
+        private void publish(Map<Member, StructureMotionState> motions) {
             var poses = new LinkedHashMap<StructureHandle, StructurePose>();
             var attachments = new LinkedHashMap<StructureHandle, NativeStructurePhysicsAttachment>();
-            var snapshots = new LinkedHashMap<Member, StructureMotionState>();
             for (var member : members.values()) {
-                var state = states.get(member);
-                var motion = state == null ? null : snapshot(member, state);
-                snapshots.put(member, motion);
+                var motion = motions.get(member);
                 poses.put(member.handle, motion == null ? member.handle.pose() : motion.pose());
                 attachments.put(member.handle, attachment(member, motion));
             }
             runtime.publishPhysicsPoses(poses, attachments);
-            snapshots.forEach((member, motion) -> {
+            motions.forEach((member, motion) -> {
                 member.published = motion;
                 member.restoring = false;
                 member.restoreMotion = null;
@@ -937,7 +1128,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             terrain = null;
             terrainBoxes = List.of();
             if (world != null) { world.close(); world = null; }
-            for (var member : members.values()) member.body = null;
+            for (var member : members.values()) member.clearBodies();
             rebuildRequired = true;
         }
 
@@ -947,7 +1138,7 @@ public final class NativeStructurePhysics implements AutoCloseable {
             terrain = null;
             terrainBoxes = List.of();
             if (world != null) { world.close(); world = null; }
-            for (var member : members.values()) member.body = null;
+            for (var member : members.values()) member.clearBodies();
             rebuildRequired = true;
         }
 
@@ -989,7 +1180,9 @@ public final class NativeStructurePhysics implements AutoCloseable {
         private final StructureRef reference;
         private StructureHandle handle;
         private NativeStructurePhysicsGeometry.Snapshot geometry;
-        private NativePhysicsBody body;
+        // One structure may be split into several fixed-jointed bodies when its merged
+        // collision geometry exceeds the per-body cuboid budget. They are one assembly.
+        private final List<NativePhysicsBody> bodies = new ArrayList<>();
         private StructureMotionState published;
         private final NativeStructureControlSlot controls = new NativeStructureControlSlot();
         private ActorBinding actorBinding;
@@ -1003,6 +1196,10 @@ public final class NativeStructurePhysics implements AutoCloseable {
             restoreMotion = motion;
             restoring = true;
         }
+
+        private boolean hasBody() { return !bodies.isEmpty(); }
+        private NativePhysicsBody primaryBody() { return bodies.getFirst(); }
+        private void clearBodies() { bodies.clear(); }
 
         private void invalidateControl() {
             actorBinding = null;

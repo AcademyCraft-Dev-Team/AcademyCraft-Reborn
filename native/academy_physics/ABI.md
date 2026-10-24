@@ -1,4 +1,4 @@
-# Academy physics ABI v1
+# Academy physics ABI v2
 
 This is a standalone binding foundation, not Minecraft world physics. It owns no
 Minecraft objects, block inventories, terrain, players, rendering or persistence.
@@ -19,8 +19,11 @@ All exports use the platform C calling convention (`cdecl` on supported x64
 targets). Types are exactly `int32_t`, `uint64_t`, and IEEE-754 `double`. There are
 no native-owned output pointers, callbacks, strings, Rust objects or C structs in
 the ABI. All functions return a status except `academy_physics_abi_version`, which
-returns 1, and `academy_physics_engine_version`, which returns 3601 for Rapier
+returns 2, and `academy_physics_engine_version`, which returns 3601 for Rapier
 0.36.1. Array lengths count elements, not bytes, and must match exactly.
+ABI 2 adds the required per-body simulation-pause export and its snapshot semantics.
+The Java bridge rejects ABI 1 before resolving newer exports; it never silently
+loads an older binary. Existing array layouts and manifest format remain unchanged.
 
 The Java 25 FFM caller owns aligned native memory, keeps it alive until the call
 returns, and ensures each pointer addresses its declared readable/writable
@@ -85,11 +88,16 @@ int32_t academy_physics_body_impulse_at_point(uint64_t world, uint64_t body,
                                              const double *impulse_point, int32_t len);
 int32_t academy_physics_body_sleep(uint64_t world, uint64_t body);
 int32_t academy_physics_body_wake(uint64_t world, uint64_t body);
+int32_t academy_physics_body_set_simulation_paused(uint64_t world, uint64_t body,
+                                                  int32_t paused);
 int32_t academy_physics_body_remove(uint64_t world, uint64_t body);
+int32_t academy_physics_fixed_joint_create(uint64_t world, uint64_t body1, uint64_t body2,
+                                           const double *anchors, int32_t anchors_len);
 ```
 
 `gravity` has 3 doubles. Handle output lengths must be 1. `kind` is 0 for a fixed
-body and 1 for a dynamic body. There are no kinematic bodies in ABI v1.
+body and 1 for a dynamic body. Callers cannot create a kinematic body; simulation
+pause internally uses a position-based kinematic while retaining the original kind.
 
 `description` has exactly 21 doubles:
 
@@ -108,7 +116,7 @@ body and 1 for a dynamic body. There are no kinematic bodies in ABI v1.
 | 19 | 1 | Explicit per-body CCD enabled: exactly 0 or 1; see the solver defaults below. |
 | 20 | 1 | Automatic sleeping allowed: exactly 0 or 1. |
 
-`cuboids` contains 1 to 64 consecutive 10-double records: local center x/y/z,
+`cuboids` contains 1 to 256 consecutive 10-double records: local center x/y/z,
 local quaternion x/y/z/w, then positive half-extents x/y/z. The entire shape is
 one body with several attached cuboid colliders. Overlapping cuboids contribute
 their masses independently; the caller must decompose an intended union without
@@ -135,7 +143,7 @@ for repeated eigenvalues; tests must compare the resulting inertia, not require
 a particular eigenvector sign/order.
 
 `pose` has 7 doubles: position followed by x/y/z/w quaternion. Changing a pose is
-an explicit teleport and wakes dynamic bodies; it is not a physical controller.
+an explicit teleport and wakes unpaused dynamic bodies; it is not a physical controller.
 `velocity` has 6 doubles: linear followed by angular velocity, both in world axes;
 changing velocity wakes the dynamic body. Fixed bodies reject velocity, impulse,
 sleep and wake operations with `INVALID_ARGUMENT`.
@@ -147,6 +155,34 @@ no-op handling; call `body_wake` for an explicit wake request.
 Explicit sleep sets linear/angular velocity to
 zero; wake does not restore a previous velocity. Manual sleep is accepted even if
 automatic sleeping was disabled.
+
+`body_set_simulation_paused` accepts `paused` exactly 0 (resume) or 1 (pause),
+only for bodies originally created dynamic. Both values reject a fixed body with
+`INVALID_ARGUMENT`. Repeating the current flag succeeds without changing saved
+motion. Pause retains the same body/collider handles, local mass/COM/inertia,
+shape, material, CCD setting and attached fixed joints. It saves linear/angular
+velocity and sleeping state, then makes the body a stationary position-based
+kinematic. Gravity, contact impulses and connected active bodies cannot move or
+wake it into dynamic simulation; other dynamic bodies can still collide with it.
+Resume restores the dynamic kind and saved velocities/sleep. Pause is not sleep.
+
+While paused, `out_state` reports the current pose, original kind 1, original
+positive mass/inertia, and the saved velocities/sleeping flag. The reported
+velocity is a prediction for resumed motion, **not** actual paused solver motion
+(which is zero). This permits swept-terrain coverage planning before resuming.
+The owning Java wrapper exposes `isSimulationPaused()` separately. Velocity,
+impulse, sleep and wake commands reject a paused body with `INVALID_ARGUMENT`,
+without failing the world or changing saved motion. Explicit `set_pose` remains
+available for recovery and updates both current and kinematic target pose; it
+does not change saved velocities/sleep. Removal and world destruction also work
+while paused. Pause affects one body: callers must pause/resume every member of
+a fixed-jointed assembly before the next simulation step.
+
+`anchors` has 6 doubles: anchor1 x/y/z in body1's local frame, then anchor2
+x/y/z in body2's local frame. Both bodies must be live, unpaused dynamic bodies in
+the same world; fixed or paused participants reject with `INVALID_ARGUMENT`
+before inserting any joint. The joint locks all relative translation and rotation. Body removal also
+removes its attached joints.
 
 `total_dt` is the total simulated duration; the engine advances exactly `substeps`
 times using `total_dt / substeps`. Wall-clock time and game tick rates are not read.
@@ -168,7 +204,9 @@ after stepping. Contacts, gravity and damping also change velocities normally.
 
 ## Limits and validation
 
-- At most 8 live worlds; 128 bodies and 2048 cuboids per world; 64 cuboids per body.
+- At most 8 live worlds; 256 bodies, 32768 cuboids and 512 fixed joints per world;
+  256 cuboids per body. A structure above the per-body limit is split into fixed-jointed
+  batches by the Java layer, preserving one rigid assembly.
 - `substeps` is 1 through 16; finite `total_dt` is in `(0, 0.1]` seconds, and the
   resulting substep is at least `0.000001` seconds.
 - Relative body positions, local shape centers and impulse points: component
@@ -201,23 +239,25 @@ that embedded class in an unnamed module, using the mod's public internal
 `PhysicsNativeAccess` interface. No arbitrary class path or external bridge is
 searched. All restricted FFM calls execute inside that bridge.
 
-Opt-in callers must supply `--enable-native-access=ALL-UNNAMED`; the bridge checks
-its actual module's native-access permission before creating a linker or loading
-the library. This grants native access to unnamed modules in the JVM, not just
-this bridge. Ordinary mod use does not open the bridge or load a native library.
-The permission check is not replaced by accepting JDK compatibility warnings.
-Explicit library close destroys owned worlds, closes the code arena, then removes
-the verified private copy. A cleanup failure retains the necessary ownership and
-allows close to be retried; it does not re-enable simulation.
+JDK 25 permits restricted FFM calls from an unnamed module with a warning, so the
+bundled solver loads without a launcher flag. A deployment that requires the
+strict contract can set `-Dacademy.nativePhysics.requireNativeAccess=true`; the
+bridge then checks its actual module's permission before creating a linker or
+loading the library. Explicit library close destroys owned worlds, closes the
+code arena, then removes the verified private copy. A cleanup failure retains the
+necessary ownership and allows close to be retried; it does not re-enable
+simulation.
 
-The initial targets are `x86_64-pc-windows-msvc` and `x86_64-unknown-linux-gnu`,
-reported as `windows-x86_64` and `linux-x86_64` to Java. Libraries are
-`academy_physics.dll` and `libacademy_physics.so`. The Java loader verifies its
-sidecar before loading the explicit local path:
+The build target matrix is Windows, Linux and macOS on x86_64/aarch64, reported
+as `windows-*`, `linux-*` and `macos-*`; libraries are `academy_physics.dll`,
+`libacademy_physics.so` and `libacademy_physics.dylib`. Android uses the same
+`.so` naming but additionally requires an NDK-built artifact and a launcher JVM
+that supports FFM; it is not enabled by the first Windows release. The Java
+loader verifies its sidecar before loading the explicit local path:
 
 ```properties
 format=academy-native-physics-v1
-abi=1
+abi=2
 engine=rapier3d-f64-0.36.1
 platform=windows-x86_64
 library=academy_physics.dll
@@ -247,8 +287,12 @@ this order and never probes class paths or downloads:
    `academy_physics.properties`.
 4. Fixed game-directory layout `academy/native_physics/` beside the installed
    game, holding the same two files with their exact platform names.
+5. The signed in-JAR fallback `academy/native_physics/<platform>/` (a base64
+   `.b64` envelope or the raw library plus the manifest). This is the project's
+   own build, never a Sable artifact.
 
 A partially configured explicit pair, a broken explicit home, or a mismatched
-artifact is an explicit failure; the loader never falls back to a later source
-after one was selected. `--enable-native-access=ALL-UNNAMED` remains a launcher
-requirement, and the bridge reports it as its own actionable failure when absent.
+external artifact is an explicit failure; the loader never silently replaces an
+explicit selection with the bundled copy. The skill capture entry points also
+call the readiness probe before removing any block, so an unsupported platform or
+invalid artifact fails closed instead of leaving a static projection.

@@ -129,12 +129,14 @@ runs/
 # The embedded Vector Reflection javaagent is a release build input.
 !libs/academy-agent.jar
 
-# Local
-*.py
-!/validation/native_structure/tcp_delay.py
-*.txt
-!src/main/resources/assets/academy/gui/ability_developer_gui_layout.txt
-!/thirdparty/licenses/native_physics/**/*.txt
+# Local scratch scripts and notes: ignored only under local-only trees, so new tracked
+# files under validation/, tools/ and docs/ stay visible to git status.
+/validation/**/*.py
+/tools/**/*.py
+/docs/**/*.py
+/validation/**/*.txt
+/tools/**/*.txt
+/docs/**/*.txt
 *.exe
 
 .vscode
@@ -149,3 +151,50 @@ node_modules/
 # Local ability skill effect manual
 /docs/AcademyCraft_Reborn_能力技能效果手册.docx
 /docs/~$ademyCraft_Reborn_能力技能效果手册.docx
+
+# docs/: only hand-written specifications are tracked.
+# Screenshots, capture videos, the HTML galleries, test/reproduction harnesses and
+# acceptance evidence all stay local; each document names the script that produces them.
+/docs/**/*.png
+/docs/**/*.gif
+/docs/**/*.mp4
+/docs/**/*.webp
+/docs/**/*.html
+/docs/**/*.jpg
+
+# Test / reproduction harnesses and their recorded output stay local.
+/docs/**/*.init.gradle
+/docs/**/*.cjs
+/docs/**/*.mjs
+/docs/**/*.java
+/docs/**/*.kt
+/docs/**/performance.txt
+/docs/models/darkmatter_creature/performance/
+/docs/vfx/darkmatter_concept_v2/runtime/
+
+# Acceptance records (验收记录) are local evidence, not specifications.
+/docs/aeromanip_vacuum_flow_sense_validation.zh-CN.md
+/docs/electromaster_mine_detect_validation.zh-CN.md
+/docs/mental_control_work_task_validation.zh-CN.md
+/docs/vfx/darkmatter_concept_v2/VALIDATION.md
+/docs/vfx/black_wings/multiplayer_optimization_result.md
+/docs/vfx/black_wings/multiplayer_baseline.json
+/docs/vfx/black_wings/multiplayer_optimized_comparison.json
+
+# Superseded design board without a tracked document (~140 MB of captures).
+/docs/vfx/darkmatter_reconstruction_v3/
+
+# Dated incident / audit / superseded design records kept locally only.
+# Index and policy: docs/README.md
+/docs/server_damage_log_analysis_2026_09_12.md
+/docs/server_watchdog_refresh_audit_2026_09_12.md
+/docs/worldgen_c2me_hang_fix_2026_09_12.md
+/docs/chunk_leap_end_crash.md
+/docs/structure_control_audit_20261016.zh-CN.md
+/docs/skill_vfx_multiplayer_validation.md
+/docs/vfx/darkmatter_interference_field_plan.md
+/docs/vfx/darkmatter_redesign_plan.md
+/docs/vfx/darkmatter_redesign/
+/docs/models/darkmatter_creature/performance/AUDIT.md
+/docs/vfx/darkmatter_concept_v2/references.md
+/docs/vfx-graph/blender-reference/texts.md

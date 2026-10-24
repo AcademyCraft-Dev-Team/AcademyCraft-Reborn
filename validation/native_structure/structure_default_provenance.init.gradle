@@ -1,0 +1,17 @@
+// Three actual default service entries and unmarked existing-body rotation, on either backend.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-default-provenance')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Default provenance smoke requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyStructureProvenanceRun').getOrElse('clientDev')) {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.structureDefaultProvenanceSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer',
+                    providers.gradleProperty('academySubLevelSmokeWorld').getOrElse('test'))
+        }
+    }
+}

@@ -1,0 +1,21 @@
+// Three real category VM graphs. No legacy smoke flags or API-fixture flags are enabled here.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-program-orientation')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Program orientation smoke requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyStructureOrientationRun').getOrElse('clientDev')) {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.structureProgramOrientationSmoke', 'true'
+            if (providers.gradleProperty('academyStructureExtractionGameplay').isPresent()) {
+                systemProperty 'academy.structureExtractionGameplay',
+                        providers.gradleProperty('academyStructureExtractionGameplay').get()
+            }
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer',
+                    providers.gradleProperty('academySubLevelSmokeWorld').getOrElse('test'))
+        }
+    }
+}

@@ -8,7 +8,9 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.structure.StructureCaptureRequest;
+import org.academy.api.common.structure.upgrade.StructureProvenance;
 import org.academy.internal.common.structure.DurableFile;
+import org.academy.internal.common.structure.upgrade.lifecycle.StructureProvenanceCodec;
 import org.jspecify.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
@@ -46,7 +48,7 @@ public final class StructureTransactionJournal {
     public static final String DIRECTORY_NAME = "structure_transactions";
     public static final int MAX_PAYLOAD_BYTES = 1024 * 1024;
     public static final int MAX_CELLS = StructureCaptureRequest.MAXIMUM_BLOCKS;
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
     private static final String SUFFIX = ".dat";
 
     /** Journal stages are ordered; a record can only advance, never skip backwards. */
@@ -97,8 +99,16 @@ public final class StructureTransactionJournal {
             Stage stage,
             @Nullable UUID targetStructure,
             List<Cell> cells,
-            @Nullable CompoundTag failureEvidence
+            @Nullable CompoundTag failureEvidence,
+            StructureProvenance.@Nullable Metadata provenance
     ) {
+        /** Legacy records and ordinary captures have no automatic restoration mark. */
+        public Record(UUID transactionId, Identifier backend, Identifier hostDimension, BlockPos origin,
+                      Stage stage, @Nullable UUID targetStructure, List<Cell> cells,
+                      @Nullable CompoundTag failureEvidence) {
+            this(transactionId, backend, hostDimension, origin, stage, targetStructure, cells, failureEvidence, null);
+        }
+
         public Record {
             Objects.requireNonNull(transactionId, "transactionId");
             Objects.requireNonNull(backend, "backend");
@@ -125,6 +135,10 @@ public final class StructureTransactionJournal {
             }
             cells = List.copyOf(cells);
             failureEvidence = failureEvidence == null ? null : failureEvidence.copy();
+            if (provenance != null && (provenance.source() != StructureProvenance.CreationKind.SKILL_CAPTURE
+                    || !provenance.creationOperationId().equals(transactionId))) {
+                throw new IllegalArgumentException("Capture provenance must belong to this transaction");
+            }
         }
 
         public Record withStage(Stage replacement) {
@@ -133,7 +147,7 @@ public final class StructureTransactionJournal {
                 throw new IllegalArgumentException("Journal stages cannot move backwards");
             }
             return new Record(transactionId, backend, hostDimension, origin, replacement,
-                    targetStructure, cells, failureEvidence);
+                    targetStructure, cells, failureEvidence, provenance);
         }
 
         /** Attaching the reserved target identity advances a prepared record to allocation. */
@@ -141,12 +155,12 @@ public final class StructureTransactionJournal {
             Objects.requireNonNull(replacement, "replacement");
             var nextStage = stage == Stage.PREPARED ? Stage.TARGET_ALLOCATED : stage;
             return new Record(transactionId, backend, hostDimension, origin, nextStage,
-                    replacement, cells, failureEvidence);
+                    replacement, cells, failureEvidence, provenance);
         }
 
         public Record withEvidence(CompoundTag evidence) {
             return new Record(transactionId, backend, hostDimension, origin, stage,
-                    targetStructure, cells, Objects.requireNonNull(evidence, "evidence"));
+                    targetStructure, cells, Objects.requireNonNull(evidence, "evidence"), provenance);
         }
     }
 
@@ -158,6 +172,18 @@ public final class StructureTransactionJournal {
 
     public StructureTransactionJournal(Path directory) throws IOException {
         this(directory, DurableFile.FileOperations.DEFAULT);
+    }
+
+    /** Ownership transfers may never use delete-then-move when atomic replacement fails. */
+    public static StructureTransactionJournal atomicOnly(Path directory) throws IOException {
+        return atomicOnly(directory, DurableFile.FileOperations.DEFAULT);
+    }
+
+    static StructureTransactionJournal atomicOnly(Path directory, DurableFile.FileOperations operations) throws IOException {
+        return new StructureTransactionJournal(directory, (source, target, atomic) -> {
+            if (!atomic) throw new IOException("Atomic transaction replacement is required");
+            operations.move(source, target, true);
+        });
     }
 
     StructureTransactionJournal(Path directory, DurableFile.FileOperations fileOperations) throws IOException {
@@ -226,6 +252,9 @@ public final class StructureTransactionJournal {
         if (existing != null && record.stage().compareTo(existing.stage()) < 0) {
             throw new IOException("Refusing to move a persisted transaction stage backwards");
         }
+        if (existing != null && !Objects.equals(existing.provenance(), record.provenance())) {
+            throw new IOException("Refusing to replace capture creation metadata after preparation");
+        }
         writeAtomically(file(record.transactionId()), encode(record));
         records.put(record.transactionId(), record);
     }
@@ -284,12 +313,14 @@ public final class StructureTransactionJournal {
         if (record.failureEvidence() != null) {
             root.put("failure_evidence", record.failureEvidence());
         }
+        if (record.provenance() != null) root.put("provenance", StructureProvenanceCodec.encode(record.provenance()));
         return root;
     }
 
     private static Record decode(CompoundTag root) throws IOException {
         requireType(root, "version", Tag.TAG_INT);
-        if (root.getInt("version").orElseThrow() != VERSION) {
+        int version = root.getInt("version").orElseThrow();
+        if (version != 1 && version != VERSION) {
             throw new IOException("Unknown structure transaction journal version");
         }
         for (var key : List.of("transaction_id", "backend", "host_dimension")) {
@@ -326,12 +357,17 @@ public final class StructureTransactionJournal {
             evidence = root.getCompound("failure_evidence").orElseThrow();
         }
         try {
+            StructureProvenance.Metadata provenance = null;
+            if (root.contains("provenance")) {
+                requireType(root, "provenance", Tag.TAG_COMPOUND);
+                provenance = StructureProvenanceCodec.decode(root.getCompound("provenance").orElseThrow());
+            }
             return new Record(UUID.fromString(root.getString("transaction_id").orElseThrow()),
                     Identifier.parse(root.getString("backend").orElseThrow()),
                     Identifier.parse(root.getString("host_dimension").orElseThrow()),
                     new BlockPos(originTag.getInt("x").orElseThrow(), originTag.getInt("y").orElseThrow(),
                             originTag.getInt("z").orElseThrow()),
-                    Stage.fromValue(root.getInt("stage").orElseThrow()), target, cells, evidence);
+                    Stage.fromValue(root.getInt("stage").orElseThrow()), target, cells, evidence, provenance);
         } catch (IllegalArgumentException | IllegalStateException invalid) {
             throw new IOException("Invalid structure transaction identity", invalid);
         }

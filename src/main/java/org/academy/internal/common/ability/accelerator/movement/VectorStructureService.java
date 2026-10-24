@@ -16,6 +16,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.accelerator.KineticLiftProfile;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.api.common.ability.accelerator.KineticStructureControl;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.BlockStructureApi;
@@ -26,6 +28,7 @@ import org.academy.api.common.structure.StructureCaptureResult;
 import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureHit;
+import org.academy.api.common.structure.StructureImpactSweep;
 import org.academy.api.common.structure.StructureLifecycle;
 import org.academy.api.common.structure.StructureMotionState;
 import org.academy.api.common.structure.StructureHandle;
@@ -40,12 +43,17 @@ import org.academy.api.common.structure.StructureSpaces;
 import org.academy.api.common.structure.StructureTraction;
 import org.academy.api.common.structure.StructureTractionSession;
 import org.academy.api.common.structure.StructureTransactions;
+import org.academy.api.common.structure.upgrade.StructureOrientations;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv3.KineticThrow;
+import org.academy.internal.common.ability.program.ProgramOrientationHandoff;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.structure.NativeStructureRuntime;
+import org.academy.internal.common.structure.NativeStructureCollisionBoxes;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.jspecify.annotations.Nullable;
@@ -80,7 +88,9 @@ public final class VectorStructureService {
     private static final double FOLLOW_LOOKAHEAD_SECONDS = 0.5;
     private static final double FOLLOW_TRAILING_MARGIN = 2.0;
     private static final double ANGULAR_MARGIN_SECONDS = 0.05;
-    private static final double SUPPORT_TOLERANCE = 0.5;
+    // Impact settling must not skip a real side hit merely because the target's feet are
+    // within half a block of the moving top face; 0.18 matches the carrying surface tolerance.
+    private static final double SUPPORT_TOLERANCE = 0.18;
     private static final double PROGRAM_CONTROL_RANGE = 32.0;
     private static final int PROGRAM_CONTROL_TIER = 1;
     /**
@@ -132,6 +142,13 @@ public final class VectorStructureService {
                 held.controlActive(), held.flying(), held.sable(), held.impactCount));
     }
 
+    /** Capture identity for program retries; independent of the backend's structure identity. */
+    public static Optional<UUID> pendingProgramCapture(ServerPlayer player) {
+        requireThread(player);
+        var capture = CAPTURES.get(player.getUUID());
+        return capture == null || !capture.program ? Optional.empty() : Optional.of(capture.transactionId);
+    }
+
     /** The current structure session for this player, if any. It is a view, not a lease. */
     public static Optional<Session> session(ServerPlayer player) {
         requireThread(player);
@@ -145,7 +162,7 @@ public final class VectorStructureService {
     public static Optional<CapturePlan> planCapture(ServerPlayer player, BlockPos seed, int tier) {
         requireThread(player);
         Objects.requireNonNull(seed, "seed");
-        var outcome = planCaptureInternal(player, seed, tier, 0);
+        var outcome = planCaptureInternal(player, seed, tier, 0, true);
         if (outcome.plan() == null) {
             rejectCapture(player, outcome.rejection());
             return Optional.empty();
@@ -158,6 +175,7 @@ public final class VectorStructureService {
      * until {@link #tick} observes its outcome; failures report {@code status:detail}.
      */
     public static boolean beginCapture(ServerPlayer player, CapturePlan plan) {
+        traceLiftProbeCommand("begin_capture", player, null);
         requireThread(player);
         Objects.requireNonNull(plan, "plan");
         if (sableLiftMassRejected(player, plan)) return false;
@@ -220,7 +238,7 @@ public final class VectorStructureService {
         if (budget < 0 || budget > MAXIMUM_PROGRAM_BUDGET) {
             return ProgramResult.rejected("invalid_budget");
         }
-        var outcome = planCaptureInternal(player, seed, tier, budget);
+        var outcome = planCaptureInternal(player, seed, tier, budget, false);
         if (outcome.plan() == null) return ProgramResult.rejected(outcome.rejection());
         var plan = outcome.plan();
         var result = startCapture(player, plan, false, true);
@@ -252,10 +270,11 @@ public final class VectorStructureService {
         var playerId = player.getUUID();
         var held = SESSIONS.get(playerId);
         if (held != null && held.reference.equals(reference)) {
-            if (isSable(reference)) return controlSableExisting(player, held, runtimeId);
+            if (isIndependent(reference)) return controlSableExisting(player, held, runtimeId);
             if (!programControlUsable(player, held, runtimeId)) {
                 return ProgramResult.rejected("structure_unavailable");
             }
+            held.manualHover = false;
             return ProgramResult.completed("control_active", reference);
         }
         var capture = CAPTURES.get(playerId);
@@ -273,7 +292,7 @@ public final class VectorStructureService {
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
         }
-        if (isSable(reference)) {
+        if (isIndependent(reference)) {
             return controlSableFresh(player, level, reference, runtimeId);
         }
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
@@ -338,6 +357,7 @@ public final class VectorStructureService {
         if (held.directControl) {
             var status = StructureDirectControl.validate(level, held.reference, player, held.controllerId);
             if (status == StructureDirectControl.Status.ACTIVE) {
+                held.manualHover = false;
                 return ProgramResult.completed("control_active", held.reference);
             }
             terminate(player.getUUID());
@@ -354,6 +374,12 @@ public final class VectorStructureService {
         }
         held.directControl = true;
         held.sableBody = true;
+        held.manualHover = false;
+        if (SubLevelStructureRefs.isSubLevel(held.reference)) {
+            var motion = StructureDynamics.motion(level, held.reference).orElseThrow();
+            held.liftTarget = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+            held.programMove = true;
+        }
         held.stage = Stage.LIFTING;
         held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         return ProgramResult.completed("control_acquired", held.reference);
@@ -381,6 +407,11 @@ public final class VectorStructureService {
         }
         session.directControl = true;
         session.sableBody = true;
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            var motion = StructureDynamics.motion(level, reference).orElseThrow();
+            session.liftTarget = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+            session.programMove = true;
+        }
         session.stage = Stage.LIFTING;
         session.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         // The service keeps one session per player; adopting a second structure first ends
@@ -459,6 +490,7 @@ public final class VectorStructureService {
      */
     private static ProgramResult launchSableDirect(ServerPlayer player, Session held, Vec3 direction,
                                                    double speedScale) {
+        traceLiftProbeCommand("program_launch", player, held.reference);
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
         }
@@ -503,7 +535,7 @@ public final class VectorStructureService {
     }
 
     public enum PressStatus {
-        CHARGING, THROWN, REJECTED
+        CHARGING, PREPARING, THROWN, REJECTED
     }
 
     public record PressResult(PressStatus status, String detail) {
@@ -542,19 +574,21 @@ public final class VectorStructureService {
     }
 
     /**
-     * H-press decision entry. A held structure the caster is aiming at is launched through its
-     * normal session; otherwise any looked-at physicalized structure of any owner is thrown
+     * H-press decision entry. The caster's own hovering structure is launched along the current
+     * view without requiring them to look back at it; otherwise a looked-at physicalized structure is thrown
      * directly along the view. No hit reports {@link PressStatus#CHARGING} so the caller keeps
      * the existing charge/capture flow; every refusal carries a machine-readable detail.
      */
     public static PressResult press(ServerPlayer player) {
+        traceLiftProbeCommand("press", player, null);
         requireThread(player);
         if (!(player.level() instanceof ServerLevel level)) return PressResult.rejected("host_unavailable");
         var look = player.getLookAngle();
         if (look.lengthSqr() <= 1.0e-8) return PressResult.rejected("invalid_look");
         var held = SESSIONS.get(player.getUUID());
         if (held != null && held.stage == Stage.LIFTING && held.usableBy(player)
-                && (aimedAtHeld(player, held, level) || viewerInsideStructure(player, held))) {
+                && held.controlActive() && held.manualHover) {
+            if (held.plannedExtraction && !held.lifted) return new PressResult(PressStatus.PREPARING, "extracting");
             return launchHeld(player, held) ? PressResult.thrown("held")
                     : PressResult.rejected("held_launch_rejected");
         }
@@ -570,6 +604,9 @@ public final class VectorStructureService {
         var current = validation.currentHit().orElseThrow();
         var permitted = level.mayInteract(player, BlockPos.containing(current.worldPoint()));
         var physical = isPhysical(level, current.block().structure());
+        if (permitted && !physical && NativeStructureRuntime.ID.equals(current.block().structure().backend())) {
+            return prepareExistingThrow(player, level, current, look.normalize());
+        }
         return switch (pressRoute(true, permitted, physical)) {
             case CHARGE -> PressResult.charging();
             case REJECT -> PressResult.rejected(permitted ? "structure_not_physical" : "permission_denied");
@@ -578,11 +615,44 @@ public final class VectorStructureService {
     }
 
     private static boolean isPhysical(ServerLevel level, StructureRef reference) {
-        if (StructureBackendRouter.SABLE_ID.equals(reference.backend())) {
+        if (StructureBackendRouter.SABLE_ID.equals(reference.backend()) || SubLevelStructureRefs.isSubLevel(reference)) {
             return StructureDynamics.motion(level, reference).isPresent();
         }
         return StructurePhysics.activeRegion(level, reference)
                 .flatMap(region -> region.motion(reference)).isPresent();
+    }
+
+    /** Keeps legacy content in its current slot and attaches that same handle before throwing. */
+    private static PressResult prepareExistingThrow(ServerPlayer player, ServerLevel level,
+                                                     StructureHit hit, Vec3 direction) {
+        var reference = hit.block().structure();
+        for (var entry : SESSIONS.entrySet()) {
+            if (!entry.getKey().equals(player.getUUID()) && entry.getValue().reference.equals(reference)) {
+                return PressResult.rejected("structure_controlled");
+            }
+        }
+        var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
+            return PressResult.rejected("structure_unavailable");
+        }
+        var region = StructurePhysics.attachedRegion(level, reference).orElse(null);
+        if (region == null) {
+            try {
+                region = StructurePhysics.adoptExistingRegion(level, reference);
+            } catch (IllegalStateException | IllegalArgumentException rejection) {
+                AcademyCraft.LOGGER.info("Kinetic Throw cannot physicalize retained {}: {}",
+                        reference, rejection.getMessage());
+                return PressResult.rejected("physicalization_region_unavailable");
+            }
+        }
+        if (region.control(reference).isPresent()) return PressResult.rejected("structure_controlled");
+        var held = new Session(reference, level.dimension(), 0, presentedCellCount(level, reference), region, null);
+        held.stage = Stage.AWAITING_PHYSICS;
+        held.pendingThrowDirection = direction;
+        held.expiresAt = level.getGameTime() + CAPTURE_TIMEOUT_TICKS;
+        terminate(player.getUUID());
+        SESSIONS.put(player.getUUID(), held);
+        return new PressResult(PressStatus.PREPARING, "physicalizing_retained_structure");
     }
 
     /** Direct velocity hand-off; mass, force and traction budgets do not gate this path. */
@@ -594,10 +664,28 @@ public final class VectorStructureService {
         var skill = Skills.KINETIC_THROW.get();
         var speed = directThrowSpeed(motion.mass(), skill.hasProficiencyMilestone(player, 3));
         var sable = StructureBackendRouter.SABLE_ID.equals(reference.backend());
+        var direct = sable || SubLevelStructureRefs.isSubLevel(reference);
         StructurePhysicsRegion region = null;
-        if (sable) {
-            if (!StructureBackendRouter.launch(level, reference, direction, speed)) {
-                return PressResult.rejected("sable_launch_rejected");
+        if (direct) {
+            var owned = SESSIONS.get(player.getUUID());
+            if (owned != null && owned.reference.equals(reference) && owned.plannedExtraction && !owned.lifted) {
+                return new PressResult(PressStatus.PREPARING, "extracting");
+            }
+            var launchControl = UUID.randomUUID();
+            var status = StructureDirectControl.acquire(level, reference, player, launchControl);
+            if (status != StructureDirectControl.Status.ACTIVE) {
+                return PressResult.rejected(status == StructureDirectControl.Status.OCCUPIED
+                        ? "structure_controlled" : "structure_unavailable");
+            }
+            try {
+                if (owned != null && owned.reference.equals(reference)) {
+                    StructureOrientations.cancel(level, reference, owned.controllerId);
+                }
+                if (!StructureBackendRouter.launch(level, reference, direction, speed)) {
+                    return PressResult.rejected("sable_launch_rejected");
+                }
+            } finally {
+                StructureDirectControl.release(reference, launchControl);
             }
         } else {
             region = StructurePhysics.activeRegion(level, reference).orElse(null);
@@ -615,7 +703,7 @@ public final class VectorStructureService {
         terminate(player.getUUID());
         var session = new Session(reference, level.dimension(), 0,
                 presentedCellCount(level, reference), region, null);
-        session.sableBody = sable;
+        session.sableBody = direct;
         session.stage = Stage.FLYING;
         session.lifted = true;
         session.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
@@ -627,13 +715,23 @@ public final class VectorStructureService {
     }
 
     private static int presentedCellCount(ServerLevel level, StructureRef reference) {
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return SubLevelServer.runtime(level)
+                    .map(runtime -> runtime.view(SubLevelStructureRefs.id(reference).orElseThrow()).cells().size())
+                    .orElse(1);
+        }
         return NativeStructureRuntime.existing(level.getServer())
                 .map(runtime -> runtime.presentedCellCount(reference))
                 .filter(count -> count > 0).orElse(1);
     }
 
-    private static PlanOutcome planCaptureInternal(ServerPlayer player, BlockPos seed, int tier, int budgetOverride) {
+    private static PlanOutcome planCaptureInternal(ServerPlayer player, BlockPos seed, int tier, int budgetOverride,
+                                                    boolean liftedCapture) {
         var level = player.level();
+        // The selection is free, but a capture removes the source blocks. Refuse before the
+        // first mutation when no backend can turn the result into a moving body.
+        var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
+        if (backendProblem.isPresent()) return new PlanOutcome(null, backendProblem.get());
         var selection = BlockStructureApi.selectLowerEllipsoidWithUpperCylinder(
                 level,
                 seed,
@@ -647,30 +745,63 @@ public final class VectorStructureService {
         var forward = Vec3.directionFromRotation(0.0f, player.getYRot());
         var playerSafeSelection = BlockStructureApi.cropToForwardHalfSpace(
                 selection.positions(), player.position(), forward, KineticThrow.PLAYER_CLEARANCE);
+        boolean localCapture = !sableMode(level);
+        // The live Sable capture target preserves admitted plants and partial terrain states.
+        // Keep the pointed-at plant and its supporting column; the preview and transaction
+        // both enforce backend admission instead of silently removing the selected seed.
+        if (!localCapture && !StructureCaptureExtractions.enabled()) {
+            playerSafeSelection = BlockStructureApi.cropNonFullBlocks(level, playerSafeSelection);
+        }
         var positions = BlockStructureApi.cropImmediatelyBlocked(
-                level, playerSafeSelection, Direction.UP);
-        // Selection policy: non-full decoration (grass tufts, flowers) is excluded here so the
-        // fail-closed content preflight sees only full structural blocks. The seed must survive
-        // the crop; otherwise the selection is rejected instead of silently re-anchored.
-        positions = BlockStructureApi.cropNonFullBlocks(level, positions);
+                level, playerSafeSelection, Direction.UP,
+                position -> (localCapture || StructureCaptureExtractions.enabled())
+                        && org.academy.internal.common.sublevel.SubLevelTerrainBreaker
+                        .canClearObstacle(level, player, position));
+        boolean seedUnblocked = positions.contains(seed);
+        // Preserve selected plants and partial collision shapes with their supporting cells.
+        // The capture backend validates the complete body before any source cell is removed.
+        // Sable retains its curated admission gates, including the supported terrain extension.
         if (positions.isEmpty() || !positions.contains(seed)) {
+            AcademyCraft.LOGGER.debug("Kinetic capture selection rejected seed={} player={} yaw={} forward={}"
+                            + " selected={} seed_selected={} forward_cells={} seed_forward={} seed_unblocked={}"
+                            + " admitted_cells={} seed_state={} above_state={} permitted={}",
+                    seed, player.position(), player.getYRot(), forward, selection.positions().size(),
+                    selection.positions().contains(seed), playerSafeSelection.size(), playerSafeSelection.contains(seed),
+                    seedUnblocked, positions.size(), level.getBlockState(seed), level.getBlockState(seed.above()),
+                    level.mayInteract(player, seed));
             return new PlanOutcome(null, "selection_blocked_or_seed_missing");
         }
         var budget = cellBudget(level);
+        // At tier zero a normal full terrain selection can exceed the 128 mass admission
+        // budget before the player has any chance to lift it. Bound the default one-mass
+        // cell selection first; the exact backend mass gate still rejects heavier materials.
+        if (!localCapture && liftedCapture) budget = Math.min(budget, KineticStructureControl.massBudget(tier));
         if (budgetOverride > 0) budget = Math.min(budget, budgetOverride);
-        var cropped = cropToBudget(positions, seed, budget);
+        var cropped = liftedCapture ? cropToLiftBudget(positions, seed, budget)
+                : cropToBudget(positions, seed, budget);
         if (cropped.isEmpty() || !cropped.contains(seed)) {
             return new PlanOutcome(null, "budget_crop_lost_seed");
         }
         return new PlanOutcome(new CapturePlan(seed.immutable(), tier, cropped), "");
     }
 
+    /** The same forward, clearance and budget gates used by the direct kinetic skill. */
+    public static List<BlockPos> programCaptureSelection(ServerPlayer player, BlockPos seed, int tier, int budget) {
+        var outcome = planCaptureInternal(player, seed, tier, budget, false);
+        return outcome.plan() == null ? List.of() : outcome.plan().positions();
+    }
+
     private static StructureCaptureResult startCapture(ServerPlayer player, CapturePlan plan,
                                                        boolean report, boolean program) {
         var level = player.level();
         var budget = cellBudget(level);
-        var result = StructureTransactions.capture(level, new StructureCaptureRequest(
-                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player)));
+        var request = new StructureCaptureRequest(
+                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true)
+                .withSkillCreation(player.getUUID(), AcademyCraft.academy("kinetic_throw"));
+        var result = StructureCaptureExtractions.enabled()
+                ? StructureCaptureExtractions.capture(level, player, request, KineticThrow.liftHeight(plan.tier()),
+                        program ? StructureCaptureExtractions.NODE_HANDOFF_TICKS : KineticThrow.HOVER_TICKS)
+                : StructureTransactions.capture(level, request);
         var reference = result.structure().orElse(null);
         if (result.pending()) {
             if (reference == null) {
@@ -723,22 +854,25 @@ public final class VectorStructureService {
         tickCapture(player);
         var held = SESSIONS.get(player.getUUID());
         if (held == null) return;
-        if (!held.usableBy(player) || player.level().getGameTime() > held.expiresAt) {
-            // A completed hover never drops silently: when the caster is still aiming at the
-            // body, the deadline throws it along the view; otherwise control ends safely with
-            // the structure, its region and its inertia retained.
-            if (held.usableBy(player) && held.stage == Stage.LIFTING && held.lifted
-                    && launchHeld(player, held)) {
-                return;
-            }
+        var expired = player.level().getGameTime() > held.expiresAt;
+        var programAngular = !held.manualHover && held.directControl && held.stage == Stage.LIFTING;
+        var angularControl = held.angularHandoff.retain(player.level().getGameTime(), held.controllerId,
+                programAngular, programAngular && directControlActive(player, held),
+                programAngular && StructureOrientations.controls(player.level(), held.reference, held.controllerId));
+        if (!held.usableBy(player) || expired && !angularControl) {
+            // Expiration releases the hover. Launching requires an explicit H press or node
+            // command; merely looking at a structure must never turn it into a projectile.
             if (held.stage == Stage.LIFTING && held.lifted) {
                 AcademyCraft.LOGGER.info(
-                        "Kinetic Throw hover expired without a launchable aim; releasing control for {}",
+                        "Kinetic Throw hover expired; releasing control for {}",
                         held.reference);
             }
             terminate(player.getUUID());
             return;
         }
+        // Keep the exact lease through the short completion/poll handoff as well as active work.
+        // An expired move/hover must not gain extra translation work from a rotation command.
+        if (expired && angularControl) return;
         switch (held.stage) {
             case AWAITING_PHYSICS -> tickAwaitingPhysics(player, held);
             case LIFTING -> tickLifting(player, held);
@@ -752,7 +886,16 @@ public final class VectorStructureService {
      * {@link KineticThrow#HOVER_TICKS} instead of sharing that budget with the lift itself.
      */
     public static long hoverDeadline(long liftedAt) {
-        return liftedAt + KineticThrow.HOVER_TICKS;
+        return liftProfile().hoverDeadline(liftedAt);
+    }
+
+    private static KineticLiftProfile liftProfile() {
+        return org.academy.internal.common.sublevel.SubLevelEnhancementBootstrap.KINETIC_LIFT;
+    }
+
+    private static StructureMotionState motionState(StructureDynamics.State state) {
+        return new StructureMotionState(state.pose(), state.linearVelocity(), state.angularVelocity(),
+                state.localCenterOfMass(), state.mass(), false, 0, 0);
     }
 
     /** Launches the lifted session along the caster's view. False keeps the current session. */
@@ -766,16 +909,14 @@ public final class VectorStructureService {
         return launchHeld(player, held);
     }
 
-    /**
-     * Shared launch validation. The hover deadline may auto-throw through this path even though
-     * the hold window itself has ended.
-     */
+    /** Shared validation for an explicit launch command. */
     private static boolean launchHeld(ServerPlayer player, Session held) {
         if (!(player.level() instanceof ServerLevel level)) return false;
+        if (held.plannedExtraction && !held.lifted) return false;
         var direction = KineticThrow.throwDirection(player.getLookAngle());
         if (direction.lengthSqr() <= 1.0e-8) return false;
-        if (!aimedAtHeld(player, held, level) && !viewerInsideStructure(player, held)) return false;
-        if (held.traction != null) return launchSable(player, held, level, direction);
+        StructureOrientations.cancel(level, held.reference, held.controllerId);
+        if (held.traction != null || held.directControl) return launchSable(player, held, level, direction);
         return launchNative(player, held, direction, 1.0);
     }
 
@@ -784,6 +925,7 @@ public final class VectorStructureService {
      * releases Academy control. Sable also owns contact handling, so no region follows here.
      */
     private static boolean launchSable(ServerPlayer player, Session held, ServerLevel level, Vec3 direction) {
+        traceLiftProbeCommand("manual_launch", player, held.reference);
         var skill = Skills.KINETIC_THROW.get();
         var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3));
         held.closeControl();
@@ -798,6 +940,25 @@ public final class VectorStructureService {
         return true;
     }
 
+    private static void traceLiftProbeCommand(String action, ServerPlayer player, @Nullable StructureRef reference) {
+        if (!Boolean.getBoolean("academy.sublevelLiftTiersSmoke")) return;
+        var source = StackWalker.getInstance().walk(frames ->
+                frames.skip(1).limit(12).map(StackWalker.StackFrame::toString).toList());
+        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT_COMMAND action={} tick={} player={} reference={} source={}",
+                action, player.level().getGameTime(), player.getUUID(), reference, source);
+    }
+
+    private static void traceLiftProbeBaseline(ServerPlayer player, StructureRef reference,
+                                               StructureDynamics.State motion, Vec3 sourceOrigin,
+                                               Vec3 sourceCenter) {
+        if (!Boolean.getBoolean("academy.sublevelLiftTiersSmoke")) return;
+        var actual = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+        AcademyCraft.LOGGER.info("SUBLEVEL_LIFT_ADOPT tick={} reference={} source_origin={} local_com={} "
+                        + "source_com={} actual_com={} delta={} pose={} linear={} angular={}",
+                player.level().getGameTime(), reference, sourceOrigin, motion.localCenterOfMass(), sourceCenter,
+                actual, actual.subtract(sourceCenter), motion.pose(), motion.linearVelocity(), motion.angularVelocity());
+    }
+
     /** Releases this session's transient control; the structure, region and inertia are retained. */
     public static void terminate(ServerPlayer player) {
         requireThread(player);
@@ -808,7 +969,8 @@ public final class VectorStructureService {
     public static void clear(ServerPlayer player) {
         if (player == null) return;
         var playerId = player.getUUID();
-        CAPTURES.remove(playerId);
+        var capture = CAPTURES.remove(playerId);
+        if (capture != null) StructureCaptureExtractions.release(player, capture.reference);
         terminate(playerId);
     }
 
@@ -828,12 +990,21 @@ public final class VectorStructureService {
     private static void beginLift(ServerPlayer player, StructureRef reference, int tier,
                                   List<BlockPos> positions, boolean report, boolean program) {
         terminate(player.getUUID());
-        if (sableMode(player.level())) {
+        if (StructureCaptureExtractions.tracked(reference) && !program) {
+            beginPlannedLift(player, reference, tier, positions);
+            return;
+        }
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            if (program) beginIndependentProgramExtract(player, reference, tier, positions);
+            else beginSubLevelLift(player, reference, tier, positions);
+            return;
+        }
+        if (isSable(reference)) {
             if (program) {
-                beginSableProgramExtract(player, reference, positions.size());
+                beginIndependentProgramExtract(player, reference, tier, positions);
                 return;
             }
-            beginSableLift(player, reference, tier, positions.size(), report);
+            beginSableLift(player, reference, tier, positions, report);
             return;
         }
         if (!(player.level() instanceof ServerLevel level)) return;
@@ -842,65 +1013,135 @@ public final class VectorStructureService {
             rejectCapture(player, "captured_handle_unavailable", report);
             return;
         }
-        var originalPose = handle.pose();
-        try {
-            // Initial generation only (no physics attachment exists yet): a bounded vertical
-            // clearance keeps the fresh body out of its own socket so the first uncontrolled
-            // solver step can never settle it below the source selection bottom. It is not a
-            // substitute for post-attachment movement, which stays anchored or detached-first.
-            handle.setPose(new StructurePose(
-                    originalPose.worldOrigin().add(0.0, INITIAL_GROUND_CLEARANCE, 0.0),
-                    originalPose.rotationX(), originalPose.rotationY(),
-                    originalPose.rotationZ(), originalPose.rotationW()));
-        } catch (IllegalStateException | IllegalArgumentException rejection) {
-            AcademyCraft.LOGGER.error("Kinetic Throw could not apply initial ground clearance to {}",
-                    reference, rejection);
-            rejectCapture(player, "initial_clearance_rejected", report);
-            return;
-        }
         var limits = new AABB(level.getWorldBorder().getMinX(), level.getMinY(), level.getWorldBorder().getMinZ(),
                 level.getWorldBorder().getMaxX(), level.getMaxY(), level.getWorldBorder().getMaxZ());
         var bounds = regionBounds(positions, KineticThrow.liftHeight(tier), INITIAL_GROUND_CLEARANCE,
                 level.getMinY(), level.getMaxY(), limits);
-        if (bounds == null) {
-            restoreInitialPose(handle, originalPose);
-            rejectCapture(player, "region_cannot_fit_structure", report);
-            return;
-        }
-        StructurePhysicsRegion region;
-        try {
-            region = StructurePhysics.openRegion(level, bounds);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("Kinetic Throw could not open a physics region for {}", reference, failure);
-            restoreInitialPose(handle, originalPose);
-            rejectCapture(player, "region_open_failed", report);
-            return;
-        }
-        try {
-            region.attach(handle);
-        } catch (RuntimeException | AssertionError failure) {
-            AcademyCraft.LOGGER.error("Kinetic Throw could not attach {}", reference, failure);
-            restoreInitialPose(handle, originalPose);
+        StructurePhysicsRegion region = StructurePhysics.attachedRegion(level, reference).orElse(null);
+        if (region != null) {
+            // The capture transaction already built the body before removing its source. Adopt
+            // that region and re-base it to the lift envelope; never call setPose on a body.
+            if (bounds != null) region.rebind(bounds);
+        } else {
+            var originalPose = handle.pose();
             try {
-                region.close();
-            } catch (RuntimeException cleanup) {
-                failure.addSuppressed(cleanup);
+                // Legacy path for captures without the physical flag: keep the fresh body out of
+                // its own source socket before the first uncontrolled solver step.
+                handle.setPose(new StructurePose(
+                        originalPose.worldOrigin().add(0.0, INITIAL_GROUND_CLEARANCE, 0.0),
+                        originalPose.rotationX(), originalPose.rotationY(),
+                        originalPose.rotationZ(), originalPose.rotationW()));
+            } catch (IllegalStateException | IllegalArgumentException rejection) {
+                AcademyCraft.LOGGER.error("Kinetic Throw could not apply initial ground clearance to {}",
+                        reference, rejection);
+                rejectCapture(player, "initial_clearance_rejected", report);
+                return;
             }
-            rejectCapture(player, "region_attach_failed", report);
-            return;
+            if (bounds == null) {
+                restoreInitialPose(handle, originalPose);
+                rejectCapture(player, "region_cannot_fit_structure", report);
+                return;
+            }
+            try {
+                region = StructurePhysics.openRegion(level, bounds);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("Kinetic Throw could not open a physics region for {}", reference, failure);
+                restoreInitialPose(handle, originalPose);
+                rejectCapture(player, "region_open_failed", report);
+                return;
+            }
+            try {
+                region.attach(handle);
+            } catch (RuntimeException | AssertionError failure) {
+                AcademyCraft.LOGGER.error("Kinetic Throw could not attach {}", reference, failure);
+                restoreInitialPose(handle, originalPose);
+                try {
+                    region.close();
+                } catch (RuntimeException cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                rejectCapture(player, "region_attach_failed", report);
+                return;
+            }
         }
         var held = new Session(reference, level.dimension(), tier, positions.size(), region, null);
         held.capturedCells = List.copyOf(positions);
         held.stage = Stage.AWAITING_PHYSICS;
+        held.manualHover = !program;
         held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         SESSIONS.put(player.getUUID(), held);
         var motion = region.motion(reference).orElse(null);
-        playKineticCue(level, motion == null ? bounds.getCenter()
+        playKineticCue(level, motion == null ? region.bounds().getCenter()
                 : motion.pose().localToWorldPoint(motion.localCenterOfMass()));
     }
 
+    private static void beginPlannedLift(ServerPlayer player, StructureRef reference, int tier,
+                                         List<BlockPos> positions) {
+        var level = (ServerLevel) player.level();
+        var motion = StructureDynamics.motion(level, reference).orElse(null);
+        if (motion == null) {
+            StructureCaptureExtractions.release(player, reference);
+            return;
+        }
+        var held = new Session(reference, level.dimension(), tier, positions.size(), null, null);
+        held.extractionHandle = StructureCaptureExtractions.owned(player, reference).orElse(null);
+        held.plannedExtraction = true;
+        held.directControl = true;
+        held.sableBody = true;
+        held.manualHover = true;
+        held.capturedCells = List.copyOf(positions);
+        held.stage = Stage.LIFTING;
+        var sourceOrigin = new Vec3(positions.stream().mapToInt(BlockPos::getX).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getY).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
+        var plan = liftProfile().planTarget(tier, new KineticLiftProfile.SourceBaseline(
+                StructurePose.identity(sourceOrigin), motion.localCenterOfMass()));
+        held.liftPlan = plan;
+        held.liftStartY = plan.sourceWorldCenterOfMass().y;
+        held.liftTarget = plan.targetWorldCenterOfMass();
+        held.controlTarget = held.liftTarget;
+        held.expiresAt = level.getGameTime() + StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS;
+        SESSIONS.put(player.getUUID(), held);
+        tickPlannedLift(player, held);
+        playKineticCue(level, plan.sourceWorldCenterOfMass());
+    }
+
+    private static void beginSubLevelLift(ServerPlayer player, StructureRef reference, int tier,
+                                         List<BlockPos> positions) {
+        terminate(player.getUUID());
+        var level = (ServerLevel) player.level();
+        var motion = StructureDynamics.motion(level, reference).orElse(null);
+        if (motion == null) return;
+        var held = new Session(reference, level.dimension(), tier, positions.size(), null, null);
+        if (StructureDirectControl.acquire(level, reference, player, held.controllerId)
+                != StructureDirectControl.Status.ACTIVE) return;
+        held.directControl = true;
+        held.sableBody = true;
+        held.manualHover = true;
+        held.capturedCells = List.copyOf(positions);
+        held.stage = Stage.LIFTING;
+        // Capture can finish after the newly created body has already taken a solver step.
+        // Keep the hover above its source cells, not above a displaced intermediate pose.
+        var sourceOrigin = new Vec3(positions.stream().mapToInt(BlockPos::getX).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getY).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
+        // The capture baseline is the source grid pose, not an already stepped body pose.
+        var plan = liftProfile().planTarget(net.minecraft.util.Mth.clamp(tier, 0, 2),
+                new KineticLiftProfile.SourceBaseline(StructurePose.identity(sourceOrigin),
+                        motion.localCenterOfMass()));
+        traceLiftProbeBaseline(player, reference, motion, sourceOrigin, plan.sourceWorldCenterOfMass());
+        held.liftPlan = plan;
+        held.holdPose = StructurePose.identity(sourceOrigin);
+        held.liftStartY = plan.sourceWorldCenterOfMass().y;
+        held.liftTarget = plan.targetWorldCenterOfMass();
+        held.controlTarget = held.liftTarget;
+        held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
+        SESSIONS.put(player.getUUID(), held);
+        playKineticCue(level, plan.sourceWorldCenterOfMass());
+    }
+
     private static void beginSableLift(ServerPlayer player, StructureRef reference, int tier,
-                                       int blockCount, boolean report) {
+                                       List<BlockPos> positions, boolean report) {
         if (!(player.level() instanceof ServerLevel level)) return;
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         var motion = StructureDynamics.motion(level, reference).orElse(null);
@@ -909,39 +1150,35 @@ public final class VectorStructureService {
             rejectCapture(player, "sable_structure_unavailable", report);
             return;
         }
-        var range = Skills.KINETIC_THROW.get().scaledRange(player, KineticThrow.TARGET_RANGE + KineticThrow.liftHeight(tier));
-        var hit = lookedAtStructure(player, reference, range);
-        if (hit == null) {
-            discardSableCapture(level, reference, "sable_target_not_visible");
-            rejectCapture(player, "sable_target_not_visible", report);
-            return;
-        }
-        var settings = KineticStructureControl.settings(motion.mass(), tier,
-                Skills.KINETIC_THROW.get().getEffectiveProficiencyMilestone(player), range);
-        var acquired = StructureTraction.tryAcquire(player, UUID.randomUUID(), hit, settings,
-                (actor, candidate) -> actor == player && !player.isSpectator() && player.getAbilities().mayBuild);
-        if (acquired.status() != StructureTraction.Status.ACTIVE) {
-            var detail = "sable_traction_" + acquired.status().name().toLowerCase(java.util.Locale.ROOT);
+        var held = new Session(reference, level.dimension(), tier, positions.size(), null, null);
+        var acquired = StructureDirectControl.acquire(level, reference, player, held.controllerId);
+        if (acquired != StructureDirectControl.Status.ACTIVE) {
+            var detail = "sable_lift_" + acquired.name().toLowerCase(java.util.Locale.ROOT);
             discardSableCapture(level, reference, detail);
             rejectCapture(player, detail, report);
             return;
         }
-        var session = acquired.session().orElseThrow();
-        var point = session.worldPoint();
-        var target = point.add(0, KineticThrow.liftHeight(tier), 0);
-        if (session.update(target, Vec3.ZERO) != StructureTraction.Status.ACTIVE) {
-            session.close();
-            discardSableCapture(level, reference, "sable_lift_target_rejected");
-            rejectCapture(player, "sable_lift_target_rejected", report);
-            return;
-        }
-        var held = new Session(reference, level.dimension(), tier, blockCount, null, session);
+        // H lifts the captured body as a whole. A ray-hit spring pulls an off-center surface,
+        // tilts the freshly excavated body against its socket and also retains gravity sag.
+        // Use the same mass-center force lease and source-grid baseline as the local backend.
+        var sourceOrigin = new Vec3(positions.stream().mapToInt(BlockPos::getX).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getY).min().orElseThrow(),
+                positions.stream().mapToInt(BlockPos::getZ).min().orElseThrow());
+        var plan = liftProfile().planTarget(net.minecraft.util.Mth.clamp(tier, 0, 2),
+                new KineticLiftProfile.SourceBaseline(StructurePose.identity(sourceOrigin), motion.localCenterOfMass()));
+        traceLiftProbeBaseline(player, reference, motion, sourceOrigin, plan.sourceWorldCenterOfMass());
+        held.directControl = true;
+        held.sableBody = true;
+        held.capturedCells = List.copyOf(positions);
         held.stage = Stage.LIFTING;
-        held.liftStartY = point.y;
-        held.liftTarget = target;
+        held.manualHover = true;
+        held.liftPlan = plan;
+        held.liftStartY = plan.sourceWorldCenterOfMass().y;
+        held.liftTarget = plan.targetWorldCenterOfMass();
+        held.controlTarget = held.liftTarget;
         held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
         SESSIONS.put(player.getUUID(), held);
-        playKineticCue(level, point);
+        playKineticCue(level, plan.sourceWorldCenterOfMass());
     }
 
     /**
@@ -961,18 +1198,22 @@ public final class VectorStructureService {
      * traction session. The following control node issues the lightweight direct-velocity lease;
      * an unavailable body rejects and the structure stays retained.
      */
-    private static void beginSableProgramExtract(ServerPlayer player, StructureRef reference, int blockCount) {
+    private static void beginIndependentProgramExtract(ServerPlayer player, StructureRef reference,
+                                                       int tier, List<BlockPos> positions) {
         if (!(player.level() instanceof ServerLevel level)) return;
         var handle = StructureSpaces.resolve(level.getServer(), reference).orElse(null);
         if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
-            discardSableCapture(level, reference, "sable_structure_unavailable");
-            rejectCapture(player, "sable_structure_unavailable", false);
+            if (isSable(reference)) discardSableCapture(level, reference, "structure_unavailable");
+            rejectCapture(player, "structure_unavailable", false);
             return;
         }
-        var held = new Session(reference, level.dimension(), 0, blockCount, null, null);
+        var held = new Session(reference, level.dimension(), tier, positions.size(), null, null);
+        held.capturedCells = List.copyOf(positions);
         held.sableBody = true;
         held.stage = Stage.LIFTING;
-        held.expiresAt = level.getGameTime() + KineticThrow.HOVER_TICKS;
+        held.expiresAt = level.getGameTime() + (StructureCaptureExtractions.tracked(reference)
+                ? StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS + StructureCaptureExtractions.NODE_HANDOFF_TICKS
+                : KineticThrow.HOVER_TICKS);
         SESSIONS.put(player.getUUID(), held);
     }
 
@@ -1012,11 +1253,13 @@ public final class VectorStructureService {
                 || !capture.dimension.equals(player.level().dimension())
                 || !player.isAlive() || player.hasDisconnected()) {
             CAPTURES.remove(playerId);
+            StructureCaptureExtractions.release(player, capture.reference);
             return;
         }
         var result = StructureTransactions.poll(level.getServer(), capture.transactionId);
         if (result.isEmpty()) {
             CAPTURES.remove(playerId);
+            StructureCaptureExtractions.release(player, capture.reference);
             rejectCapture(player, "transaction_evicted", capture.report);
             return;
         }
@@ -1024,6 +1267,7 @@ public final class VectorStructureService {
         if (current.pending()) {
             if (level.getGameTime() - capture.startedAt > CAPTURE_TIMEOUT_TICKS) {
                 CAPTURES.remove(playerId);
+                StructureCaptureExtractions.release(player, capture.reference);
                 AcademyCraft.LOGGER.warn("Kinetic Throw capture {} exceeded its tracking window; structure retained",
                         capture.transactionId);
             }
@@ -1034,6 +1278,7 @@ public final class VectorStructureService {
             beginLift(player, current.structure().orElse(capture.reference), capture.tier,
                     capture.positions, capture.report, capture.program);
         } else {
+            StructureCaptureExtractions.release(player, capture.reference);
             rejectCapture(player, current.status() + ":" + current.detail(), capture.report);
         }
     }
@@ -1052,18 +1297,39 @@ public final class VectorStructureService {
         if (region.status() != StructurePhysicsRegion.Status.READY) return;
         var motion = region.motion(held.reference).orElse(null);
         if (motion == null) return;
+        if (held.pendingThrowDirection != null) {
+            var direction = held.pendingThrowDirection;
+            var speed = KineticThrow.throwSpeed(Skills.KINETIC_THROW.get().hasProficiencyMilestone(player, 3));
+            try {
+                region.setVelocity(held.reference, direction.scale(speed), Vec3.ZERO);
+            } catch (IllegalStateException | IllegalArgumentException rejection) {
+                rejectCapture(player, "retained_throw_rejected");
+                terminate(player.getUUID());
+                return;
+            }
+            held.pendingThrowDirection = null;
+            held.stage = Stage.FLYING;
+            held.lifted = true;
+            held.velocity = direction.scale(speed);
+            held.expiresAt = player.level().getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
+            return;
+        }
         var skill = Skills.KINETIC_THROW.get();
         var range = skill.scaledRange(player, KineticThrow.TARGET_RANGE + KineticThrow.liftHeight(held.tier));
         var settings = KineticStructureControl.settings(motion.mass(), held.tier,
                 skill.getEffectiveProficiencyMilestone(player), range);
         var local = motion.localCenterOfMass();
-        var point = motion.pose().localToWorldPoint(local);
-        held.liftStartY = point.y;
-        held.liftTarget = point.add(0, KineticThrow.liftHeight(held.tier), 0);
+        var plan = liftProfile().planTarget(net.minecraft.util.Mth.clamp(held.tier, 0, 2),
+                new KineticLiftProfile.SourceBaseline(motion.pose(), motion.localCenterOfMass()));
+        held.liftPlan = plan;
+        held.liftStartY = plan.sourceWorldCenterOfMass().y;
+        held.liftTarget = plan.targetWorldCenterOfMass();
+        held.controlTarget = KineticStructureControl.gravityCompensatedTarget(held.liftTarget,
+                motion.mass(), settings.stiffness());
         held.stiffness = settings.stiffness();
         held.damping = settings.damping();
         held.maxForce = settings.maxForce();
-        var control = new StructurePhysicsControl.Anchor(local, held.liftTarget, Vec3.ZERO,
+        var control = new StructurePhysicsControl.Anchor(local, held.controlTarget, Vec3.ZERO,
                 settings.stiffness(), settings.damping(), settings.maxForce());
         Optional<StructurePhysicsLease> acquired;
         try {
@@ -1084,19 +1350,39 @@ public final class VectorStructureService {
     }
 
     private static void tickLifting(ServerPlayer player, Session held) {
+        if (held.plannedExtraction) {
+            tickPlannedLift(player, held);
+            return;
+        }
         if (held.directControl) {
             if (!directControlActive(player, held)) {
                 terminate(player.getUUID());
                 return;
             }
-            if (held.programMove && player.level() instanceof ServerLevel level) {
+            if ((held.programMove || held.manualHover || SubLevelStructureRefs.isSubLevel(held.reference))
+                    && player.level() instanceof ServerLevel level) {
                 var motion = StructureDynamics.motion(level, held.reference).orElse(null);
                 if (motion == null) return;
-                var settings = KineticStructureControl.settings(motion.mass(), held.tier, 0, PROGRAM_CONTROL_RANGE);
-                if (!StructureDirectControl.submit(level, held.reference, player, held.controllerId,
-                        new StructurePhysicsControl.Anchor(motion.localCenterOfMass(), held.liftTarget, Vec3.ZERO,
-                                settings.stiffness(), settings.damping(), settings.maxForce()))) {
+                var skill = Skills.KINETIC_THROW.get();
+                var settings = KineticStructureControl.settings(motion.mass(), held.tier,
+                        held.programMove ? 0 : skill.getEffectiveProficiencyMilestone(player),
+                        held.programMove ? PROGRAM_CONTROL_RANGE
+                                : skill.scaledRange(player, KineticThrow.TARGET_RANGE + KineticThrow.liftHeight(held.tier)));
+                held.controlTarget = KineticStructureControl.gravityCompensatedTarget(held.liftTarget,
+                        motion.mass(), settings.stiffness());
+                var anchor = new StructurePhysicsControl.Anchor(motion.localCenterOfMass(), held.controlTarget,
+                        Vec3.ZERO, settings.stiffness(), settings.damping(), settings.maxForce());
+                var submitted = held.holdPose != null
+                        ? StructureDirectControl.submit(level, held.reference, player, held.controllerId,
+                                anchor, held.holdPose)
+                        : StructureDirectControl.submit(level, held.reference, player, held.controllerId, anchor);
+                if (!submitted) {
                     terminate(player.getUUID());
+                }
+                held.velocity = motion.linearVelocity();
+                if (!held.programMove && !held.lifted && settledAtLiftTarget(held, motionState(motion))) {
+                    held.lifted = true;
+                    held.expiresAt = hoverDeadline(level.getGameTime());
                 }
             }
             return;
@@ -1105,8 +1391,8 @@ public final class VectorStructureService {
             tickSableLift(player, held);
             return;
         }
-        if (held.region == null && isSable(held.reference)) {
-            // A program-extracted Sable body is retained until its control node issues the lease.
+        if (held.region == null && isIndependent(held.reference)) {
+            // Program extraction retains an independent body until its control node issues the lease.
             if (!(player.level() instanceof ServerLevel level)
                     || StructureSpaces.resolve(level.getServer(), held.reference)
                     .filter(handle -> handle.lifecycle() == StructureLifecycle.ACTIVE).isEmpty()) {
@@ -1137,7 +1423,7 @@ public final class VectorStructureService {
         }
         try {
             lease.setControl(new StructurePhysicsControl.Anchor(motion.localCenterOfMass(),
-                    held.liftTarget, Vec3.ZERO, held.stiffness, held.damping, held.maxForce));
+                    held.controlTarget, Vec3.ZERO, held.stiffness, held.damping, held.maxForce));
             lease.renew(TRACTION_LEASE_TICKS);
         } catch (IllegalStateException | IllegalArgumentException rejection) {
             AcademyCraft.LOGGER.warn("Kinetic Throw lift lease ended for {}", held.reference, rejection);
@@ -1145,10 +1431,9 @@ public final class VectorStructureService {
             return;
         }
         held.velocity = motion.linearVelocity();
-        var com = motion.pose().localToWorldPoint(motion.localCenterOfMass());
         if (held.programMove) {
             followRegion(player, held, motion);
-        } else if (!held.lifted && com.y >= held.liftStartY + KineticThrow.liftHeight(held.tier) - 0.6) {
+        } else if (!held.lifted && settledAtLiftTarget(held, motion)) {
             held.lifted = true;
             held.expiresAt = hoverDeadline(player.level().getGameTime());
         }
@@ -1159,6 +1444,24 @@ public final class VectorStructureService {
         if (!(player.level() instanceof ServerLevel level)) return false;
         return StructureDirectControl.validate(level, held.reference, player, held.controllerId)
                 == StructureDirectControl.Status.ACTIVE;
+    }
+
+    private static void tickPlannedLift(ServerPlayer player, Session held) {
+        var level = (ServerLevel) player.level();
+        var result = StructureCaptureExtractions.advance(level, player, held.reference);
+        var snapshot = result.value().orElse(null);
+        if (StructureCaptureExtractions.failed(result)
+                || snapshot != null && snapshot.phase() == org.academy.api.common.structure.upgrade.StructureExtraction.Phase.RELEASED) {
+            AcademyCraft.LOGGER.info("Kinetic extraction ended for {}: {}", held.reference, result.detail());
+            terminate(player.getUUID());
+            return;
+        }
+        var motion = StructureDynamics.motion(level, held.reference).orElse(null);
+        if (motion != null) held.velocity = motion.linearVelocity();
+        if (!held.lifted && StructureCaptureExtractions.arrived(result)) {
+            held.lifted = true;
+            held.expiresAt = hoverDeadline(level.getGameTime());
+        }
     }
 
     private static void tickSableLift(ServerPlayer player, Session held) {
@@ -1173,12 +1476,23 @@ public final class VectorStructureService {
             terminate(player.getUUID());
             return;
         }
-        var point = session.worldPoint();
         held.velocity = Vec3.ZERO;
-        if (!held.lifted && point.y >= held.liftStartY + KineticThrow.liftHeight(held.tier) - 0.6) {
+        var measured = StructureDynamics.motion(player.level(), held.reference).orElse(null);
+        if (!held.lifted && measured != null && settledAtLiftTarget(held, motionState(measured))) {
             held.lifted = true;
             held.expiresAt = hoverDeadline(player.level().getGameTime());
         }
+    }
+
+    private static boolean settledAtLiftTarget(Session held, StructureMotionState motion) {
+        if (held.liftPlan == null) return false;
+        var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+        double tolerance = org.academy.internal.common.sublevel.SubLevelKineticLiftProfile.ACCEPTANCE_TOLERANCE;
+        // The rising body can cross the target while still moving quickly. Starting the hold
+        // at that crossing consumes the player's aiming time during the subsequent overshoot.
+        return center.distanceToSqr(held.liftTarget) <= tolerance * tolerance
+                && motion.linearVelocity().lengthSqr() <= 0.15 * 0.15
+                && motion.angularVelocity().lengthSqr() <= 0.1 * 0.1;
     }
 
     private static void tickFlight(ServerPlayer player, Session held) {
@@ -1220,6 +1534,32 @@ public final class VectorStructureService {
         }
         held.unavailableTicks = 0;
         held.velocity = motion.linearVelocity();
+        if (SubLevelStructureRefs.isSubLevel(held.reference)) applySubLevelImpacts(player, held, motion);
+    }
+
+    private static void applySubLevelImpacts(ServerPlayer player, Session held, StructureDynamics.State motion) {
+        var level = (ServerLevel) player.level();
+        var runtime = SubLevelServer.runtime(level).orElse(null);
+        if (runtime == null) return;
+        var local = runtime.localCollisionBoxes(SubLevelStructureRefs.id(held.reference).orElseThrow());
+        if (local.isEmpty()) return;
+        var previous = held.previousImpactPose == null ? motion.pose() : held.previousImpactPose;
+        held.previousImpactPose = motion.pose();
+        var boxes = NativeStructureCollisionBoxes.worldBoxes(local, motion.pose());
+        var impactCenter = union(boxes).minmax(union(NativeStructureCollisionBoxes.worldBoxes(local, previous)))
+                .getCenter();
+        var bounds = StructureImpactSweep.sweptBounds(local, previous, motion.pose(), motion.localCenterOfMass());
+        var now = level.getGameTime();
+        for (var target : level.getEntities(player, bounds.inflate(0.1))) {
+            if (target.noPhysics || !canAffect(player, target)) continue;
+            var last = held.impactTicks.get(target.getUUID());
+            if (last != null && now - last < IMPACT_COOLDOWN_TICKS) continue;
+            var targetBox = target.getBoundingBox();
+            if (NativeStructureCollisionBoxes.supports(boxes, targetBox, SUPPORT_TOLERANCE)
+                    || !StructureImpactSweep.intersects(local, previous, motion.pose(), targetBox)) continue;
+            settleImpact(player, held, null, target, impactCenter);
+        }
+        held.impactTicks.entrySet().removeIf(entry -> now - entry.getValue() > IMPACT_COOLDOWN_TICKS * 4L);
     }
 
     private static void followRegion(ServerPlayer player, Session held, StructureMotionState motion) {
@@ -1240,14 +1580,25 @@ public final class VectorStructureService {
         var candidate = followBounds(bounds, predicted, motion.linearVelocity(), FOLLOW_LOOKAHEAD_SECONDS,
                 FOLLOW_TRAILING_MARGIN, level.getMinY(), level.getMaxY(), limits);
         if (candidate == null || candidate.equals(bounds) || !tryRebind(held.region, candidate)) {
-            // A body that can no longer be kept inside a rebaseable region would fail the
-            // region terminally on the next step. Ending the action keeps the structure.
+            // Try the current occupancy before giving up on the conservative swept bounds.
             var conservative = followBounds(bounds, occupied, motion.linearVelocity(), FOLLOW_LOOKAHEAD_SECONDS,
                     FOLLOW_TRAILING_MARGIN, level.getMinY(), level.getMaxY(), limits);
             if (conservative == null || conservative.equals(bounds) || !tryRebind(held.region, conservative)) {
-                AcademyCraft.LOGGER.warn("Kinetic Throw region follow could not rebase {}; ending flight safely",
-                        held.reference);
-                terminate(player.getUUID());
+                try {
+                    // Ordinary cancellation preserves inertia. A refused region follow must
+                    // release this session's lease before explicitly stopping its motion.
+                    held.closeControl();
+                    held.region.setVelocity(held.reference, Vec3.ZERO, Vec3.ZERO);
+                    AcademyCraft.LOGGER.warn("Kinetic Throw region follow could not rebase {}; "
+                                    + "linear and angular velocity cleared before ending the session",
+                            held.reference);
+                } catch (RuntimeException | AssertionError | LinkageError failure) {
+                    AcademyCraft.LOGGER.error("Kinetic Throw region follow could not stop motion for {}; "
+                                    + "ending the skill session with the structure retained",
+                            held.reference, failure);
+                } finally {
+                    terminate(player.getUUID());
+                }
             }
         }
     }
@@ -1270,6 +1621,9 @@ public final class VectorStructureService {
         var union = union(boxes);
         if (union == null) return;
         var now = level.getGameTime();
+        // A fast body can move several blocks between two published poses. Sweep the target
+        // backwards along that motion so a 50 m/s throw cannot tunnel through a narrow entity.
+        var sweep = held.velocity.scale(-0.05);
         var targets = new ArrayList<Entity>();
         for (var target : level.getEntities(player, union.inflate(1.5))) {
             if (target == projection || target.noPhysics || !canAffect(player, target)) continue;
@@ -1277,7 +1631,8 @@ public final class VectorStructureService {
             if (last != null && now - last < IMPACT_COOLDOWN_TICKS) continue;
             var targetBox = target.getBoundingBox();
             if (projection.supports(targetBox, SUPPORT_TOLERANCE)) continue;
-            if (boxes.stream().noneMatch(box -> box.intersects(targetBox))) continue;
+            var sweptTarget = targetBox.expandTowards(sweep);
+            if (boxes.stream().noneMatch(box -> box.intersects(sweptTarget))) continue;
             targets.add(target);
         }
         for (var target : targets) settleImpact(player, held, projection, target, union.getCenter());
@@ -1285,13 +1640,15 @@ public final class VectorStructureService {
     }
 
     private static void settleImpact(ServerPlayer player, Session held,
-                                     NativeStructureProjectionEntity direct, Entity target, Vec3 center) {
+                                     @Nullable NativeStructureProjectionEntity direct, Entity target, Vec3 center) {
         var level = (ServerLevel) player.level();
         var skill = Skills.KINETIC_THROW.get();
         var damage = KineticThrow.structureDamage(held.blockCount);
         if (target instanceof LivingEntity living && damage > 0.0f) {
             var before = living.getHealth();
-            var accepted = living.hurtServer(level, SkillDamageSource.ofDirect(player, skill, direct), damage);
+            var source = direct == null ? SkillDamageSource.of(player, skill)
+                    : SkillDamageSource.ofDirect(player, skill, direct);
+            var accepted = living.hurtServer(level, source, damage);
             AcademyCraft.LOGGER.info(
                     "NATIVE_STRUCTURE_KINETIC_IMPACT tick={} target={} damage={} before={} after={} accepted={}",
                     level.getGameTime(), target.getStringUUID(), damage, before, living.getHealth(), accepted);
@@ -1347,6 +1704,10 @@ public final class VectorStructureService {
 
     private static boolean isSable(StructureRef reference) {
         return StructureBackendRouter.SABLE_ID.equals(reference.backend());
+    }
+
+    private static boolean isIndependent(StructureRef reference) {
+        return isSable(reference) || SubLevelStructureRefs.isSubLevel(reference);
     }
 
     private static StructureHit lookedAtStructure(ServerPlayer player, StructureRef reference, double range) {
@@ -1502,6 +1863,35 @@ public final class VectorStructureService {
         return List.copyOf(kept);
     }
 
+    /**
+     * Budgeting a lift must keep the selected cells above every retained cell. Distance-only
+     * cropping can leave a cap in the world while capturing the block immediately below it,
+     * even though the untrimmed selection passed the clearance test.
+     */
+    static List<BlockPos> cropToLiftBudget(List<BlockPos> positions, BlockPos seed, int budget) {
+        var ordered = cropToBudget(positions, seed, Integer.MAX_VALUE);
+        if (budget < 1 || !ordered.contains(seed)) return List.of();
+        var columns = new HashMap<Long, List<BlockPos>>();
+        for (var position : ordered) {
+            long column = ((long) position.getX() << 32) ^ Integer.toUnsignedLong(position.getZ());
+            columns.computeIfAbsent(column, ignored -> new ArrayList<>()).add(position);
+        }
+        var retained = new java.util.LinkedHashSet<BlockPos>();
+        for (var position : ordered) {
+            if (retained.contains(position)) continue;
+            long column = ((long) position.getX() << 32) ^ Integer.toUnsignedLong(position.getZ());
+            var dependencies = columns.get(column).stream()
+                    .filter(above -> above.getY() >= position.getY() && !retained.contains(above))
+                    .sorted(Comparator.comparingInt((BlockPos above) -> above.getY()).reversed()).toList();
+            if (retained.size() + dependencies.size() > budget) {
+                if (position.equals(seed)) return List.of();
+                continue;
+            }
+            retained.addAll(dependencies);
+        }
+        return ordered.stream().filter(retained::contains).toList();
+    }
+
     /** Smallest usable physics region around the captured cells and their vertical lift. */
     static AABB regionBounds(List<BlockPos> positions, int lift, double minimumY, double maximumY, AABB limits) {
         return regionBounds(positions, lift, 0.0, minimumY, maximumY, limits);
@@ -1591,7 +1981,8 @@ public final class VectorStructureService {
         private final ResourceKey<Level> dimension;
         private final int tier;
         private final int blockCount;
-        private final UUID controllerId = UUID.randomUUID();
+        private final UUID controllerId;
+        private final ProgramOrientationHandoff angularHandoff;
         private final Map<UUID, Long> impactTicks = new HashMap<>();
         private final StructurePhysicsRegion region;
         private final StructureTractionSession traction;
@@ -1599,6 +1990,9 @@ public final class VectorStructureService {
         private StructurePhysicsLease lease;
         private long expiresAt;
         private Vec3 liftTarget = Vec3.ZERO;
+        private Vec3 controlTarget = Vec3.ZERO;
+        private KineticLiftProfile.@Nullable LiftTarget liftPlan;
+        private StructurePose holdPose;
         private double liftStartY;
         private double stiffness;
         private double damping;
@@ -1608,14 +2002,21 @@ public final class VectorStructureService {
         private int impactCount;
         private int unavailableTicks;
         private boolean programMove;
+        private boolean manualHover;
+        private boolean plannedExtraction;
+        private StructureCaptureExtractions.@Nullable Handle extractionHandle;
         private boolean sableBody;
         private boolean directControl;
         private Vec3 velocity = Vec3.ZERO;
+        private @Nullable StructurePose previousImpactPose;
+        private @Nullable Vec3 pendingThrowDirection;
         private @Nullable List<BlockPos> capturedCells;
 
         private Session(StructureRef reference, ResourceKey<Level> dimension, int tier, int blockCount,
                         @Nullable StructurePhysicsRegion region, @Nullable StructureTractionSession traction) {
             this.reference = reference;
+            this.controllerId = StructureCaptureExtractions.controlId(reference).orElseGet(UUID::randomUUID);
+            this.angularHandoff = new ProgramOrientationHandoff(controllerId);
             this.dimension = dimension;
             this.tier = tier;
             this.blockCount = blockCount;
@@ -1641,6 +2042,7 @@ public final class VectorStructureService {
         }
 
         public boolean controlActive() {
+            if (directControl) return true;
             if (traction != null) return traction.status() == StructureTraction.Status.ACTIVE;
             return lease != null && lease.state() == StructurePhysicsLease.State.ACTIVE;
         }
@@ -1650,7 +2052,7 @@ public final class VectorStructureService {
         }
 
         public boolean sable() {
-            return sableBody;
+            return isSable(reference);
         }
 
         public int impacts() {
@@ -1678,6 +2080,11 @@ public final class VectorStructureService {
         }
 
         private void closeControl() {
+            if (plannedExtraction) {
+                if (extractionHandle != null) StructureCaptureExtractions.release(extractionHandle);
+                extractionHandle = null;
+                plannedExtraction = false;
+            }
             try {
                 if (lease != null) lease.close();
             } catch (RuntimeException failure) {

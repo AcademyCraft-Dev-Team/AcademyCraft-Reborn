@@ -45,6 +45,115 @@ final class NativePhysicsEngineIntegrationTest {
     }
 
     @Test
+    void pausedCompoundIsAnImmovableObstacleAndRetainsSavedMotionForResume() {
+        try (var world = library.createWorld(PhysicsVector.ZERO, GRAVITY)) {
+            var obstacle = world.createBody(BodyType.DYNAMIC, pose(0, 4, 0),
+                    List.of(box(vector(1, 0, 0), vector(2, 0.5, 2))), 1, 0.6, 0, true);
+            var falling = cube(world, BodyType.DYNAMIC, 1, 7, 0, 0.5, true);
+            obstacle.setVelocity(vector(2, -3, 1), vector(0.1, 0.2, 0.3));
+            long handle = obstacle.handle;
+            var before = obstacle.state();
+            obstacle.setSimulationPaused(true);
+            obstacle.setSimulationPaused(true);
+            assertTrue(obstacle.isSimulationPaused());
+            assertTrue(obstacle.isCcdEnabled());
+            assertThrows(IllegalStateException.class, () -> obstacle.setVelocity(PhysicsVector.ZERO, PhysicsVector.ZERO));
+            assertThrows(IllegalStateException.class, () -> obstacle.applyImpulse(vector(5, 0, 0), vector(0, 4, 0)));
+            assertThrows(IllegalStateException.class, obstacle::sleep);
+            assertThrows(IllegalStateException.class, obstacle::wake);
+            assertThrows(IllegalStateException.class,
+                    () -> world.createFixedJoint(obstacle, falling, PhysicsVector.ZERO, PhysicsVector.ZERO));
+            assertThrows(IllegalStateException.class,
+                    () -> world.createFixedJoint(falling, obstacle, PhysicsVector.ZERO, PhysicsVector.ZERO));
+            steps(world, 360);
+            assertEquals(before, obstacle.state(), "Contacts and gravity must not change a paused body or saved motion");
+            assertEquals(5, falling.pose().position().y(), 0.05, "The paused compound must remain a collider");
+            assertEquals(handle, obstacle.handle);
+            obstacle.setPose(pose(10, 12, 0));
+            steps(world, 6);
+            assertEquals(pose(10, 12, 0), obstacle.pose());
+            assertEquals(before.linearVelocity(), obstacle.linearVelocity());
+            assertEquals(before.angularVelocity(), obstacle.angularVelocity());
+            assertEquals(before.localCenterOfMass(), obstacle.localCenterOfMass());
+            assertEquals(before.mass(), obstacle.mass());
+            assertEquals(before.principalInertia(), obstacle.principalInertia());
+            obstacle.setSimulationPaused(false);
+            obstacle.setSimulationPaused(false);
+            assertFalse(obstacle.isSimulationPaused());
+            assertEquals(before.linearVelocity(), obstacle.linearVelocity());
+            assertEquals(before.angularVelocity(), obstacle.angularVelocity());
+            steps(world, 6);
+            assertTrue(obstacle.pose().position().x() > 10);
+            obstacle.setSimulationPaused(true);
+            obstacle.close();
+            assertDoesNotThrow(obstacle::close);
+            assertThrows(IllegalStateException.class, obstacle::isSimulationPaused);
+            assertDoesNotThrow(() -> world.step(DT, 1));
+        }
+    }
+
+    @Test
+    void pausedJointedAssemblyResumesAsTheSameRigidAssembly() {
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var left = cube(world, BodyType.DYNAMIC, 0, 0, 0, 0.5, false);
+            var right = cube(world, BodyType.DYNAMIC, 1, 0, 0, 0.5, false);
+            world.createFixedJoint(left, right, vector(0.5, 0, 0), vector(-0.5, 0, 0));
+            for (var part : List.of(left, right)) {
+                part.setVelocity(vector(0, 1, 0), PhysicsVector.ZERO);
+                part.setSimulationPaused(true);
+            }
+            steps(world, 120);
+            assertEquals(pose(0, 0, 0), left.pose());
+            assertEquals(pose(1, 0, 0), right.pose());
+            for (var part : List.of(left, right)) part.setSimulationPaused(false);
+            steps(world, 120);
+            assertEquals(1, left.pose().position().y(), 0.02);
+            assertVectorEquals(vector(1, 0, 0), right.pose().position().subtract(left.pose().position()), 0.02);
+            // Paused removal must release joints, and closing the world must safely release
+            // the remaining paused member without requiring a final simulation step.
+            for (var part : List.of(left, right)) part.setSimulationPaused(true);
+            left.close();
+        }
+    }
+
+    @Test
+    void pauseRestoresSleepingStateAndRejectsFixedBodiesWithoutFailingWorld() {
+        try (var world = library.createWorld(PhysicsVector.ZERO, GRAVITY)) {
+            var body = cube(world, BodyType.DYNAMIC, 0, 5, 0, 0.5, false);
+            var fixed = cube(world, BodyType.FIXED, 10, 5, 0, 0.5, false);
+            assertThrows(IllegalArgumentException.class, () -> fixed.setSimulationPaused(true));
+            assertThrows(IllegalArgumentException.class, () -> fixed.setSimulationPaused(false));
+            body.sleep();
+            body.setSimulationPaused(true);
+            steps(world, 12);
+            assertTrue(body.isSleeping());
+            body.setSimulationPaused(false);
+            assertTrue(body.isSleeping());
+            assertEquals(PhysicsVector.ZERO, body.linearVelocity());
+            steps(world, 12);
+            assertEquals(5, body.pose().position().y(), 0);
+            body.wake();
+            steps(world, 12);
+            assertTrue(body.pose().position().y() < 5);
+        }
+    }
+
+    @Test
+    void fixedJointWiresTwoRealBodiesIntoOneAssembly() {
+        try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
+            var left = cube(world, BodyType.DYNAMIC, 0, 0, 0, 0.5, false);
+            var right = cube(world, BodyType.DYNAMIC, 1, 0, 0, 0.5, false);
+            world.createFixedJoint(left, right, vector(0.5, 0, 0), vector(-0.5, 0, 0));
+            left.setVelocity(vector(0, 1, 0), PhysicsVector.ZERO);
+            steps(world, 6);
+            var separation = right.pose().position().subtract(left.pose().position());
+            assertEquals(1.0, separation.x(), 0.15);
+            assertEquals(0.0, separation.y(), 0.15);
+            assertEquals(0.0, separation.z(), 0.15);
+        }
+    }
+
+    @Test
     void fixedFloorStopsAndSettlesFallingBody() {
         try (var world = library.createWorld(PhysicsVector.ZERO, GRAVITY)) {
             var floor = floor(world);
@@ -316,9 +425,9 @@ final class NativePhysicsEngineIntegrationTest {
             assertThrows(RuntimeException.class, () -> world.createBody(BodyType.DYNAMIC, pose(0, 0, 0),
                     boxes(0.5, 0.5, 0.5), -1, 0, 0, false));
             assertThrows(RuntimeException.class, () -> world.createBody(BodyType.DYNAMIC, pose(0, 0, 0),
-                    Collections.nCopies(65, box(PhysicsVector.ZERO, vector(0.1, 0.1, 0.1))), 1, 0, 0, false));
+                    Collections.nCopies(257, box(PhysicsVector.ZERO, vector(0.1, 0.1, 0.1))), 1, 0, 0, false));
             assertEquals(original, body.state(), "Rejected calls must not advance or rewrite a live body");
-            for (int index = 1; index < 128; index++) cube(world, BodyType.FIXED, index * 2, 0, 0, 0.25, false);
+            for (int index = 1; index < NativePhysicsWorld.MAX_BODIES; index++) cube(world, BodyType.FIXED, index * 2, 0, 0, 0.25, false);
             assertThrows(RuntimeException.class, () -> cube(world, BodyType.FIXED, 300, 0, 0, 0.25, false));
             body.applyImpulse(vector(1, 0, 0), PhysicsVector.ZERO);
             world.step(DT, 1);
@@ -344,13 +453,13 @@ final class NativePhysicsEngineIntegrationTest {
     @Test
     void compoundBudgetIsReclaimedWhenItsBodyIsRemoved() {
         var compound = new ArrayList<PhysicsBox>();
-        for (int index = 0; index < 64; index++) {
-            compound.add(box(vector((index % 4) * 0.2, (index / 4 % 4) * 0.2, (index / 16) * 0.2),
-                    vector(0.05, 0.05, 0.05)));
+        for (int index = 0; index < 128; index++) {
+            compound.add(box(vector((index % 8) * 0.1, (index / 8 % 8) * 0.1, (index / 64) * 0.1),
+                    vector(0.04, 0.04, 0.04)));
         }
         try (var world = library.createWorld(PhysicsVector.ZERO, PhysicsVector.ZERO)) {
             var bodies = new ArrayList<NativePhysicsBody>();
-            for (int index = 0; index < 32; index++) {
+            for (int index = 0; index < NativePhysicsWorld.MAX_BODIES; index++) {
                 bodies.add(body(world, BodyType.FIXED, pose(index * 3, 0, 0), compound, 0, false));
             }
             assertThrows(RuntimeException.class, () -> cube(world, BodyType.DYNAMIC, 0, 3, 0, 0.25, false));

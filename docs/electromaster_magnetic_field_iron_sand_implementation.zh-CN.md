@@ -15,6 +15,8 @@
 
 伤害保留用户确认的 `基础值 × A × D`。`D` 沿用项目玩家伤害倍率的原有定义，不改变其内部能力强度计算。
 
+牵引速度 2.3／2.645 格/tick 对实体目标仍然准确；方块（结构）牵引自 `e2bf53a0`（2026-10-14）起改由结构物理服务执行，按结构质量预算限幅（`MagneticStructureControl.java:19` 的 `BASE_MASS_BUDGET` 与 `:24` 的 `massBudget`，0／1／2+ 阶分别为 128／256／512 总质量），不再直接套用实体牵引速度。
+
 铁砂 MP 上限为 `100A`，每秒恢复 `10A`，富集群系再恢复 `10A`；恢复期间可以继续使用技能。数据包标签为 `academy:iron_sand_rich`，默认包含沙漠及三个恶地群系。
 
 - 1000：维持／动态 CP ×0.9；四类 MP 消耗统一 ×0.9，质量折扣位于公开数值方法中。
@@ -31,9 +33,13 @@
 | 接口 | 用途 |
 | --- | --- |
 | `MagneticTargets` | 方块、物品、实体的磁性判定；旧技能兼容方法和精密操作转调此处 |
+| `MagneticallyManipulable` | 实体自行声明可被磁性操纵，不依赖注册名、标签或装备 |
 | `MagneticMovement` | 牵引速度、方向和平滑加速计算 |
+| `MagneticStructureControl` | 方块／结构牵引的共享质量预算、磁性参与比例与单物理步拉力上限 |
 | `MagneticSupportQuery` / `MagneticLevitation` | 碰撞表面支撑查询与自由悬浮速度，支持玩家、AI 和程序提供输入 |
+| `SupportReference` | 已解析的支撑面参照：方块位置、最近碰撞点、朝向与距离；`isGround()` 只认朝天面 |
 | `MagneticFieldTuning` / `IronSandTuning` | 熟练度、距离、MP、伤害等纯数值方法 |
+| `LevitationTuning` | 悬浮调参记录与逐字段校验；服务端配置经 `MagneticFieldEffects.levitationTuning()` 解析 |
 | `GravityControl` | 按来源持有重力状态，释放时恢复原状态并保留其他来源 |
 | `MentalImmunity` | 按实体实例及来源授予免疫、反馈和撤销；兼容现有实体类型 tag |
 | `AbilityDefenseEffects` | 按来源添加真实抗性；所有已注册属性的生物类型具备默认值为 0 的属性 |
@@ -67,7 +73,7 @@
 
 使用 JBR 25 和项目 Gradle wrapper。
 
-- `test -DisDev=true`：2105 项单元测试通过。
+- `test -DisDev=true`：2105 项单元测试通过（2026-09 快照，HEAD 未复测）。
 - `build -DisDev=true` 与 `build -DisDev=false`：完整构建通过；同时包含 API 示例、103 项编辑器测试、Javadoc 和 JVM 类指针相关检查。
 - 最终全量 GameTest：120/121 通过，本次新增 5 项全部通过。唯一失败为 `academy:time_player_tick_scaling`；单独运行该项通过。较早批次还出现一次心理掌握敌对链时序失败，最终批次已通过，未为此改动生产逻辑。
 - 玩家时钟项单独命令：`runGameTestServer -DisDev=true -PacademyGameTests=academy:time_player_tick_scaling`。批量运行与隔离运行存在差异，尚未将整个 GameTest 集合宣称为稳定全绿。
@@ -85,4 +91,4 @@
 
 该场景会修改上述隔离存档中的场地、角色能力和测试实体，并在验收后退出。
 
-未创建 Git 提交；保留了工作区已有修改。构建产物包含整个当前工作区，输出为 `build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` 和 `academy-26.2.0-0.0.4-alpha-release.jar`。
+实现随 `bc7e0985`（2026-09-15）提交；方块牵引随后由 `e2bf53a0`（2026-10-14）迁移到结构物理服务。构建产物包含整个当前工作区，输出为 `build/libs/academy-26.2.0-0.0.4-alpha-dev.jar` 和 `academy-26.2.0-0.0.4-alpha-release.jar`。

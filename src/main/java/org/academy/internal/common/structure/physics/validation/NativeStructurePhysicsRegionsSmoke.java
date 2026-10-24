@@ -123,8 +123,56 @@ public final class NativeStructurePhysicsRegionsSmoke {
             require(!a.runtimeId().toString().equals(oracle.getCompoundOrEmpty("a").getStringOr("runtime", ""))
                     && !b.runtimeId().toString().equals(oracle.getCompoundOrEmpty("b").getStringOr("runtime", "")),
                     "New JVM reused an old structure runtime identity");
+            // Production already opens saved regions in its NORMAL ServerStarted listener.
+            // Freeze only this disposable fixture until both storage activations finish, so
+            // neither member can miss the first-step observation while the other is loading.
+            regionA = StructurePhysics.attachedRegion(host, a.reference()).orElseThrow();
+            regionB = StructurePhysics.attachedRegion(host, b.reference()).orElseThrow();
+            require(regionA.id().equals(idA) && regionB.id().equals(idB), "Automatic recovery changed saved region identities");
+            require(diagnostics(regionA).steps() == 0 && diagnostics(regionB).steps() == 0,
+                    "Saved region stepped before the server-started boundary");
+            server.tickRateManager().setFrozen(true); frozen = true;
             report.append("different_jvm=true\nnew_structure_runtimes=true\n");
         }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void beforePhysicsTick(ServerTickEvent.Post event) {
+        var scenario = active;
+        if (!ENABLED || !STAGE.equals("resume") || scenario == null || scenario.server != event.getServer()
+                || scenario.complete || scenario.failed || scenario.phase != Phase.ACTIVATE) return;
+        scenario.guarded(scenario::prepareAutomaticResume);
+    }
+
+    private void prepareAutomaticResume() {
+        if (a.lifecycle() != StructureLifecycle.ACTIVE || b.lifecycle() != StructureLifecycle.ACTIVE) return;
+        require(frozen && diagnostics(regionA).steps() == 0 && diagnostics(regionB).steps() == 0,
+                "Activation barrier did not preserve the first restored physics step");
+        verifyRegionInfo(); assertSaved(a, idA, "a"); assertSaved(b, idB, "b"); assertContents();
+        var before = runtime.savedPhysicsEntries(host);
+        expectStateRejected(() -> StructurePhysics.savedRegionBounds(host), "Singular bounds silently selected one of two regions");
+        expectStateRejected(() -> StructurePhysics.resumeRegion(host), "Singular resume silently selected one of two regions");
+        expectStateRejected(() -> StructurePhysics.discardSavedRegion(host), "Singular discard removed multiple regions");
+        require(runtime.savedPhysicsEntries(host).equals(before), "Ambiguous legacy calls changed saved checkpoints");
+        var absentId = new UUID(0, 1); require(!absentId.equals(idA) && !absentId.equals(idB), "Reserved unknown fixture UUID collided");
+        expectStateRejected(() -> StructurePhysics.resumeRegion(host, absentId), "Unknown UUID resumed another saved region");
+        require(!StructurePhysics.discardSavedRegion(host, absentId), "Unknown UUID discarded another saved region");
+        expectStateRejected(() -> StructurePhysics.resumeRegion(host, idA), "Explicit resume replaced automatically opened region A");
+        expectStateRejected(() -> StructurePhysics.resumeRegion(host, idB), "Explicit resume replaced automatically opened region B");
+        require(runtime.savedPhysicsEntries(host).equals(before), "Unknown or duplicate UUID calls changed an automatic region");
+        require(StructurePhysics.attachedRegion(host, a.reference()).orElseThrow() == regionA
+                        && StructurePhysics.attachedRegion(host, b.reference()).orElseThrow() == regionB,
+                "Duplicate recovery replaced a live region handle");
+        require(regionA.bounds().equals(readBounds(oracle.getCompoundOrEmpty("a").getCompoundOrEmpty("bounds"))),
+                "Automatic recovery lost region A's rebased bounds");
+        // The automatically restored B must fail closed on a digest mismatch while A proceeds.
+        // Mutate before its first native step; changing an already running body is ordinary rebuild.
+        put(b, CELL, new StructureBlockData(Blocks.STONE_SLAB.defaultBlockState()));
+        report.append("automatic_region_handles_restored=true\nregion_ids_retained=true\n"
+                + "pre_step_checkpoint_preserved=true\nduplicate_resume_rejected=true\n"
+                + "ambiguous_singular_calls_rejected=true\nunknown_uuid_isolated=true\nresumed_rebased_bounds=true\n");
+        server.tickRateManager().setFrozen(false); frozen = false;
+        next(Phase.RESUME_A);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -149,22 +197,6 @@ public final class NativeStructurePhysicsRegionsSmoke {
                     regionA = StructurePhysics.openRegion(host, BOUNDS_A); regionB = StructurePhysics.openRegion(host, BOUNDS_B);
                     idA = regionA.id(); idB = regionB.id(); require(!idA.equals(idB), "Independent regions share their persistent UUID");
                     regionA.attach(a); regionB.attach(b); verifyRegionInfo(); verifyOpeningLimits(); next(Phase.INITIAL);
-                } else {
-                    verifyRegionInfo(); assertSaved(a, idA, "a"); assertSaved(b, idB, "b"); assertContents();
-                    var before = runtime.savedPhysicsEntries(host);
-                    expectStateRejected(() -> StructurePhysics.savedRegionBounds(host), "Singular bounds silently selected one of two regions");
-                    expectStateRejected(() -> StructurePhysics.resumeRegion(host), "Singular resume silently selected one of two regions");
-                    expectStateRejected(() -> StructurePhysics.discardSavedRegion(host), "Singular discard removed multiple regions");
-                    require(runtime.savedPhysicsEntries(host).equals(before), "Ambiguous legacy calls changed saved checkpoints");
-                    var absentId = new UUID(0, 1); require(!absentId.equals(idA) && !absentId.equals(idB), "Reserved unknown fixture UUID collided");
-                    expectStateRejected(() -> StructurePhysics.resumeRegion(host, absentId), "Unknown UUID resumed another saved region");
-                    require(!StructurePhysics.discardSavedRegion(host, absentId), "Unknown UUID discarded another saved region");
-                    require(runtime.savedPhysicsEntries(host).equals(before), "Unknown UUID calls changed another region");
-                    regionA = StructurePhysics.resumeRegion(host, idA); require(regionA.id().equals(idA), "Explicit recovery replaced region A's stable UUID");
-                    require(regionA.bounds().equals(readBounds(oracle.getCompoundOrEmpty("a").getCompoundOrEmpty("bounds"))),
-                            "Resumed region lost its rebased bounds");
-                    report.append("region_ids_retained=true\nambiguous_singular_calls_rejected=true\nunknown_uuid_isolated=true\nresumed_rebased_bounds=true\n");
-                    next(Phase.RESUME_A);
                 }
             }
             case INITIAL -> {
@@ -210,6 +242,7 @@ public final class NativeStructurePhysicsRegionsSmoke {
                 require(regionA.bounds().equals(original) && regionA.status() == StructurePhysicsRegion.Status.READY,
                         "A rejected rebase changed the live region");
                 var migrated = BOUNDS_A_MIGRATED;
+                verifyFailedRebindPreservesWorld(migrated);
                 migrationPose = a.pose();
                 require(nativeRegionA.rebind(migrated), "A separated rebase was refused");
                 require(regionA.bounds().equals(migrated) && regionA.diagnostic().equals("awaiting_rebound_geometry"),
@@ -277,14 +310,16 @@ public final class NativeStructurePhysicsRegionsSmoke {
                 assertFirstStep(a, regionA, "a"); stepsA = diagnostics(regionA).steps(); poseA = a.pose(); next(Phase.A_ONLY);
             }
             case A_ONLY -> {
-                ready(regionA); assertSaved(b, idB, "b"); assertContents();
+                ready(regionA); assertSaved(b, idB, "b"); assertChest();
+                require(regionB.status() == StructurePhysicsRegion.Status.PAUSED
+                                && regionB.diagnostic().equals("saved_geometry_mismatch")
+                                && diagnostics(regionB).steps() == 0 && regionB.motion(b.reference()).isEmpty(),
+                        "Automatically restored B did not pause on its saved geometry mismatch");
                 if (age < 5) return;
                 require(diagnostics(regionA).steps() >= stepsA + 5 && center(a).distanceTo(poseA.localToWorldPoint(CENTER)) > 0.05,
-                        "Region A did not advance while region B remained pending");
-                require(regionA.motion(b.reference()).isEmpty(), "Resuming A implicitly attached region B's structure");
-                report.append("resume_a_keeps_b_pending=true\n");
-                put(b, CELL, new StructureBlockData(Blocks.STONE_SLAB.defaultBlockState()));
-                regionB = StructurePhysics.resumeRegion(host, idB); require(regionB.id().equals(idB), "Recovery changed region B's UUID");
+                        "Automatically restored A did not advance while B remained paused");
+                require(regionA.motion(b.reference()).isEmpty(), "Automatically restored A exposed region B's structure");
+                report.append("automatic_resume_a_keeps_mismatched_b_paused=true\n");
                 stepsA = diagnostics(regionA).steps(); poseA = a.pose(); next(Phase.MISMATCH_B);
             }
             case MISMATCH_B -> {
@@ -483,6 +518,48 @@ public final class NativeStructurePhysicsRegionsSmoke {
             server.halt(false);
         }
     }
+    /** Real manifest write refusal, confined to the verified disposable prepare-world directory. */
+    private void verifyFailedRebindPreservesWorld(AABB proposed) {
+        require(STAGE.equals("prepare") && runtime.save(a.reference()), "Cannot checkpoint rebase refusal fixture");
+        var metadata = server.getWorldPath(LevelResource.ROOT).resolve("data/academy/native_structures/metadata.dat");
+        var backup = metadata.resolveSibling("metadata.rebind-smoke-backup");
+        var blocker = metadata.resolve("deny-replace");
+        require(Files.isRegularFile(metadata, LinkOption.NOFOLLOW_LINKS)
+                        && !Files.exists(backup, LinkOption.NOFOLLOW_LINKS), "Unexpected rebase fixture metadata paths");
+        var before = diagnostics(regionA);
+        var motion = regionA.motion(a.reference()).orElseThrow();
+        var checkpoint = runtime.savedPhysicsEntries(host);
+        var bounds = regionA.bounds();
+        boolean moved = false, blocked = false;
+        try {
+            Files.move(metadata, backup);
+            moved = true;
+            Files.createDirectory(metadata);
+            blocked = true;
+            Files.writeString(blocker, "Intentional bounded rebase write refusal", StandardOpenOption.CREATE_NEW);
+            require(!regionA.rebind(proposed), "Manifest write refusal accepted a rebase");
+            require(regionA.bounds().equals(bounds) && regionA.status() == StructurePhysicsRegion.Status.READY
+                            && diagnostics(regionA).equals(before), "Failed persistence destroyed the previous native world");
+            require(regionA.motion(a.reference()).orElseThrow().equals(motion)
+                            && runtime.savedPhysicsEntries(host).equals(checkpoint), "Failed rebase changed motion or attachments");
+            // This requires live unpaused bodies; a stale published snapshot alone cannot pass.
+            regionA.setVelocity(a.reference(), motion.linearVelocity(), motion.angularVelocity());
+            report.append("region_rebase_io_failure_keeps_world=true\nregion_rebase_io_failure_keeps_motion=true\n");
+        } catch (IOException failure) {
+            throw new IllegalStateException("Cannot exercise failed physics rebase", failure);
+        } finally {
+            try {
+                if (blocked) {
+                    Files.deleteIfExists(blocker);
+                    Files.delete(metadata);
+                }
+                if (moved) Files.move(backup, metadata);
+            } catch (IOException failure) {
+                throw new IllegalStateException("Cannot restore rebase fixture metadata; backup retained at " + backup, failure);
+            }
+        }
+    }
+
     private void writeText(String name, String text) { try { Files.writeString(directory.resolve(name), text, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE); } catch (IOException error) { throw new IllegalStateException("Cannot write immutable region probe result", error); } }
     private void writeNbt(CompoundTag tag) { try (var output = Files.newOutputStream(directory.resolve("regions-checkpoint.nbt"), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) { NbtIo.writeCompressed(tag, output); } catch (IOException error) { throw new IllegalStateException("Cannot write region checkpoint evidence", error); } }
 

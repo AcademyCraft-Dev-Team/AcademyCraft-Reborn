@@ -121,6 +121,12 @@ public final class NativeStructureQueries {
 
     public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
                                                   Vec3 trustedWorldTo, StructureHit proposed) {
+        return validate(host, trustedWorldFrom, trustedWorldTo, proposed, ClipContext.Block.OUTLINE);
+    }
+
+    public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
+                                                  Vec3 trustedWorldTo, StructureHit proposed,
+                                                  ClipContext.Block shape) {
         validateRay(host, trustedWorldFrom, trustedWorldTo);
         Objects.requireNonNull(proposed, "proposed");
         var reference = proposed.block().structure();
@@ -128,7 +134,7 @@ public final class NativeStructureQueries {
             return StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
         }
         try {
-            return validateCurrent(host, trustedWorldFrom, trustedWorldTo, proposed);
+            return validateCurrent(host, trustedWorldFrom, trustedWorldTo, proposed, shape);
         } catch (IllegalStateException unavailable) {
             // An asynchronous storage failure can invalidate a handle between its accessors.
             return StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
@@ -137,6 +143,12 @@ public final class NativeStructureQueries {
 
     private static StructureHitValidation validateCurrent(ServerLevel host, Vec3 trustedWorldFrom,
                                                           Vec3 trustedWorldTo, StructureHit proposed) {
+        return validateCurrent(host, trustedWorldFrom, trustedWorldTo, proposed, ClipContext.Block.OUTLINE);
+    }
+
+    private static StructureHitValidation validateCurrent(ServerLevel host, Vec3 trustedWorldFrom,
+                                                          Vec3 trustedWorldTo, StructureHit proposed,
+                                                          ClipContext.Block shape) {
         var handle = NativeStructureRuntime.backend(host.getServer()).resolve(proposed.block().structure()).orElse(null);
         if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) {
             return StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
@@ -146,7 +158,7 @@ public final class NativeStructureQueries {
                 || !equivalentPose(handle.pose(), proposed.pose())) {
             return StructureHitValidation.failure(StructureHitValidation.Status.STALE);
         }
-        var current = raycast(host, trustedWorldFrom, trustedWorldTo).orElse(null);
+        var current = raycast(host, trustedWorldFrom, trustedWorldTo, shape).orElse(null);
         if (current == null || !current.block().equals(proposed.block())) {
             return StructureHitValidation.failure(StructureHitValidation.Status.NOT_VISIBLE);
         }

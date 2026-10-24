@@ -54,6 +54,13 @@ public interface StructurePhysicsRegion extends AutoCloseable {
     String diagnostic();
 
     /**
+     * Whether any member has a command or active lease, including a leased Force already
+     * consumed by physics. Attaching another member pauses the cohort, so adoption must not
+     * interrupt an occupied region. This observation neither acquires nor releases control.
+     */
+    boolean hasActiveControl();
+
+    /**
      * Attaches this exact active runtime handle, never an implicitly reloaded replacement.
      * The structure must belong to this host and independent backend and fit the region's
      * audited geometry/resource limits. Geometry is checked on the next server tick;

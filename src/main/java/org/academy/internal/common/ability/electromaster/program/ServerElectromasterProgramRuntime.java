@@ -27,7 +27,10 @@ import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
+import org.academy.internal.common.ability.program.ProgramStructureExtraction;
 import org.academy.api.common.structure.StructureSpaces;
+import org.academy.api.common.structure.StructureTransactions;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
@@ -37,12 +40,16 @@ import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.ability.electromaster.skills.lv3.CurrentRecharge;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.ProgramStructureCaptureMonitor;
 import org.academy.internal.common.ability.program.StructureProgramActions;
+import org.academy.internal.common.ability.program.SubLevelProgramControl;
+import org.academy.internal.common.ability.program.ProgramOrientationControl;
 import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.util.EnergyChargeHelper;
 import org.academy.internal.common.world.damagesource.CtaFriendlyFireWhitelist;
 import org.jspecify.annotations.Nullable;
@@ -72,7 +79,11 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     private final UUID runtimeToken = UUID.randomUUID();
+    private final SubLevelProgramControl subLevelControls;
+    private final ProgramOrientationControl orientationControls;
     private @Nullable StructureRef pendingExtraction;
+    private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
+    private boolean pendingForceMagnetize;
     private long extractionDeadline;
     private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
     @Override
@@ -88,6 +99,8 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         this.player = Objects.requireNonNull(player, "player");
         this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
+        subLevelControls = new SubLevelProgramControl(player, runtimeToken, MAX_ACTION_RANGE);
+        orientationControls = new ProgramOrientationControl(player, MAX_ACTION_RANGE, this::validateOrientationControl);
     }
 
     @Override
@@ -266,13 +279,22 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             }
             pendingExtraction = MagneticStructureService.programSession(player)
                     .map(state -> state.reference()).orElse(null);
-            extractionDeadline = player.level().getGameTime() + 400;
+            captureMonitor.track(MagneticStructureService.pendingProgramCapture(player));
+            pendingForceMagnetize = forceMagnetize;
+            extractionDeadline = player.level().getGameTime() + (StructureCaptureExtractions.enabled() ? 800 : 400);
             if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
+        }
+        var captureFailure = captureMonitor.pollFailure(id -> StructureTransactions.poll(player.level().getServer(), id));
+        if (captureFailure.isPresent()) {
+            StructureCaptureExtractions.release(player, pendingExtraction);
+            pendingExtraction = null;
+            return StructureOperation.result(captureFailure.get());
         }
         var reference = pendingExtraction;
         var state = MagneticStructureService.programSession(player).orElse(null);
         if (state == null || !state.reference().equals(reference)
                 || player.level().getGameTime() > extractionDeadline) {
+            StructureCaptureExtractions.release(player, pendingExtraction);
             pendingExtraction = null;
             return StructureOperation.rejected("capture_session_ended");
         }
@@ -282,7 +304,18 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                         (ServerLevel) player.level(), reference).isEmpty()) {
             return StructureOperation.result(ProgramStructureOperationResult.pending("capture_pending"));
         }
+        var extraction = ProgramStructureExtraction.poll(player, reference);
+        if (extraction.status() == ProgramStructureOperationResult.Status.PENDING) {
+            return StructureOperation.result(extraction);
+        }
+        if (extraction.status() != ProgramStructureOperationResult.Status.COMPLETED) {
+            pendingExtraction = null;
+            return StructureOperation.result(extraction);
+        }
         pendingExtraction = null;
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            subLevelControls.recordMagneticCapture(reference, pendingForceMagnetize);
+        }
         return StructureOperation.structure(programReference(reference),
                 ProgramStructureOperationResult.completed("committed", reference));
     }
@@ -291,6 +324,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_CONTROL_COST * costMultiplier,
+                    () -> controlSubLevelStructure(structure),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> MagneticStructureService.programControl(
@@ -318,6 +357,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_MOVE_COST * costMultiplier,
+                    () -> moveSubLevelStructure(control, target, anchor, seconds),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var destination = resolveMoveTarget(control, target, anchor);
         if (destination == null) return StructureOperation.rejected("move_target_unavailable");
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
@@ -335,9 +380,38 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     @Override
     public StructureOperation rotateStructure(ProgramStructureControl control,
                                               @Nullable ProgramStructurePose pose) {
-        var rejection = validateControl(control);
-        if (rejection != null) return StructureOperation.rejected(rejection);
-        return StructureOperation.unavailable("finite_torque_control_unavailable");
+        return StructureOperation.result(rotateOrientation(control, pose).result());
+    }
+
+    @Override
+    public Operation rotateOrientation(ProgramStructureControl control, @Nullable ProgramStructurePose pose) {
+        requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+        return orientationControls.rotate(control, pose, Skills.MAGNET_MANIPULATION.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation resetOrientation(ProgramStructureControl control, ResetRequest request) {
+        requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+        return orientationControls.reset(control, request, Skills.MAGNET_MANIPULATION.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation spinStructure(ProgramStructureControl control, SpinRequest request) {
+        requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+        return orientationControls.spin(control, request, Skills.MAGNET_MANIPULATION.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
+        requireCasterReady(Skills.MAGNET_MANIPULATION.get());
+        return orientationControls.status(control, operationId);
+    }
+
+    @Override
+    public void closeOrientationCommands() {
+        orientationControls.close();
+        if (pendingExtraction != null) StructureCaptureExtractions.release(player, pendingExtraction);
+        pendingExtraction = null;
     }
 
     @Override
@@ -347,6 +421,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
+                    STRUCTURE_LAUNCH_COST * costMultiplier,
+                    () -> launchSubLevelStructure(control, direction, power),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var normalized = normalized(direction);
         var speedScale = ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);
         var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
@@ -361,6 +441,10 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation releaseStructure(ProgramStructureControl control) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        orientationControls.cancel(control);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureOperation.result(subLevelControls.release(control));
+        }
         var result = MagneticStructureService.programRelease(player, control.reference(), control.controlId());
         return StructureOperation.result(operationResult(result));
     }
@@ -368,7 +452,11 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     @Override
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
+        requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureOperation.result(subLevelControls.staticize(structure, target));
+        }
         var cells = MagneticStructureService.programSession(player)
                 .filter(session -> session.reference().equals(structure.reference()))
                 .map(MagneticStructureService.Session::capturedCells)
@@ -458,6 +546,32 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 return context::unregister;
             }
         };
+    }
+
+    private StructureOperation controlSubLevelStructure(ProgramStructureReference structure) {
+        if (!subLevelControls.hasMagneticParticipation(structure)) return StructureOperation.rejected("no_magnetic_participation");
+        var acquisition = subLevelControls.acquire(structure);
+        if (acquisition.control() == null) return StructureOperation.result(acquisition.result());
+        issuedControls.put(acquisition.control().controlId(), acquisition.control());
+        return StructureOperation.control(acquisition.control(), acquisition.result());
+    }
+
+    private StructureOperation moveSubLevelStructure(ProgramStructureControl control,
+                                                      @Nullable ProgramWorldPosition target,
+                                                      @Nullable ProgramStructureAnchor anchor,
+                                                      double seconds) {
+        return StructureOperation.result(subLevelControls.moveMagnetic(control, target, anchor, seconds));
+    }
+
+    private StructureOperation launchSubLevelStructure(ProgramStructureControl control,
+                                                       ProgramDirection direction, float power) {
+        if (!subLevelControls.hasMagneticParticipation(new ProgramStructureReference(
+                control.reference(), control.structureRuntimeId()))) {
+            return StructureOperation.rejected("no_magnetic_participation");
+        }
+        var speedScale = ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);
+        return StructureOperation.result(subLevelControls.launch(control, normalized(direction),
+                MagneticStructureService.launchSpeed(speedScale)));
     }
 
     @Override
@@ -565,6 +679,12 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             case REJECTED -> ProgramStructureOperationResult.rejected(result.detail());
             case UNAVAILABLE -> ProgramStructureOperationResult.unavailable(result.detail());
         };
+    }
+
+    private @Nullable String validateOrientationControl(ProgramStructureControl control) {
+        var rejection = validateControl(control);
+        if (rejection != null) return rejection;
+        return SubLevelStructureRefs.isSubLevel(control.reference()) ? subLevelControls.validate(control) : null;
     }
 
     private @Nullable String validateControl(ProgramStructureControl control) {

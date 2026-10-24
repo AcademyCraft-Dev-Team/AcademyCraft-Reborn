@@ -1,0 +1,26 @@
+{
+  "format": "academy-structure-upgrade-scaffold-v1",
+  "status": "UNVERIFIED",
+  "gameplay_enabled": false,
+  "runtime_configuration": false,
+  "live_services": {
+    "extraction": {"readiness": "EXPERIMENTAL", "gameplay_default": true},
+    "orientation": {"readiness": "EXPERIMENTAL", "gameplay_default": true},
+    "provenance": {"readiness": "EXPERIMENTAL", "gameplay_default": true},
+    "restoration": {"readiness": "EXPERIMENTAL", "gameplay_default": true,
+      "configuration": "academy-server.json:generic.structureRestoration",
+      "marked_only": true, "allow_offline_owners": true,
+      "rest_ticks": 100, "check_interval_ticks": 20, "candidates_per_tick": 4, "retry_ticks": 100}
+  },
+  "ports": ["extraction", "orientation", "provenance", "restoration", "damage", "impact_feed", "fracture"],
+  "native_provider_candidates": ["academy_rapier", "mps"],
+  "future_physics_kinds": ["rigid", "soft", "fluid"],
+  "planned_node_actions": ["structure/rotate", "structure/reset_orientation", "structure/spin"],
+  "trial_values_not_defaults": {
+    "launch_speed_blocks_per_second": [75, 90],
+    "rest_observation_ticks": 100,
+    "rest_poll_ticks": 20,
+    "maximum_fragments_per_impact": 8
+  },
+  "implementation_order": ["S0", "S1", "S2", "S3", "S4", "S5", "S6"]
+}

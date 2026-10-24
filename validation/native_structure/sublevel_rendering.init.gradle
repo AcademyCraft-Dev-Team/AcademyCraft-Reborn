@@ -1,0 +1,31 @@
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = new File(rootProject.projectDir, 'run/native-sublevel-client-smoke').canonicalFile
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelClientSmoke', 'true'
+            systemProperty 'academy.sublevel.clientCollision', 'true'
+            systemProperty 'academy.sublevel.clientBreakProbe', 'true'
+            systemProperty 'academy.sublevel.clientPlaceProbe', 'true'
+            systemProperty 'academy.sublevel.clientUseProbe', 'true'
+            systemProperty 'academy.sublevel.clientChestProbe', 'true'
+            systemProperty 'academy.sublevel.carryProbe', 'true'
+            systemProperty 'academy.sublevel.launchProbe', 'true'
+            systemProperty 'academy.sublevel.programChainProbe', 'true'
+            systemProperty 'academy.sublevel.motionProbe', 'true'
+            systemProperty 'academy.sublevelProgramNodes', 'true'
+            systemProperty 'academy.sublevelDirectSkills', 'true'
+            systemProperty 'academy.sublevel.carryRotateProbe', 'true'
+            systemProperty 'academy.sublevel.clientHopperProbe', 'true'
+            systemProperty 'academy.sublevel.clientDispenserProbe', 'true'
+            systemProperty 'academy.sublevel.clientDropperProbe', 'true'
+            systemProperty 'academy.sublevel.clientFurnaceProbe', 'true'
+            systemProperty 'academy.sublevel.clientDoorProbe', 'true'
+            systemProperty 'academy.sublevel.clientTrappedChestProbe', 'true'
+            systemProperty 'academy.sublevel.clientBarrelProbe', 'true'
+            systemProperty 'academy.sublevel.fallProbe', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720',
+                    '--quickPlaySingleplayer', 'Native SubLevel Smoke')
+        }
+    }
+}

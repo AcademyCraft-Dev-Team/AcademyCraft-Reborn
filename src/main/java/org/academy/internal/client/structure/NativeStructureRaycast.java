@@ -45,8 +45,8 @@ public final class NativeStructureRaycast {
         // Entity section lookup is origin-based and can miss a rotated view extending far from its origin.
         // Only tracked projections are inspected; each cheap transformed-bounds rejection precedes DDA.
         for (var entity : level.entitiesForRendering()) {
-            if (!(entity instanceof NativeStructureProjectionEntity projection) || projection.isRemoved()
-                    || !projection.getBoundingBox().intersects(search)) continue;
+            if (!(entity instanceof NativeStructureProjectionEntity projection) || projection.isClientOnly()
+                    || projection.isRemoved() || !projection.getBoundingBox().intersects(search)) continue;
             var hit = raycast(projection, start, end, partialTick);
             if (hit.isPresent() && hit.get().distanceSquared() + 1.0e-8 < nearest) {
                 result = hit.get();
@@ -59,7 +59,8 @@ public final class NativeStructureRaycast {
     /** A single-view geometric query. Call pick when ordinary world/entity occlusion matters. */
     public static Optional<Hit> raycast(NativeStructureProjectionEntity projection,
                                       Vec3 worldStart, Vec3 worldEnd, float partialTick) {
-        if (projection.isRemoved() || projection.view().isEmpty() || !finite(worldStart) || !finite(worldEnd)
+        if (projection.isClientOnly() || projection.isRemoved() || projection.view().isEmpty()
+                || !finite(worldStart) || !finite(worldEnd)
                 || worldStart.distanceToSqr(worldEnd) > MAX_REACH * MAX_REACH) return Optional.empty();
         var pose = projection.renderPose(partialTick);
         var localStart = pose.worldToLocalPoint(worldStart);

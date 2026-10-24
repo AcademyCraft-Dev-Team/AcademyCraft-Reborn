@@ -21,8 +21,10 @@ class NativeStructureControlSlotTest {
     @Test
     void consumedLeasedForceStillExcludesEveryOtherWriterUntilExpiry() {
         var slot = new NativeStructureControlSlot();
+        assertFalse(slot.occupied());
         var ticket = slot.acquire(OWNER, FORCE, 2).orElseThrow();
         slot.consumeForce();
+        assertTrue(slot.occupied());
         assertTrue(slot.control().isEmpty());
         assertTrue(ticket.control().isEmpty());
         assertEquals(ACTIVE, ticket.state());
@@ -36,6 +38,7 @@ class NativeStructureControlSlotTest {
         assertEquals(ACTIVE, ticket.state());
         slot.tick();
         assertTerminal(ticket, EXPIRED);
+        assertFalse(slot.occupied());
         assertTrue(slot.acquire(COMPETITOR, ANCHOR, 1).isPresent());
     }
 

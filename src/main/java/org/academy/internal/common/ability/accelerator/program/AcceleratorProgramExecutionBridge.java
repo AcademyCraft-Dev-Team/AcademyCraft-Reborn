@@ -271,13 +271,12 @@ public final class AcceleratorProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::reset);
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_SPIN,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::spin);
         put(result, AcceleratorProgramNodeIds.STRUCTURE_ROTATE,
-                (context, _, inputs) -> structureResult(
-                        runtime(context).rotateStructure(
-                                structureControl(inputs),
-                                optionalStructurePose(inputs, "pose")),
-                        false,
-                        false));
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::rotate);
         put(result, AcceleratorProgramNodeIds.STRUCTURE_LAUNCH,
                 (ProgramVmContext context,
                  AcceleratorProgramNodeCatalog.StrengthConfiguration configuration,
@@ -315,9 +314,7 @@ public final class AcceleratorProgramExecutionBridge {
         if (result.status() != ProgramStructureOperationResult.Status.COMPLETED
                 && result.status() != ProgramStructureOperationResult.Status.PENDING) {
             throw new ProgramActionFailure(
-                    result.status() == ProgramStructureOperationResult.Status.UNAVAILABLE
-                            ? ProgramVmDiagnostic.ACTION_UNAVAILABLE
-                            : ProgramVmDiagnostic.ACTION_REJECTED,
+                    ProgramVmDiagnostic.structureFailure(result),
                     statusDetail(result));
         }
         if (result.status() == ProgramStructureOperationResult.Status.COMPLETED) {

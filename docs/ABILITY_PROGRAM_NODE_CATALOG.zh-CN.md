@@ -4,12 +4,12 @@
 
 ## 1. 统计口径
 
-- 已注册的唯一节点类型：271 个。
-- 编辑器当前可见的唯一节点类型：206 个；被合并节点仍注册为隐藏兼容节点。
-- 共享节点：155 个，全部能力分类都可使用。
-- 入口节点：7 个分类手动入口、5 个共享自动入口；每个槽位严格限制为一个入口。Level 0 不再注册程序定义和入口。
-- 非心理系分类专属节点：39 个。
-- 心理掌握专属节点：入口 1 个、功能节点 55 个；其中 5 个旧精密操作别名已隐藏，但仍可导入和执行。
+- 已注册的唯一节点类型：305 个（按 `*ProgramNodeIds` 常量与集合域展开静态统计，精确注册数需运行注册表核对）。
+- 编辑器当前可见的唯一节点类型：240 个（同一静态口径：305 减去 34 个旧数值/运算兼容节点、12 个非心理系旧目标节点、2 个心理系旧目标节点、12 个旧心理过滤节点与 5 个旧心理别名节点）；被合并节点仍注册为隐藏兼容节点。
+- 共享节点：170 个（134 个 `CommonProgramNodeIds` 常量 + 4 种集合域 × 9 个操作共 36 个动态展开；按 `*ProgramNodeIds` 常量与集合域展开静态统计，精确注册数需运行注册表核对），全部能力分类都可使用。旧口径“155 个”已不成立。
+- 入口节点：7 个分类手动入口、6 个共享自动入口（含 2026-10 新增的 `flow/trigger/chat`）；每个槽位严格限制为一个入口。Level 0 不再注册程序定义和入口。
+- 非心理系分类专属节点：73 个（矢量操作 19、气流操纵 16、电气掌握 18、空间移动 6、未元物质 8、原子崩坏 6，均含隐藏兼容旧目标节点；按 `*ProgramNodeIds` 常量静态统计，精确注册数需运行注册表核对）。
+- 心理掌握专属节点：入口 1 个、功能节点 55 个；其中 5 个旧精密操作别名、12 个旧过滤节点以及 `target/caster`、`target/look_living` 已隐藏，但仍可导入和执行。
 - 每个程序最多 128 个节点、256 条边；每个服务端时间片燃料上限为 16385 步，挂起会话最长保留 72000 个逻辑 tick。
 - 共享查询与分类行动使用同一套服务端距离策略，查询集合最多返回 128 个结果：未识别的扩展分类默认 32 格；传送使、心理掌握 64 格；未元物质、电击使 48 格；原子崩坏、空力使 32 格；矢量操作 24 格。
 - 分类行动的默认强度均为 `1`。矢量操作的离散档位继续使用 `strength=0/1/2`；其他分类和动能冲击波使用连续 `power=0.00–2.00` 滑条。伤害按 `power` 线性缩放，CP 按 `power²` 缩放，因此 `power=1` 保持原技能伤害与消耗。
@@ -62,6 +62,7 @@
 | `academy:program/core/flow/trigger/melee` | — | 玩家完成一次近战攻击后触发。 | 不触发 |
 | `academy:program/core/flow/trigger/movement` | `condition=jump/sneak/sprint/elytra/swim` | 跳跃，或潜行、疾跑、鞘翅飞行、游泳状态发生切换时触发。 | 可触发 |
 | `academy:program/core/flow/trigger/health_threshold` | `mode=below/above`、`threshold>=0` | 生命值首次进入阈值触发区间时触发；离开区间后重新武装。 | 不触发 |
+| `academy:program/core/flow/trigger/chat` | `mode=any/equals/contains/starts_with/ends_with`、`keyword`、`ignore_case`、`sender=all/self/others` | 服务端收到一条聊天消息后，对每个在线玩家分别匹配消息文本与来源；命中即触发对应槽位程序。 | 不触发 |
 
 自动触发完全由服务端判定；自动循环不会逐次发送成功提示。为防止技能造成的伤害递归触发自身，同一玩家正在执行自动入口时不会重入。循环触发所在槽位按对应的 `Alt+1` 至 `Alt+0` 后，服务端切换并保存 `enabled`，随后向客户端同步新修订号并显示开启/关闭提示。
 
@@ -71,7 +72,7 @@
 
 **已实施**：Level 0 程序定义已移除；全部分类在能力达到 Level 5 后解锁精密操作，默认 GUI 键为 `\`，10 个槽位的默认施放键依次为 `Alt+1` 至 `Alt+9`、`Alt+0`；心理掌握沿用同一入口并转发到心理专属程序会话。旧 `=` 默认键会迁移为 `\`，但不覆盖玩家自定义键位；反射过滤网默认键仍为 `=`。统一 GUI/槽位键可在“设置 → 按键设置”中修改，未达到 Level 5 或当前能力不支持精密操作时不显示该组。
 
-## 3. 共享节点（155 个）
+## 3. 共享节点（170 个）
 
 共享节点 ID 前缀均为 `academy:program/core/`，归属为“所有分类”。
 
@@ -86,13 +87,14 @@
 | `value/integer` | 数值·隐藏兼容 | `value:I` | `— → value:I` | 旧 32 位整数常量，保留旧程序执行。 |
 | `value/big_integer` | 数值·隐藏兼容 | `value:BI`，字符串编码 | `— → value:BI` | 旧任意精度整数常量，保留旧程序执行。 |
 | `value/float` | 数值·隐藏兼容 | `value:N` | `— → value:N` | 旧有限浮点数常量，保留旧程序执行。 |
+| `value/random_number` | 数值 | `type=integer/big_integer/float`、`lower`、`upper` | `— → value:T` | 服务端随机取值：整数与大整数为两端闭区间，浮点为 `[lower, upper)`；同一次调用内该节点被多路读取时复用同一次抽样。 |
 
 ### 3.1.X 数值节点调整计划
 四个数值节点合并，可以在I界面中选择是哪种数值
 
 **已实施**：新增 `value/scalar`；原四节点从节点库隐藏但未注销，避免旧图失效。
 
-### 3.2 整数、大整数与浮点运算（32 个注册，2 个可见）
+### 3.2 整数、大整数与浮点运算（33 个注册，3 个可见）
 
 下表每行代表 3 个实际节点；将 `{integer|big_integer|float}` 分别展开为整数、大整数、浮点数。输入类型与展开的数值域一致。
 
@@ -101,6 +103,7 @@
 | `logic/numeric/arithmetic` | 数值运算 | `type=integer/big_integer/float`、`operator=add/subtract/multiply/divide/modulo` | `left:T, right:T → result:T` | 可见合并节点；类型与运算符由左右按键选择，输入输出端口随类型动态变化。整数运算保持溢出与零除检查，浮点结果必须有限。 |
 | `logic/{integer|big_integer|float}/{add|subtract|multiply|divide|modulo}` | 运算·隐藏兼容（15 个） | — | `left:T, right:T → result:T` | 旧分类型运算节点继续编译执行，新建图不再显示。 |
 | `logic/numeric/compare` | 数值比较 | `type=integer/big_integer/float`、`operator=equal/less/less_equal/greater/greater_equal` | `left:T, right:T → result:B` | 可见合并节点；类型与运算符由检查器选择，输入端口随类型动态变化。 |
+| `logic/numeric/convert` | 数值转换 | `source_type=integer/big_integer/float`、`target_type=integer/big_integer/float` | `value:S → result:T` | 可见合并节点；按源/目标类型动态改变端口。浮点转整数向零截断，窄化溢出与非有限浮点结果会被拒绝（见源码）。 |
 | `logic/{integer|big_integer|float}/{equal|less|less_equal|greater|greater_equal}` | 比较·隐藏兼容（15 个） | — | `left:T, right:T → result:B` | 旧比较节点继续编译执行，新建图不再显示。 |
 
 其中 `T` 分别为 `I`、`BI`、`N`。
@@ -123,6 +126,8 @@
 | `logic/world_position/equal` | 逻辑 | — | `left:WP, right:WP → result:B` | 判断维度和坐标数值完全相等。 |
 | `logic/block_position/equal` | 逻辑 | — | `left:BP, right:BP → result:B` | 判断是否为同维度同一方块。 |
 | `logic/direction/equal` | 逻辑 | — | `left:D, right:D → result:B` | 精确比较方向分量。 |
+| `logic/text/compare` | 逻辑 | `mode=equals/contains/starts_with/ends_with`、`ignore_case` | `left:TEXT, right:TEXT → result:B` | 按所选模式比较两段文本；`ignore_case` 开启时先按 `Locale.ROOT` 转小写再比较。 |
+| `logic/text/split` | 逻辑 | `mode=whitespace/line/sentence/delimiter`、`delimiter`、`fragment_index`、`trim`、`skip_empty` | `text:TEXT,[fragment_index:I] → text:TEXT, count:I, exists:B` | 按空白、换行、句末标点或自定义分隔符分割（自定义分隔符按字面量匹配，最多 64 个字符），输出 0 基片段与片段总数；序号越界时文本为空且 `exists=false`，输入超过 4096 个 UTF-16 代码单元时按 0 段处理。 |
 | `flow/branch` | 流程 | — | `flow:F, condition:B → true:F, false:F` | 根据条件选择流程出口。 |
 | `flow/break_loop` | 流程 | — | `flow:F → —` | 结束最近一层结构化集合循环，并从其 `done` 流程继续。 |
 | `flow/continue_loop` | 流程 | — | `flow:F → —` | 跳过最近一层结构化集合循环的当前项，继续下一项。 |
@@ -133,12 +138,19 @@
 | `flow/trigger/melee` | 流程入口 | — | `— → flow:F` | 近战攻击目标后自动触发。 |
 | `flow/trigger/movement` | 流程入口 | `condition` | `— → flow:F` | 指定运动事件发生时自动触发，也可手动触发。 |
 | `flow/trigger/health_threshold` | 流程入口 | `mode=below/above`、`threshold` | `— → flow:F` | 生命值首次高于或低于阈值时触发一次；回到阈值另一侧后可再次触发。 |
+| `flow/trigger/chat` | 流程入口 | `mode=any/equals/contains/starts_with/ends_with`、`keyword`、`ignore_case`、`sender=all/self/others` | `— → flow:F` | 服务端收到聊天消息后，按 `sender` 限定发言者是否本人，并按 `mode`/`keyword` 匹配文本；命中触发该槽位程序。触发消息可由 `query/chat_trigger_message` 读取。 |
 | `state/variable_get` | 逻辑 | `name`、`type` | `— → value:T` | 读取当前执行会话中的类型化变量。 |
 | `state/variable_set` | 逻辑 | `name`、`type` | `flow:F, value:T → flow:F` | 写入会话变量；变量使循环具备可变状态。 |
+| `state/shared_variable_get` | 逻辑 | `name`、`type=boolean/integer/big_integer/float/text` | `— → value:T, exists:B` | 读取当前能力分类持久化的共享变量；不存在或已存值类型与配置不符时输出该类型默认值且 `exists=false`。 |
+| `state/shared_variable_set` | 逻辑 | `name`、`type=boolean/integer/big_integer/float/text` | `flow:F, value:T → flow:F` | 写入当前分类的共享变量；写入随行动事务回滚，单值编码上限 256 码点。 |
+| `state/shared_variable_clear` | 逻辑 | `name` | `flow:F → flow:F` | 删除指定共享变量；不存在时为空操作，删除随行动事务回滚。 |
+| `state/shared_variable_clear_all` | 逻辑 | — | `flow:F → flow:F` | 清空当前分类的全部共享变量，并随行动事务回滚。 |
 
 变量支持 `B/I/BI/N/identifier/duration/V/D/WP/BP/E/LE/DS/WPS/BPS/ES/LES`，变量名长度为 1–64。
 
-### 3.4 目标与方向：向量、世界坐标、方块坐标与方向节点（20 个）
+共享变量按能力分类持久化，仅支持 `B/I/BI/N/TEXT` 五种类型：名称 1–64 个码点且不得含控制字符，每个分类最多 64 个变量，单个值编码后最多 256 个码点。
+
+### 3.4 目标与方向：向量、世界坐标、方块坐标与方向节点（21 个）
 
 | ID 后缀 | 类别 | 配置 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
@@ -162,8 +174,9 @@
 | `spatial/vector_construct` | 目标与方向 | — | `x:N,y:N,z:N → vector:V` | 使用三个分量构造保留长度且允许为零的向量。 |
 | `spatial/vector_components` | 目标与方向 | — | `value:V → x:N,y:N,z:N` | 分解向量分量。 |
 | `spatial/vec3_operation` | 目标与方向 | `type=vector/direction/world_position`、`operator` | 动态端口 → `result:T/N/D` | 对向量、方向或世界坐标执行加、减、点乘、叉乘、标量缩放、求长度或归一化；端口类型随配置变化。 |
+| `spatial/text_to_vec3` | 目标与方向 | `type=vector/direction/world_position`、`mode=exact/extract`、`match_index` | `text:TEXT,[match_index:I],[reference:E] → result:T, success:B` | 解析整段文本或提取第 N 组合法坐标；`reference` 未连接时以施术者脚部位置与朝向为基准。世界坐标的 `~` 轴需要位置基准、`^` 轴需要朝向基准；失败时 `success=false` 且不输出结果。 |
 
-### 3.5 共享世界查询节点（16 个）
+### 3.5 共享世界查询节点（22 个）
 
 | ID 后缀 | 类别 | 输入 → 输出 | 效果 |
 |---|---|---|---|
@@ -174,6 +187,10 @@
 | `query/loop_index` | 目标 | `— → loop_index:BI` | 循环触发中返回从 0 开始的该槽位执行序号；其他入口返回 0。关闭/重新开启循环时重置。 |
 | `query/melee_target` | 目标 | `— → entity:E` | 仅在近战触发上下文中返回本次攻击目标。 |
 | `query/look_target` | 目标 | `— → entity:E` 或 `block:BP` | `target_type=entity/block`，返回服务端验证的施术者视线实体或方块坐标；输出端口随配置改变，未命中时不输出数据。 |
+| `query/block_normal` | 目标与方向 | `entity:E → normal:D` 或 `origin:WP,direction:D → normal:D` | `mode=view/position_direction`；view 从实体眼部沿视线、position_direction 沿输入方向各做 32 格射线，返回命中方块面的法线；未命中时不输出数据。 |
+| `query/block_volume` | 目标与方向 | `first:BP,second:BP → blocks:BPS` | 返回两角点围成的闭区间内全部方块坐标；两角点必须同维度，最多 32768 个位置。 |
+| `query/look_structure` | 目标 | `— → structure:SR` | 返回服务端验证的施术者视线结构引用；未命中时不输出数据。 |
+| `query/structure_motion` | 目标与方向 | `structure:SR → position:WP,velocity:V,angular_velocity:V,mass:N` | 读取结构质心的世界坐标、线速度、角速度与质量；结构未加载或已被替换时不输出数据。 |
 | `query/entity_position` | 目标与方向 | `entity:E → position:WP` | 读取同维度有效实体的当前位置。 |
 | `query/entity_look_direction` | 目标与方向 | `entity:E → direction:D` | 读取实体视线方向。 |
 | `query/entity_movement_direction` | 目标与方向 | `entity:E → direction:D` | 读取实体当前运动方向；静止时不输出。 |
@@ -183,6 +200,10 @@
 | `query/entities_around` | 目标与方向 | `center:WP,radius:N → entities:ES` | 收集坐标附近实体；半径受当前能力分类统一距离上限约束，结果最多 128。 |
 | `query/raycast_block` | 目标与方向 | `origin:WP,direction:D,range:N → block:BP` | 沿方向返回首个方块命中。 |
 | `query/raycast_entity` | 目标与方向 | `origin:WP,direction:D,range:N → entity:E` | 沿方向返回首个无遮挡实体命中。 |
+| `query/chat_read` | 目标 | `[distance:I],[start:I],[length:I] → text:TEXT,exists:B` | 读取服务端聊天记录：`distance=0` 为最近一条（0–31），`start`/`length` 按码点截取（0–256 / 1–256）；端口未连接时使用检查器配置，无记录时 `exists=false` 且文本为空。 |
+| `query/chat_trigger_message` | 目标 | `— → text:TEXT,exists:B` | 仅在聊天触发上下文中返回本次匹配到的消息全文；其他入口 `exists=false` 且文本为空。 |
+
+结构相关端口沿用公共 value type：`SR` 结构引用（`structure_reference`）、`SC` 结构控制令牌（`structure_control`）、`SQ` 结构操作结果（`structure_operation_result`）、`SA` 结构锚点（`structure_anchor`）、`SP` 结构姿态（`structure_pose`）；这些类型不属于 §1 的标量与坐标缩写。
 
 ### 3.5.X 共享世界查询节点（5 个）调整计划
 施术者，施术者视线目标应作为通用的节点
@@ -191,9 +212,9 @@
 
 受击来源、入站伤害量和近战目标现在写入不可变调用快照；即使程序先经过 `flow/wait`，恢复后仍读取原触发事件，而不会误读后续事件。`query/game_time` 则始终读取恢复时的当前世界游戏时间。
 
-### 3.6 共享实体过滤节点（13 个）
+### 3.6 共享过滤节点（15 个）
 
-完整 ID 前缀为 `academy:program/core/filter/entity/`，所有节点均为只读世界查询并输出去重且顺序稳定的实体集合。
+完整 ID 前缀为 `academy:program/core/filter/`（`filter/entity/*` 与 `filter/block/*`），所有节点均为只读世界查询并输出去重且顺序稳定的集合。
 
 | ID 后缀 | 配置 | 输入 → 输出 | 效果 |
 |---|---|---|---|
@@ -210,8 +231,10 @@
 | `filter/entity/max_health_at_most` | — | `entities:ES,health:N → entities:ES` | 保留最大生命值不高于输入数值的生物。 |
 | `filter/entity/has_target` | — | `entities:ES → entities:ES` | 保留当前存在攻击目标的生物。 |
 | `filter/entity/visible_from` | — | `entities:ES,observer:E → entities:ES` | 保留与观察者同维度且视线可见的实体。 |
+| `filter/entity/exact` | `selectors` | `entities:ES → entities:ES` | 按精确选择器保留实体：实体类型 ID、`#实体标签` 或实体显示名，以逗号、分号或换行分隔，去重后最多 64 个。 |
+| `filter/block/exact` | `selectors` | `blocks:BPS → blocks:BPS` | 按精确选择器保留方块坐标：方块 ID、`#方块标签` 或方块显示名；异维度与未加载方块不保留。 |
 
-### 3.7 集合节点（40 个）
+### 3.7 集合节点（42 个）
 
 集合域共有 4 种：
 
@@ -236,7 +259,7 @@
 | `get` | 集合 | `values:SET,index:I → value:ELEM` | 获取 1 基位置元素。 |
 | `foreach` | 集合/流程 | `flow:F,values:SET → body:F,done:F,value:ELEM,index:I` | 逐项执行循环体并输出 1 基位置；结束后从 `done` 继续，可用通用继续/中断节点局部控制。 |
 
-四种集合各提供一个服务端随机选择节点：
+四种集合各提供一个服务端随机选择节点，另有跨实体/坐标集合的距离排序节点：
 
 | ID 后缀 | 类别 | 输入 → 输出 | 效果 |
 |---|---|---|---|
@@ -245,6 +268,7 @@
 | `collection/world_position/random` | 集合 | `positions:WPS → position:WP` | 随机选取一个世界坐标；空集合不输出数据。 |
 | `collection/block_position/random` | 集合 | `blocks:BPS → block:BP` | 随机选取一个方块坐标；空集合不输出数据。 |
 | `collection/direction/random` | 集合 | `directions:DS → direction:D` | 随机选取一个方向；空集合不输出数据。 |
+| `collection/point/distance_sort` | 集合 | `values:SET, origin:WP → values:SET` | `type=entity/world_position/block_position`、`order=ascending/descending`；按元素（实体取当前位置、方块坐标取中心）到 `origin` 的距离稳定排序；跨维度元素会报错（见源码）。 |
 
 `foreach`、会话变量和可循环流程边共同构成当前图灵完备控制核心。
 
@@ -254,9 +278,9 @@
 |---|---|---|---|---|
 | `action/debug_output` | 行动 | `value_type`、`text`、`audience=self/all` | `flow:F,value:T → flow:F` | 将实体、集合、坐标、方向、向量及标量等格式化为单行聊天文本；`{value}` 替换输入数据，可选择仅自己或全体玩家可见。 |
 
-## 4. 矢量操作专属节点（12 个）
+## 4. 矢量操作专属节点（19 个）
 
-ID 前缀：`academy:program/accelerator/`。一般行动节点使用配置 `strength=0/1/2`，分别表示受控/标准/最大。`kinetic_shockwave` 改用连续 `power`，并具有 `destroy_blocks` 和 `radius` 配置。
+ID 前缀：`academy:program/accelerator/`。一般行动节点使用配置 `strength=0/1/2`，分别表示受控/标准/最大。`kinetic_shockwave` 改用连续 `power`，并具有 `destroy_blocks` 和 `radius` 配置。结构操作节点使用独立配置，见“结构操作节点”。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
@@ -273,6 +297,20 @@ ID 前缀：`academy:program/accelerator/`。一般行动节点使用配置 `str
 | `action/displace_entity` | 行动 | 矢量加速 | `flow:F,entity:E,destination:WP → flow:F` | 按目标方向驱动实体移动；沿途保留方块碰撞并可被阻挡，不再直接传送到目标坐标。 |
 | `action/displace_block` | 行动 | 动能附加 | `flow:F,block:BP,destination:BP → flow:F` | 将允许修改的方块实体化并无重力飞向空目标方块。 |
 
+### 结构操作节点
+
+七个结构节点共用 `flow:F` 输入与 `result:SQ, flow:F` 输出，能力归属均为“动能投掷”，端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5 说明。捕获分两阶段：首次执行发起内容捕获，`CAPTURING` 阶段节点原地重试（PENDING），提交后才输出结构引用；选区为空、超预算、权限不足或结构已被替换时以明确的 `result.detail` 拒绝。`rotate` 与 `staticize` 目前固定返回 `unavailable`。
+
+| ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
+|---|---|---|---|---|
+| `action/structure/extract` | 行动 | 动能投掷 | `flow:F, host:BP → structure:SR, result:SQ, flow:F` | `tier=0/1/2`（默认 `1`，选择捕获几何与质量预算）、`budget=0..256`（`0` 使用后端默认）；从宿主格捕获连通结构，提交后输出结构引用。CP 30。 |
+| `action/structure/control` | 行动 | 动能投掷 | `flow:F, structure:SR → control:SC, result:SQ, flow:F` | 取得该结构的一次性独占控制令牌；令牌绑定施术者、运行时与结构代次，不持久化，失效后不恢复权限。CP 10。 |
+| `action/structure/move` | 行动 | 动能投掷 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → result:SQ, flow:F` | `target` 与 `anchor` 至少连接一个；两者都连接时按锚点位移修正目标。`seconds` 未连接时使用配置 `duration_seconds=0.1..10`（默认 `1.0`）。CP 5。 |
+| `action/structure/rotate` | 行动 | 动能投掷 | `flow:F, control:SC, [pose:SP] → result:SQ, flow:F` | 请求目标姿态；当前返回 `unavailable`（`finite_torque_control_unavailable`），有限力矩姿态控制尚未实现。 |
+| `action/structure/launch` | 行动 | 动能投掷 | `flow:F, control:SC, direction:D → result:SQ, flow:F` | `strength=0/1/2` 映射发射速度倍率 `0.5/1.0/1.5`。CP 15。 |
+| `action/structure/release` | 行动 | 动能投掷 | `flow:F, control:SC → result:SQ, flow:F` | 幂等撤销本令牌下发的后续命令与持续力，保留结构、惯性与重力；不单独收取 CP。 |
+| `action/structure/staticize` | 行动 | 动能投掷 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 安全静态化预检：校验完整目标 footprint 的加载、权限、占用与可旋转方块状态；即使预检全部通过也返回 `safe_staticization_unavailable`，尚未写回方块。 |
+
 ### 矢量操作数值
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
@@ -287,9 +325,9 @@ ID 前缀：`academy:program/accelerator/`。一般行动节点使用配置 `str
 | 方块位移 | 位移上限 2，速度 0.65，CP 20 | 位移上限 4，速度 0.9，CP 40 | 位移上限 8，速度 1.15，CP 80 |
 | 偏转投射物 | — | 无档位；速度钳制 0.5–4.0，CP 为 `8 + 2 × 速度` | — |
 
-## 5. 气流操纵专属节点（9 个）
+## 5. 气流操纵专属节点（16 个）
 
-ID 前缀：`academy:program/aeromanip/`；行动配置为连续 `power=0.00–2.00`。
+ID 前缀：`academy:program/aeromanip/`；一般行动配置为连续 `power=0.00–2.00`。结构操作节点使用独立配置，见“结构操作节点”。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
@@ -302,6 +340,20 @@ ID 前缀：`academy:program/aeromanip/`；行动配置为连续 `power=0.00–2
 | `action/fire_jets` | 行动 | 高速射流 | `flow:F → flow:F` | 激活所有已布置喷口 `duration=1..60` 秒；本轮结束时移除临时喷口。 |
 | `query/owned_jet_nozzle_count` | 查询 | 高速射流 | `center:WP,radius:N,[direction:D] → count:I` | 统计中心附近属于施术者的外置方块喷口；连接方向时只计入与方向夹角不超过 45° 的喷口。 |
 | `action/launch_block_structure` | 行动 | 高速射流 | `flow:F,block:BP,direction:D → flow:F` | 方块必须安装施术者的喷口；以该方块为外表面中心、沿推动方向向内一格为球心，选取 `radius=2..8` 的球形区域。最小范围完整包含向内的 3×3×3 区域，随后沿喷口反向递归裁剪紧邻受阻部分，再原子化捕获并按质量推动。输入方向用于选择反向推力与之相符的喷口；另可配置 `power=0.00..2.00`、`duration=1..60` 秒。`restore_when_settled` 仅保留配置兼容，结构静止后始终结算为方块或掉落物。 |
+
+### 结构操作节点
+
+七个结构节点共用 `flow:F` 输入与 `result:SQ, flow:F` 输出，能力归属均为“高速射流”，端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5 说明。捕获同样分两阶段（PENDING 原地重试），捕获宿主必须解析到施术者拥有的外置方块喷口；选区为空、超预算、权限不足或结构已被替换时以明确的 `result.detail` 拒绝。`rotate` 与 `staticize` 目前固定返回 `unavailable`。
+
+| ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
+|---|---|---|---|---|
+| `action/structure/extract` | 行动 | 高速射流 | `flow:F, host:BP → structure:SR, result:SQ, flow:F` | `radius=2..8`（默认 `2`）、`budget=0..256`（`0` 使用后端默认）；从喷口宿主格捕获球形连通结构，喷口支撑格必须落入捕获结果。CP 30。 |
+| `action/structure/control` | 行动 | 高速射流 | `flow:F, structure:SR → control:SC, result:SQ, flow:F` | 取得该结构的一次性独占控制令牌；令牌绑定施术者、运行时与结构代次，不持久化，失效后不恢复权限。CP 10。 |
+| `action/structure/move` | 行动 | 高速射流 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → result:SQ, flow:F` | `target` 为世界坐标目标，`anchor` 为结构局部作用点，两者都可留空（留空时沿用当前喷口驱动）；目标须在移动上限内。`seconds` 未连接时使用配置 `duration_seconds=0.1..10`（默认 `1.0`）。CP 5。 |
+| `action/structure/rotate` | 行动 | 高速射流 | `flow:F, control:SC, [pose:SP] → result:SQ, flow:F` | 请求目标姿态；当前返回 `unavailable`（`finite_torque_control_unavailable`），有限力矩姿态控制尚未实现。 |
+| `action/structure/launch` | 行动 | 高速射流 | `flow:F, control:SC, direction:D → result:SQ, flow:F` | `power=0.00..2.00` 控制发射强度，`duration_seconds=0.1..60`（默认 `8.0`）控制有界发射窗口；`restore_when_settled` 仅保留旧配置回读兼容，不会在结构静止后恢复方块。CP 15。 |
+| `action/structure/release` | 行动 | 高速射流 | `flow:F, control:SC → result:SQ, flow:F` | 幂等撤销本令牌下发的后续命令与持续力，保留结构、惯性与重力；不单独收取 CP。 |
+| `action/structure/staticize` | 行动 | 高速射流 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 安全静态化预检：校验完整目标 footprint 的加载、权限、占用与可旋转方块状态；即使预检全部通过也返回 `safe_staticization_unavailable`，尚未写回方块。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
@@ -337,9 +389,9 @@ ID 前缀：`academy:program/darkmatter/`；行动配置为连续 `power=0.00–
 
 每只甲虫额外占用 20 基础维护 CP。
 
-## 7. 电气掌握专属节点（11 个）
+## 7. 电气掌握专属节点（18 个）
 
-ID 前缀：`academy:program/electromaster/`；行动配置为连续 `power=0.00–2.00`。
+ID 前缀：`academy:program/electromaster/`；一般行动配置为连续 `power=0.00–2.00`。结构操作节点使用独立配置，见“结构操作节点”。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
@@ -354,6 +406,20 @@ ID 前缀：`academy:program/electromaster/`；行动配置为连续 `power=0.00
 | `action/chain_discharge` | 行动 | 电弧激发 | `flow:F,entities:ES → flow:F` | 按集合顺序对至多 `maximum_jumps=1..8` 个目标放电，每跳功率衰减 15%，最低保留 35%；每跳独立收费和校验。 |
 | `action/current_recharge` | 行动 | 电流充能 | `flow:F,entity:E → flow:F` 或 `flow:F,block:BP → flow:F` | `target_type=entity/block`；持续 10 tick 为目标输入 FE，方块无 FE 槽时改为持续红石充能。 |
 | `action/magnetic_move` | 行动 | 磁力操纵 | `flow:F,entity:E,destination:WP → flow:F` 或 `flow:F,block:BP,destination:WP → flow:F` | `target_type=entity/block`、`mode=pull/launch`。牵引会将目标加入持久清单，并逐 tick 把清单内全部目标移向坐标；方块模式启用 `force_magnetize` 后可额外消耗 24 CP 临时磁化原本非磁性的可编辑方块。发射会沿目标坐标射出、伤害轨迹实体并解除控制。 |
+
+### 结构操作节点
+
+七个结构节点共用 `flow:F` 输入与 `result:SQ, flow:F` 输出，能力归属均为“磁力操纵”，端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5 说明。捕获分两阶段（PENDING 原地重试），宿主格必须能被磁力服务识别；选区为空、超预算、权限不足或结构已被替换时以明确的 `result.detail` 拒绝。`rotate` 与 `staticize` 目前固定返回 `unavailable`。
+
+| ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
+|---|---|---|---|---|
+| `action/structure/extract` | 行动 | 磁力操纵 | `flow:F, host:BP → structure:SR, result:SQ, flow:F` | `budget=0..256`（`0` 使用后端默认）、`force_magnetize`（对非磁性可编辑方块额外收取 24 CP 并附加限时磁化覆盖）；从宿主格捕获磁性连通结构，提交后输出结构引用。基础 CP 30。 |
+| `action/structure/control` | 行动 | 磁力操纵 | `flow:F, structure:SR → control:SC, result:SQ, flow:F` | 取得该结构的一次性独占控制令牌；令牌绑定施术者、运行时与结构代次，不持久化，失效后不恢复权限。CP 10。 |
+| `action/structure/move` | 行动 | 磁力操纵 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → result:SQ, flow:F` | `target` 与 `anchor` 至少连接一个；两者都连接时按锚点位移修正目标。`seconds` 未连接时使用配置 `duration_seconds=0.1..10`（默认 `1.0`）。CP 5。 |
+| `action/structure/rotate` | 行动 | 磁力操纵 | `flow:F, control:SC, [pose:SP] → result:SQ, flow:F` | 请求目标姿态；当前返回 `unavailable`（`finite_torque_control_unavailable`），有限力矩姿态控制尚未实现。 |
+| `action/structure/launch` | 行动 | 磁力操纵 | `flow:F, control:SC, direction:D → result:SQ, flow:F` | `power=0.00..2.00` 映射发射速度倍率 `0.5/1.0/1.5`。CP 15。 |
+| `action/structure/release` | 行动 | 磁力操纵 | `flow:F, control:SC → result:SQ, flow:F` | 幂等撤销本令牌下发的后续命令与持续力（含本次磁场与磁化覆盖），保留结构、惯性与重力；不单独收取 CP。 |
+| `action/structure/staticize` | 行动 | 磁力操纵 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 安全静态化预检：校验完整目标 footprint 的加载、权限、占用与可旋转方块状态；即使预检全部通过也返回 `safe_staticization_unavailable`，尚未写回方块。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
@@ -382,9 +448,9 @@ ID 前缀：`academy:program/meltdowner/`；行动配置为连续 `power=0.00–
 | 定点采掘束 | 射程 12，视觉缩放 0.75，CP 0 | 射程 28，视觉缩放 1.0，CP 20 | 射程 48，视觉缩放 1.25，CP 80 |
 | 原子喷射 | 长度 32，伤害倍率 0，CP 0 | 长度 32，伤害倍率 1，CP 20 | 长度 32，伤害倍率 2，CP 80 |
 
-## 9. 空间移动专属节点（5 个）
+## 9. 空间移动专属节点（6 个）
 
-ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.00`。
+ID 前缀：`academy:program/teleport/`；一般行动配置为连续 `power=0.00–2.00`。`action/block_item_teleport` 例外，只使用 `mode=place/collect`。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
@@ -393,6 +459,7 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 | `logic/space_safety` | 逻辑 | 空间移动通用 | `entity:E,position:WP → result:B` | 精确检测实体包围盒放置到世界坐标后是否位于世界边界内且无碰撞或挤压。 |
 | `action/self_teleport` | 行动 | 自身传送 | `flow:F,destination:WP → flow:F` | “安全传送”；将施术者安全传送至任意距离、任意可用维度中的无碰撞目标，目标区块会按需加载。ID 为兼容旧图保持不变。 |
 | `action/entity_teleport` | 行动 | 快速定位传送 | `flow:F,entity:E,destination:CD,[direction:D] → flow:F` 或 `flow:F,block:BP,destination:CD,[direction:D] → flow:F` | “目标传送”；实体目标允许为施术者且允许进入方块内部；方块目标可覆盖可破坏方块；`target_type=entity/block` 切换来源端口，可选方向同步目标朝向。CP 按实际移动距离分段：≤16 格 ×0.25、≤32 格 ×0.5、>32 格 ×1。ID 为兼容旧图保持不变。 |
+| `action/block_item_teleport` | 行动 | 自身传送 | `flow:F,position:BP,[slot:I] → flow:F`（`place`）或 `flow:F,position:BP → flow:F`（`collect`） | `mode=place/collect`。place 把快捷栏 `slot`（`0` 为当前选中槽，`1–9` 为固定槽）中的一件物品传送进目标格：方块物品放置为方块、其他物品掉落为掉落物，原方块按掉落结算，格内实体受到按方块硬度与 CP 上限换算的伤害；collect 破坏目标方块，并把其掉落物与格内掉落物收进背包。place 的 CP 为 `10 + 伤害×0.1`，collect 固定 10 CP；两者都要求目标格已加载、在行动距离内且可编辑，并按事务回滚。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
@@ -407,7 +474,7 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 
 | 参数 | 合法值 | 默认值 |
 |---|---|---|
-| `RANGE` | 1–32 格 | 32 |
+| `RANGE` | 1–64 格（分类查询域上限 64） | 64 |
 | `COUNT` | 整数 1–8 | 4 |
 | `CAPABILITY` | 整数 0–6 | 0 |
 | `SORT_DIRECTION` | 0 近到远；1 远到近 | 0 |
@@ -515,10 +582,10 @@ ID 前缀：`academy:program/teleport/`；行动配置为连续 `power=0.00–2.
 
 ## 11. 统一调控时应优先处理的问题
 
-1. **能力枚举本地化错位**：`ControlCapability` 有 7 项，但心理参数文本只有 0–5；代码 5 是“直接控制”，当前 UI 显示成“守卫控制”，代码 6 没有文本。
+1. **能力枚举本地化错位（已修复，2026-10）**：`ControlCapability` 有 7 项；中英文 `precision_operation.value.capability.5/6` 现分别为“直接控制/守卫控制”（`Direct control`/`Guard control`），与枚举一致。
 2. **行动强度语义有两套**：矢量操作一般节点使用离散 `strength`，其余分类与动能冲击波使用连续 `power`；前者选档，后者按线性伤害和平方 CP 规则缩放。
 3. **基础数值仍分散**：连续 `power` 的缩放公式已集中到 `ProgramPowerScale`，但射程、速度和标准 CP 仍由各 `Server*ProgramRuntime` 提供，尚不能通过一个配置面统一调整。
-4. **重复目标节点已隐藏兼容**：各分类旧 `caster` 和 `look_target` 仍在注册表中供旧图解码，但节点库只显示共享版本；删除旧 ID 前仍需要正式迁移。
+4. **重复目标与旧过滤节点已隐藏兼容**：各分类旧 `target/caster`、`target/look_target` 与心理系 `target/look_living` 仍在注册表中供旧图解码，但节点库只显示共享版本；心理系另有 12 个旧过滤节点（`filter/alive`、`filter/distance`、`filter/allies`、`filter/enemies`、`filter/targeted_by`、`filter/hostile_to`、`filter/last_damaged_by`、`filter/entity_type`、`filter/health`、`filter/health_below`、`filter/has_target`、`filter/visible_from`）由 `ProgramEditorNodeCatalog.replacedByCommonFilter` 隐藏。删除旧 ID 前仍需要正式迁移。
 5. **入口 ID 不一致**：心理系为 `academy:program/entry/on_cast`，其他分类为 `academy:program/<category>/entry/on_cast`。
 6. **隐藏兼容节点仍属于注册表**：心理系的 `entity_to_set`、`union`、`intersection`、`subtract`、`entity_position` 不在节点库显示，但旧程序仍可使用，调整或删除时必须提供迁移。
 7. **端口类型宽于实际要求**：多项行动端口声明为通用 `E`，运行时才限制为生物、弹射物、磁性实体或可移动实体，容易产生“连线合法、执行失败”。应考虑增加显式生物/投射物/磁性目标转换或过滤节点。

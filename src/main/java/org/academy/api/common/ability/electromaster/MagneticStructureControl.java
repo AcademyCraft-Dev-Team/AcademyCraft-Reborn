@@ -3,6 +3,9 @@ package org.academy.api.common.ability.electromaster;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.LegacyMotionUnits;
 import org.academy.api.common.structure.StructurePhysicsControl;
+import org.academy.api.common.structure.StructurePhysicsControls;
+import org.academy.api.common.structure.StructureMotionState;
+import org.academy.api.common.structure.StructureDynamics;
 
 /**
  * Shared magnetic-pull budgets for skills, precision programs and non-player ability actors.
@@ -69,6 +72,29 @@ public final class MagneticStructureControl {
         if (length > limit) force = force.scale(limit / length);
         var bounded = Math.clamp(participation, 0.0, 1.0);
         return bounded >= 1.0 ? force : force.scale(bounded);
+    }
+
+    /**
+     * Pulls a structure-local action point. Its velocity includes angular motion about the
+     * center of mass, so an off-center magnet cannot amplify its own rotation by mistaking
+     * a stationary center of mass for a stationary action point.
+     */
+    public static Vec3 pullForce(StructureMotionState motion, Vec3 localPoint, Vec3 target,
+                                 Vec3 fallbackDirection, double maxSpeedPerTick, double stopDistance,
+                                 double participation) {
+        return pullForce(StructurePhysicsControls.pointVelocity(localPoint, motion),
+                motion.pose().localToWorldPoint(localPoint), target, fallbackDirection,
+                maxSpeedPerTick, stopDistance, motion.mass(), participation);
+    }
+
+    /** Same local-point feedback for backend-neutral motion observations. */
+    public static Vec3 pullForce(StructureDynamics.State motion, Vec3 localPoint, Vec3 target,
+                                 Vec3 fallbackDirection, double maxSpeedPerTick, double stopDistance,
+                                 double participation) {
+        var velocity = motion.pose().surfaceVelocity(localPoint, motion.localCenterOfMass(),
+                motion.linearVelocity(), motion.angularVelocity());
+        return pullForce(velocity, motion.pose().localToWorldPoint(localPoint), target, fallbackDirection,
+                maxSpeedPerTick, stopDistance, motion.mass(), participation);
     }
 
     private static void requireMass(double value) {

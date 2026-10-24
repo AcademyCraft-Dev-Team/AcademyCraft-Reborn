@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "status": "UNVERIFIED",
+  "mode": "SCAFFOLD_ONLY",
+  "source_world": "run/saves/test",
+  "run_world": null,
+  "commit_or_diff_digest": null,
+  "environment": {
+    "jbr": null,
+    "native_library_sha256": null,
+    "sable_version": null,
+    "hardware": null,
+    "render_distance": null,
+    "simulation_distance": null
+  },
+  "cases": [
+    {
+      "id": "PERF",
+      "marker": "[TODO: Agent B] PERF-RESOURCE",
+      "contract": "同机器与同场景测 local/Sable 的 warmup、重复样本、server/client p50/p95、GC、allocations、网络字节、重建次数；禁止用零值代替未采集指标",
+      "sample_scenarios": ["1x55", "1x81", "16x256", "64x256", "1x4096"],
+      "samples": [],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "CONTACT",
+      "marker": "[TODO: Agent B] CONTACT-RESOURCE",
+      "contract": "旋转薄板/楼梯/空心结构的包围盒空区可穿过；真实表面阻挡、移动平台携带、双端校正、多人延迟",
+      "evidence": [],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "INTERACT",
+      "marker": "[TODO: Agent B] INTERACT-RESOURCE",
+      "contract": "生存挖掘进度/中止/工具/战利品/经验；创造无掉落；重复包幂等；旋转放置、手持物扣除、双手、容器移动、保护事件",
+      "evidence": [],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "LIFT",
+      "marker": "[TODO: Agent B] LIFT-RESOURCE",
+      "contract": "选区档位 0/1/2 对应源格基准上移 3/5/7 格；到位后 200 server ticks；转向 H；程序会话隔离",
+      "expected_lift_blocks": [3, 5, 7],
+      "expected_hover_ticks": 200,
+      "evidence": [],
+      "status": "UNVERIFIED"
+    },
+    {
+      "id": "SOFT",
+      "marker": "[TODO: Agent B] SOFT-RESOURCE",
+      "contract": "扫掠实际形状触及的允许软块可破坏；权限/保护/硬度/BE/预算/掉落/缓存失效；禁止将扫掠AABB空区当命中",
+      "breakable_tag": "academy:structure_motion_breakable",
+      "protected_tag": "academy:structure_motion_protected",
+      "evidence": [],
+      "status": "UNVERIFIED"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import org.academy.api.common.structure.StructureHit;
 import org.academy.api.common.structure.StructureQueries;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.Optional;
 
 /** World-space aim points for skills, including rotated physical structures on either backend. */
@@ -26,7 +27,18 @@ public final class WorldBlockTargets {
      * A cast-time position, not a block address or a permission to edit blocks. In particular,
      * callers must not turn a structure surface point into a host-world block mutation.
      */
-    public record Target(Vec3 position, boolean hit) {}
+    public enum Source { NONE, TERRAIN, STRUCTURE }
+
+    public record Target(Vec3 position, boolean hit, Source source) {
+        public Target(Vec3 position, boolean hit) {
+            this(position, hit, hit ? Source.TERRAIN : Source.NONE);
+        }
+
+        public Target {
+            Objects.requireNonNull(position, "position");
+            Objects.requireNonNull(source, "source");
+        }
+    }
 
     public static Vec3 aimedPoint(Entity source, double range) {
         var from = source.getEyePosition();
@@ -49,7 +61,7 @@ public final class WorldBlockTargets {
         requireFinite(from);
         requireFinite(to);
         double length = from.distanceTo(to);
-        if (length < 1.0E-6) return new Target(to, false);
+        if (length < 1.0E-6) return new Target(to, false, Source.NONE);
         if (!Double.isFinite(length) || length > 4096) throw new IllegalArgumentException("Skill ray exceeds 4096 blocks");
         int segments = (int) Math.ceil(length / 255.0);
         var terrain = new HostBlocks(host);
@@ -72,16 +84,18 @@ public final class WorldBlockTargets {
                     structure.isEmpty() ? null : structure.get().worldPoint());
             if (result.hit()) return result;
         }
-        return new Target(to, false);
+        return new Target(to, false, Source.NONE);
     }
 
     static Target nearest(Vec3 from, Vec3 to, @Nullable Vec3 terrain, @Nullable Vec3 structure) {
         Vec3 nearest = onSegment(from, to, terrain) ? terrain : null;
+        var source = nearest == null ? Source.NONE : Source.TERRAIN;
         if (onSegment(from, to, structure)
                 && (nearest == null || from.distanceToSqr(structure) < from.distanceToSqr(nearest) - 1.0E-7)) {
             nearest = structure;
+            source = Source.STRUCTURE;
         }
-        return new Target(nearest == null ? to : nearest, nearest != null);
+        return new Target(nearest == null ? to : nearest, nearest != null, source);
     }
 
     private static boolean onSegment(Vec3 from, Vec3 to, @Nullable Vec3 point) {

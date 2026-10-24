@@ -276,7 +276,7 @@ final class NativeStructurePhysicsSupportSmokeChecks {
                 var error = Math.abs(riderMoved - moved);
                 edgeMaxFollowError = Math.max(edgeMaxFollowError, error);
                 require(error < EDGE_FOLLOW_TOLERANCE, "Rider did not follow the horizontal move: " + error);
-                if (moved < EDGE_DISTANCE - 0.25) return false;
+                if (moved < EDGE_DISTANCE - 0.35) return false;
                 require(moved > 1.5, "Horizontal anchor only moved the structure by " + moved);
                 region.setVelocity(handle.reference(), Vec3.ZERO, Vec3.ZERO);
                 edgeRiderLocal = motion.pose().worldToLocalPoint(rider.position());

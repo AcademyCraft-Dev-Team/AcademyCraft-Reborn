@@ -31,6 +31,36 @@ class VectorStructureServiceTest {
     }
 
     @Test
+    void liftBudgetRetainsTheSourceColumnCapInsteadOfTrappingItsLowerCell() {
+        var seed = BlockPos.ZERO;
+        var cap = seed.above(2);
+        var neighbor = seed.east();
+        var positions = List.of(seed, cap, neighbor, neighbor.below());
+        var cropped = VectorStructureService.cropToLiftBudget(positions, seed, 3);
+        assertEquals(List.of(seed, neighbor, cap), cropped);
+        assertEquals(cropped, VectorStructureService.cropToLiftBudget(positions.reversed(), seed, 3));
+        assertTrue(VectorStructureService.cropToLiftBudget(positions, seed, 1).isEmpty());
+    }
+
+    @Test
+    void liftBudgetDoesNotLeaveAnySelectedOverheadCellInTheSource() {
+        var seed = BlockPos.ZERO;
+        var positions = new ArrayList<BlockPos>();
+        for (int x = -4; x <= 4; x++) {
+            for (int y = -3; y <= 3; y++) positions.add(new BlockPos(x, y, 0));
+        }
+        var retained = VectorStructureService.cropToLiftBudget(positions, seed, 17);
+        assertTrue(retained.contains(seed));
+        assertTrue(retained.size() <= 17);
+        for (var position : retained) {
+            for (var above : positions) {
+                if (above.getX() == position.getX() && above.getZ() == position.getZ()
+                        && above.getY() > position.getY()) assertTrue(retained.contains(above));
+            }
+        }
+    }
+
+    @Test
     void regionBoundsCoverStructureAndLiftWithinHostLimits() {
         var positions = List.of(new BlockPos(10, 100, 20), new BlockPos(12, 100, 22));
         var limits = new AABB(-100, -64, -100, 100, 320, 100);

@@ -73,6 +73,7 @@ public final class NativePhysicsLibrary implements AutoCloseable {
         if (worlds.size() >= MAX_WORLDS) throw new IllegalStateException("Native physics world limit reached");
         var world = new NativePhysicsWorld(this, access, access.createWorld(gravity.array()), worldOrigin);
         worlds.add(world);
+        world.traceGravity(gravity);
         return world;
     }
 

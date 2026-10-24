@@ -294,7 +294,7 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
                     impactTick = flightTicks;
                 }
                 if (damageDrop >= 0 && firstImpactTick >= 0 && flightTicks == firstImpactTick + 2) {
-                    var moved = zombie.position().distanceToSqr(source.getX() + 11.5, source.getY() + 3.0,
+                    var moved = zombie.position().distanceToSqr(source.getX() + 11.5, source.getY() + 1.5,
                             source.getZ() + 1.5) > 0.04;
                     require(moved || zombie.getDeltaMovement().lengthSqr() > 0.01,
                             "Kinetic throw contact did not knock the target back");
@@ -367,7 +367,9 @@ final class NativeStructurePhysicsKineticThrowSmokeChecks implements AutoCloseab
         zombie.addEffect(new net.minecraft.world.effect.MobEffectInstance(
                 net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE, 20 * 600));
         zombie.setHealth(1000.0f);
-        zombie.setPos(source.getX() + 11.5, source.getY() + 3.0, source.getZ() + 1.5);
+        // Keep the target inside the projectile's side profile, not standing on its top face:
+        // a rider on the top is intentionally exempt from contact damage.
+        zombie.setPos(source.getX() + 11.5, source.getY() + 1.5, source.getZ() + 1.5);
         require(host.addFreshEntity(zombie), "Cannot register the kinetic throw target fixture");
         initialZombieHealth = zombie.getHealth();
         evidence.append("kinetic_target_health=").append(initialZombieHealth).append('\n');

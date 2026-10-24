@@ -8,6 +8,7 @@ public final class NativePhysicsBody implements AutoCloseable {
     final int boxCount;
     private final boolean ccd;
     boolean removed;
+    boolean simulationPaused;
 
     NativePhysicsBody(NativePhysicsWorld world, long handle, BodyType type, int boxCount, boolean ccd) {
         this.world = world;
@@ -17,6 +18,7 @@ public final class NativePhysicsBody implements AutoCloseable {
         this.ccd = ccd;
     }
 
+    /** While paused, velocity and sleeping describe the saved motion restored on resume. */
     public PhysicsBodyState state() { return world.state(this); }
     public PhysicsPose pose() { return state().pose(); }
     public PhysicsVector linearVelocity() { return state().linearVelocity(); }
@@ -33,6 +35,14 @@ public final class NativePhysicsBody implements AutoCloseable {
     public void applyImpulse(PhysicsVector impulse, PhysicsVector worldPoint) { world.impulse(this, impulse, worldPoint); }
     public void sleep() { world.sleep(this); }
     public void wake() { world.wake(this); }
+    /**
+     * Freezes a dynamic body as a collidable obstacle without replacing its handle or joints.
+     * Resume restores its saved velocity and sleeping state. Calls with the same flag are idempotent.
+     * Pause every member of an assembly before stepping; this method affects only this body.
+     * Velocity, impulse, sleep and wake commands are rejected while paused; explicit setPose remains allowed.
+     */
+    public void setSimulationPaused(boolean paused) { world.setSimulationPaused(this, paused); }
+    public boolean isSimulationPaused() { world.requireBody(this); return simulationPaused; }
 
     @Override
     public void close() { world.remove(this); }

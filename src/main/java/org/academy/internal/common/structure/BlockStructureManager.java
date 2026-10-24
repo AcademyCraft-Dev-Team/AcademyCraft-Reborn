@@ -285,13 +285,24 @@ public final class BlockStructureManager {
             Iterable<BlockPos> candidates,
             Direction movementDirection
     ) {
-        if (level == null || candidates == null || movementDirection == null) {
+        return cropImmediatelyBlocked(level, candidates, movementDirection, position -> false);
+    }
+
+    /** The optional pass-through policy only selects cells; it never grants or performs destruction. */
+    public static List<BlockPos> cropImmediatelyBlocked(
+            ServerLevel level,
+            Iterable<BlockPos> candidates,
+            Direction movementDirection,
+            Predicate<BlockPos> passThrough
+    ) {
+        if (level == null || candidates == null || movementDirection == null || passThrough == null) {
             throw new IllegalArgumentException(
                     "level, candidates, and movementDirection cannot be null");
         }
         return cropImmediatelyBlocked(candidates, movementDirection, position -> {
             if (!level.isInWorldBounds(position) || !level.isLoaded(position)) return true;
-            return !level.getBlockState(position).isAir();
+            return !level.getBlockState(position).getCollisionShape(level, position).isEmpty()
+                    && !passThrough.test(position);
         });
     }
 

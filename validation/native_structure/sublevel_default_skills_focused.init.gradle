@@ -1,0 +1,18 @@
+// Runs all direct-skill cases with production defaults; content/plot matrix results remain separate.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-default-focused')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || smokeDirectory.parentFile != rootProject.file('run').canonicalFile
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Default skills smoke must use an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelDefaultSkillsSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer',
+                    providers.gradleProperty('academySubLevelSmokeWorld').getOrElse('test'))
+        }
+    }
+}

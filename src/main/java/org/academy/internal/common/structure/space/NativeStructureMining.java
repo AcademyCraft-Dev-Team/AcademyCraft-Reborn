@@ -71,6 +71,8 @@ public final class NativeStructureMining {
                 var tool = player.getMainHandItem();
                 if (!NativeStructureMiningPolicy.canMine(before.state(), blockEntity)
                         || !NativeStructureMiningPolicy.canUseTool(tool)) return;
+                float hardness = before.state().getDestroySpeed(storage, position);
+                if (!Float.isFinite(hardness) || hardness < 0.0F && !player.hasInfiniteMaterials()) return;
                 var initial = new Ownership(player, before, blockEntity, tool);
                 outcome.toolBefore = initial.toolBefore;
                 outcome.tool = tool;
@@ -120,7 +122,9 @@ public final class NativeStructureMining {
                     outcome.writeAttempted = true;
                     boolean removed = adjusted.onDestroyedByPlayer(storage, position, player,
                             initial.toolBefore.copy(), harvest, storage.getFluidState(position));
-                    if (!removed || !storage.getBlockState(position).isAir()) {
+                    var replacement = storage.getBlockState(position);
+                    if (!removed || !replacement.isAir()
+                            && !(replacement.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock)) {
                         throw new IllegalStateException("Native mining removal did not produce its expected empty cell");
                     }
                     outcome.removed = true;

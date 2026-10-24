@@ -1,0 +1,72 @@
+{
+  "schema": "academy-lift-357-1",
+  "date": "2026-10-20",
+  "fixture": "ground 8x2x8 / 128 cells, dedicated server parity harness",
+  "method": "Sequential 3/5/7 lift using the live plan and control law: SubLevelKineticLiftProfile.planTarget, KineticStructureControl.settings, gravityCompensatedTarget, StructureDirectControl.Anchor. Each tier requires 200 consecutive ticks with |rise - height| <= 0.1.",
+  "massTierNote": "Control settings use the smallest tier whose mass budget admits the body; heights remain 3/5/7. Local mass 128 -> control tier 0; Sable mass 256 -> control tier 1.",
+  "runs": {
+    "local-ground-lift357-r22": {
+      "capture_call_ms": 157.3244,
+      "lift_status": "PASSED",
+      "hover_valid_ticks": 600,
+      "lift_p95_ms": 7.5642,
+      "tiers": [
+        {
+          "tier": 0,
+          "height": 3,
+          "reached_tick": 27,
+          "hover_ticks": 200,
+          "rise": 3.064378124999905
+        },
+        {
+          "tier": 1,
+          "height": 5,
+          "reached_tick": 247,
+          "hover_ticks": 200,
+          "rise": 5.064378124999905
+        },
+        {
+          "tier": 2,
+          "height": 7,
+          "reached_tick": 467,
+          "hover_ticks": 200,
+          "rise": 7.064378124999905
+        }
+      ]
+    },
+    "sable-ground-lift357-r23": {
+      "capture_call_ms": 121.7762,
+      "lift_status": "PASSED",
+      "hover_valid_ticks": 600,
+      "lift_p95_ms": 11.6785,
+      "tiers": [
+        {
+          "tier": 0,
+          "height": 3,
+          "reached_tick": 36,
+          "hover_ticks": 200,
+          "rise": 3.022796390563485
+        },
+        {
+          "tier": 1,
+          "height": 5,
+          "reached_tick": 263,
+          "hover_ticks": 200,
+          "rise": 5.022796390563485
+        },
+        {
+          "tier": 2,
+          "height": 7,
+          "reached_tick": 490,
+          "hover_ticks": 200,
+          "rise": 7.022796390563485
+        }
+      ]
+    }
+  },
+  "invalidSample": {
+    "run": "sable-ground-lift357-r21",
+    "reason": "Sable mass 256 at control tier 0 has maxForce 2000, below its weight; rise stayed ~0 and the probe hit its deadline. Not a control regression: the live Sable skill rejects tier 0 for that mass via sableLiftMassRejected. The probe now selects the mass-adequate control tier for settings."
+  },
+  "limitations": "Server-side parity harness only; no real H player input, camera, client rendering, network, or Sable live tier-0 skill (which the mass gate rejects). The local 3/5/7 live skill path still needs in-game acceptance."
+}

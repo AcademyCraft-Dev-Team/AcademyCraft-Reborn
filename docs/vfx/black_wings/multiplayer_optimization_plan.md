@@ -1,5 +1,7 @@
 # 黑翼多人性能与攻击播放修复方案
 
+> 历史方案：基线 08e63fbf，行号已漂移；LOD 预算与实现一致（VortexRenderBudget 120000 顶点 / 8 MiB）。
+
 状态：本方案的 A–C 核心优化已实施；结果、参数差异及尚未完成的实机验收见[实施结果](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/vfx/black_wings/multiplayer_optimization_result.md)。日期：2026-09-07。下文保留实施前的诊断与建议。
 
 排查基于 `08e63fbf6b5234e4b83accea8f6ce91ba72bcbb2` 的当前工作区，Minecraft 26.2.0 / NeoForge 26.2.0.70。
@@ -33,8 +35,8 @@
 | [CurveToMeshBuilder.java:32](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/api/client/render/vfxgraph/arc/CurveToMeshBuilder.java:32) | 每条曲线创建直接顶点缓冲、索引数组、环截面数组和切线运输临时对象 | 每帧分配量随曲线数增长，存在堆与直接内存回收压力 |
 | [VfxGraphRenderer.java:474](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/api/client/render/vfxgraph/render/VfxGraphRenderer.java:474) | 所有小网格再复制到新建的合并缓冲，逐顶点做世界/相机变换，再上传 VBO/IBO | 重复拷贝和上传；当前一次效果输出已合成一次 `drawIndexed`，不是每条曲线一次 draw call |
 | [EffectBudget.java:14](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/api/client/render/vfxgraph/runtime/EffectBudget.java:14) 与 [VfxGraphManager.java:161](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/api/client/render/vfxgraph/runtime/VfxGraphManager.java:161) | 预算只统计 ParticleBuffer；黑翼使用 ArcBuffer。管理器先模拟，再做普通剔除 | 粒子上限管不到黑翼曲线；也没有跨玩家的总顶点/上传量预算 |
-| [BlackWing.java:183](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/ability/accelerator/skills/lv5/BlackWing.java:183) | 每次有效攻击扫描本维度玩家，向 128 米内玩家发送事件 | 接收者没有结合实体追踪；多人密集时广播总量仍随攻击者×观察者增长 |
-| [WingFlightSupport.java:56](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/ability/accelerator/skills/lv5/WingFlightSupport.java:56) | 正常 20 tick/s 时每人每秒发送 20 个控制包；斜向输入可发 40 个；每个包都施加运动并回发速度 | 包频率与移动物理耦合。必须先改为服务端 tick 驱动，才能降频 |
+| [BlackWing.java:183](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/ability/accelerator/skills/lv5/wing/BlackWing.java:183) | 每次有效攻击扫描本维度玩家，向 128 米内玩家发送事件 | 接收者没有结合实体追踪；多人密集时广播总量仍随攻击者×观察者增长 |
+| [WingFlightSupport.java:56](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/ability/accelerator/skills/lv5/wing/WingFlightSupport.java:56) | 正常 20 tick/s 时每人每秒发送 20 个控制包；斜向输入可发 40 个；每个包都施加运动并回发速度 | 包频率与移动物理耦合。必须先改为服务端 tick 驱动，才能降频 |
 
 已经存在且应保留的正确处理：`ArcBuffer.removeGroup` 使用稳定压缩，避免左翼高光再次被核心覆盖；`WingFlightPose.sync` 已经只在姿态变化时同步；攻击目标已检查数量和有限数值；攻击招式已经只在服务端成功接受时轮换。它们不是需要重写的缺陷。
 
@@ -59,9 +61,9 @@
 
 由实际网格字节数推算，8 名玩家全部保持当前精度时，每帧数据量约 17.5–17.7 MiB，全部四翼时约 35.1–35.3 MiB。若每秒生成 60 帧，分别约 1.03 和 2.06 GiB/s。这里是代码要求提交的几何字节量估算，**不是网络流量，也不是实测 PCIe 带宽**，CPU 多人耗时也不能直接宣称按单人结果线性测得。
 
-攻击包则很小：[BlackWingAttackPacket.java:30](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/ability/accelerator/skills/lv5/BlackWingAttackPacket.java:30) 中普通攻击为实体 VarInt + 招式 VarInt + 8 字节 tick + 24 字节目标；四翼为 96 字节目标。以两字节实体 ID 计算，是 35 / 107 字节应用负载，未计协议封装、压缩、加密及传输头。五招轮换平均 49.4 字节/次，每人最大 1.25 次/秒；8 人均攻击且均收到全部事件时合计约 3.86 KiB/s 应用负载。该估算说明不应把压缩攻击包作为首要优化。
+攻击包则很小：[BlackWingAttackPacket.java:30](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/internal/common/ability/accelerator/skills/lv5/wing/BlackWingAttackPacket.java:30) 中普通攻击为实体 VarInt + 招式 VarInt + 8 字节 tick + 24 字节目标；四翼为 96 字节目标。以两字节实体 ID 计算，是 35 / 107 字节应用负载，未计协议封装、压缩、加密及传输头。五招轮换平均 49.4 字节/次，每人最大 1.25 次/秒；8 人均攻击且均收到全部事件时合计约 3.86 KiB/s 应用负载。该估算说明不应把压缩攻击包作为首要优化。
 
-原始结果：[multiplayer_baseline.json](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/vfx/black_wings/multiplayer_baseline.json)。临时探针、classpath、执行日志保存在 [build/black_wing_analysis](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/black_wing_analysis)，此目录被 Git 忽略，清理 build 会删除它。当前已成功执行 `blackWingAnalysisClasspath`，并编译运行探针；未以此替代后续完整构建或联机验收。
+原始结果：[multiplayer_baseline.json](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/vfx/black_wings/multiplayer_baseline.json)。临时探针、classpath、执行日志保存在 [build/black_wing_analysis](D:/mcmodtest/AcademyCraft-Reborn-26.2/build/black_wing_analysis)（构建产物已清理，需重跑）；此目录被 Git 忽略，清理 build 会删除它。当前已成功执行 `blackWingAnalysisClasspath`，并编译运行探针；未以此替代后续完整构建或联机验收。
 
 ## 4. 攻击事件与连续播放
 

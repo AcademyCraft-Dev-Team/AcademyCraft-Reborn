@@ -19,6 +19,14 @@ import org.academy.internal.common.structure.physics.NativeStructureTraction;
 import org.academy.internal.common.structure.space.NativeStructureManifest;
 import org.academy.internal.common.structure.space.NativeStructureQueries;
 import org.academy.internal.common.structure.transaction.CaptureTarget;
+import org.academy.internal.common.structure.transaction.NativeCaptureTarget;
+import org.academy.internal.common.structure.transaction.SubLevelCaptureTarget;
+import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.sublevel.SubLevelQueries;
+import org.academy.internal.common.sublevel.SubLevelDirectControl;
+import org.academy.internal.common.sublevel.SubLevelSkillSupport;
+import org.academy.internal.common.sublevel.SubLevelId;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -46,12 +54,17 @@ public final class StructureBackendRouter {
 
     /** This neutral boundary contains no optional mod types, including in generic signatures. */
     public interface Bridge {
+        default Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess() {
+            return Optional.empty();
+        }
         Optional<StructureHandle> resolve(MinecraftServer server, StructureRef reference);
         Optional<StructureDynamics.State> motion(ServerLevel host, StructureRef reference);
         Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to);
         Optional<StructureHit> raycast(ServerLevel host, Vec3 from, Vec3 to, net.minecraft.world.level.ClipContext.Block shape);
         boolean clearSightline(ServerLevel host, Vec3 from, Vec3 to);
         StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed);
+        StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed,
+                                        net.minecraft.world.level.ClipContext.Block shape);
         StructurePresentationStatus presentationStatus(MinecraftServer server, StructureRef reference);
         StructureTraction.Acquisition acquire(Entity actor, UUID owner, StructureHit proposed,
                 StructureTraction.Settings settings, BiPredicate<Entity, StructureHandle> permission);
@@ -86,6 +99,30 @@ public final class StructureBackendRouter {
 
     public static StructureBackendStatus status(MinecraftServer server) { return selection(server).status; }
 
+    /** Optional mod types stay behind the verified bridge. Local plots can coexist with Sable. */
+    public static Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess(
+            ServerLevel host, StructureRef reference) {
+        requireThread(host.getServer());
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return Optional.of(org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE);
+        }
+        if (!reference.backend().equals(SABLE_ID)) return Optional.empty();
+        var selected = selection(host.getServer());
+        return selected.bridge == null ? Optional.empty() : selected.bridge.orientationAccess();
+    }
+
+    public static java.util.List<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationBackends(
+            ServerLevel host) {
+        requireThread(host.getServer());
+        var result = new java.util.ArrayList<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess>();
+        if (SubLevelServer.runtime(host).isPresent()) {
+            result.add(org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE);
+        }
+        var selected = selection(host.getServer());
+        if (selected.bridge != null) selected.bridge.orientationAccess().ifPresent(result::add);
+        return java.util.List.copyOf(result);
+    }
+
     public static boolean nativeEnabled(MinecraftServer server) {
         return status(server).mode() == StructureBackendStatus.Mode.NATIVE;
     }
@@ -100,6 +137,20 @@ public final class StructureBackendRouter {
         return selected.bridge.captureTarget(server);
     }
 
+    /** New native physical captures use plots; existing native references retain their backend. */
+    public static Optional<CaptureTarget> captureTarget(ServerLevel host, boolean physical) {
+        Objects.requireNonNull(host, "host");
+        var server = host.getServer();
+        requireThread(server);
+        return switch (status(server).mode()) {
+            case NATIVE -> physical
+                    ? SubLevelServer.runtime(host).map(runtime -> new SubLevelCaptureTarget(server))
+                    : Optional.of(new NativeCaptureTarget(server));
+            case SABLE -> captureTarget(server);
+            case MIGRATION_REQUIRED, INCOMPATIBLE -> Optional.empty();
+        };
+    }
+
     public static StructureBackend backend(MinecraftServer server) {
         var selected = selection(server);
         return selected.status.mode() == StructureBackendStatus.Mode.NATIVE
@@ -108,6 +159,7 @@ public final class StructureBackendRouter {
 
     public static Optional<StructureHandle> resolve(MinecraftServer server, StructureRef reference) {
         Objects.requireNonNull(reference, "reference");
+        if (SubLevelStructureRefs.isSubLevel(reference)) return SubLevelQueries.resolve(server, reference);
         return backend(server).resolve(reference);
     }
 
@@ -117,6 +169,7 @@ public final class StructureBackendRouter {
         requireThread(host.getServer());
         if (host.getServer().getLevel(host.dimension()) != host
                 || !host.dimension().identifier().equals(reference.dimension())) return Optional.empty();
+        if (SubLevelStructureRefs.isSubLevel(reference)) return SubLevelQueries.motion(host, reference);
         var selected = selection(host.getServer());
         if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
             return selected.bridge.motion(host, reference);
@@ -129,6 +182,10 @@ public final class StructureBackendRouter {
 
     public static StructurePresentationStatus presentationStatus(MinecraftServer server, StructureRef reference) {
         Objects.requireNonNull(reference, "reference");
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return SubLevelQueries.resolve(server, reference).isPresent()
+                    ? StructurePresentationStatus.VISIBLE : StructurePresentationStatus.NOT_ACTIVE;
+        }
         var selected = selection(server);
         if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
             return selected.bridge.presentationStatus(server, reference);
@@ -147,19 +204,36 @@ public final class StructureBackendRouter {
         validateRay(host, from, to);
         var selected = selection(host.getServer());
         if (selected.bridge != null) return selected.bridge.raycast(host, from, to, shape);
-        return selected.status.mode() == StructureBackendStatus.Mode.NATIVE
-                ? NativeStructureQueries.raycast(host, from, to, shape) : Optional.empty();
+        if (selected.status.mode() != StructureBackendStatus.Mode.NATIVE) return Optional.empty();
+        var legacy = NativeStructureQueries.raycast(host, from, to, shape);
+        var subLevel = SubLevelQueries.raycast(host, from, to, shape);
+        return subLevel.isPresent() && (legacy.isEmpty()
+                || from.distanceToSqr(subLevel.get().worldPoint()) < from.distanceToSqr(legacy.get().worldPoint()))
+                ? subLevel : legacy;
     }
 
     public static StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed) {
+        return validate(host, from, to, proposed, net.minecraft.world.level.ClipContext.Block.OUTLINE);
+    }
+
+    public static StructureHitValidation validate(ServerLevel host, Vec3 from, Vec3 to, StructureHit proposed,
+                                                   net.minecraft.world.level.ClipContext.Block shape) {
         validateRay(host, from, to);
         Objects.requireNonNull(proposed, "proposed");
+        Objects.requireNonNull(shape, "shape");
+        if (SubLevelStructureRefs.isSubLevel(proposed.block().structure())) {
+            return SubLevelQueries.validate(host, from, to, proposed, shape);
+        }
         var selected = selection(host.getServer());
         if (selected.bridge != null && SABLE_ID.equals(proposed.block().structure().backend())) {
-            return selected.bridge.validate(host, from, to, proposed);
+            return selected.bridge.validate(host, from, to, proposed, shape);
+        }
+        var visible = raycast(host, from, to, shape);
+        if (visible.isPresent() && !visible.get().block().structure().equals(proposed.block().structure())) {
+            return StructureHitValidation.failure(StructureHitValidation.Status.NOT_VISIBLE);
         }
         return selected.status.mode() == StructureBackendStatus.Mode.NATIVE
-                ? NativeStructureQueries.validate(host, from, to, proposed)
+                ? NativeStructureQueries.validate(host, from, to, proposed, shape)
                 : StructureHitValidation.failure(StructureHitValidation.Status.NOT_AVAILABLE);
     }
 
@@ -168,7 +242,8 @@ public final class StructureBackendRouter {
         var selected = selection(host.getServer());
         if (selected.bridge != null) return selected.bridge.clearSightline(host, from, to);
         return selected.status.mode() == StructureBackendStatus.Mode.NATIVE
-                && NativeStructureQueries.clearSightline(host, from, to);
+                && NativeStructureQueries.clearSightline(host, from, to)
+                && SubLevelQueries.raycast(host, from, to, net.minecraft.world.level.ClipContext.Block.OUTLINE).isEmpty();
     }
 
     public static StructureTraction.Acquisition acquire(Entity actor, UUID owner, StructureHit proposed,
@@ -179,6 +254,9 @@ public final class StructureBackendRouter {
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(permission, "permission");
         if (!(actor.level() instanceof ServerLevel host)) return unavailable();
+        if (SubLevelStructureRefs.isSubLevel(proposed.block().structure())) {
+            return org.academy.internal.common.sublevel.SubLevelTraction.acquire(actor, owner, proposed, settings, permission);
+        }
         var selected = selection(host.getServer());
         if (selected.bridge != null && SABLE_ID.equals(proposed.block().structure().backend())) {
             return selected.bridge.acquire(actor, owner, proposed, settings, permission);
@@ -190,6 +268,7 @@ public final class StructureBackendRouter {
     /** Called after ordinary chunk mutations. Never initializes a backend from world generation. */
     public static void onBlockChanged(ServerLevel host, BlockPos position) {
         if (!host.getServer().isSameThread()) return;
+        org.academy.internal.common.sublevel.SubLevelServer.onBlockChanged(host, position);
         Selection selected;
         synchronized (SERVERS) { selected = SERVERS.get(host.getServer()); }
         if (selected != null && selected.bridge != null) selected.bridge.onBlockChanged(host, position);
@@ -206,16 +285,45 @@ public final class StructureBackendRouter {
         requireThread(host.getServer());
         if (host.getServer().getLevel(host.dimension()) != host
                 || !host.dimension().identifier().equals(reference.dimension())) return false;
-        var selected = selection(host.getServer());
-        if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
-            return selected.bridge.launch(host, reference, direction, speed);
+        boolean launched;
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            launched = SubLevelQueries.resolve(host.getServer(), reference).isPresent()
+                    && SubLevelSkillSupport.launch(host.getServer(), new SubLevelId(reference.id()), direction, speed);
+        } else {
+            var selected = selection(host.getServer());
+            launched = selected.bridge != null && SABLE_ID.equals(reference.backend())
+                    && selected.bridge.launch(host, reference, direction, speed);
         }
-        return false;
+        if (launched) org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.launched(host, reference);
+        if (launched) org.academy.internal.common.structure.upgrade.control.LiveStructureExtraction.launched(host, reference);
+        return launched;
     }
 
     /** Queues one bounded control command in the selected backend. */
     public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
                                               UUID controlId, StructurePhysicsControl control) {
+        return submitDirectControl(host, reference, actor, controlId, control, false);
+    }
+
+    /** Routes an optional orientation hold; only backends with angular authority consume it. */
+    public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                              UUID controlId, StructurePhysicsControl control,
+                                              boolean holdOrientation) {
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return SubLevelDirectControl.submit(host, reference, actor, controlId, control, holdOrientation);
+        }
+        var selected = selection(host.getServer());
+        return selected.bridge != null
+                && selected.bridge.submitDirectControl(host, reference, actor, controlId, control);
+    }
+
+    /** Routes an explicit source-pose hold; local SubLevel normalizes to it once. */
+    public static boolean submitDirectControl(ServerLevel host, StructureRef reference, Entity actor,
+                                              UUID controlId, StructurePhysicsControl control,
+                                              StructurePose holdPose) {
+        if (SubLevelStructureRefs.isSubLevel(reference)) {
+            return SubLevelDirectControl.submit(host, reference, actor, controlId, control, holdPose);
+        }
         var selected = selection(host.getServer());
         return selected.bridge != null
                 && selected.bridge.submitDirectControl(host, reference, actor, controlId, control);
@@ -230,6 +338,7 @@ public final class StructureBackendRouter {
                 || !host.dimension().identifier().equals(reference.dimension())) {
             return StructureDirectControl.Probe.unavailable("host_mismatch");
         }
+        if (SubLevelStructureRefs.isSubLevel(reference)) return SubLevelDirectControl.probe(host, reference);
         var selected = selection(host.getServer());
         if (selected.bridge != null && SABLE_ID.equals(reference.backend())) {
             return selected.bridge.probeDirectControl(host, reference);

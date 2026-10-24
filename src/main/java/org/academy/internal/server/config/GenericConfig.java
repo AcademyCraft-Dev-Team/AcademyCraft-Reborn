@@ -23,6 +23,19 @@ public class GenericConfig {
     @SerializedName("friendlyFire")
     public final FriendlyFireSettings friendlyFire = new FriendlyFireSettings();
 
+    @SerializedName("structureRestoration")
+    public final StructureRestorationSettings structureRestoration = new StructureRestorationSettings();
+
+    /** Skill-created structures only; ordinary or unmarked saved structures remain untouched. */
+    public static class StructureRestorationSettings {
+        public boolean enabled = true;
+        public boolean allowOfflineOwners = true;
+        public int restTicks = 100;
+        public int checkIntervalTicks = 20;
+        public int candidatesPerTick = 4;
+        public int retryTicks = 100;
+    }
+
     /** 全局玩法总开关。 */
     public static class GeneralSettings {
         /** 服务端总开关：关闭后所有技能都无法破坏方块，客户端无法覆盖。 */

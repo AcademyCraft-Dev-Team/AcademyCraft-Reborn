@@ -1,0 +1,41 @@
+// Dedicated client validation for the live kinetic-throw 3/5/7 lift gradients.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-lift357')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Lift tiers smoke must use an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academySubLevelLiftRun').getOrElse('clientDev')) {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelLiftTiersSmoke', 'true'
+            if (providers.gradleProperty('academyStructureExtractionGameplay').isPresent()) {
+                systemProperty 'academy.structureExtractionGameplay',
+                        providers.gradleProperty('academyStructureExtractionGameplay').get()
+            }
+            if (providers.gradleProperty('academyNativePhysicsTrace').isPresent()) {
+                systemProperty 'academy.nativePhysics.trace', providers.gradleProperty('academyNativePhysicsTrace').get()
+            }
+            systemProperty 'academy.sublevelLiftVegetation', providers.gradleProperty('academySubLevelLiftVegetation')
+                    .getOrElse('false')
+            systemProperty 'academy.sublevelLiftEmbedded', providers.gradleProperty('academySubLevelLiftEmbedded')
+                    .getOrElse('false')
+            systemProperty 'academy.sublevelLiftTerrain', providers.gradleProperty('academySubLevelLiftTerrain')
+                    .getOrElse('flat')
+            systemProperty 'academy.sublevelLiftTier', providers.gradleProperty('academySubLevelLiftTier')
+                    .getOrElse('-1')
+            // Optional tier-0 platform x,y,z; fixes terrain section boundaries for A/B runs.
+            systemProperty 'academy.sublevelLiftAnchor', providers.gradleProperty('academySubLevelLiftAnchor')
+                    .getOrElse('')
+            // Diagnostic A/B only; retain the previous body by default. Never a production fix.
+            systemProperty 'academy.sublevelLiftDiscardBetweenTiers', providers.gradleProperty('academySubLevelLiftDiscardBetweenTiers')
+                    .getOrElse('false')
+            systemProperty 'academy.sublevelLiftDisturbance', providers.gradleProperty('academySubLevelLiftDisturbance')
+                    .getOrElse('false')
+            systemProperty 'academy.sublevelLiftDisturbanceMode', providers.gradleProperty('academySubLevelLiftDisturbanceMode')
+                    .getOrElse('both')
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-20",
+  "java": "JetBrains Runtime 25.0.3+1-b329.124",
+  "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+  "scope": "dedicated server; 8x2x8 stone; fresh flat world; 2 runs/backend/fixture; sequential AB/BA",
+  "heap_and_power_policy": "not separately fixed; pilot only",
+  "client_metrics": "UNVERIFIED",
+  "files": [
+    {
+      "path": "validation/structure_parity/java/org/academy/validation/parity/StructureParityProbe.java",
+      "sha256": "5893BA05492CA92167015697738F7A54ED1997F11521C59743DC8F6C007E4148"
+    },
+    {
+      "path": "validation/structure_parity/cuboid_128.csv",
+      "sha256": "8ACEAED0F3A99E84278EA9F1A27DA4DA8B61DD4FCCF9274C7B5A2F2AD4676B38"
+    },
+    {
+      "path": "validation/structure_parity/server_parity.init.gradle",
+      "sha256": "91343821C984FE067E726E725222B14230C96382DC21799265C7CE9B1C1550D8"
+    },
+    {
+      "path": "validation/structure_parity/run-pair.ps1",
+      "sha256": "BEAD0153B041E4A94DA0E78FCB44965E126FB9DF6F8AE0AB9C5B0A97B8CF48E5"
+    },
+    {
+      "path": "docs/sable_compat_artifacts.json",
+      "sha256": "7BF88712FC2E32EACA5346AA846A531342C157E9AB18F9E330042852E929A340"
+    },
+    {
+      "path": "build/native-physics/artifacts/academy_physics.dll",
+      "sha256": "20BA4B01B5885D69824A8E3C5E4379E5669FE91E1523F52B40A761ADCADB4D22"
+    },
+    {
+      "path": "build/native-physics/artifacts/academy_physics.properties",
+      "sha256": "DAC6E700538C031DEAE48E2678F0245CCCAF044E29962C8D422ECA5F59E922F7"
+    }
+  ]
+}

@@ -1,0 +1,293 @@
+﻿{
+    "schema":  "academy-structure-parity-pilot-1",
+    "runs":  [
+                 {
+                     "run":  "local-ground-r13",
+                     "backend":  "local",
+                     "fixture":  "ground",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "0FEAFFE4873B7397E3206E2CCA73109FF7FE5F4503999BBBA34697699B08B545",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  9.9301366129890925E-16,
+                     "capture_call_ms":  221.8508,
+                     "capture_ready_ms":  221.863,
+                     "mass":  127.99999999999994,
+                     "lift_status":  "FAILED",
+                     "reached_tick":  30,
+                     "hover_streak":  27,
+                     "prelaunch_rise":  3.114449999984288,
+                     "launch_speed":  50.0,
+                     "flight_dx":  50.0,
+                     "flight_seconds":  1.009438,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  2.7878,
+                                                "p95_ms":  7.4583,
+                                                "max_ms":  35.0316
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  2.2567,
+                                                  "p95_ms":  5.9068,
+                                                  "max_ms":  9.8548
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "sable-ground-r13",
+                     "backend":  "sable",
+                     "fixture":  "ground",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "E6B0C62248A47740627B089A61783B03F8919595FAC4808CB6EF3BEA5611A53D",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  3.0757881233966208E-05,
+                     "capture_call_ms":  127.1527,
+                     "capture_ready_ms":  127.1657,
+                     "mass":  256.0,
+                     "lift_status":  "PASSED",
+                     "reached_tick":  38,
+                     "hover_streak":  223,
+                     "prelaunch_rise":  3.02972388079786,
+                     "launch_speed":  50.0,
+                     "flight_dx":  47.87218165397645,
+                     "flight_seconds":  1.0025974,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  6.9678,
+                                                "p95_ms":  14.02,
+                                                "max_ms":  28.3399
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  4.5404,
+                                                  "p95_ms":  7.7596,
+                                                  "max_ms":  8.1626
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "local-floating-r13",
+                     "backend":  "local",
+                     "fixture":  "floating",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "B5E2435F2FB33D77A6A98A5D2524A719B9028DC11453209C422E57E7489F43C9",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  9.9301366129890925E-16,
+                     "capture_call_ms":  198.4296,
+                     "capture_ready_ms":  198.4438,
+                     "mass":  127.99999999999994,
+                     "lift_status":  "FAILED",
+                     "reached_tick":  30,
+                     "hover_streak":  27,
+                     "prelaunch_rise":  3.114449999984288,
+                     "launch_speed":  50.0,
+                     "flight_dx":  50.0,
+                     "flight_seconds":  0.9941667,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  3.0721,
+                                                "p95_ms":  11.1403,
+                                                "max_ms":  35.2847
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  1.6764,
+                                                  "p95_ms":  4.4254,
+                                                  "max_ms":  8.1805
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "sable-floating-r13",
+                     "backend":  "sable",
+                     "fixture":  "floating",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "F78A19855E798616C209FFD18AAA6D83F6D25E2C457DC48912AC87FFD1667B24",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  3.0757881233966208E-05,
+                     "capture_call_ms":  142.3181,
+                     "capture_ready_ms":  142.3306,
+                     "mass":  256.0,
+                     "lift_status":  "PASSED",
+                     "reached_tick":  35,
+                     "hover_streak":  226,
+                     "prelaunch_rise":  3.02972388079786,
+                     "launch_speed":  50.0,
+                     "flight_dx":  47.8721809387207,
+                     "flight_seconds":  1.0026249,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  7.0759,
+                                                "p95_ms":  13.9482,
+                                                "max_ms":  22.4065
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  6.1293,
+                                                  "p95_ms":  8.2626,
+                                                  "max_ms":  18.4296
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "sable-ground-r14",
+                     "backend":  "sable",
+                     "fixture":  "ground",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "B17F9773B1AE0A42AD44878AA1B23765A03A1B138C5EBC727AA4DA492CB5887D",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  3.0757881233966208E-05,
+                     "capture_call_ms":  129.9344,
+                     "capture_ready_ms":  129.9472,
+                     "mass":  256.0,
+                     "lift_status":  "PASSED",
+                     "reached_tick":  38,
+                     "hover_streak":  223,
+                     "prelaunch_rise":  3.02972388079786,
+                     "launch_speed":  50.0,
+                     "flight_dx":  47.87218165397645,
+                     "flight_seconds":  0.9995304,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  7.0853,
+                                                "p95_ms":  15.9847,
+                                                "max_ms":  27.9922
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  5.106,
+                                                  "p95_ms":  7.1071,
+                                                  "max_ms":  7.3917
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "local-ground-r14",
+                     "backend":  "local",
+                     "fixture":  "ground",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "47EF899B11AE69B6391F2D9EDD78166F36F2592E61471BA2A9F0DA3AB6E5CD70",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  9.9301366129890925E-16,
+                     "capture_call_ms":  221.7952,
+                     "capture_ready_ms":  221.8104,
+                     "mass":  127.99999999999994,
+                     "lift_status":  "FAILED",
+                     "reached_tick":  30,
+                     "hover_streak":  27,
+                     "prelaunch_rise":  3.114449999984288,
+                     "launch_speed":  50.0,
+                     "flight_dx":  50.0,
+                     "flight_seconds":  1.0108707,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  2.8715,
+                                                "p95_ms":  9.9163,
+                                                "max_ms":  37.2029
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  1.7168,
+                                                  "p95_ms":  5.184,
+                                                  "max_ms":  9.6993
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "sable-floating-r14",
+                     "backend":  "sable",
+                     "fixture":  "floating",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "093334EF3D282F3206B669F60D7F66C199E2D1AF0BB6BAF39D4F7CC9DC971304",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  3.0757881233966208E-05,
+                     "capture_call_ms":  108.0448,
+                     "capture_ready_ms":  108.0579,
+                     "mass":  256.0,
+                     "lift_status":  "PASSED",
+                     "reached_tick":  35,
+                     "hover_streak":  226,
+                     "prelaunch_rise":  3.02972388079786,
+                     "launch_speed":  50.0,
+                     "flight_dx":  47.8721809387207,
+                     "flight_seconds":  1.0095573,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  6.5916,
+                                                "p95_ms":  12.9291,
+                                                "max_ms":  30.0881
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  5.2169,
+                                                  "p95_ms":  8.2271,
+                                                  "max_ms":  9.4348
+                                              }
+                               }
+                 },
+                 {
+                     "run":  "local-floating-r14b",
+                     "backend":  "local",
+                     "fixture":  "floating",
+                     "cells_sha256":  "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+                     "raw_sha256":  "44AF29C4831B15FAAC66A6D4DF29AB4068EAD1CBCF0A5BC9535F5FA588DC0C57",
+                     "measurement_status":  "COMPLETE",
+                     "alignment_error":  9.9301366129890925E-16,
+                     "capture_call_ms":  218.8404,
+                     "capture_ready_ms":  218.8527,
+                     "mass":  127.99999999999994,
+                     "lift_status":  "FAILED",
+                     "reached_tick":  30,
+                     "hover_streak":  27,
+                     "prelaunch_rise":  3.114449999984288,
+                     "launch_speed":  50.0,
+                     "flight_dx":  50.0,
+                     "flight_seconds":  0.9973156,
+                     "ticks":  {
+                                   "lift":  {
+                                                "n":  259,
+                                                "p50_ms":  3.0271,
+                                                "p95_ms":  10.1539,
+                                                "max_ms":  44.5034
+                                            },
+                                   "flight":  {
+                                                  "n":  20,
+                                                  "p50_ms":  1.8809,
+                                                  "p95_ms":  5.816,
+                                                  "max_ms":  7.2222
+                                              }
+                               }
+                 }
+             ],
+    "comparisons":  [
+                        {
+                            "fixture":  "ground",
+                            "runs_per_backend":  2,
+                            "local_capture_mean_ms":  221.82299999999998,
+                            "sable_capture_mean_ms":  128.54355,
+                            "capture_ratio_local_over_sable":  1.725664181516692,
+                            "local_lift_p95_mean_ms":  8.6873,
+                            "sable_lift_p95_mean_ms":  15.00235,
+                            "lift_p95_cost_ratio_local_over_sable":  0.57906261352388133,
+                            "performance_equivalence":  "UNVERIFIED: check lift outcome, mass/material, geometry and client metrics separately"
+                        },
+                        {
+                            "fixture":  "floating",
+                            "runs_per_backend":  2,
+                            "local_capture_mean_ms":  208.635,
+                            "sable_capture_mean_ms":  125.18144999999998,
+                            "capture_ratio_local_over_sable":  1.6666606753636424,
+                            "local_lift_p95_mean_ms":  10.6471,
+                            "sable_lift_p95_mean_ms":  13.438649999999999,
+                            "lift_p95_cost_ratio_local_over_sable":  0.79227452162233558,
+                            "performance_equivalence":  "UNVERIFIED: check lift outcome, mass/material, geometry and client metrics separately"
+                        }
+                    ]
+}

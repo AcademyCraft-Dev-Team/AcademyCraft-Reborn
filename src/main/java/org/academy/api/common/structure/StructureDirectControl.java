@@ -1,8 +1,12 @@
 package org.academy.api.common.structure;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.upgrade.control.LiveStructureExtraction;
+import org.academy.internal.common.sublevel.SubLevelDirectControl;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
@@ -20,6 +24,7 @@ import java.util.UUID;
  */
 public final class StructureDirectControl {
     private static final Map<StructureRef, Lease> LEASES = new HashMap<>();
+    private static final Map<StructureRef, Entity> ACTORS = new HashMap<>();
 
     private StructureDirectControl() {
     }
@@ -70,12 +75,16 @@ public final class StructureDirectControl {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(controlId, "controlId");
+        if (!actor.isAlive() || actor.isRemoved() || actor.level() != host) return Status.UNAVAILABLE;
         var probe = StructureBackendRouter.probeDirectControl(host, reference);
         synchronized (LEASES) {
             var standing = LEASES.get(reference);
             var status = decideAcquire(probe, standing, actor.getUUID(), controlId);
             if (status == Status.ACTIVE) {
+                org.academy.internal.common.structure.upgrade.lifecycle.SkillStructureRestoration.activity(host.getServer(), reference);
+                if (standing != null && !standing.controlId().equals(controlId)) cancel(reference, standing.controlId());
                 LEASES.put(reference, new Lease(actor.getUUID(), controlId, probe.runtimeId()));
+                ACTORS.put(reference, actor);
             }
             return status;
         }
@@ -87,9 +96,15 @@ public final class StructureDirectControl {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(actor, "actor");
         Objects.requireNonNull(controlId, "controlId");
-        var probe = StructureBackendRouter.probeDirectControl(host, reference);
+        var probe = leaseProbe(host, reference);
         synchronized (LEASES) {
-            return validateLease(LEASES, reference, probe, actor.getUUID(), controlId);
+            var standing = LEASES.get(reference);
+            var status = validateLease(LEASES, reference, probe, actor.getUUID(), controlId);
+            if (!LEASES.containsKey(reference) && owns(standing, actor.getUUID(), controlId)) {
+                ACTORS.remove(reference);
+                cancel(reference, controlId);
+            }
+            return status;
         }
     }
 
@@ -110,29 +125,124 @@ public final class StructureDirectControl {
         }
     }
 
+    /** Identity only, for retaining a command while its terrain is paused; not mutation permission. */
+    public static boolean matches(StructureRef reference, UUID actorId, UUID controlId, UUID runtimeId) {
+        synchronized (LEASES) {
+            var lease = LEASES.get(reference);
+            return owns(lease, actorId, controlId) && lease.runtimeId().equals(runtimeId);
+        }
+    }
+
     /** Idempotent and token-scoped; a foreign or stale token is a no-op. */
     public static void release(StructureRef reference, UUID controlId) {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(controlId, "controlId");
         synchronized (LEASES) {
             var standing = LEASES.get(reference);
-            if (standing != null && standing.controlId().equals(controlId)) LEASES.remove(reference);
+            if (standing != null && standing.controlId().equals(controlId)) {
+                LEASES.remove(reference);
+                ACTORS.remove(reference);
+                cancel(reference, controlId);
+            }
         }
+    }
+
+    /** Revokes dead/moved actors for every backend before local motion is applied. */
+    public static void tick(MinecraftServer server) {
+        synchronized (LEASES) {
+            for (var entry : Map.copyOf(ACTORS).entrySet()) {
+                var reference = entry.getKey();
+                var actor = entry.getValue();
+                if (!(actor.level() instanceof ServerLevel host) || host.getServer() != server) continue;
+                var lease = LEASES.get(reference);
+                if (lease == null) { ACTORS.remove(reference); continue; }
+                boolean disconnected = actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected();
+                if (actorLeaseEnded(actor.isAlive(), actor.isRemoved(), disconnected,
+                        reference.dimension().equals(host.dimension().identifier()))) {
+                    release(reference, lease.controlId());
+                    continue;
+                }
+                boolean local = SubLevelStructureRefs.isSubLevel(reference);
+                if (local || !(org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)
+                        || LiveStructureExtraction.controls(host, reference))) {
+                    var probe = local ? leaseProbe(host, reference) : StructureBackendRouter.probeDirectControl(host, reference);
+                    if (probeRevokesLease(probe, lease.runtimeId(), local)) release(reference, lease.controlId());
+                }
+            }
+        }
+    }
+
+    static boolean actorLeaseEnded(boolean alive, boolean removed, boolean disconnected, boolean sameDimension) {
+        return !alive || removed || disconnected || !sameDimension;
+    }
+
+    /** Optional backend pause/staff ownership is not evidence of a changed runtime identity. */
+    static boolean probeRevokesLease(Probe probe, UUID runtimeId, boolean local) {
+        return probe.state() == Probe.State.READY ? !runtimeId.equals(probe.runtimeId()) : local;
+    }
+
+    private static void cancel(StructureRef reference, UUID controlId) {
+        org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.cancel(reference, controlId);
+        LiveStructureExtraction.cancel(reference, controlId);
+        if (SubLevelStructureRefs.isSubLevel(reference)) SubLevelDirectControl.cancel(reference, controlId);
+    }
+
+    private static Probe leaseProbe(ServerLevel host, StructureRef reference) {
+        var probe = StructureBackendRouter.probeDirectControl(host, reference);
+        if (probe.state() == Probe.State.UNAVAILABLE && SubLevelStructureRefs.isSubLevel(reference)
+                && (org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation.controls(host, reference)
+                || LiveStructureExtraction.controls(host, reference))) {
+            // Keep the exact existing lease while this body alone waits for terrain. No impulse
+            // can pass the paused native body, and the angular registry still enforces timeout.
+            var body = org.academy.internal.common.sublevel.SubLevelOrientationAccess.INSTANCE.observe(host, reference);
+            if (body.isPresent() && !body.get().terrainReady()) return Probe.ready(body.get().runtimeId());
+        }
+        return probe;
     }
 
     /** Submits one outer tick of bounded force; the backend consumes it at physics substeps. */
     public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
                                  StructurePhysicsControl control) {
+        return submit(host, reference, actor, controlId, control, false);
+    }
+
+    /**
+     * Submits one controlled tick. When holdOrientation is true the backend holds the pose rotation
+     * observed at the first submission for the lifetime of the standing control token (at least
+     * the skill's 200-tick hover window), instead of allowing contact torque to spin the structure.
+     * Backends without angular authority ignore the flag rather than rejecting the command.
+     */
+    public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
+                                 StructurePhysicsControl control, boolean holdOrientation) {
         Objects.requireNonNull(control, "control");
         if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
                 || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
-        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control);
+        if (LiveStructureExtraction.controls(host, reference)) return false;
+        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control,
+                holdOrientation);
+    }
+
+    /**
+     * Submits one controlled tick with an explicit source pose. The backend holds that rotation
+     * for the standing control token and, when supported, normalizes the body to the source pose
+     * at the first tick so a capture-adjacent disturbance cannot wedge the structure.
+     */
+    public static boolean submit(ServerLevel host, StructureRef reference, Entity actor, UUID controlId,
+                                 StructurePhysicsControl control, StructurePose holdPose) {
+        Objects.requireNonNull(control, "control");
+        Objects.requireNonNull(holdPose, "holdPose");
+        if (!actor.isAlive() || actor.isRemoved() || actor.level() != host
+                || validate(host, reference, actor, controlId) != Status.ACTIVE) return false;
+        if (LiveStructureExtraction.controls(host, reference)) return false;
+        return StructureBackendRouter.submitDirectControl(host, reference, actor, controlId, control, holdPose);
     }
 
     /** Drops every lease; called when the owning server stops. */
     public static void clearAll() {
         synchronized (LEASES) {
+            for (var entry : LEASES.entrySet()) cancel(entry.getKey(), entry.getValue().controlId());
             LEASES.clear();
+            ACTORS.clear();
         }
     }
 

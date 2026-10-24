@@ -32,6 +32,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
+import org.academy.api.common.ability.program.ProgramStructureAnchor;
+import org.academy.api.common.ability.program.ProgramStructurePose;
+import org.academy.api.common.ability.program.ProgramStructureReference;
 import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramNodeStep;
 import org.academy.api.common.ability.program.ProgramNumericMath;
@@ -568,6 +571,16 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 blockPosition(inputs, "block").center()
         ));
 
+        put(result, CommonProgramNodeIds.STRUCTURE_POSE, (_, _, inputs) -> data(
+                "pose", ProgramValueTypes.STRUCTURE_POSE,
+                new ProgramStructurePose(direction(inputs, "axis"), floatValue(inputs, "angle_radians"))
+        ));
+        put(result, CommonProgramNodeIds.STRUCTURE_ANCHOR, (_, _, inputs) -> data(
+                "anchor", ProgramValueTypes.STRUCTURE_ANCHOR,
+                new ProgramStructureAnchor((ProgramStructureReference) inputs.require("structure",
+                        ProgramValueTypes.STRUCTURE_REFERENCE).value(), new BlockPos(
+                        integer(inputs, "local_x"), integer(inputs, "local_y"), integer(inputs, "local_z")))
+        ));
         put(result, CommonProgramNodeIds.DIRECTION_CONSTANT,
                 (ProgramVmContext _,
                  CommonProgramNodeCatalog.DirectionConfiguration configuration,

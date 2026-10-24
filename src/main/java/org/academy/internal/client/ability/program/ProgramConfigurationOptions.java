@@ -8,6 +8,7 @@ import org.academy.api.client.ability.program.ProgramNodeEditorOptions;
 import org.academy.api.common.ability.program.ProgramNodeEditorMetadata;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeIds;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeIds;
@@ -124,6 +125,25 @@ public final class ProgramConfigurationOptions {
             );
         }
         var id = entry.id();
+        var orientationReset = id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION)
+                || id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION)
+                || id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION);
+        var orientationSpin = id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN)
+                || id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN)
+                || id.equals(AeromanipProgramNodeIds.STRUCTURE_SPIN);
+        if (orientationReset && field.equals("reset_mode")) {
+            return stringOptions("screen.academy.program.configuration.reset_mode.",
+                    "capture_baseline", "world_up_keep_yaw", "nearest_grid_yaw");
+        }
+        if (orientationReset && field.equals("missing_baseline")) {
+            return stringOptions("screen.academy.program.configuration.missing_baseline.", "reject", "use_world_grid");
+        }
+        if (orientationSpin && field.equals("frame")) {
+            return stringOptions("screen.academy.program.configuration.orientation_frame.", "world", "local");
+        }
+        if (orientationSpin && field.equals("finish_mode")) {
+            return stringOptions("screen.academy.program.configuration.finish_mode.", "brake", "release_inertia");
+        }
         if (id.equals(CommonProgramNodeIds.SCALAR_CONSTANT) && field.equals("type")) {
             return scalarTypes(true);
         }

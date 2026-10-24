@@ -14,8 +14,11 @@ public final class StructureDynamics {
     /**
      * Returns the whole body's actual solver mass, center of mass and motion, regardless of
      * which cell was targeted. Never creates a body, loads a structure or activates a solver.
-     * Missing, incompatible, paused and unsimulated structures return empty. This observation
-     * is not a control capability; subsequent actions must revalidate their exact activation.
+     * Missing, incompatible and unsimulated structures return empty. A local body held for
+     * missing terrain coverage remains observable with zero velocities; its saved resumption
+     * velocity is internal to the solver. Paused regions may instead be unavailable.
+     * This observation is not a control capability; subsequent actions must revalidate their
+     * exact activation.
      */
     public static Optional<State> motion(ServerLevel host, StructureRef reference) {
         return StructureBackendRouter.motion(host, reference);

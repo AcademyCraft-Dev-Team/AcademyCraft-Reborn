@@ -1,0 +1,1143 @@
+{
+  "schema": "academy-structure-upgrade-capture-live-validation-v1",
+  "date": "2026-10-23",
+  "base_commit": "8dec409b",
+  "previous_orientation_commit": "edea3a45",
+  "scope": "line_b_capture_preview_live_fixes_and_real_transaction_validation",
+  "extraction_gameplay_enabled": false,
+  "extraction_motion_exercised": false,
+  "orientation_unchanged": true,
+  "native_production_changed": false,
+  "preexisting_native_diagnostic_diff": {
+    "path": "native/academy_physics/src/lib.rs",
+    "additions": 374,
+    "deletions": 56,
+    "touched_by_this_stage": false
+  },
+  "original_test_worlds_modified": false,
+  "checks": {
+    "test": {
+      "tests": 2997,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "nativePhysicsTest": {
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "verifyStructureUpgradeScaffold": "PASSED",
+    "development_build": {
+      "status": "PASSED",
+      "log": "build/line-b-capture-validation-dev-final.log",
+      "command": "./gradlew.bat test sableCompatTest nativePhysicsTest build -x testNativePhysicsRust -DisDev=true @physicsNativeArgs --console=plain"
+    },
+    "release_build": {
+      "status": "PASSED",
+      "log": "build/line-b-capture-validation-release.log",
+      "command": "./gradlew.bat build -DisDev=false @physicsNativeArgs --console=plain"
+    },
+    "rust_native_suite": "NOT_RERUN_KNOWN_S0_23_PASS_5_FAIL; nativePhysicsTest prerequisite explicitly excluded",
+    "new_test_cases": {
+      "LevelCaptureSourceTest": 2,
+      "StructureCaptureEvidenceTest": 1,
+      "CapturePlanRegistryTest": 1,
+      "LoadedChunkViewTest": 1
+    }
+  },
+  "clients": {
+    "native_connected": {
+      "path": "run/native-sublevel-direct-smoke-capture-preview-native-connected-20261023/structure-capture-preview-result.json",
+      "log": "build/line-b-capture-preview-native-connected.log",
+      "case_count": 34,
+      "result": {
+        "passed": true,
+        "backend": "academy:sublevel",
+        "actual_capture_transactions": true,
+        "extraction_motion_exercised": false,
+        "disconnected_source_regression": false,
+        "split_source_cells": [],
+        "removed_fixture_sable_bodies": 0,
+        "cases": [
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "UNSUPPORTED",
+            "detail": "capture_source_block_entity_unsupported",
+            "scenario": "block_entity_source_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "TERRAIN_PENDING",
+            "detail": "capture_source_chunk_unloaded",
+            "scenario": "missing_chunk_not_loaded"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_evidence_unavailable",
+            "scenario": "other_source_capture_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "READY",
+            "detail": "capture_bound",
+            "scenario": "real_capture_binding"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "READY",
+            "detail": "capture_binding_repeated",
+            "scenario": "binding_retry"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "STALE",
+            "detail": "capture_authority_stale",
+            "scenario": "repeat_stale_runtime_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_control_token_mismatch",
+            "scenario": "wrong_control_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_preview_foreign_actor",
+            "scenario": "foreign_actor_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_control_lease_inactive",
+            "scenario": "repeat_released_lease_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "READY",
+            "detail": "capture_bound",
+            "scenario": "real_capture_binding"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "READY",
+            "detail": "capture_binding_repeated",
+            "scenario": "binding_retry"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "STALE",
+            "detail": "capture_authority_stale",
+            "scenario": "repeat_stale_runtime_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "DENIED",
+            "detail": "capture_control_token_mismatch",
+            "scenario": "wrong_control_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "DENIED",
+            "detail": "capture_preview_foreign_actor",
+            "scenario": "foreign_actor_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 5,
+            "tier": 1,
+            "status": "DENIED",
+            "detail": "capture_control_lease_inactive",
+            "scenario": "repeat_released_lease_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "READY",
+            "detail": "capture_bound",
+            "scenario": "real_capture_binding"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "READY",
+            "detail": "capture_binding_repeated",
+            "scenario": "binding_retry"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "STALE",
+            "detail": "capture_authority_stale",
+            "scenario": "repeat_stale_runtime_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "DENIED",
+            "detail": "capture_control_token_mismatch",
+            "scenario": "wrong_control_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "DENIED",
+            "detail": "capture_preview_foreign_actor",
+            "scenario": "foreign_actor_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "STALE",
+            "detail": "capture_authority_stale",
+            "scenario": "repeat_content_change_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 7,
+            "tier": 2,
+            "status": "DENIED",
+            "detail": "capture_control_lease_inactive",
+            "scenario": "repeat_released_lease_rejected"
+          }
+        ],
+        "failure": ""
+      }
+    },
+    "sable_connected": {
+      "path": "run/native-sublevel-direct-smoke-capture-preview-sable-connected-20261023/structure-capture-preview-result.json",
+      "log": "build/line-b-capture-preview-sable-connected.log",
+      "case_count": 34,
+      "result": {
+        "passed": true,
+        "backend": "academy:sable",
+        "actual_capture_transactions": true,
+        "extraction_motion_exercised": false,
+        "disconnected_source_regression": false,
+        "split_source_cells": [],
+        "removed_fixture_sable_bodies": 4,
+        "cases": [
+          {
+            "scenario": "offset_shape_ceiling_blocked",
+            "detail": "extraction_path_blocked",
+            "status": "BLOCKED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "soft_content_requires_permission",
+            "detail": "soft_content_requires_authorization:1",
+            "status": "BLOCKED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "source_permission_denied",
+            "detail": "capture_source_permission_denied",
+            "status": "DENIED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "block_entity_source_rejected",
+            "detail": "capture_source_block_entity_unsupported",
+            "status": "UNSUPPORTED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "missing_chunk_not_loaded",
+            "detail": "capture_source_chunk_unloaded",
+            "status": "TERRAIN_PENDING",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "source_relative_preview",
+            "detail": "capture_preview_ready",
+            "status": "READY",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "other_source_capture_rejected",
+            "detail": "capture_source_evidence_unavailable",
+            "status": "DENIED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "real_capture_binding",
+            "detail": "capture_bound",
+            "status": "READY",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "binding_retry",
+            "detail": "capture_binding_repeated",
+            "status": "READY",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_stale_runtime_rejected",
+            "detail": "capture_authority_stale",
+            "status": "STALE",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "wrong_control_rejected",
+            "detail": "capture_control_token_mismatch",
+            "status": "DENIED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "foreign_actor_rejected",
+            "detail": "capture_preview_foreign_actor",
+            "status": "DENIED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_released_lease_rejected",
+            "detail": "capture_control_lease_inactive",
+            "status": "DENIED",
+            "tier": 0,
+            "lift": 3,
+            "passed": true
+          },
+          {
+            "scenario": "offset_shape_ceiling_blocked",
+            "detail": "extraction_path_blocked",
+            "status": "BLOCKED",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "soft_content_requires_permission",
+            "detail": "soft_content_requires_authorization:1",
+            "status": "BLOCKED",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "source_permission_denied",
+            "detail": "capture_source_permission_denied",
+            "status": "DENIED",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "source_relative_preview",
+            "detail": "capture_preview_ready",
+            "status": "READY",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "real_capture_binding",
+            "detail": "capture_bound",
+            "status": "READY",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "binding_retry",
+            "detail": "capture_binding_repeated",
+            "status": "READY",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_stale_runtime_rejected",
+            "detail": "capture_authority_stale",
+            "status": "STALE",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "wrong_control_rejected",
+            "detail": "capture_control_token_mismatch",
+            "status": "DENIED",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "foreign_actor_rejected",
+            "detail": "capture_preview_foreign_actor",
+            "status": "DENIED",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_released_lease_rejected",
+            "detail": "capture_control_lease_inactive",
+            "status": "DENIED",
+            "tier": 1,
+            "lift": 5,
+            "passed": true
+          },
+          {
+            "scenario": "offset_shape_ceiling_blocked",
+            "detail": "extraction_path_blocked",
+            "status": "BLOCKED",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "soft_content_requires_permission",
+            "detail": "soft_content_requires_authorization:1",
+            "status": "BLOCKED",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "source_permission_denied",
+            "detail": "capture_source_permission_denied",
+            "status": "DENIED",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "source_relative_preview",
+            "detail": "capture_preview_ready",
+            "status": "READY",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "real_capture_binding",
+            "detail": "capture_bound",
+            "status": "READY",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "binding_retry",
+            "detail": "capture_binding_repeated",
+            "status": "READY",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_stale_runtime_rejected",
+            "detail": "capture_authority_stale",
+            "status": "STALE",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "wrong_control_rejected",
+            "detail": "capture_control_token_mismatch",
+            "status": "DENIED",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "foreign_actor_rejected",
+            "detail": "capture_preview_foreign_actor",
+            "status": "DENIED",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_content_change_rejected",
+            "detail": "capture_authority_stale",
+            "status": "STALE",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          },
+          {
+            "scenario": "repeat_released_lease_rejected",
+            "detail": "capture_control_lease_inactive",
+            "status": "DENIED",
+            "tier": 2,
+            "lift": 7,
+            "passed": true
+          }
+        ],
+        "failure": ""
+      }
+    },
+    "sable_split": {
+      "path": "run/native-sublevel-direct-smoke-capture-preview-sable-split-r2-20261023/structure-capture-preview-result.json",
+      "log": "build/line-b-capture-preview-sable-split-r2.log",
+      "case_count": 7,
+      "result": {
+        "passed": true,
+        "backend": "academy:sable",
+        "actual_capture_transactions": true,
+        "extraction_motion_exercised": false,
+        "disconnected_source_regression": true,
+        "split_source_cells": [
+          {
+            "expected": "Block{minecraft:iron_block}",
+            "local": [
+              0,
+              0,
+              0
+            ],
+            "actual": "Block{minecraft:iron_block}"
+          },
+          {
+            "expected": "Block{minecraft:iron_block}",
+            "local": [
+              2,
+              0,
+              0
+            ],
+            "actual": "Block{minecraft:air}"
+          },
+          {
+            "expected": "Block{minecraft:iron_block}",
+            "local": [
+              0,
+              0,
+              1
+            ],
+            "actual": "Block{minecraft:iron_block}"
+          }
+        ],
+        "removed_fixture_sable_bodies": 2,
+        "new_sable_body_observations": [
+          {
+            "age": 3,
+            "id": "4f1cf7e7-7139-4748-abde-91a4d56f662e",
+            "split_from": "null",
+            "removed": false,
+            "logical_position": [
+              -186.5,
+              271.4858703613281,
+              60.0
+            ],
+            "bounds": [
+              "-187.0",
+              "271.0",
+              "59.0",
+              "-184.0",
+              "272.0",
+              "61.0"
+            ],
+            "bounds_inside_arena": true,
+            "logical_inside_arena": true,
+            "owned": true
+          },
+          {
+            "age": 3,
+            "id": "8090e73e-7e08-40ba-bb65-d4a304422394",
+            "split_from": "null",
+            "removed": false,
+            "logical_position": [
+              -184.5,
+              271.4858703613281,
+              59.5
+            ],
+            "bounds": [
+              "0.0",
+              "0.0",
+              "0.0",
+              "0.0",
+              "0.0",
+              "0.0"
+            ],
+            "bounds_inside_arena": false,
+            "logical_inside_arena": true,
+            "owned": true
+          },
+          {
+            "age": 3,
+            "id": "4f1cf7e7-7139-4748-abde-91a4d56f662e",
+            "split_from": "null",
+            "removed": false,
+            "logical_position": [
+              -186.5,
+              271.4858703613281,
+              60.0
+            ],
+            "bounds": [
+              "-187.0",
+              "271.0",
+              "59.0",
+              "-184.0",
+              "272.0",
+              "61.0"
+            ],
+            "bounds_inside_arena": true,
+            "logical_inside_arena": true,
+            "owned": true
+          },
+          {
+            "age": 3,
+            "id": "8090e73e-7e08-40ba-bb65-d4a304422394",
+            "split_from": "null",
+            "removed": false,
+            "logical_position": [
+              -184.5,
+              271.4858703613281,
+              59.5
+            ],
+            "bounds": [
+              "0.0",
+              "0.0",
+              "0.0",
+              "0.0",
+              "0.0",
+              "0.0"
+            ],
+            "bounds_inside_arena": false,
+            "logical_inside_arena": true,
+            "owned": true
+          }
+        ],
+        "split_publication_wait_ticks": 0,
+        "cases": [
+          {
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          },
+          {
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          },
+          {
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          },
+          {
+            "status": "UNSUPPORTED",
+            "detail": "capture_source_block_entity_unsupported",
+            "scenario": "block_entity_source_rejected",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          },
+          {
+            "status": "TERRAIN_PENDING",
+            "detail": "capture_source_chunk_unloaded",
+            "scenario": "missing_chunk_not_loaded",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          },
+          {
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          },
+          {
+            "status": "STALE",
+            "detail": "capture_authority_stale",
+            "scenario": "split_source_stale_rejected",
+            "passed": true,
+            "lift": 3,
+            "tier": 0
+          }
+        ],
+        "failure": ""
+      }
+    }
+  },
+  "retained_failure_history": [
+    {
+      "path": "run/native-sublevel-direct-smoke-capture-preview-sable-final-20261023/structure-capture-preview-result.json",
+      "diagnosis": "disconnected_positive_fixture_triggered_real_sable_split",
+      "result": {
+        "passed": false,
+        "backend": "academy:sable",
+        "actual_capture_transactions": true,
+        "extraction_motion_exercised": false,
+        "cases": [
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "UNSUPPORTED",
+            "detail": "capture_source_block_entity_unsupported",
+            "scenario": "block_entity_source_rejected"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "TERRAIN_PENDING",
+            "detail": "capture_source_chunk_unloaded",
+            "scenario": "missing_chunk_not_loaded"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview"
+          },
+          {
+            "passed": true,
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_evidence_unavailable",
+            "scenario": "other_source_capture_rejected"
+          }
+        ],
+        "failure": "java.lang.IllegalStateException: real capture binding failed: Result[status=STALE, detail=capture_authority_stale, operationId=Optional.empty, value=Optional.empty]"
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-capture-preview-sable-diagnostic-20261023/structure-capture-preview-result.json",
+      "diagnosis": "same_runtime_content_revision_changed_from_2_to_3",
+      "result": {
+        "passed": false,
+        "backend": "academy:sable",
+        "actual_capture_transactions": true,
+        "extraction_motion_exercised": false,
+        "cases": [
+          {
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked",
+            "passed": true,
+            "lift": 3
+          },
+          {
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission",
+            "passed": true,
+            "lift": 3
+          },
+          {
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied",
+            "passed": true,
+            "lift": 3
+          },
+          {
+            "tier": 0,
+            "status": "UNSUPPORTED",
+            "detail": "capture_source_block_entity_unsupported",
+            "scenario": "block_entity_source_rejected",
+            "passed": true,
+            "lift": 3
+          },
+          {
+            "tier": 0,
+            "status": "TERRAIN_PENDING",
+            "detail": "capture_source_chunk_unloaded",
+            "scenario": "missing_chunk_not_loaded",
+            "passed": true,
+            "lift": 3
+          },
+          {
+            "tier": 0,
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview",
+            "passed": true,
+            "lift": 3
+          },
+          {
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_evidence_unavailable",
+            "scenario": "other_source_capture_rejected",
+            "passed": true,
+            "lift": 3
+          }
+        ],
+        "failure": "java.lang.IllegalStateException: real capture binding failed: Result[status=STALE, detail=capture_authority_stale, operationId=Optional.empty, value=Optional.empty]"
+      }
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-capture-preview-sable-split-20261023/structure-capture-preview-result.json",
+      "diagnosis": "fixture_missed_child_with_zero_bounds_and_cleared_parent",
+      "result": {
+        "passed": false,
+        "backend": "academy:sable",
+        "actual_capture_transactions": true,
+        "extraction_motion_exercised": false,
+        "disconnected_source_regression": true,
+        "split_source_cells": [
+          {
+            "expected": "Block{minecraft:iron_block}",
+            "local": [
+              0,
+              0,
+              0
+            ],
+            "actual": "Block{minecraft:iron_block}"
+          },
+          {
+            "expected": "Block{minecraft:iron_block}",
+            "local": [
+              2,
+              0,
+              0
+            ],
+            "actual": "Block{minecraft:air}"
+          },
+          {
+            "expected": "Block{minecraft:iron_block}",
+            "local": [
+              0,
+              0,
+              1
+            ],
+            "actual": "Block{minecraft:iron_block}"
+          }
+        ],
+        "removed_fixture_sable_bodies": 1,
+        "cases": [
+          {
+            "lift": 3,
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "extraction_path_blocked",
+            "scenario": "offset_shape_ceiling_blocked",
+            "passed": true
+          },
+          {
+            "lift": 3,
+            "tier": 0,
+            "status": "BLOCKED",
+            "detail": "soft_content_requires_authorization:1",
+            "scenario": "soft_content_requires_permission",
+            "passed": true
+          },
+          {
+            "lift": 3,
+            "tier": 0,
+            "status": "DENIED",
+            "detail": "capture_source_permission_denied",
+            "scenario": "source_permission_denied",
+            "passed": true
+          },
+          {
+            "lift": 3,
+            "tier": 0,
+            "status": "UNSUPPORTED",
+            "detail": "capture_source_block_entity_unsupported",
+            "scenario": "block_entity_source_rejected",
+            "passed": true
+          },
+          {
+            "lift": 3,
+            "tier": 0,
+            "status": "TERRAIN_PENDING",
+            "detail": "capture_source_chunk_unloaded",
+            "scenario": "missing_chunk_not_loaded",
+            "passed": true
+          },
+          {
+            "lift": 3,
+            "tier": 0,
+            "status": "READY",
+            "detail": "capture_preview_ready",
+            "scenario": "source_relative_preview",
+            "passed": true
+          }
+        ],
+        "failure": "java.lang.IllegalStateException: the split did not produce a separate owned body"
+      }
+    }
+  ],
+  "h_continuous_diagnostic": {
+    "anchor": [
+      -156,
+      123,
+      61
+    ],
+    "terrain": "step",
+    "embedded": true,
+    "disturbances": true,
+    "new_extraction_service_used": false,
+    "gameplay_bug_fixed": false,
+    "retained": {
+      "passed": false,
+      "log": "build/line-b-capture-h-retained.log",
+      "directory": "run/native-sublevel-direct-smoke-capture-h-retained-20261023",
+      "discard_between_tiers": false,
+      "tier0_rise": 3.0643781249999336,
+      "tier0_hover_ticks": 200,
+      "tier1_target_height": 5,
+      "tier1_rise": 0.31965964238450795,
+      "tier1_timeout_tick": 220,
+      "tier2_run": false,
+      "terrain_sections": 8,
+      "terrain_boxes": 57
+    },
+    "discarded": {
+      "passed": true,
+      "log": "build/line-b-capture-h-discarded.log",
+      "directory": "run/native-sublevel-direct-smoke-capture-h-discarded-20261023",
+      "discard_between_tiers": true,
+      "rise": [
+        3.0643781249999336,
+        5.064378124999905,
+        7.064378124999905
+      ],
+      "hover_ticks": [
+        200,
+        200,
+        200
+      ],
+      "max_orientation_error_degrees": [
+        0.0,
+        0.7678239145586436,
+        0.054601536615972626
+      ],
+      "terrain_after_discard_next_tick": {
+        "sections": 4,
+        "boxes": 21
+      },
+      "tier1_terrain": {
+        "sections": 4,
+        "boxes": 36
+      }
+    },
+    "interpretation": "Coordinate difference excluded. Removing the prior body changes old dynamic body, retained terrain and native insertion/contact history together; individual root cause remains unisolated.",
+    "next_diagnostic": "Compare installed terrain-box fingerprint and actual native body pose against fresh same-section geometry; then isolate prior body versus prior terrain. Current ABI cannot enumerate orphan native colliders."
+  },
+  "implemented": [
+    "block_local_shape_to_source_local_coordinates",
+    "same_local_grid_digest_comparison",
+    "bounded_completed_capture_source_evidence_for_previewed_requests_only",
+    "repeat_binding_revalidates_actor_lease_target_runtime_content_pose_and_clearance",
+    "post_capture_clearance_does_not_exclude_old_source_cells",
+    "loaded_only_bounded_neighbor_shape_reads_with_explicit_failure",
+    "unsupported_block_entity_fluid_scheduled_tick_or_unbreakable_source_rejection"
+  ],
+  "unverified": [
+    "UPG-CTRL-01..04_actual_extraction_motion_status_cancel",
+    "H_skill_and_program_extraction_wiring",
+    "capture_duration_beyond_preview_expiry",
+    "third_party_shape_and_permission_callbacks_matrix",
+    "state_dependent_permission_predicate_after_source_removed",
+    "unload_and_restart_matrix",
+    "H_continuous_multistructure_wedge",
+    "known_S0_native_contact_failures",
+    "provenance_persistence_restoration_combat_fracture_MPS_fluid_soft_body"
+  ]
+}

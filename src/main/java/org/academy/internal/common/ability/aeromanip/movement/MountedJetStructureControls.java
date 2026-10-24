@@ -7,6 +7,7 @@ import org.academy.api.common.structure.*;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 
 import java.util.*;
@@ -71,14 +72,23 @@ final class MountedJetStructureControls {
     private static Control acquire(ServerPlayer player, ServerLevel host, StructureHandle handle,
                                    StructurePhysicsControl command) {
         var control = new Control(host, handle.reference(), handle.runtimeId());
-        if (handle.reference().backend().equals(StructureBackendRouter.SABLE_ID)) {
+        if (handle.reference().backend().equals(StructureBackendRouter.SABLE_ID)
+                || SubLevelStructureRefs.isSubLevel(handle.reference())) {
             if (StructureDirectControl.occupied(handle.reference(), handle.runtimeId())
                     || StructureDirectControl.acquire(host, handle.reference(), player, control.id)
                     != StructureDirectControl.Status.ACTIVE) return null;
             control.direct = true;
         } else {
             var region = StructurePhysics.activeRegion(host, handle.reference()).orElse(null);
-            if (region == null || region.status() == StructurePhysicsRegion.Status.FAILED) return null;
+            if (region == null) {
+                try {
+                    region = StructurePhysics.adoptExistingRegion(host, handle.reference());
+                } catch (IllegalStateException | IllegalArgumentException rejection) {
+                    return null;
+                }
+            }
+            if (region.status() != StructurePhysicsRegion.Status.READY
+                    || region.motion(handle.reference()).isEmpty()) return null;
             control.lease = region.acquireEntityControl(handle.reference(), player, control.id, command, 3).orElse(null);
             if (control.lease == null) return null;
             control.region = region;

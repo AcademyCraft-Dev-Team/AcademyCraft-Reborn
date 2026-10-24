@@ -1,12 +1,14 @@
 # 区块跃迁（`chunk_leap`）详细设计方案
 
+> 设计基线：2026-09-12；2026-10-18 按 HEAD 782d935b 校正了交换上限、客户端配置、网络包清单、常量表与 P3 状态（标注处保留原始设计论述）。
+>
 > 目标技能：传送使（`academy:teleport`）LV5 —— 区块跃迁。
 > 按键开启后打开一张以区块为网格、可缩放拖动的**跨维度区块地图**；地图可自行加载同维度与跨维度区块、显示地图上的生物实体；玩家可选中等额区块（可跨维度）交换区块位置（含其中的实体），或选中目标实体将其传送至选中的位置。传送时玩家随区块一并位移（含跨维度），不进入加载界面。
 
-> **实施状态（P1 + P2 已落地）**：同维度与跨维度交换闭环均已实现并通过构建与测试；保真项按 §0.2 继续推进。
+> **实施状态（P1 + P2 已落地，P3 部分落地）**：同维度与跨维度交换闭环均已实现并通过构建与测试；保真项按 §0.2 继续推进。
 > 已落地（P1）：技能注册与 `Alt+C` 按键、地图 GUI（缩放/拖动/框选/维度页切换）、视图租约加载、区块瓦片流、生物标记、**同维度区块交换**（区块段引用交换 + 方块实体重定位 + 实体/玩家随区块位移 + 高度图/天光列/光照重建 + 整区块重发）、实体传送、体积计费、设置项与本地化。
 > 已落地（P2）：**跨维度区块交换**（`ChunkVerticalBand` 按绝对 Y 求重叠带 + 段字节回环交换，带外段保持不动）、跨维度实体与玩家搬运、`ChunkLeapLoadingScreen` 替代跨维加载界面（仅在跃迁归因窗口内生效）、目的地预加载进度下发与 GUI 门控、客户端跨维度校验放行。
-> 尚未落地（P3）：计划刻重定位、POI 重建、崩溃恢复日志、地图瓦片增量刷新。
+> 尚未落地（P3）：计划刻重定位、POI 重建、结构引用处理、崩溃恢复日志（无 `ChunkSwapJournalSavedData`）；地图瓦片已有交换后的定向失效（`ChunkSwapService` → `ChunkMapViewService.invalidateChunks`），但尚无方块变更监听驱动的增量刷新。
 > 实现与本文档的差异详见文末「§14 实施记录」。
 
 本文档为设计文档。文中标注了已核验的 Minecraft 26.2 / NeoForge 26.2.0.70 API 依据，以及需要 AccessTransformer 或 Mixin 才能完成的少数环节。
@@ -31,7 +33,7 @@
 
 - **P1（核心闭环）**：技能注册 + 按键 + 地图 GUI（缩放/拖动/框选/维度切换）+ 瓦片与实体流 + 视图租约加载 + **同维度**区块交换（含方块实体与实体）+ 同维度玩家随区块无缝传送。
 - **P2（跨维度）**：跨维度区块交换（绝对 Y 配对 + 字节回环）+ 跨维度实体/玩家搬运 + `RegisterDimensionTransitionScreenEvent` 隐藏加载界面 + 预加载进度条。
-- **P3（保真与韧性）**：计划刻重定位、POI 重建、结构引用处理、崩溃日志（SavedData）与恢复、地图瓦片按方块变更增量刷新。
+- **P3（保真与韧性）**：计划刻重定位、POI 重建、结构引用处理、崩溃日志（SavedData）与恢复、地图瓦片按方块变更增量刷新。当前前三项与崩溃日志仍未落地；地图瓦片只在交换后做定向失效（`ChunkMapViewService.invalidateChunks`），尚无方块变更监听。
 
 ---
 
@@ -46,7 +48,7 @@ public final class ChunkLeap extends Skill {
                 .of(AbilityCategories.TELEPORT.get())
                 .level(AbilityLevel.LEVEL5)                 // 推荐等级
                 .energyCost(100_000)                        // IF 学习消耗，与既有 L5 一致
-                .cpCost(200)                                // 基础施放 CP，实际按体积计费
+                .cpCost(ChunkLeapCost.BASE)                 // 基础施放 CP = 100，实际按体积计费
                 .iterationTicks(20)                         // CP 迭代/冷却间隔，上限 MAX_CP_ITERATION_TICKS=20
                 .maxStacks(NO_STACK_LIMIT)
                 .dependsOn(Skills.AREA_TELEPORT_SELECT)     // 前置：区域传送
@@ -60,8 +62,8 @@ public final class ChunkLeap extends Skill {
 
 - **不加熟练度档位**：`Builder` 默认 `SkillProficiencyProfile.NONE`，与同为 L5 的 `SpacialExcision` 一致。
 - **计费模型**（服务端在 `executeActive` 内用 `CostCalculator` 二次核算，防止客户端谎报）：
-  `actualCost = 100 + 4 × 交换区块总数 + 30 × 实体传送个数`
-  客户端在 GUI 校验阶段做同样的预估并展示（`ChunkLeapCost.estimate(...)` 单一实现，双端复用）。
+  `actualCost = 100 + 4 × 交换区块总数 + 30 × 随区块实体数`；单实体传送固定 `30`
+  客户端在 GUI 校验阶段做同样的预估并展示（`ChunkLeapCost.forSwap(...)` / `forEntityTeleport()` 单一实现，双端复用）。
 - **等级门禁**：`LEVEL5` 只影响推荐等级与学习条件；运行期无额外等级校验（与现有一致）。
 
 ### 1.2 注册点清单
@@ -75,9 +77,7 @@ public final class ChunkLeap extends Skill {
 | `src/main/java/org/academy/internal/common/network/PacketTypes.java` | 新增 §4.1 全部 packet type（`PACKET_TYPES.register("chunk_leap_*", ...)`） |
 | `src/main/resources/assets/academy/lang/{en_us,zh_cn}.json` | `skill.academy.chunk_leap`、`app.academy.chunk_leap.*`（GUI 文案/按键标签/设置项） |
 | `src/main/resources/assets/academy/ui/layout/chunk_leap.json` | 新 GUI 布局（§3.2） |
-| `docs/ability_skill_dependencies.md` | 追加：`5 | 区块跃迁 (academy:chunk_leap) | academy:area_teleport_select` |
-| `docs/SKILL_IMPLEMENTATION_CONTROL_MATRIX.md` | 追加技能行（运行 `tools/docs/sync_skill_control_matrix.ps1` 重生成） |
-| `docs/SKILL_EFFECT_COST_ITERATION_STACK_MATRIX.md` | 同步消耗/迭代数值 |
+| `docs/ABILITY_SKILL_REFERENCE.zh-CN.md` | 在合并后的技能总表中追加区块跃迁行：前置 `academy:area_teleport_select`、消耗/迭代数值与实现状态（原 `ABILITY_SKILL_USAGE_GUIDE.md`、`SKILL_IMPLEMENTATION_CONTROL_MATRIX.md`、`SKILL_EFFECT_COST_ITERATION_STACK_MATRIX.md`、`ability_skill_dependencies.md` 已并入此文件） |
 
 ### 1.3 技能树位置（`SkillInfo`）
 
@@ -148,7 +148,7 @@ public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClie
 
 ### 2.3 配置与设置项
 
-`ChunkLeapConfig extends KeyBindingConfig`：
+`ChunkLeapClientConfig extends KeyBindingConfig`（`org.academy.internal.client.ability.teleport`）：
 
 | 绑定 | 默认 | 说明 |
 | --- | --- | --- |
@@ -158,15 +158,15 @@ public static final AbilitySystemClient.SkillInfo SKILL_INFO = AbilitySystemClie
 
 | Entry | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- |
-| `max_region_chunks` | `IntegerRange` 16–1024，step 16 | 256 | 单次交换区块总数上限（防止误选超大区域导致性能事故） |
-| `auto_load_map` | `Toggle` | `true` | 地图是否自动为可见区域申请区块加载（关闭后只显示已加载区块） |
-| `view_radius_chunks` | `IntegerRange` 8–48，step 4 | 24 | 单维度地图视图租约半径（区块） |
-| `tile_detail` | `Choice`（低/中/高） | 中 | 瓦片采样分辨率 4×4 / 8×8 / 16×16 |
-| `show_entities` | `Toggle` | `true` | 是否在地图上显示生物实体 |
-| `entity_refresh_ticks` | `IntegerRange` 5–40，step 5 | 10 | 实体标记刷新间隔 |
-| `confirm_swap` | `Toggle` | `true` | 执行前是否需要二次确认（危险操作） |
 | `move_players_with_chunks` | `Toggle` | `true` | 玩家所在区块被交换时是否随区块一并位移 |
+| `max_region_chunks` | `IntegerRange` 1–9，step 1 | 9 | 单次交换区块总数上限（与服务端 `ChunkSwapService.MAX_SWAP_CHUNKS = 9` 一致） |
+| `view_radius_chunks` | `IntegerRange` 4–20，step 2 | 12 | 单维度地图视图半径（区块） |
+| `auto_load_map` | `Toggle` | `true` | 地图是否自动为可见区域申请区块加载（关闭后只显示已加载区块） |
+| `confirm_swap` | `Toggle` | `true` | 执行前是否需要二次确认（危险操作） |
+| `show_entities` | `Toggle` | `true` | 是否在地图上显示生物实体 |
 | `seamless_transition` | `Toggle` | `true` | 跨维度时是否隐藏加载界面 |
+
+> 原设计的 `tile_detail` 设置项已移除：瓦片精度固定为 `MapTileBuilder.DETAIL = 16`（1 texel = 1 方块）。`entityRefreshTicks` 字段仍保留为持久化配置（默认 10，夹取 5–40），但**未注册到设置界面**；它随 `ViewRequestPacket` 下发，服务端再按 5–40 夹取。
 
 ---
 
@@ -274,7 +274,7 @@ public final class ChunkLeapScreen extends UiScreen implements SerializedUiDebug
 
 **核心策略：把每个区块烘焙成一张小位图，再整块绘制 —— 而非逐格填充。**
 
-- 数据：每个区块 = `detail × detail` 的 ARGB 字节（默认 `detail = 8` → 64 B/chunk，可切换 4/16）。
+- 数据：每个区块 = `detail × detail` 的 ARGB 字节（当前固定 `detail = MapTileBuilder.DETAIL = 16`，即 1 texel = 1 方块 → 1 KB/chunk；纹理格位 16×16 px 恰好对应一个区块）。
 - 客户端把 `detail×detail` 瓦片**打包进一张动态图集**：
   - `ChunkTileAtlas`：单张 `1024×1024` RGBA 纹理，格位 `16×16` px（含 1px 内边距防渗色）→ 可容纳 `64×64 = 4096` 个瓦片，覆盖 64×64 区块的整屏视野绰绰有余。
   - 复用 MSDF 图集的 `SkylineAllocator` 思路做矩形分配；上传走 `UiEnvironment.createDynamicTextureSource(identifier, bytes)`（`MinecraftUiEnvironment` 已实现 `DynamicTexture` + `textureManager.register`）。
@@ -282,7 +282,7 @@ public final class ChunkLeapScreen extends UiScreen implements SerializedUiDebug
 - 绘制：**每个可见区块 1 个带 UV 的纹理四边形**（`ImageWidget` 同族的 `PosTexColorRectDrawCommand` / 直接 `ImageDrawCommand`）。屏幕最多可见区块数约 `(屏宽/16)×(屏高/16)`，1080p 下 ≈ 4800 个四边，但**同一纹理 + 同一 pipeline + 同一 scissor**，由 `BatchProcessor` 合并成**极少数 draw call**。
   - 关键约束（已核验 `BatchProcessor.BatchState.shouldBreakBatch`）：批次在 pipeline、纹理集（`resourceKey`）或 `scissorRect` 变化时被打断。因此：**整张地图只用 1 个外层 scissor、1 张瓦片图集、1 个 pipeline**；禁止逐格 scissor。
 - 视口裁剪：在**区块坐标空间**做可见矩形迭代（`PrecisionEditorGeometry` + 可见区块矩形），只提交可见区块，并对图集外/未加载区块提交统一的「未加载」纯色占位。
-- 缩放档位与 LOD：缩放 < 0.5x 时降级为 detail 4 的粗瓦片（服务端按请求档位生成），避免低倍率下无谓的高精度带宽。
+- 缩放档位与 LOD（当前未实现）：设计目标是在缩放 < 0.5x 时降级为 detail 4 的粗瓦片，避免低倍率下无谓的高精度带宽；当前服务端固定按 16 采样、请求中无 `detail` 字段，客户端也未实现降级。
 - 网格与选区覆盖层：在瓦片之上按 drawOrder 分层提交细线/粗线、选区填充与 1px 边界、hover 高亮；这些也是少量四边，不破坏批次。
 
 ### 3.5 实体标记
@@ -345,43 +345,48 @@ enum DragMode { NONE, PAN, MARQUEE, ENTITY_MARQUEE }
 
 所有包沿用仓库现有 Misaka 模式：`PacketType` 在 `PacketTypes` 注册；`@PacketTarget(ThreadType.CLIENT|SERVER)`；`StreamCodec` 用 `StreamCodec.composite` 或手写 `StreamCodec.of`（变长列表参照 `LocationTeleport.MarksSyncPacket` / `AreaTeleportSelect.SyncPacket`）；处理器类 `Client`/`Server` 内 `@SubscribePacket static void handle(...)`，在 `initClient`/`initServer` 里 `NETWORK_MANAGER.register(...)`。
 
-**C2S（客户端 → 服务端）**
+**C2S（客户端 → 服务端，7 个）**
 
 | PacketType 名 | 类 | 字段 | 说明 |
 | --- | --- | --- | --- |
-| `chunk_leap_view_request` | `ViewRequestPacket` | `dimension(ResourceKey<Level>)`, `minChunkX/Z`, `maxChunkX/Z`(矩形), `detail(byte)`, `epoch(int)` | 申请/更新某维度的地图视图；服务端按此建立/收敛租约 |
-| `chunk_leap_view_release` | `ViewReleasePacket` | `dimension` | 离开该维度页/关闭地图时释放租约 |
-| `chunk_leap_swap` | `SwapRequestPacket` | `dimA`, `minA`, `sizeA(w,h)`, `dimB`, `minB`, `sizeB(w,h)`, `opId(UUID)` | 等额区块交换请求（跨维度允许） |
-| `chunk_leap_entity_tp` | `EntityTeleportPacket` | `entityId(varInt)`, `dimension`, `BlockPos target`, `opId(UUID)` | 将指定实体传送到目标位置 |
-| `chunk_leap_cancel` | `CancelPacket` | `opId(UUID)` | 取消进行中的交换（若尚未进入不可中断阶段） |
+| `chunk_leap_view_request` | `ViewRequestPacket` | `region(ChunkLeapRegion)`（维度 + 最小区块 + 宽高）, `epoch(int)`, `entityRefreshTicks(int)` | 申请/更新地图视图；服务端据此建立/收敛租约，并夹取实体刷新间隔 |
+| `chunk_leap_view_release` | `ViewReleasePacket` | `dimensionId(String)` | 离开该维度页/关闭地图时释放租约 |
+| `chunk_leap_swap` | `SwapRequestPacket` | `opId(UUID)`, 源选区（`dimension`, `originChunkX/Z`, `count`, `List<Offset(dx,dz)>`）, 目标（`dimension`, `originChunkX/Z`）, `movePlayers(bool)` | 源偏移列表 + 目标锚点；目标由源同形派生，服务端按偏移下标配对 |
+| `chunk_leap_entity_teleport` | `EntityTeleportPacket` | `entityId(varInt)`, `dimensionId`, `targetX/Y/Z(varInt)` | 将指定实体传送到点击的方块列（服务端解析真实地表） |
+| `chunk_leap_player_teleport` | `PlayerTeleportPacket` | `dimensionId`, `blockX`, `blockZ` | FTB 风格点地传送：只上报方块列，落点由服务端安全搜索决定 |
+| `chunk_leap_inspect_request` | `InspectRequestPacket` | `dimensionId`, `chunkX`, `chunkZ` | 查询指定区块的表层方块/群系/实体数/方块构成 |
+| `chunk_leap_god_view_request` | `GodViewRequestPacket` | `dimensionId`, `blockX`, `blockZ`, `enter(bool)` | 进入/退出真实地形上帝视角 |
 
-**S2C（服务端 → 客户端）**
+**S2C（服务端 → 客户端，8 个）**
 
 | PacketType 名 | 类 | 字段 | 说明 |
 | --- | --- | --- | --- |
-| `chunk_leap_tiles` | `MapTilesPacket` | `dimension`, `epoch(int)`, `List<TileEntry>`；`TileEntry = (long chunkKey, byte flags, byte[] colors)` | 批量瓦片；`flags` 位：已加载/生成中/失效 |
-| `chunk_leap_entities` | `MapEntitiesPacket` | `dimension`, `List<Marker>`；`Marker = (varInt entityId, byte category, varInt typeId, int blockX, int blockZ)` | 可见区域实体标记（限频） |
-| `chunk_leap_view_status` | `ViewStatusPacket` | `dimension`, `loaded(int)`, `total(int)` | 加载进度（驱动进度条） |
-| `chunk_leap_swap_result` | `SwapResultPacket` | `opId`, `success(bool)`, `reasonKey`, `List<(dim, chunkKey)> affected` | 交换结果 + 需要失效的瓦片集合 |
-| `chunk_leap_swap_progress` | `SwapProgressPacket` | `opId`, `done`, `total` | 大区域交换的分步进度 |
-| `chunk_leap_teleport_result` | `TeleportResultPacket` | `success`, `reasonKey`, `dimension`, `BlockPos` | 实体传送结果 |
-| `chunk_leap_target_ready` | `TargetReadyPacket` | `dimension`, `minChunkX/Z`, `ready(bool)` | 目的地预加载完成（解锁「确认交换」） |
+| `chunk_leap_tiles` | `TilesPacket` | `dimensionId`, `epoch(int)`, `detail(int)`, `List<Tile>`；`Tile = (chunkX, chunkZ, detail×detail ARGB int)` | 批量瓦片；仅已加载区块，单包 ≤ `MAX_TILES = 32` |
+| `chunk_leap_entities` | `EntitiesPacket` | `dimensionId`, `List<Marker>`；`Marker = (entityId, category(byte), typeId, blockX, blockZ, optional playerId(UUID))` | 可见区域实体标记（限频）；单包 ≤ `MAX_MARKERS = 512` |
+| `chunk_leap_swap_result` | `SwapResultPacket` | `opId`, `success(bool)`, `reasonKey`, `List<ChunkLeapRegion> affected` | 交换结果 + 需要失效的瓦片区域（≤4） |
+| `chunk_leap_teleport_result` | `TeleportResultPacket` | `success(bool)`, `reasonKey` | 实体/玩家传送结果 |
+| `chunk_leap_view_status` | `ViewStatusPacket` | `dimensionId`, `loaded(int)`, `total(int)` | 加载进度（驱动进度条） |
+| `chunk_leap_preload_status` | `PreloadStatusPacket` | `opId`, `dimensionId`, `ready(bool)`, `loaded(int)`, `total(int)` | 交换目的地预加载进度；`ready` 后才会开始交换 |
+| `chunk_leap_inspect_result` | `InspectResultPacket` | `dimensionId`, `chunkX/Z`, `loaded(bool)`, `surfaceBlock`, `surfaceY`, `biome`, `entityCount`, `palette`（≤5 个 blockId/count） | 区块检查结果 |
+| `chunk_leap_god_view_status` | `GodViewStatusPacket` | `dimensionId`, `active(bool)`, `sameDimension(bool)`, `blockX/Y/Z` | 上帝视角就绪/结束；`sameDimension=false` 表示跨维度不可展示 |
+
+> 当前共 15 个包（7 C2S + 8 S2C）。旧设计中的 `chunk_leap_cancel`、`chunk_leap_swap_progress`、`chunk_leap_target_ready` 已不存在：预加载进度由 `chunk_leap_preload_status` 承担，视图进度由 `chunk_leap_view_status` 承担。
 
 ### 4.2 codec 要点
 
-- **瓦片编码**：`flags(byte) + detail×detail` 字节；`detail` 随 `MapTilesPacket` 头统一给出，避免每瓦片重复。颜色为 `MapColor` 复合后的 RGB → 单字节索引或 3 字节 RGB 直存（推荐 3 字节直存，省去调色板同步；8×8×3 = 192 B/chunk，64 瓦片 ≈ 12 KB/包）。
-- **批量上限**：`MapTilesPacket` 每包 ≤ 64 个瓦片；`MapEntitiesPacket` 每包 ≤ 256 个标记，超出分行。
-- **维度键**：使用 `ResourceKey<Level>` 的 `ResourceLocation` 流编解码（`ResourceLocation.STREAM_CODEC` / `ByteBufCodecs` 组合），不要自定义维度 id 映射。
+- **瓦片编码**：`TilesPacket` 头统一给出 `dimensionId`、`epoch`、`detail`（当前固定为 `MapTileBuilder.DETAIL = 16`）与瓦片数；每瓦片为 `chunkX/chunkZ + detail×detail` 个 ARGB int（`buf.writeInt`），仅已加载区块入包。16×16×4 B ≈ 1 KB/chunk，32 瓦片约 32 KB/包。
+- **批量上限**：`TilesPacket.MAX_TILES = 32`；`EntitiesPacket.MAX_MARKERS = 512`，超出不追加。
+- **维度键**：线格式用 `STRING_UTF8` 的维度 id，服务端以 `Identifier.tryParse` → `ResourceKey.create(Registries.DIMENSION, id)` 还原；不要传 `ResourceKey` 对象。
 - **`opId`**：`UUID`，用于把异步结果与请求配对并抑制过期回包（客户端丢弃未知/已关闭的 `opId`）。
 - **解码防御**：所有列表长度、选区尺寸、`detail`、坐标范围在解码时**夹取**（参照 `LocationTeleport.MarksSyncPacket` 的做法），拒绝退化/恶意包。
 
 ### 4.3 请求节流与增量
 
 - **视图请求去抖**：pan/zoom 停止 150 ms 后才发 `ViewRequestPacket`。
-- **增量**：客户端保存「上次已请求矩形」，只发**差集**（expand 的部分）与精度档位变化；`epoch` 用于服务端识别新会话（新 `epoch` 时重建租约，旧租约立即释放）。
+- **增量**：客户端保存「上次已请求矩形」，只发**差集**（expand 的部分）；`epoch` 用于服务端识别新会话（新 `epoch` 时重建租约，旧租约立即释放）。
 - **优先级由近到远**：服务端把瓦片任务按「距视图中心距离」排序，保证中心先可见。
 - **在途上限**：客户端同时最多 2 个未完成的视图请求；服务端每玩家每 tick 生成的瓦片数有预算（§5.4）。
-- **实体包限频**：`entity_refresh_ticks`（默认 10 tick）一包；仅在可见区域或选中实体变化时提前推送。
+- **实体包限频**：`entityRefreshTicks`（默认 10 tick）一包；仅在可见区域或选中实体变化时提前推送。
 
 ---
 
@@ -424,7 +429,7 @@ public final class ChunkTicketLeaseManager {
 3. **不会向客户端灌真实地形**：`ChunkMap.isChunkTracked(player, x, z)` 要求 `player.getChunkTrackingView().contains(...)`；地图视野通常远大于玩家视距，因此被地图加载的远处区块**不会**触发 `markChunkPendingToSend`，玩家不会被真实区块包淹没——地图数据完全走我们自己的轻量瓦片包。
 4. 租约边界与生命周期：
    - 每玩家每维度至多 1 个租约；切维度页时 `release` 旧租约；
-   - `view_radius_chunks` 上限 48，`max_region_chunks` 上限 1024，硬夹取；
+   - `view_radius_chunks` 夹取在 4–20，`max_region_chunks` 夹取在 1–9；租约本身另有 `VIEW_LEASE_CAP = 1600` / `IMMEDIATE_LEASE_CAP = 1024` 的硬上限；
    - 关闭地图（`onClose`）/玩家登出（`PlayerLoggedOutEvent`）/玩家换维度时释放；
    - `ServerStoppingEvent` 全量释放（对齐现有 `TeleportChunkForceManager.onServerStopping`）；
    - 每个 tick 只推进有限数量的 ticket 申请，避免一次性申请上千区块造成卡顿；已申请集合去重。
@@ -441,12 +446,12 @@ for (x, z) in chunk:
     color  = state.getMapColor(level, pos).calculateARGBColor(...)  // 或 col 字段
 ```
 
-- 采样分辨率由请求的 `detail` 决定（4/8/16），并对每个采样点在 chunk 内做 `Heightmap` 查询；`Heightmap` 缺失时 vanilla 会自动 `primeHeightmaps`（已核验 `ChunkAccess.getHeight`）。
+- 采样分辨率固定为 `MapTileBuilder.DETAIL = 16`（不再由客户端请求档位决定），并对每个采样点在 chunk 内做 `Heightmap` 查询；`Heightmap` 缺失时 vanilla 会自动 `primeHeightmaps`（已核验 `ChunkAccess.getHeight`）。
 - 顶层取「非空气最高方块」；水下取流体色并做深度压暗（近似 vanilla 地图观感）。
 - 瓦片缓存：`MapTileCache` 键 `(level.dimension(), chunkKey)`，值 `byte[] + version`。
-  - 失效来源：① 区块交换（§6）；② P3 阶段的方块变更（可监听 `BlockEvent.BreakEvent`/`BlockEvent.EntityPlaceEvent` 标记脏区块，或按 epoch 定期失效）；
+  - 失效来源：① 区块交换（§6，已实现：交换完成后由 `ChunkMapViewService.invalidateChunks` 定向失效）；② 方块变更监听（P3，尚未实现；可监听 `BlockEvent.BreakEvent`/`BlockEvent.EntityPlaceEvent` 标记脏区块，或按 epoch 定期失效）；
   - 失效后仅重发该瓦片，不整屏刷新。
-- 生成预算：`MapTileBuildScheduler` 每 tick 至多 `N`（默认 64）个瓦片、并按毫秒预算（`Util.getMillis()` + `AcademyProfiler.zone("academy.chunk_leap.tile")`）提前让出，防止抢占 tick。
+- 生成预算：`ChunkMapViewService` 每玩家每 tick 至多 `48` 个瓦片（`TILE_BUDGET_PER_TICK`），并按 `4 ms` 毫秒预算（`Util.getMillis()`）提前让出，防止抢占 tick。
 - 未加载区块：若 `auto_load_map = true` 则由租约触发加载并在就绪后按需生成；否则直接回「未加载」flags 占位。
 
 ### 5.3 实体索引
@@ -460,18 +465,18 @@ var list = level.getEntitiesOfClass(LivingEntity.class, aabb, e -> !(e instanceo
 
 - 分类映射：`category ∈ {HOSTILE, PASSIVE, NEUTRAL, PLAYER, ITEM, PROJECTILE}`，由 `MobCategory`/`EntityType` 判断；仅下发分类 + 类型 id（用于图标与本地预览），不下发完整实体数据。
 - 坐标下发**区块内相对偏移**或绝对方块坐标（推荐绝对方块坐标的 varint 差分编码，行内按 x 排序后差分，压缩率好）。
-- 限频由 `entity_refresh_ticks` 控制；如果玩家正把地图打开在某维度页，只刷新该维度。
+- 限频由 `entityRefreshTicks` 控制；如果玩家正把地图打开在某维度页，只刷新该维度。
 
 ### 5.4 速率与预算
 
 | 资源 | 预算 |
 | --- | --- |
-| 每 tick 瓦片生成 | 64 个 / 毫秒预算提前让出 |
-| 每 tick 新区块加载申请 | 32 个（租约推进队列） |
-| 每包瓦片数 | 64 |
-| 实体包频率 | 每 `entity_refresh_ticks`（默认 10 tick） |
+| 每 tick 瓦片生成 | 每玩家 48 个 + 4 ms 毫秒预算 |
+| 每 tick 视图票据增/删 | 48 / 96（全局视图租约队列） |
+| 每包瓦片数 | 32（`TilesPacket.MAX_TILES`） |
+| 实体包频率 | 每 `entityRefreshTicks`（默认 10 tick，服务端夹取 5–40） |
 | 单玩家单维度租约 | 1 |
-| 租约区块总数上限 | `max_region_chunks`（默认 256，硬上限 1024） |
+| 租约区块总数上限 | `VIEW_LEASE_CAP = 1600`；`IMMEDIATE_LEASE_CAP = 1024`；客户端 `max_region_chunks` 上限 9 |
 
 ---
 
@@ -483,7 +488,7 @@ var list = level.getEntitiesOfClass(LivingEntity.class, aabb, e -> !(e instanceo
 - 允许跨维度；同一维度时两矩形**禁止相交**。
 - 交换内容：区块内的**方块、生物群系、方块实体、实体、计划刻（尽力）、高度图**。玩家默认随区块位移（可关）。
 - 禁止条件：任一区块包含**已加载的玩家且 `move_players_with_chunks=false`**（避免把人留在原地导致掉入虚空/卡墙）；任一区块含水/岩浆等流体的跨界连带（首期不做流体修正，交换后由 vanilla 流体 tick 自行收敛）；超出体积上限。
-- 越界/未加载：由 §5.1 的租约在提交前把两侧全部加载到 `FULL`；未就绪则拒绝并返回 `TargetReadyPacket(ready=false)`。
+- 越界/未加载：由 §5.1 的租约在提交前把两侧全部加载到 `FULL`；提交后先回 `PreloadStatusPacket(ready=false)` 并异步加载，加载失败回 `SwapResultPacket(reason=chunk_leap.reason.load_failed)`，就绪后才进入交换。
 
 ### 6.2 交换核心算法
 
@@ -558,8 +563,8 @@ sectionB.read(buf);           // A 的旧内容写入 B
 
 - `ChunkSwapOperation`：一次交换的完整状态（请求、两侧配对表、阶段、已处理索引、受影响区块集合、`opId`）。
 - 阶段：`VALIDATE → LOAD → APPLY(逐对, 原子) → RELIGHT/RESEND → ENTITIES/PLAYERS → DONE`。
-- **时间切片**：`APPLY` 按**区块对**分片，`ChunkSwapService.onServerTick` 每次取预算内的若干对（以毫秒预算为准，默认 2 ms/对上限），每完成一批发 `SwapProgressPacket`。因为单对是原子的，玩家永远不会看到「只换了一半的区块对」。
-- **崩溃安全**：`ChunkSwapJournalSavedData`（`SavedDataType`，存于 `server.overworld().getDataStorage()`，编码参照 `SpatialStorageSavedData`）：
+- **时间切片**：`APPLY` 按**区块对**分片，`ChunkSwapService.onServerTick` 每次取预算内的若干对（以毫秒预算为准，默认 **4 ms / server tick 总预算**，`SWAP_TIME_BUDGET_MS`）。当前不逐批发进度包：加载阶段由 `PreloadStatusPacket` 汇报，全部完成后发 `SwapResultPacket`。因为单对是原子的，玩家永远不会看到「只换了一半的区块对」。
+- **崩溃安全（P3，尚未实现）**：`ChunkSwapJournalSavedData`（`SavedDataType`，存于 `server.overworld().getDataStorage()`，编码参照 `SpatialStorageSavedData`）：
   - 进入 `APPLY` 前写入 `{opId, dimA, dimB, pairs, phase}`；`DONE` 后删除。
   - 服务器启动时若发现未完成记录：对涉及的区块强制 `markUnsaved + 重光照 + 整区块重发`，并把两侧的原始 NBT 快照（若在 P3 阶段引入）用于回滚；P1 只做「检测 + 重光照 + 重发 + 控制台告警」，并在文档中明确取舍。
 - **回滚**：`VALIDATE/LOAD` 阶段失败无需回滚（未改世界）；`APPLY` 之后失败按「继续完成 + 报错」而非回滚，因为半交换状态在语义上比「中断」更糟；若必须回滚，同一算法再执行一次反向交换即可（交换是自逆操作），这是该设计的一个优点。
@@ -585,8 +590,8 @@ sectionB.read(buf);           // A 的旧内容写入 B
 ### 7.2 预加载（把等待挪到地图打开期间）
 
 1. 地图打开、玩家在地图上浏览目标区域时，§5.1 的视图租约**已经**把目标区块加载到 `FULL` 并完成生成/落盘；
-2. 提交前，`ChunkTicketLeaseManager.acquireAndLoad(...)` 对**目的地矩形 + 玩家落点区块 + 其 3×3 邻域**做一次显式异步加载，用 `CompletableFuture` 汇总；
-3. `CompletableFuture` 完成后服务端发 `TargetReadyPacket`，GUI 的 `preload_progress` 到 100% 才启用「确认交换」；
+2. 提交前，`ChunkTicketLeaseManager.acquireAndLoad(...)` 对**源选区与目的地选区**各做一次显式异步加载（ticket 半径 1，为光照/碰撞提供邻域上下文），用 `CompletableFuture` 汇总；玩家传送另加载目的地 3×3；
+3. `CompletableFuture` 完成后服务端发 `PreloadStatusPacket(ready=true)`，GUI 的 `preload_progress` 到 100% 才启用「确认交换」；
 4. 由于区块已在内存且 `FULL`，`PlayerChunkSender.sendNextChunks` 只需推送**网络传输**，不再有生成/加载耗时；客户端落地时地形基本已到。
 
 > 关键：**绝不在主线程 `join()`**。`ServerChunkCache.getChunk(x, z, ChunkStatus.FULL, true)` 在非主线程会阻塞等待主线程（`ServerChunkCache.java:148-172`），地图服务必须走 `addTicketAndLoadWithRadius` / `getChunkFuture` 的异步路径。
@@ -633,10 +638,11 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
         │
         ├─ 点击「确认交换」（此时目的地区块已在内存）
         │  C2S SwapRequest(opId) ────────────────────────────► 服务端
-        │                                                     ├─ 校验 + 计费(executeActive)
-        │                                                     ├─ SwapJournal 写入
+        │                                                     ├─ 校验 + 预加载（源/目标两侧选区）
+        │  ◄── S2C PreloadStatus(ready) ──────────────────────┤
+        │                                                     ├─ 计费(executeActive)
+        │                                                     ├─ SwapJournal 写入（P3 未实现）
         │                                                     ├─ APPLY：逐对原子（section/BE/刻/实体）
-        │  ◄── S2C SwapProgress ──────────────────────────────┤
         │                                                     ├─ 光照 / 整区块重发
         │                                                     ├─ 实体迁移（TeleportSync）
         │                                                     └─ 玩家随区块位移（TeleportSync）
@@ -658,7 +664,7 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
 | `ChunkLeap` | 技能定义 | `Skill`, `executeActive` |
 | `ChunkMapViewService` | 视图租约生命周期、瓦片/实体推送调度、登出清理 | `ServerTickEvent.Post`, `PlayerLoggedOutEvent` |
 | `ChunkTicketLeaseManager` | 通用 ticket 租约（跨维度、>64 区块、异步） | `ServerChunkCache.addTicketWithRadius/addTicketAndLoadWithRadius`, `TicketType`, `ChunkLevel.byStatus` |
-| `MapTileBuilder` | 8×8/16×16 瓦片采样与编码 | `ChunkAccess.getHeight(Heightmap.Types, x, z)`, `BlockState.getMapColor(...)` |
+| `MapTileBuilder` | 16×16 瓦片采样与编码 | `ChunkAccess.getHeight(Heightmap.Types, x, z)`, `BlockState.getMapColor(...)` |
 | `MapTileBuildScheduler` | 每 tick 预算内的瓦片生成队列 | `Util.getMillis()`, `AcademyProfiler` |
 | `MapTileCache` | `(dim, chunkKey) → (byte[], version)` 缓存与失效 | — |
 | `MapEntityIndex` | 可见区实体分类与编码 | `EntityGetter.getEntitiesOfClass(...)` |
@@ -682,7 +688,7 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
 | `ChunkMapRenderer` | 可见区块矩形迭代、瓦片四边、网格、选区、标记、坐标/生物群系读数 |
 | `ChunkMapInputController` | pan/zoom/marquee/entity-pick 状态机 |
 | `ChunkMapHud` | 底部队列条/进度（如需地图外轻量提示） |
-| `ChunkLeapConfig` | `extends KeyBindingConfig` + 设置模块 |
+| `ChunkLeapClientConfig` | `extends KeyBindingConfig` + 设置模块 |
 | `ChunkLeapTransition` | 注册 `SeamlessLoadingScreen` |
 | `SeamlessLoadingScreen` | 不可见/仅 VFX 的 `LevelLoadingScreen` 子类 |
 | `TeleportPreloadTracker` | 目的地预加载进度与「可执行」门控 |
@@ -711,13 +717,13 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
 2. **交换不产生逐块包**：整区块重发（每区块 1 个 `ClientboundLevelChunkWithLightPacket`），而非每方块 1 个 `ClientboundBlockUpdatePacket`。
 3. **交换时间切片**：按区块对分片 + 毫秒预算，逐 tick 推进并上报进度，玩家感知为「逐步生效」而非一次性冻结。
 4. **地图瓦片**：单张图集 + 单 pipeline + 单 scissor → 可见区块整体合并为极少数 draw call；脏瓦片只重写子区域。
-5. **带宽**：增量视图请求（只发差集）、去抖 150 ms、每包 ≤64 瓦片、实体包限频、低倍率自动降精度（LOD）。
+5. **带宽**：增量视图请求（只发差集）、去抖 150 ms、每包 ≤32 瓦片、实体包限频、低倍率自动降精度（LOD）。
 6. **服务端生成预算**：每 tick 瓦片数 + 毫秒双预算，`AcademyProfiler` 分区计时，超预算立即让出。
 7. **加载异步化**：只走 `addTicketAndLoadWithRadius`/`getChunkFuture`，**绝不主线程 join**；租约申请也分 tick 推进。
 8. **不污染客户端视距**：租约加载的远处区块因 `ChunkTrackingView` 不含其坐标，不会触发真实地形下发（`ChunkMap.isChunkTracked` 已核验），地图数据与真实地形互不干扰。
 9. **光照摊销**：`setLightEnabled(false→true)` 丢弃并重算，`runLightUpdates` 由 vanilla 在后续 tick 摊销，不在交换 tick 内阻塞。
 10. **租约生命周期严格**：关屏/登出/换维度/停服即释放；客户端瓦片表 LRU 淘汰；服务端瓦片缓存带版本失效。
-11. **内存边界**：`max_region_chunks`（默认 256，硬上限 1024）、`view_radius_chunks`（默认 24，上限 48）双重夹取，杜绝「选满世界」把服务器拖垮。
+11. **内存边界**：`max_region_chunks`（默认 9，上限 9）、`view_radius_chunks`（默认 12，上限 20）双重夹取，另有 `VIEW_LEASE_CAP = 1600` / `IMMEDIATE_LEASE_CAP = 1024` 的租约硬上限，杜绝「选满世界」把服务器拖垮。
 12. **计费与体积联动**：CP 随体积线性增长，天然抑制滥用；本地预估与服务端核算共用 `ChunkLeapCost`，避免不一致。
 
 ---
@@ -727,17 +733,18 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
 | 常量 | 值 | 位置 |
 | --- | --- | --- |
 | 技能 id | `academy:chunk_leap` | `SkillNames` |
-| 推荐等级 / IF / 基础 CP / 迭代 | `LEVEL5` / `100_000` / `200` / `20 tick` | `ChunkLeap` |
-| 计费公式 | `100 + 4×区块数 + 30×实体数` | `ChunkLeapCost` |
-| 全局键 | `Alt+C↓` | `ChunkLeapConfig` |
-| 视图请求去抖 | `150 ms` | `ChunkMapInputController` |
-| 瓦片精度 | `4 / 8 / 16`（默认 8） | `ChunkLeapConfig.tile_detail` |
-| 单包瓦片上限 | `64` | `MapTilesPacket` |
-| 每 tick 瓦片生成 | `64` + 毫秒预算 | `MapTileBuildScheduler` |
-| 租约上限 | `view_radius_chunks ≤ 48`；`max_region_chunks ≤ 1024` | `ChunkTicketLeaseManager` |
-| 实体刷新 | `10 tick` | `ChunkLeapConfig.entity_refresh_ticks` |
-| 交换分片预算 | `2 ms/对`（可调） | `ChunkSwapService` |
-| 预加载邻域 | 目的地 + 玩家落点 3×3 区块 | `TeleportPreloadTracker` |
+| 推荐等级 / IF / 基础 CP / 迭代 | `LEVEL5` / `100_000` / `100`（`ChunkLeapCost.BASE`）/ `20 tick` | `ChunkLeap` |
+| 计费公式 | `100 + 4×区块数 + 30×实体数`；实体传送固定 `30` | `ChunkLeapCost` |
+| 全局键 | `Alt+C↓` | `ChunkLeap.Client` / `ChunkLeapClientConfig` |
+| 视图请求去抖 | `150 ms`（`REQUEST_DEBOUNCE_MS`） | `ChunkMapViewClient` |
+| 瓦片精度 | 固定 `16`（`MapTileBuilder.DETAIL`，1 texel = 1 方块） | `MapTileBuilder` |
+| 单包瓦片上限 | `32`（`TilesPacket.MAX_TILES`） | `ChunkLeapPackets` |
+| 每 tick 瓦片生成 | 每玩家 `48` + `4 ms` 预算（`TILE_BUDGET_PER_TICK` / `TILE_TIME_BUDGET_MS`） | `ChunkMapViewService` |
+| 租约上限 | `VIEW_LEASE_CAP = 1600`；`IMMEDIATE_LEASE_CAP = 1024`；视图票据增/删预算 `48/96` 每 tick | `ChunkTicketLeaseManager` |
+| 实体刷新 | 默认 `10 tick`，夹取 `5–40` | `ChunkLeapClientConfig.entityRefreshTicks` |
+| 交换分片预算 | `4 ms` / server tick 总预算（`SWAP_TIME_BUDGET_MS`）；高度图刷新 `6` 区块 + `3 ms` / tick | `ChunkSwapService` |
+| 随区块玩家回传 | `2` 批 × 延迟 `5 tick`，半径 `1`（3×3） | `ChunkSwapService`（`CarrierResync`） |
+| 预加载邻域 | 交换：源/目标两侧完整选区（ticket 半径 1）；玩家传送：目的地 3×3 | `ChunkSwapService` |
 
 ---
 
@@ -820,7 +827,7 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
 
 ### 14.1 已落地的文件
 
-**服务端（`org.academy.internal.common.ability.teleport`）**
+**服务端（`org.academy.internal.common.ability.teleport.chunk` / `org.academy.internal.common.ability.teleport.map`；`bfbd232f` 起由 `.teleport` 迁入）**
 
 | 文件 | 职责 |
 | --- | --- |
@@ -830,9 +837,9 @@ public final class SeamlessLoadingScreen extends LevelLoadingScreen {
 | `ChunkTicketLeaseManager` | 引用计数的区块加载租约；`acquireAndLoad` 走异步 future，绝不阻塞主线程 |
 | `MapTileBuilder` | 每区块 1 texel 采样（4 列取平均 + 高度明暗） |
 | `ChunkMapViewService` | 视图租约生命周期、按 tick 预算的瓦片推送、限频实体标记、登出/停服清理 |
-| `ChunkSwapService` | 校验（纯函数 `validateRegions` 与含服务端查维度的 `validate`）、计费、提交 |
+| `ChunkSwapService` | 校验（纯函数 `validateSelections` 与含服务端查维度的 `validate`）、计费、提交 |
 | `ChunkRegionSwap` | 单对区块的原子交换：区块段引用交换、方块实体重定位、实体/玩家位移、高度图/天光列/光照、整区块重发 |
-| `ChunkLeapPackets` | 全部 5 个 C2S + 5 个 S2C 包与编解码、`Client`/`Server` 处理器 |
+| `ChunkLeapPackets` | P1 时 5 个 C2S + 5 个 S2C；现为 15 个包（7 C2S + 8 S2C，见 §4.1）与编解码、`Client`/`Server` 处理器 |
 | `ChunkMapClientState` | 客户端按维度的 texel 表、实体标记、epoch 过滤、结果队列 |
 | `skills/lv5/ChunkLeap` | 技能定义（L5 / 100k / 基础 100 CP / 迭代 20）、`Alt+C` 按键、`executeSwap`/`executeEntityTeleport` 公开入口 |
 
@@ -1005,6 +1012,8 @@ V3 修完用户报告的 5 项后，我对新代码做了一轮自查，发现�
 
 因此，把「上帝视角看真实 3D 地形」做进这个技能，只能以牺牲玩家周围世界或引入加载界面为代价，属于我无法在无实机确认下安全交付的改动。
 
+> 注：该结论已被 §21.2 的已实现方案取代，保留作时间线记录。
+
 **代之以实际可用的等价能力（已实现）**：`ChunkLeapInspector` + 悬停详情面板。服务端**读取自己手上的真实区块**，返回该区块的表层方块、表层 Y、生物群系、实体数量与前 5 种方块构成；客户端悬停即请求（按区块去重 + 250ms 限频）、结果缓存、面板显示。它适用于**任意维度**（不需要客户端拥有该维度的 `ClientLevel`），读数是真实方块数据而非采样色块，且单次只加载被悬停的那一个区块。就「确认目标位置到底是什么样」这一实际目的而言，它给出的是可据以决策的信息；若你确实需要完整 3D 视角，请告诉我，那需要接受上述代价之一（我倾向的方案是：临时把玩家置于旁观者模式并正常传送过去，也就是用原版机制换取真实视野，但会有加载界面）。
 
 ---
@@ -1021,7 +1030,7 @@ V3 修完用户报告的 5 项后，我对新代码做了一轮自查，发现�
 - **目标由源派生**：`source.anchoredAt(dim, origin)` 复用同一份偏移，因此目标与源**在构造上**就等大同形——「数量不等」「形状不符」从此不可能出现，这两个校验分支与对应文案一并删除；服务端按**偏移下标**配对（源第 i 块 ↔ 目标第 i 块）。
 - 线格式随之改变：`SwapRequestPacket` 只传一份偏移列表 + 源/目标两个锚点，而不是两个矩形。
 
-顺带修掉一个真实缺陷：`MAX_SWAP_CHUNKS` 与容器上限 `MAX_CHUNKS` 原本都是 1024，而构造时会截断到容器上限，导致「超过上限」校验**永远不可能触发**。现已把玩法上限下调为 512（低于线格式上限 1024），使上限成为真正可执行的约束，并加了断言防止二者再次相等。
+顺带修掉一个真实缺陷：`MAX_SWAP_CHUNKS` 与容器上限 `MAX_CHUNKS` 原本都是 1024，而构造时会截断到容器上限，导致「超过上限」校验**永远不可能触发**。现已把玩法上限下调为 **9**（`ChunkSwapService.MAX_SWAP_CHUNKS = 9`，远低于线格式/容器上限 `ChunkLeapSelection.MAX_CHUNKS = 1024`），使上限成为真正可执行的约束，并在 `ChunkSwapServiceValidationTest` 中断言二者不相等。
 
 ### 18.2 显示与交互
 
@@ -1047,6 +1056,8 @@ V3 修完用户报告的 5 项后，我对新代码做了一轮自查，发现�
 ### 18.5 关于「预览实际目标画面」
 
 用户要求一个按钮预览真实目标区域。**完整的 3D 视角仍然不可行**，原因与 §17.4 相同（`ClientChunkCache.Storage.inRange` 会丢弃远程区块包，移动缓存中心会卸载玩家脚下区块，跨维度还需第二个 `ClientLevel`）。
+
+> 注：该结论已被 §21.2 的已实现方案取代，保留作时间线记录。
 
 因此实现为**方块级预览**：`ChunkLeapPreview` 以 1 texel = 1 方块读取目标中心 64×64 方块的**真实地表**（同样的顶棚感知采样），侧栏新增「预览目标区域」按钮，点开后在地图视口上方叠加显示该图像并可点击关闭。相对地图的每 2×2 方块 1 像素，这是 16 倍细节，足以辨认建筑轮廓与方块构成；且中心区块未加载时会明确提示「无法预览」，而不是显示空白。
 
@@ -1250,7 +1261,7 @@ V3 修完用户报告的 5 项后，我对新代码做了一轮自查，发现�
 
 同维度传送尤其明显：客户端区块列表没有变化（不需重发地形），因此**没有任何后续机制去补光照**，表现为「周围方块渲染全部丢失」。
 
-**修法**：交换管线把**被携带的玩家**列在 `Result` 中返回（`Result.playersMoved()`），由 `ChunkSwapService` 在交换完成后为他们安排**分两批、各延迟 20 tick 的整区块重发**（`CarrierResync`）。理由有二：
+**修法**：交换管线把**被携带的玩家**列在 `Result` 中返回（`Result.playersMoved()`），由 `ChunkSwapService` 在交换完成后为他们安排**2 批、每批延迟 5 tick、半径 1（3×3）的整区块重发**（`CarrierResync`；`CARRIER_RESYNC_STEP_TICKS = 5`、`CARRIER_RESYNC_PASSES = 2`、`CARRIER_RESYNC_RADIUS = 1`）。理由有二：
 
 1. 光照引擎的重建是**跨多个 tick 摊销**的，过早发送仍可能抓到重建中的中间态，所以需要等待；
 2. 整区块包（`ClientboundLevelChunkWithLightPacket`）同时携带当前光照并使客户端**把该区块每个 section 标脏重绘**，一次性修复光照与渲染状态，而不必依赖精确的光更新包。

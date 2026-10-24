@@ -84,19 +84,44 @@ class NativeStructurePhysicsGeometryTest {
     }
 
     @Test
-    void terrainBatchesHonor64PerBodyAnd2048PerWorldWithoutDroppingTail() {
+    void fullBlockPrismsMergeButPartialShapesStayExact() {
+        var boxes = new ArrayList<PhysicsBox>();
+        for (int y = 0; y < 4; y++) for (int x = 0; x < 6; x++) for (int z = 0; z < 6; z++) {
+            boxes.add(new PhysicsBox(new PhysicsVector(x + 0.5, y + 0.5, z + 0.5),
+                    PhysicsQuaternion.IDENTITY, new PhysicsVector(0.5, 0.5, 0.5)));
+        }
+        var merged = NativeStructurePhysicsGeometry.mergeFullBlocks(boxes);
+        assertEquals(1, merged.size());
+        assertEquals(3.0, merged.getFirst().center().x(), 1.0E-12);
+        assertEquals(2.0, merged.getFirst().center().y(), 1.0E-12);
+        assertEquals(3.0, merged.getFirst().center().z(), 1.0E-12);
+        assertEquals(3.0, merged.getFirst().halfExtents().x(), 1.0E-12);
+        assertEquals(2.0, merged.getFirst().halfExtents().y(), 1.0E-12);
+        assertEquals(3.0, merged.getFirst().halfExtents().z(), 1.0E-12);
+
+        var slab = new PhysicsBox(new PhysicsVector(0.5, 0.25, 0.5),
+                PhysicsQuaternion.IDENTITY, new PhysicsVector(0.5, 0.25, 0.5));
+        var mixed = NativeStructurePhysicsGeometry.mergeFullBlocks(List.of(merged.getFirst(), slab));
+        assertEquals(2, mixed.size());
+        assertEquals(0.25, mixed.stream().filter(box -> box.halfExtents().y() == 0.25)
+                .findFirst().orElseThrow().halfExtents().y(), 1.0E-12);
+    }
+
+    @Test
+    void terrainBatchesHonor256PerBodyAndWorldBudgetWithoutDroppingTail() {
         var box = new PhysicsBox(new PhysicsVector(0.5, 0.5, 0.5), PhysicsQuaternion.IDENTITY, new PhysicsVector(0.5, 0.5, 0.5));
-        var input = new ArrayList<>(Collections.nCopies(129, box));
+        var input = new ArrayList<>(Collections.nCopies(257, box));
         var batches = NativeStructurePhysicsGeometry.batches(input);
-        assertEquals(List.of(64, 64, 1), batches.stream().map(List::size).toList());
+        assertEquals(List.of(256, 1), batches.stream().map(List::size).toList());
         input.clear();
-        assertEquals(129, batches.stream().mapToInt(List::size).sum());
+        assertEquals(257, batches.stream().mapToInt(List::size).sum());
         assertThrows(UnsupportedOperationException.class, () -> batches.getFirst().clear());
         assertThrows(UnsupportedOperationException.class, () -> batches.clear());
-        assertEquals(32, NativeStructurePhysicsGeometry.batches(Collections.nCopies(2048, box)).size());
+        assertEquals(NativePhysicsWorld.MAX_BOXES / 256,
+                NativeStructurePhysicsGeometry.batches(Collections.nCopies(NativePhysicsWorld.MAX_BOXES, box)).size());
         assertEquals(NativeStructurePhysicsGeometry.Failure.LIMIT_EXCEEDED,
                 assertThrows(NativeStructurePhysicsGeometry.GeometryException.class,
-                        () -> NativeStructurePhysicsGeometry.batches(Collections.nCopies(2049, box))).failure());
+                        () -> NativeStructurePhysicsGeometry.batches(Collections.nCopies(NativePhysicsWorld.MAX_BOXES + 1, box))).failure());
     }
 
     @Test

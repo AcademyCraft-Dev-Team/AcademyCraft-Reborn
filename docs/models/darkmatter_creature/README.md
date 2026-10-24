@@ -56,7 +56,7 @@ node docs/models/darkmatter_creature/export_geometry.cjs docs/models/darkmatter_
 
 游戏采用公开、实体无关的 `DistanceModelPolicy`：到相机距离 ≤16 格保留完整姿态；16–24 格每两 tick 对次要动作采样并停止细微触角/颚闲动；>24 格使用独立低模、每四 tick 采样主动作。各实体用自己的编号错开采样相位。瞄准与攻击进度继续使用当前状态，AI、命中、导航、体型与原版约 32 格的实体距离剔除不改变。详细和低模都在每次实际绘制前复位选中的骨架，遮挡 mask 重放及 A→B→A 共享实例顺序不会依赖上一实体状态。
 
-性能对照命令与实际测量见 [performance/README.md](performance/README.md)，优化前源码审计见 [performance/AUDIT.md](performance/AUDIT.md)。
+性能对照命令与实际测量见本地记录 `performance/README.md` 与 `performance/COMPARISON.md`；优化前的源码审计是 `performance/AUDIT.md`。三者都是验收证据，不随仓库分发。
 
 ## 验证
 

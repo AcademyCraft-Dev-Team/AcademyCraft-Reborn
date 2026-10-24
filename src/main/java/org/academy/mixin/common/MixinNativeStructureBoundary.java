@@ -21,6 +21,7 @@ public abstract class MixinNativeStructureBoundary {
     private boolean academy$isOutsideStructureSpace(BlockPos position) {
         var level = (Level) (Object) this;
         return NativeStructureDimensions.isStorageLevel(level.dimension())
+                && !NativeStructureDimensions.isPlotLevel(level.dimension())
                 && (!NativeStructureDimensions.contains(position) || level.isOutsideBuildHeight(position));
     }
 

@@ -7,6 +7,21 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MagnetManipulationMoveDistancePacketTest {
     @Test
+    void pullAndLevitationPacketsKeepTheirModeAfterEncoding() {
+        for (var packet : new MagnetManipulation.MoveStartPacket[]{
+                MagnetManipulation.MoveStartPacket.TARGET_TO_PLAYER,
+                MagnetManipulation.MoveStartPacket.PLAYER_TO_TARGET}) {
+            var buffer = Unpooled.buffer();
+            try {
+                MagnetManipulation.MoveStartPacket.CODEC.encode(buffer, packet);
+                assertSame(packet, MagnetManipulation.MoveStartPacket.CODEC.decode(buffer));
+            } finally {
+                buffer.release();
+            }
+        }
+    }
+
+    @Test
     void wheelOffsetsRoundTripWithoutLosingPrecision() {
         for (var offset : new double[]{1.0, -1.0, 0.25, -0.5, 2.5}) {
             var buffer = Unpooled.buffer();

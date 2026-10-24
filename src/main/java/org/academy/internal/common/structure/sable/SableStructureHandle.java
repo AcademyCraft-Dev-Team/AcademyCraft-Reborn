@@ -21,6 +21,8 @@ final class SableStructureHandle implements StructureHandle, StructureWorldAcces
     private final BlockPos plotOrigin;
     private boolean invalidated;
     private long revision;
+    private long contentRevision;
+    private long poseRevision;
     private StructurePose observedPose;
 
     SableStructureHandle(ServerLevel host, ServerSubLevel subLevel) {
@@ -46,7 +48,14 @@ final class SableStructureHandle implements StructureHandle, StructureWorldAcces
     }
 
     void invalidate() { requireThread(); invalidated = true; }
-    void contentChanged() { requireThread(); revision = Math.incrementExact(revision); }
+    void contentChanged() {
+        requireThread();
+        revision = Math.incrementExact(revision);
+        contentRevision = Math.incrementExact(contentRevision);
+    }
+
+    long contentRevision() { requireActive(); return contentRevision; }
+    long poseRevision() { requireActive(); pose(); return poseRevision; }
 
     @Override public StructureRef reference() { requireThread(); return reference; }
     @Override public UUID runtimeId() { requireThread(); return runtimeId; }
@@ -67,6 +76,7 @@ final class SableStructureHandle implements StructureHandle, StructureWorldAcces
         else if (!observedPose.equals(current)) {
             observedPose = current;
             revision = Math.incrementExact(revision);
+            poseRevision = Math.incrementExact(poseRevision);
         }
         return current;
     }

@@ -2,7 +2,7 @@
 
 实施状态：开发已完成，接口、迁移和验收结果见[实现与验收](electromaster_magnetic_field_iron_sand_implementation.zh-CN.md)。
 
-日期：2026-09-15。状态：设计方案，尚未实施生产代码修改。
+日期：2026-09-15。状态：已实施（`bc7e0985`，2026-09-15）；本文保留设计依据。
 
 本方案依据当前工作区代码编写。现有电击特效、护盾与翻译文件已有其他未提交改动；实施时须在当前内容上整合。
 
@@ -104,15 +104,14 @@ c = 熟练度 >= 1000 ? 0.9 : 1.0
 
 ### 3.2 为精密操作与非玩家提供真实可用的入口
 
-拟新增 `api.server.ability.AbilityActorContext`，至少包含：
+`api.server.ability.AbilityActorContext` 已作为不可变记录落地（`AbilityActorContext.java:12`），实际字段为 `subject`、`skill`、`abilityPower`、`damageMultiplier`、`milestone`、`resource`。与原设计的差异需明确：
 
-- `LivingEntity subject`、服务器世界、来源技能与来源 ID；可选玩家归属。
-- 能力强度 A、伤害倍率 D、有效熟练度、资源账户访问。
-- 目标/方块操作权限、移动输入或 AI 意图提供器。
+- 已覆盖：`LivingEntity subject`、服务器世界（`level()`）、能力强度 A、伤害倍率 D、有效熟练度、资源账户访问；玩家适配器 `of(ServerPlayer, Skill, AbilityResourceAccount)` 从 AbilitySystemServer 读取。
+- 尚未覆盖：来源 ID（只有 `skill`，没有独立来源标识与可选玩家归属）、目标/方块操作权限、移动输入或 AI 意图提供器。这三项仍由调用方在各自技能或程序内自行持有，不属于该记录的合同。
 
-玩家适配器从现有 AbilitySystemServer 读取；非玩家适配器从注册的属性/资源提供器读取，缺失能力时返回明确的不支持结果。核心方法不以 `ServerPlayer` 强制转换，也不通过虚构玩家完成归属。
+非玩家调用方自行组装 subject 与 `AbilityResourceAccount`，缺失能力时由调用方拒绝；核心方法不以 `ServerPlayer` 强制转换，也不通过虚构玩家完成归属。
 
-已有 `SkillDamageSource.of` 和 `AbilityDamageService.apply` 均偏向玩家：新增接受 LivingEntity/上下文的重载，旧重载转发；保留来源技能、实际直接来源、PVP/队伍保护、反射、伤害附效。非玩家施术者的熟练度反馈由适配器决定，不冒充玩家加经验。
+`SkillDamageSource.of` 与 `AbilityDamageService.apply` 已提供接受 `LivingEntity` 的重载（`ServerPlayer` 重载保留转发）；保留来源技能、实际直接来源、PVP/队伍保护、反射、伤害附效。没有单独的“上下文”重载：非玩家施术者的熟练度反馈由适配器决定，不冒充玩家加经验。
 
 ## 4. 磁场操作
 
@@ -123,12 +122,16 @@ c = 熟练度 >= 1000 ? 0.9 : 1.0
 增加公开 `MentalImmunity` 服务，支持数据包类型标签与按实体实例、来源 ID 授予的运行时免疫：
 
 ```java
-ImmunityLease grant(LivingEntity subject, Identifier source, Component feedback);
-ImmunityResult query(LivingEntity subject);
+void set(LivingEntity subject, Identifier source, Component feedback, boolean enabled);
 boolean isImmune(LivingEntity subject);
+Optional<Component> feedback(LivingEntity subject);
+void suppress(LivingEntity subject);
+void restore(LivingEntity subject);
 ```
 
-- 磁场操作以 `academy:magnetic_field` 为来源持有免疫。释放自己的租约不删除其他技能或实体自带免疫。
+实际 API 没有独立的租约对象与 `query` 结果类型：`set(..., false)` 即释放该来源，`isImmune` 合并实例来源与实体类型标签，`feedback` 返回首个来源文本。`suppress` / `restore`（`:52`、`:65`）不按来源区分，供死亡、重登等整实例生命周期使用；两处语义不要混用。
+
+- 磁场操作以 `academy:magnetic_field` 为来源持有免疫。释放自己的来源不删除其他技能或实体自带免疫。
 - 心理控制所有准入与免疫文案查询都走同一个 resolver；运行时免疫返回与免疫标签等效的拒绝语义。
 - 文案使用可翻译 Component，中文为用户指定句子；新增原因级反馈，不把玩家类型反馈覆盖为统一文案。
 - 现有护盾开启检查替换为实例免疫查询；关闭铁砂防御和悬浮不撤销磁场免疫。
@@ -164,27 +167,40 @@ boolean isImmune(LivingEntity subject);
 - 服务端从视线选择目标；继续使用磁性实体/物品/装备与磁性方块判定，保留最近阻挡限制。
 - 目标停在视线前方约 2.5 格；复用加速、减速、0.65 格停止距离及玩家运动同步。
 - 48/60 格准入与持续距离检查共用同一方法，目标失效、跨维度或越界立即释放。
-- 方块实体化保留方块实体、不可破坏方块排除，并统一接入交互权限、方块破坏策略与实体移动保护。
+- 方块实体化已由 `e2bf53a0`（2026-10-14）迁移到结构物理服务：实现位于 `internal/common/ability/electromaster/magnet/MagneticStructureService.java`，公开质量预算与拉力入口为 `api/common/ability/electromaster/MagneticStructureControl.java:13`；保留方块实体与不可破坏方块排除，并统一接入交互权限、方块破坏策略与实体移动保护。
 - 将 `isMagnetic(BlockState/ItemStack/Entity)` 提取为 `MagneticTargets` 公开 API；旧 `MagnetManipulation` 方法暂留转发，避免破坏既有调用。
 - 将 `calculatePullVelocity` 与 `calculateControlledBlockVelocity` 归并至 `MagneticMovement`。精密操作磁性移动同步改调公共方法。
 - 移除旧 3000“松手投掷（未完成）”文案和分支；新 3000 奖励按 X=16 实现。
 
 ## 5. 铁砂质量服务
 
-公开接口位于 `api.server.ability.electromaster`，实现位于 `internal.server.ability`：
+公开接口位于 `api.server.ability.electromaster`，实现位于 `internal.server.ability`。实际没有单一的 `IronSandResourceView`，而是拆成两个合同：
+
+`IronSandResourceService`（`IronSandResourceService.java:8-11`）：
 
 ```java
-IronSandResourceView view(AbilityActorContext actor);
-boolean tryConsume(AbilityActorContext actor, double amount);
-double consumeUpTo(AbilityActorContext actor, double amount);
-double recover(AbilityActorContext actor, double amount);
-void reconcileCapacity(AbilityActorContext actor);
+AbilityResourceAccount account(ServerPlayer subject);
+void reconcileCapacity(ServerPlayer subject);
+boolean isDefenseActive(ServerPlayer subject);
+boolean setDefense(ServerPlayer subject, boolean enabled);
 ```
 
-资源服务接收已经计算好的最终 MP 数值，不在内部重复应用熟练度。`tryConsume` 全额成功或完全不扣，`consumeUpTo` 用于可部分抵消的生命损失。
+`AbilityResourceAccount`（`api/server/ability/AbilityResourceAccount.java:7-11`）：
+
+```java
+double current();
+double capacity();
+boolean tryConsume(double amount);
+double recover(double amount);
+double consumeUpTo(double amount);
+```
+
+资源服务仍以 `ServerPlayer` 为参数入口，覆盖玩家账户、容量对账与防御开关；非玩家不走该服务，而是自行实现 `AbilityResourceAccount` 交给 `AbilityActorContext`，因此账本合同对两者一致，注册入口只属于玩家侧。
+
+服务接收已经计算好的最终 MP 数值，不在内部重复应用熟练度。`tryConsume` 全额成功或完全不扣，`consumeUpTo` 用于可部分抵消的生命损失。
 
 - 玩家复用现有 MP 存储、持久化与同步基础，以一种账户为唯一权威；新增初始化/迁移版本信息，不在技能数据、Attachment 和 CPData 各建一个可写质量值。
-- 非玩家通过资源账户适配器使用相同服务；读取视图不产生恢复、消耗或网络请求。
+- 非玩家通过 `AbilityResourceAccount` 适配器进入同一套结算规则；读取账户不产生恢复、消耗或网络请求。
 - 回收、上限夹取、消费均拒绝 NaN/Infinity，允许小数；4.5 MP 不取整。按 tick 累计恢复，客户端可插值显示。
 - 自然恢复与防御、攻击开关无关，使用云雾期间也恢复；这与空力“使用中停回”不同，不能复制其条件。
 - `academy:iron_sand_rich` 为拟新增群系标签，默认包含沙漠、恶地、繁茂恶地/风蚀恶地对应的原版成员；实施时按当前注册表校验具体 ID。数据包可扩展。
@@ -215,16 +231,17 @@ writtenHealth = h1 + absorbed
 
 需要明确的字段语义：按最终合法写入值的负差收费，不按原伤害事件值收费。例如健康上限 20 的目标，最终拟写入 0，负差为 20。超量伤害不产生超出该负差的额外质量账单。
 
-拟抽取分类无关公开服务 `HealthLossGuards` 与纯计算结果 `HealthLossResolution`：
+拟抽取分类无关公开服务 `HealthLossGuards` 与纯计算结果 `HealthLossResolution`。实际已实现，但签名不采用单独的上下文与写入器对象（`api/server/damage/HealthLossGuards.java:87,99`）：
 
 ```java
-HealthLossResolution preview(HealthWriteContext context);
-HealthWriteResult commit(HealthWriteContext context, HealthValueWriter writer);
+float preview(LivingEntity subject, float current, float requested);
+boolean commit(LivingEntity subject, float current, float requested, DoublePredicate writer);
 ```
 
+- 没有独立 `HealthWriteContext`：主体、原值、拟写入值直接作为参数；保护来源由 `set(subject, source, account, costPerHealth, enabled, onAbsorbed)` 注册，`Resolution` 携带结算后的生命与费用。
 - `preview` 只读，供投影准入与 UI 使用，不能扣 MP、发反馈或递归写血。
-- `commit` 负责一次性预留/提交资源、写入前限制与失败回滚；不会先写到 0 再治疗。
-- `HealthWriteContext` 带主体、原值、拟写入值、来源、此次写入 token 与原因。token 限于本次交易，多次真正独立伤害仍分别收费。
+- `commit` 负责一次性预留/提交资源、写入前限制与失败回滚；不会先写到 0 再治疗。`writer` 返回 true 表示接受受保护后的值。
+- 原设计中的写入 token 由服务内部的 `WRITING` 重入标记承担；`commit` 没有独立的原因参数，维护写入与真实伤害由各调用点区分，多次真正独立伤害仍分别收费。
 - 标准路径在 `SynchedEntityData` 的生命 `DataItem.value` 提交边界完成限制；`setHealth` 的现有 ModifyArg 成为转接点，不另收一次。
 - `EntityControlApi` 的直接定位器写入与 fallback 必须复用同一交易，避免前置限制和 fallback 双扣。
 - `TrueHealthOffsetRuntime.permits/install` 只查询或接受已结算的生命目标；不能再用原始未防御的目标值建立投影，不能让一次资源不足的真实伤害被整体取消。
@@ -431,7 +448,7 @@ double scaleDamage(double baseDamage, double abilityPower, double damageMultipli
 
 如改动数据生成输入，再执行 `.\gradlew.bat runClientData` 并核对生成差异。客户端实测输入冲突、按住/松开、悬浮墙顶移动、MP HUD、联机观察者及特效清理；保存可见修改的截图或短录像。
 
-本次仅产出方案，因此未运行以上功能测试和构建。后续实施完成并验证后，按仓库规则另行征询是否创建中文本地提交。
+实施后已由 [实现与验收](electromaster_magnetic_field_iron_sand_implementation.zh-CN.md) 与验证记录覆盖；具体测试数字见该文。
 
 ## 14. 建议默认值汇总
 

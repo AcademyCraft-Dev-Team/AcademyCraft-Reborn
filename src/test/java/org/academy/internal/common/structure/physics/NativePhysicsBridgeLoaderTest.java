@@ -37,6 +37,7 @@ class NativePhysicsBridgeLoaderTest {
                 Path.of(PhysicsNativeAccess.class.getProtectionDomain().getCodeSource().getLocation().toURI()),
                 resourceRoot).map(Path::toString).collect(Collectors.joining(File.pathSeparator));
         var builder = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-Dacademy.nativePhysics.requireNativeAccess=true",
                 "-cp", classPath, NativePhysicsBridgePermissionProbe.class.getName());
         for (var variable : new String[]{"JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"}) {
             builder.environment().remove(variable);

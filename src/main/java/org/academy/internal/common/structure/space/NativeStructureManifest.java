@@ -193,6 +193,49 @@ public final class NativeStructureManifest {
         writeAtomically(metadata, encodeIndex(entries.values()));
     }
 
+    /**
+     * Commits a prepared recovery checkpoint before publishing its in-memory entries. Unlike
+     * ordinary saves, a failed atomic replace never falls back to deleting the prior checkpoint.
+     */
+    public void replaceAllAtomically(List<Entry> expected, List<Entry> replacements) throws IOException {
+        replaceAllAtomically(expected, replacements, DurableFile.FileOperations.DEFAULT);
+    }
+
+    void replaceAllAtomically(List<Entry> expected, List<Entry> replacements,
+                              DurableFile.FileOperations operations) throws IOException {
+        requireHealthy();
+        Objects.requireNonNull(expected);
+        Objects.requireNonNull(replacements);
+        Objects.requireNonNull(operations);
+        var prior = new LinkedHashMap<UUID, Entry>();
+        for (var entry : expected) {
+            if (prior.putIfAbsent(entry.reference().id(), entry) != null
+                    || !entry.equals(entries.get(entry.reference().id()))) {
+                throw new IllegalStateException("Recovery checkpoint changed before commit");
+            }
+        }
+        var candidate = new LinkedHashMap<>(entries);
+        var replaced = new HashSet<UUID>();
+        for (var entry : replacements) {
+            var before = prior.get(entry.reference().id());
+            if (before == null || !replaced.add(entry.reference().id())
+                    || !before.reference().equals(entry.reference()) || before.slot() != entry.slot()) {
+                throw new IllegalArgumentException("Recovery must replace each expected identity and slot exactly once");
+            }
+            candidate.put(entry.reference().id(), entry);
+        }
+        if (!replaced.equals(prior.keySet()) || replaced.isEmpty()) {
+            throw new IllegalArgumentException("Recovery must commit its complete nonempty cohort");
+        }
+        validateEntries(candidate.values());
+        writeAtomically(metadata, encodeIndex(candidate.values()), (source, target, atomic) -> {
+            if (!atomic) throw new IOException("Recovery requires an atomic metadata replacement");
+            operations.move(source, target, true);
+        });
+        entries.clear();
+        entries.putAll(candidate);
+    }
+
     private void persist(Map<UUID, Entry> candidate) throws IOException {
         requireHealthy();
         validateEntries(candidate.values());
@@ -438,6 +481,11 @@ public final class NativeStructureManifest {
     }
 
     private static void writeAtomically(Path target, CompoundTag payload) throws IOException {
+        writeAtomically(target, payload, DurableFile.FileOperations.DEFAULT);
+    }
+
+    private static void writeAtomically(Path target, CompoundTag payload,
+                                       DurableFile.FileOperations operations) throws IOException {
         var size = payload.sizeInBytes();
         if (size < 0 || size > MAX_PAYLOAD_BYTES) throw new IOException("Native structure payload is too large");
         var encoded = new ByteArrayOutputStream();
@@ -456,6 +504,6 @@ public final class NativeStructureManifest {
         } catch (RuntimeException invalid) {
             throw new IOException("Native structure payload exceeds decoding limits", invalid);
         }
-        DurableFile.writeAtomically(target, data, DurableFile.FileOperations.DEFAULT);
+        DurableFile.writeAtomically(target, data, operations);
     }
 }

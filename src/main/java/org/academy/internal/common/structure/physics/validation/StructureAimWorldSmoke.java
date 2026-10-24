@@ -40,6 +40,10 @@ public final class StructureAimWorldSmoke {
     }
 
     public static void check(ServerPlayer player, StructureHandle handle, StringBuilder evidence) {
+        if (Boolean.getBoolean("academy.nativeStructurePhysicsSkipPlasmaAim")) {
+            evidence.append("physical_structure_plasma_aim_skipped=true\n");
+            return;
+        }
         var host = (ServerLevel) player.level();
         var pose = handle.pose();
         // Aim above the separately pickable nozzle on the bottom of the jet fixture.

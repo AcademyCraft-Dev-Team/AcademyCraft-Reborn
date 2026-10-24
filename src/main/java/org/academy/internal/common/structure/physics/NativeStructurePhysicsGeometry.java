@@ -7,8 +7,10 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -42,6 +44,17 @@ public final class NativeStructurePhysicsGeometry {
             DispenserBlock.class, DropperBlock.class, HopperBlock.class, LeverBlock.class,
             LeavesBlock.class, TintedParticleLeavesBlock.class, UntintedParticleLeavesBlock.class,
             MangroveLeavesBlock.class);
+    // These exact vanilla plants inherit the ordinary noCollision shape. Terrain may ignore
+    // them, but captured structure contents still go through the stricter supported() gate.
+    // Do not generalize this to every empty CollisionContext.empty() result: powder snow and
+    // other actor-conditioned geometry can be solid for the interacting entity.
+    private static final Set<Class<?>> EMPTY_TERRAIN_PLANTS = Set.of(TallGrassBlock.class,
+            DoublePlantBlock.class, FlowerBlock.class, TallFlowerBlock.class, SaplingBlock.class, MushroomBlock.class,
+            DryVegetationBlock.class, ShortDryGrassBlock.class, TallDryGrassBlock.class,
+            BushBlock.class, FlowerBedBlock.class, LeafLitterBlock.class,
+            CropBlock.class, CarrotBlock.class, PotatoBlock.class, BeetrootBlock.class, TorchflowerCropBlock.class,
+            StemBlock.class, AttachedStemBlock.class, NetherWartBlock.class, SugarCaneBlock.class,
+            SweetBerryBushBlock.class);
 
     private NativeStructurePhysicsGeometry() {}
 
@@ -84,17 +97,92 @@ public final class NativeStructurePhysicsGeometry {
                         throw denied(Failure.LIMIT_EXCEEDED, "Structure exceeds the physical non-air cell budget");
                     }
                     var position = new BlockPos(chunkX * 16 + x, baseY + y, chunkZ * 16 + z);
-                    captureCell(getter, position, PhysicsVector.ZERO, NativePhysicsWorld.MAX_BOXES_PER_BODY, result);
+                    captureCell(getter, position, PhysicsVector.ZERO, NativePhysicsWorld.MAX_BOXES, result);
                 }
             }
         }
-        return finish(getter, result, revision, nonAir);
+        // Complex shapes can split one cell into many cuboids. Merge adjacent full cubes first;
+        // a plain cuboid structure then fits a single dynamic body regardless of cell count.
+        var merged = mergeFullBlocks(result);
+        if (merged.size() > NativePhysicsWorld.MAX_BOXES) {
+            throw denied(Failure.LIMIT_EXCEEDED, "Structure requires more collision boxes than the world budget");
+        }
+        return finish(getter, merged, revision, nonAir);
+    }
+
+    /**
+     * Deterministically replaces adjacent full-block cuboids with larger cuboids. Only exact
+     * 1x1x1 axis-aligned cells are merged, so partial shapes, slabs, stairs and fences retain
+     * their audited geometry. The result is sorted by center to keep snapshots and digests stable.
+     */
+    static List<PhysicsBox> mergeFullBlocks(List<PhysicsBox> boxes) {
+        var remaining = new java.util.TreeSet<BlockPos>(java.util.Comparator
+                .comparingInt((BlockPos pos) -> pos.getY())
+                .thenComparingInt(pos -> pos.getX()).thenComparingInt(pos -> pos.getZ()));
+        var others = new ArrayList<PhysicsBox>();
+        for (var box : boxes) {
+            if (isFullBlock(box)) {
+                remaining.add(new BlockPos((int) Math.floor(box.center().x()),
+                        (int) Math.floor(box.center().y()), (int) Math.floor(box.center().z())));
+            } else others.add(box);
+        }
+        while (!remaining.isEmpty()) {
+            var start = remaining.first();
+            int maxX = start.getX();
+            while (remaining.contains(new BlockPos(maxX + 1, start.getY(), start.getZ()))) maxX++;
+            int maxZ = start.getZ();
+            while (columnOfFullBlocks(remaining, start.getX(), maxX, start.getY(), maxZ + 1)) maxZ++;
+            int maxY = start.getY();
+            while (slabOfFullBlocks(remaining, start.getX(), maxX, start.getZ(), maxZ, maxY + 1)) maxY++;
+            for (int y = start.getY(); y <= maxY; y++) for (int x = start.getX(); x <= maxX; x++) {
+                for (int z = start.getZ(); z <= maxZ; z++) {
+                    remaining.remove(new BlockPos(x, y, z));
+                }
+            }
+            others.add(new PhysicsBox(
+                    new PhysicsVector((start.getX() + maxX + 1) / 2.0, (start.getY() + maxY + 1) / 2.0,
+                            (start.getZ() + maxZ + 1) / 2.0), PhysicsQuaternion.IDENTITY,
+                    new PhysicsVector((maxX - start.getX() + 1) / 2.0, (maxY - start.getY() + 1) / 2.0,
+                            (maxZ - start.getZ() + 1) / 2.0)));
+        }
+        others.sort(java.util.Comparator.comparingDouble((PhysicsBox box) -> box.center().x())
+                .thenComparingDouble(box -> box.center().y()).thenComparingDouble(box -> box.center().z()));
+        return List.copyOf(others);
+    }
+
+    private static boolean columnOfFullBlocks(java.util.Set<BlockPos> remaining, int minX, int maxX, int y, int z) {
+        for (int x = minX; x <= maxX; x++) if (!remaining.contains(new BlockPos(x, y, z))) return false;
+        return true;
+    }
+
+    private static boolean slabOfFullBlocks(java.util.Set<BlockPos> remaining, int minX, int maxX,
+                                            int minZ, int maxZ, int y) {
+        for (int x = minX; x <= maxX; x++) for (int z = minZ; z <= maxZ; z++) {
+            if (!remaining.contains(new BlockPos(x, y, z))) return false;
+        }
+        return true;
+    }
+
+    private static boolean isFullBlock(PhysicsBox box) {
+        var half = box.halfExtents();
+        var center = box.center();
+        if (!box.rotation().equals(PhysicsQuaternion.IDENTITY)
+                || !near(half.x(), 0.5) || !near(half.y(), 0.5) || !near(half.z(), 0.5)) return false;
+        return near(center.x() - Math.floor(center.x()), 0.5)
+                && near(center.y() - Math.floor(center.y()), 0.5)
+                && near(center.z() - Math.floor(center.z()), 0.5);
+    }
+
+    private static boolean near(double value, double expected) {
+        return Math.abs(value - expected) <= 1.0E-9;
     }
 
     /**
      * Includes a one-cell halo for shapes such as fences extending outside their own cell.
      * Boxes and bounds are relative to origin; each batch can become one fixed native body.
      * maxBoxes is the caller's remaining world budget, after reserving all dynamic bodies.
+     * Host water/lava contribute no solid geometry when their collision shape is empty; this
+     * does not simulate buoyancy. Audited waterlogged blocks retain their actual solid shape.
      */
     public static Snapshot captureTerrain(ServerLevel host, AABB worldBounds, PhysicsVector origin, int maxBoxes) {
         var scan = terrainScan(host, worldBounds, origin, maxBoxes);
@@ -187,7 +275,13 @@ public final class NativeStructurePhysicsGeometry {
                                        int maxBoxes, List<PhysicsBox> result) {
         var state = getter.getBlockState(position);
         if (state.isAir()) return false;
-        if (!supported(state)) {
+        if (!supported(state) && (getter.structure || !supportedWaterloggedTerrain(state))) {
+            if (!getter.structure && (emptyTerrainPlant(state) || state.is(Blocks.WATER) || state.is(Blocks.LAVA))
+                    && state.getCollisionShape(getter, position, CollisionContext.empty()).isEmpty()) {
+                // getBlockState above remains in the receipt: replacing a plant/fluid with a solid
+                // block must invalidate the cached terrain even though it contributed no boxes.
+                return true;
+            }
             throw denied(Failure.UNSUPPORTED_CONTENT, "Unsupported collision state at " + position + ": " + state);
         }
         var shape = state.getCollisionShape(getter, position, CollisionContext.empty());
@@ -203,6 +297,22 @@ public final class NativeStructurePhysicsGeometry {
                 || !BuiltInRegistries.BLOCK.getKey(block).getNamespace().equals("minecraft")) return false;
         if (block == Blocks.CHEST) return NativeStructureView.isSingleChestState(state);
         return STATE_SHAPES.contains(block.getClass());
+    }
+
+    private static boolean emptyTerrainPlant(BlockState state) {
+        var block = state.getBlock();
+        return state.getFluidState().isEmpty() && !state.hasBlockEntity() && !block.hasDynamicShape()
+                && BuiltInRegistries.BLOCK.getKey(block).getNamespace().equals("minecraft")
+                && EMPTY_TERRAIN_PLANTS.contains(block.getClass());
+    }
+
+    private static boolean supportedWaterloggedTerrain(BlockState state) {
+        // Audit the same block's dry state, but sample the original state's actual collision.
+        // This admits waterlogged slabs/stairs/fences without weakening the captured-content gate
+        // or treating arbitrary fluid-containing/actor-conditioned blocks as safe terrain.
+        return state.hasProperty(BlockStateProperties.WATERLOGGED)
+                && state.getValue(BlockStateProperties.WATERLOGGED) && state.getFluidState().is(Fluids.WATER)
+                && supported(state.setValue(BlockStateProperties.WATERLOGGED, false));
     }
 
     /** Exact VoxelShape box decomposition: never substitutes the shape's bounding cuboid. */

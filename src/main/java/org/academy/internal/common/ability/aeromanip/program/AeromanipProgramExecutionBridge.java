@@ -235,13 +235,12 @@ public final class AeromanipProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::reset);
+        put(result, AeromanipProgramNodeIds.STRUCTURE_SPIN,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::spin);
         put(result, AeromanipProgramNodeIds.STRUCTURE_ROTATE,
-                (context, _, inputs) -> structureResult(
-                        runtime(context).rotateStructure(
-                                structureControl(inputs),
-                                optionalStructurePose(inputs, "pose")),
-                        false,
-                        false));
+                org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::rotate);
         put(result, AeromanipProgramNodeIds.STRUCTURE_LAUNCH,
                 (ProgramVmContext context,
                  AeromanipProgramNodeCatalog.LaunchStructureConfiguration configuration,
@@ -280,9 +279,7 @@ public final class AeromanipProgramExecutionBridge {
         if (result.status() != ProgramStructureOperationResult.Status.COMPLETED
                 && result.status() != ProgramStructureOperationResult.Status.PENDING) {
             throw new ProgramActionFailure(
-                    result.status() == ProgramStructureOperationResult.Status.UNAVAILABLE
-                            ? ProgramVmDiagnostic.ACTION_UNAVAILABLE
-                            : ProgramVmDiagnostic.ACTION_REJECTED,
+                    ProgramVmDiagnostic.structureFailure(result),
                     statusDetail(result));
         }
         if (result.status() == ProgramStructureOperationResult.Status.COMPLETED) {

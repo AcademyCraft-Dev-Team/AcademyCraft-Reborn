@@ -77,6 +77,9 @@ public final class NativeStructureRuntime implements StructureBackend {
     private final Map<Integer, CompoundTag> pendingRecovery = new LinkedHashMap<>();
     // Keep ownership-bearing adapter objects alive when encoding or disk persistence fails.
     private final Map<Integer, Supplier<CompoundTag>> pendingAdapterRecovery = new LinkedHashMap<>();
+    // Only checkpoints found failed at startup are retried automatically. A new native fault
+    // must not enter an unbounded destroy/recreate loop during the same server session.
+    private final Map<UUID, PhysicsStartupRecovery> pendingPhysicsRecovery = new LinkedHashMap<>();
     private boolean closed;
     private boolean stopping;
     private boolean dirty;
@@ -103,6 +106,12 @@ public final class NativeStructureRuntime implements StructureBackend {
         synchronized (SERVERS) {
             return SERVERS.computeIfAbsent(server, NativeStructureRuntime::new);
         }
+    }
+
+    /** Read-only administrative view of currently loaded structures; does not load storage. */
+    public List<StructureRef> loadedReferences() {
+        requireThread();
+        return loaded.values().stream().map(handle -> handle.reference).toList();
     }
 
     /** Read-only lookup: a targeting/control query must not create a backend or storage. */
@@ -352,6 +361,11 @@ public final class NativeStructureRuntime implements StructureBackend {
         return closed || stopping ? Optional.empty() : physics.activeRegion(host, reference);
     }
 
+    public Optional<StructurePhysicsRegion> attachedPhysicsRegion(ServerLevel host, StructureRef reference) {
+        requireThread();
+        return closed || stopping ? Optional.empty() : physics.attachedRegion(host, reference);
+    }
+
     public Optional<AABB> savedPhysicsRegionBounds(ServerLevel host) {
         requireThread();
         return physics.savedRegionBounds(host);
@@ -372,6 +386,61 @@ public final class NativeStructureRuntime implements StructureBackend {
         requireRunning();
         if (physicsStepping) throw new IllegalStateException("Cannot resume a region during a physics step");
         return physics.resume(host, Objects.requireNonNull(regionId, "regionId"));
+    }
+
+    /** Explicit whole-cohort recovery; ordinary resume continues to reject failed checkpoints. */
+    public NativeStructurePhysics.Recovery recoverPhysicsRegion(ServerLevel host, UUID regionId) {
+        requireRunning();
+        if (physicsStepping) throw new IllegalStateException("Cannot recover a region during a physics step");
+        return physics.recover(host, Objects.requireNonNull(regionId, "regionId"));
+    }
+
+    /**
+     * Commits only after the physics owner has built a complete, unpublished candidate world.
+     * This guarded metadata operation never touches block storage or emits drops.
+     */
+    public void commitRecoveredPhysicsRegion(ServerLevel host, UUID regionId, List<Entry> expected,
+                                              List<Entry> replacements) throws IOException {
+        requireRunning();
+        if (!physicsStepping || !manifest.healthy()) throw new IllegalStateException("Missing physics recovery guard");
+        if (!savedPhysicsEntries(host, regionId).equals(expected)
+                || expected.isEmpty() || expected.size() != replacements.size()) {
+            throw new IllegalStateException("Saved physics cohort changed during recovery");
+        }
+        if (expected.stream().allMatch(entry -> entry.physicsAttachment().resumeAllowed())) {
+            throw new IllegalStateException("Only failed physics checkpoints can be recovered");
+        }
+        var replacementById = new LinkedHashMap<UUID, Entry>();
+        for (var replacement : replacements) {
+            if (replacementById.putIfAbsent(replacement.reference().id(), replacement) != null) {
+                throw new IllegalArgumentException("Duplicate physics recovery member");
+            }
+        }
+        AABB recoveredBounds = null;
+        for (var before : expected) {
+            var replacement = replacementById.get(before.reference().id());
+            var handle = loaded.get(before.reference().id());
+            if (replacement == null || handle == null || !physicsAvailable(handle)
+                    || !before.active() || before.quarantined() || !before.pose().equals(handle.pose())
+                    || !before.withPhysicsAttachment(replacement.physicsAttachment()).equals(replacement)) {
+                throw new IllegalStateException("Recovery must preserve the complete active cohort and its content identity");
+            }
+            var attachment = Objects.requireNonNull(replacement.physicsAttachment());
+            if (!attachment.regionId().equals(regionId) || !attachment.resumeAllowed()) {
+                throw new IllegalArgumentException("Recovery cannot transfer a region identity");
+            }
+            if (recoveredBounds != null && !recoveredBounds.equals(attachment.bounds())) {
+                throw new IllegalArgumentException("Recovered cohort has inconsistent bounds");
+            }
+            recoveredBounds = attachment.bounds();
+            var motion = attachment.motion();
+            if (motion != null && (motion.linearVelocity().lengthSqr() != 0 || motion.angularVelocity().lengthSqr() != 0)) {
+                throw new IllegalArgumentException("Recovery cannot replay failed kinetic energy");
+            }
+        }
+        manifest.replaceAllAtomically(expected, replacements);
+        for (var entry : expected) invalidateInteractionHistory(entry.reference());
+        // Retain any pre-existing dirty/recovery work; ordinary checkpoints may flush it later.
     }
 
     public boolean discardSavedPhysicsRegion(ServerLevel host) {
@@ -952,6 +1021,63 @@ public final class NativeStructureRuntime implements StructureBackend {
         if (!StructureBackendRouter.nativeEnabled(event.getServer())) return;
         var runtime = backend(event.getServer());
         for (var entry : runtime.manifest.entries()) if (entry.active()) runtime.load(entry.reference());
+        for (var level : event.getServer().getAllLevels()) {
+            if (!NativeStructureDimensions.isStorageLevel(level.dimension())) runtime.resumeSavedPhysicsRegions(level);
+        }
+    }
+
+    /** Restores saved physics islands after a normal restart; H/R/jet no longer see a static shell. */
+    public int resumeSavedPhysicsRegions(ServerLevel host) {
+        requireThread();
+        if (!enabled || stopping) return 0;
+        int resumed = 0;
+        for (var saved : physics.savedRegions(host)) {
+            if (!saved.resumeAllowed()) {
+                pendingPhysicsRecovery.putIfAbsent(saved.id(), new PhysicsStartupRecovery(host, 0));
+                continue;
+            }
+            try {
+                physics.resume(host, saved.id());
+                resumed++;
+            } catch (IllegalStateException alreadyOpenOrUnavailable) {
+                if (alreadyOpenOrUnavailable.getMessage() != null
+                        && alreadyOpenOrUnavailable.getMessage().contains("already open")) continue;
+                AcademyCraft.LOGGER.warn("Could not resume saved physics region {} in {}",
+                        saved.id(), host.dimension().identifier(), alreadyOpenOrUnavailable);
+            }
+        }
+        if (resumed > 0) AcademyCraft.LOGGER.info("Resumed {} saved physics region(s) in {}", resumed,
+                host.dimension().identifier());
+        return resumed;
+    }
+
+    private record PhysicsStartupRecovery(ServerLevel host, int attempts) {}
+
+    private void recoverStartupPhysicsRegions() {
+        if (stopping || pendingPhysicsRecovery.isEmpty() || server.getTickCount() % 20 != 0) return;
+        for (var entry : List.copyOf(pendingPhysicsRecovery.entrySet())) {
+            var id = entry.getKey();
+            var pending = entry.getValue();
+            // Far-away saved bodies may not have host chunks until a player visits much later.
+            // Back off instead of abandoning that startup checkpoint or forcing chunk tickets.
+            if (pending.attempts() >= 30 && server.getTickCount() % 200 != 0) continue;
+            var result = physics.recover(pending.host(), id);
+            if (result.status() == NativeStructurePhysics.RecoveryStatus.WAITING) {
+                pendingPhysicsRecovery.put(id, new PhysicsStartupRecovery(pending.host(), Math.min(30, pending.attempts() + 1)));
+                if (pending.attempts() == 29) AcademyCraft.LOGGER.info(
+                        "Physics region {} is still waiting for recovery readiness; retrying every 200 ticks: {}",
+                        id, result.diagnostic());
+                continue;
+            }
+            pendingPhysicsRecovery.remove(id);
+            if (result.status() == NativeStructurePhysics.RecoveryStatus.RECOVERED) {
+                AcademyCraft.LOGGER.info("Recovered failed physics region {} in {} with zero velocity",
+                        id, pending.host().dimension().identifier());
+            } else {
+                AcademyCraft.LOGGER.warn("Failed physics region {} retained after startup recovery: {} ({})",
+                        id, result.status(), result.diagnostic());
+            }
+        }
     }
 
     @SubscribeEvent public static void controllerLeft(EntityLeaveLevelEvent event) {
@@ -973,6 +1099,7 @@ public final class NativeStructureRuntime implements StructureBackend {
         NativeStructureRuntime runtime;
         synchronized (SERVERS) { runtime = SERVERS.get(event.getServer()); }
         if (runtime == null || runtime.closed || !runtime.enabled) return;
+        runtime.recoverStartupPhysicsRegions();
         runtime.physics.tick();
         NativeStructureChestSessions.tick(event.getServer());
         for (var handle : List.copyOf(runtime.loaded.values())) {
@@ -1012,6 +1139,9 @@ public final class NativeStructureRuntime implements StructureBackend {
                                     StructurePose pose, Entity entity) {
         var surface = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_SUPPORT_TOLERANCE);
         if (surface.isEmpty()) {
+            // A fast projectile must not pick up an entity that merely swept inside the top-face
+            // recovery gap; that is an impact, not a rider. Recovery carry is for slow lifts.
+            if (pose.worldOrigin().distanceToSqr(previous.worldOrigin()) > 0.25) return;
             surface = projection.supportSurfaceY(entity.getBoundingBox(), CARRY_RECOVERY_TOLERANCE);
             if (surface.isEmpty()) return;
         }

@@ -93,6 +93,8 @@ public final class CommonProgramNodeIds {
     public static final Identifier POSITION_TO_BLOCK = id("spatial/position_to_block");
     public static final Identifier BLOCK_TO_CENTER = id("spatial/block_to_center");
     public static final Identifier DIRECTION_CONSTANT = id("spatial/direction");
+    public static final Identifier STRUCTURE_POSE = id("spatial/structure_pose");
+    public static final Identifier STRUCTURE_ANCHOR = id("spatial/structure_anchor");
     public static final Identifier DIRECTION_CONSTRUCT = id("spatial/direction_construct");
     public static final Identifier DIRECTION_COMPONENTS = id("spatial/direction_components");
     public static final Identifier DIRECTION_BETWEEN = id("spatial/direction_between");

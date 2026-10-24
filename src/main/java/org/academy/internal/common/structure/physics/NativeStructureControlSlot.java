@@ -16,6 +16,10 @@ final class NativeStructureControlSlot {
         return Optional.ofNullable(control);
     }
 
+    boolean occupied() {
+        return lease != null || control != null;
+    }
+
     boolean owns(Ticket candidate) {
         return lease == candidate && candidate.state() == StructurePhysicsLease.State.ACTIVE;
     }

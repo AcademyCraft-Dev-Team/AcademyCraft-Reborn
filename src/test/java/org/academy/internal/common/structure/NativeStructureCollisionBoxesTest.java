@@ -87,6 +87,20 @@ class NativeStructureCollisionBoxesTest {
     }
 
     @Test
+    void projectionUnionUsesActualShapesInsteadOfAnInflatedCell() {
+        var single = NativeStructureCollisionBoxes.union(List.of(UNIT), Vec3.ZERO);
+        assertEquals(1.0, single.getXsize(), 1.0E-12);
+        assertEquals(1.0, single.getYsize(), 1.0E-12);
+        assertEquals(1.0, single.getZsize(), 1.0E-12);
+        var fence = new AABB(0.375, 0, 0.375, 0.625, 1.5, 0.625);
+        var tall = NativeStructureCollisionBoxes.union(List.of(fence), Vec3.ZERO);
+        assertEquals(1.5, tall.getYsize(), 1.0E-12);
+        var empty = NativeStructureCollisionBoxes.union(List.of(), new Vec3(2, 3, 4));
+        assertEquals(0.01, empty.getXsize(), 1.0E-12);
+        assertEquals(2.0, empty.getCenter().x, 1.0E-12);
+    }
+
+    @Test
     void supportSurfaceMatchesTheLegacyToleranceSemantics() {
         var platform = List.of(new AABB(0, 0, 0, 4, 1, 4), new AABB(2, 0, 0, 6, 2, 4));
         var standing = new AABB(1, 1.0, 1, 1.5, 2.8, 1.5);

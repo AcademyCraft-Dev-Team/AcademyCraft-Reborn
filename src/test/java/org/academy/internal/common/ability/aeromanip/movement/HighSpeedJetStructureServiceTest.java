@@ -14,6 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HighSpeedJetStructureServiceTest {
     @Test
+    void restoreOriginIsTheMinimumCornerEvenWhenTheNozzleIsOnTheOppositeEdge() {
+        var nozzleSeed = new BlockPos(10, 70, 12);
+        assertEquals(new BlockPos(8, 69, 10), HighSpeedJetStructureService.minimumCorner(
+                List.of(nozzleSeed, nozzleSeed.offset(-2, -1, -2), nozzleSeed.offset(-1, 0, -1))));
+    }
+
+    @Test
     void impactRequiresClosingSpeedAndUsesBoundedDamage() {
         assertEquals(0.0f,
                 HighSpeedJetStructureService.impactDamage(4, 0.34, 1.0f));

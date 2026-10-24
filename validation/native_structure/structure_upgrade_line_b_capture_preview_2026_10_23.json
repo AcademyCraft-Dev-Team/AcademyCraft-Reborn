@@ -1,0 +1,50 @@
+{
+  "schema": "academy-structure-upgrade-capture-preview-v1",
+  "date": "2026-10-23",
+  "base_commit": "edea3a45",
+  "scope": "line_b_capture_preview_and_source_binding",
+  "extraction_readiness": "EXPERIMENTAL",
+  "extraction_gameplay_enabled": false,
+  "orientation_unchanged": true,
+  "draft_gameplay_enabled": false,
+  "native_production_changed": false,
+  "original_test_worlds_modified": false,
+  "checks": {
+    "test": {
+      "tests": 2992,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "new_tests": {
+      "CaptureSourceSnapshotTest": 3,
+      "CapturePlanRegistryTest": 5,
+      "ExtractionPlanBuilderTest": 6
+    },
+    "verifyStructureUpgradeScaffold": "PASSED",
+    "development_build": "PASSED",
+    "release_build": "PASSED",
+    "live_client_fixture": "NOT_RUN",
+    "sable_live_fixture": "NOT_RUN"
+  },
+  "implemented": [
+    "capture_source_snapshot_digest",
+    "bounded_server_side_preview_registry",
+    "capture_plan_binding_single_capture_control_pair",
+    "loaded_only_host_clearance_planning",
+    "structure_content_digest_reverification",
+    "real_pose_and_collision_replan_on_bind"
+  ],
+  "unimplemented": [
+    "extraction_plan_begin_status_cancel",
+    "skill_or_program_wiring",
+    "structural_terrain_revision_concept"
+  ],
+  "limitations": [
+    "live_path_not_exercised_in_game",
+    "complex_terrain_and_eccentric_disturbance_matrix_pending",
+    "sable_structure_content_read_pending",
+    "capture_duration_beyond_preview_expiry_pending",
+    "no_gameplay_enabled"
+  ]
+}

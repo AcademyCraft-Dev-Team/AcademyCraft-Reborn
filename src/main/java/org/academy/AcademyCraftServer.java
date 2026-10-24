@@ -49,6 +49,7 @@ import org.academy.internal.server.misaka.SatelliteMisakaRelayAccess;
 import org.academy.internal.server.misaka.ServerMisakaComputeAccess;
 import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT;
 import org.academy.internal.server.world.level.storage.Player;
+import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.server.world.level.storage.WorldDataStore;
 import org.slf4j.Logger;
@@ -74,6 +75,7 @@ public final class AcademyCraftServer {
     private final MusicConfig musicConfig;
     private final DimensionEffectsConfig dimensionEffectsConfig;
     private final TemporalRuntime temporalRuntime;
+    private final VectorReflectionRuntime vectorReflectionRuntime;
     private final MinecraftServer server;
     private long nextSaveTick = SAVE_INTERVAL_TICKS;
 
@@ -97,6 +99,7 @@ public final class AcademyCraftServer {
 
         worldData = WorldData.getWorldData(worldDataFile);
         temporalRuntime = new TemporalRuntime(server);
+        vectorReflectionRuntime = new VectorReflectionRuntime(server);
         abilitySystemServer = new AbilitySystemServer(context, worldData, abilityConfig);
         WirelessManager.initServer();
         PvpSetting.initServer();
@@ -113,6 +116,8 @@ public final class AcademyCraftServer {
         PlayerLeftClickSwingPacket.initServer();
         org.academy.internal.common.network.NativeStructureUsePacket.initServer();
         org.academy.internal.common.network.NativeStructureMinePacket.initServer();
+        org.academy.internal.common.network.SubLevelInteractPacket.initServer();
+        org.academy.internal.common.network.SubLevelMiningPacket.initServer();
         org.academy.internal.common.world.item.CoinItem.initServer();
         MagneticHookActionPacket.initServer();
         MisakaPackets.initServer();
@@ -152,6 +157,7 @@ public final class AcademyCraftServer {
     public static void onServerStopping(ServerStoppingEvent event) {
         var context = event.getServer();
         var instance = context.getAcademyCraftServer();
+        VectorReflectionRuntime.shutdown(event.getServer());
         ServerProgramScheduler.clear(event.getServer());
         AbilityProgramManager.clear();
         PrecisionOperationRuntime.clear(event.getServer());
@@ -174,6 +180,10 @@ public final class AcademyCraftServer {
 
     public AbilitySystemServer getAbilitySystemServer() {
         return abilitySystemServer;
+    }
+
+    public VectorReflectionRuntime getVectorReflectionRuntime() {
+        return vectorReflectionRuntime;
     }
 
     public GenericConfig getGenericConfig() {

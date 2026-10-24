@@ -33,15 +33,20 @@ public final class NativeStructureView implements BlockGetter {
             .comparingInt((Cell cell) -> cell.position().getY())
             .thenComparingInt(cell -> cell.position().getX())
             .thenComparingInt(cell -> cell.position().getZ());
-    public static final NativeStructureView EMPTY = new NativeStructureView(List.of());
+    public static final NativeStructureView EMPTY = new NativeStructureView(List.of(), false);
     public static final StreamCodec<RegistryFriendlyByteBuf, NativeStructureView> STREAM_CODEC =
             StreamCodec.of(NativeStructureView::encode, NativeStructureView::decode);
 
     private final List<Cell> cells;
     private final Map<BlockPos, BlockState> states;
     private final AABB bounds;
+    private final boolean solid;
 
     public NativeStructureView(List<Cell> cells) {
+        this(cells, false);
+    }
+
+    public NativeStructureView(List<Cell> cells, boolean solid) {
         Objects.requireNonNull(cells, "cells");
         if (cells.size() > MAX_CELLS) {
             throw new IllegalArgumentException("A native view can contain at most " + MAX_CELLS + " cells");
@@ -64,6 +69,7 @@ public final class NativeStructureView implements BlockGetter {
         this.cells = List.copyOf(copy);
         states = Map.copyOf(stateCopy);
         bounds = accumulated == null ? new AABB(0, 0, 0, 0, 0, 0) : accumulated;
+        this.solid = solid;
     }
 
     public List<Cell> cells() {
@@ -76,6 +82,10 @@ public final class NativeStructureView implements BlockGetter {
 
     public AABB bounds() {
         return bounds;
+    }
+
+    public boolean solid() {
+        return solid;
     }
 
     /**
@@ -92,13 +102,15 @@ public final class NativeStructureView implements BlockGetter {
         var block = state.getBlock();
         return isSingleChestState(state)
                 || block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE || block == Blocks.SMOKER
-                || block == Blocks.HOPPER || block == Blocks.DISPENSER || block == Blocks.DROPPER;
+                || block == Blocks.HOPPER || block == Blocks.DISPENSER || block == Blocks.DROPPER
+                || block == Blocks.BARREL;
     }
 
     /** Only the exact, dry vanilla single chest has a dedicated inventory-free model path. */
     public static boolean isSingleChestState(BlockState state) {
         Objects.requireNonNull(state, "state");
-        return state.getBlock() == Blocks.CHEST && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
+        return (state.getBlock() == Blocks.CHEST || state.getBlock() == Blocks.TRAPPED_CHEST)
+                && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
                 && state.getFluidState().isEmpty();
     }
 
@@ -129,6 +141,7 @@ public final class NativeStructureView implements BlockGetter {
 
     private static void encode(RegistryFriendlyByteBuf buffer, NativeStructureView view) {
         buffer.writeVarInt(view.cells.size());
+        if (!view.cells.isEmpty()) buffer.writeBoolean(view.solid);
         for (var cell : view.cells) {
             buffer.writeByte(cell.position().getX());
             buffer.writeShort(cell.position().getY());
@@ -143,6 +156,7 @@ public final class NativeStructureView implements BlockGetter {
             throw new DecoderException("Native view cell count out of bounds: " + size);
         }
         if (size == 0) return EMPTY;
+        var solid = buffer.readBoolean();
         var cells = new ArrayList<Cell>(size);
         try {
             for (var index = 0; index < size; index++) {
@@ -152,7 +166,7 @@ public final class NativeStructureView implements BlockGetter {
                 if (state == null) throw new DecoderException("Unknown block state " + stateId);
                 cells.add(new Cell(position, state));
             }
-            return new NativeStructureView(cells);
+            return new NativeStructureView(cells, solid);
         } catch (IllegalArgumentException failure) {
             throw new DecoderException("Invalid native structure view", failure);
         }

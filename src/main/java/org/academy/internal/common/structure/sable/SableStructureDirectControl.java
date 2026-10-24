@@ -78,6 +78,15 @@ public final class SableStructureDirectControl {
         COMMANDS.remove(server);
     }
 
+    public static void cancel(ServerLevel host, StructureRef reference, UUID controlId) {
+        SableStructureAccess.requireThread(host.getServer());
+        var commands = COMMANDS.get(host.getServer());
+        var command = commands == null ? null : commands.get(reference);
+        if (command != null && command.host == host && command.controlId.equals(controlId)) {
+            commands.remove(reference, command);
+        }
+    }
+
     private static final class Command {
         final ServerLevel host;
         final SableStructureHandle handle;

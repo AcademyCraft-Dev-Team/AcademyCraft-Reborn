@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academyGroundWalkDirectory')
+                .getOrElse('run/native-sublevel-ground-walk-r1')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-ground-walk-')) {
+            throw new GradleException('Ground walking requires an isolated run/native-sublevel-ground-walk-* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelGroundWalkingSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

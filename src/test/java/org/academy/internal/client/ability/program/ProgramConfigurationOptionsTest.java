@@ -25,6 +25,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProgramConfigurationOptionsTest {
     @Test
+    void structureOrientationModesUseStableFiniteOptionsInAllThreeCategories() {
+        for (var category : List.of("accelerator", "electromaster", "aeromanip")) {
+            var catalog = AbilityProgramDefinitions.require(
+                    net.minecraft.resources.Identifier.parse("academy:" + category)).editorCatalog();
+            var reset = catalog.entry(net.minecraft.resources.Identifier.parse(
+                    "academy:program/" + category + "/action/structure/reset_orientation"));
+            var spin = catalog.entry(net.minecraft.resources.Identifier.parse(
+                    "academy:program/" + category + "/action/structure/spin"));
+            assertEquals(List.of("capture_baseline", "world_up_keep_yaw", "nearest_grid_yaw"),
+                    values(ProgramConfigurationOptions.options(reset, "reset_mode", new JsonPrimitive("world_up_keep_yaw"))));
+            assertEquals(List.of("reject", "use_world_grid"), values(ProgramConfigurationOptions.options(
+                    reset, "missing_baseline", new JsonPrimitive("reject"))));
+            assertEquals(List.of("world", "local"), values(ProgramConfigurationOptions.options(
+                    spin, "frame", new JsonPrimitive("world"))));
+            assertEquals(List.of("brake", "release_inertia"), values(ProgramConfigurationOptions.options(
+                    spin, "finish_mode", new JsonPrimitive("brake"))));
+        }
+    }
+
+    @Test
     void numericKindsAndOperatorsUseFiniteStepOptions() {
         var catalog = AbilityProgramDefinitions.mentalout().editorCatalog();
         var arithmetic = catalog.entry(CommonProgramNodeIds.NUMERIC_ARITHMETIC);

@@ -10,20 +10,28 @@ import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.StructureBlockData;
 import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureLifecycle;
+import org.academy.api.common.structure.StructurePhysics;
+import org.academy.api.common.structure.StructurePhysicsRegion;
 import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWorldAccess;
 import org.academy.api.common.structure.StructureWriteResult;
 import org.academy.internal.common.structure.NativeStructureRuntime;
+import org.academy.internal.common.structure.StructureCapturePhysics;
 import org.academy.internal.common.structure.physics.NativePhysicsWorld;
 import org.academy.internal.common.structure.physics.NativeStructurePhysicsGeometry;
 import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 /** Native backend adapter: owns every native runtime, handle and geometry call of a capture. */
 public final class NativeCaptureTarget implements CaptureTarget {
+    @Override
+    public String allocationFailureDetail() {
+        return "no_free_native_slot";
+    }
     public static final Identifier ID = NativeStructureRuntime.ID;
 
     private final MinecraftServer server;
@@ -107,6 +115,51 @@ public final class NativeCaptureTarget implements CaptureTarget {
         var handle = runtime().resolve(target).orElse(null);
         if (handle != null || !recovery) return Optional.ofNullable(handle);
         return runtime().load(target);
+    }
+
+    /**
+     * Opens the host region and attaches the copied structure while its source blocks still
+     * exist. A later source-removal failure can therefore release a real body instead of
+     * leaving an orphan static projection.
+     */
+    @Override
+    public boolean preparePhysics(ServerLevel host, StructureRef target, BlockPos origin, List<BlockPos> positions) {
+        var handle = runtime().resolve(target).orElse(null);
+        if (handle == null || handle.lifecycle() != StructureLifecycle.ACTIVE) return false;
+        var bounds = StructureCapturePhysics.regionBounds(host, positions);
+        if (bounds == null) return false;
+        StructurePhysicsRegion region;
+        try {
+            region = StructurePhysics.openRegion(host, bounds);
+        } catch (RuntimeException | LinkageError failure) {
+            org.academy.AcademyCraft.LOGGER.error("Cannot open the capture physics region for {}", target, failure);
+            return false;
+        }
+        try {
+            region.attach(handle);
+            return true;
+        } catch (RuntimeException | LinkageError failure) {
+            org.academy.AcademyCraft.LOGGER.error("Cannot attach the captured structure {}", target, failure);
+            try { region.close(); }
+            catch (RuntimeException | LinkageError cleanup) { failure.addSuppressed(cleanup); }
+            return false;
+        }
+    }
+
+    @Override
+    public void releasePhysics(ServerLevel host, StructureRef target) {
+        var region = StructurePhysics.attachedRegion(host, target).orElse(null);
+        if (region == null) return;
+        try {
+            region.detach(target);
+        } catch (RuntimeException | LinkageError failure) {
+            org.academy.AcademyCraft.LOGGER.error("Cannot detach rolled-back capture {}", target, failure);
+        }
+        try {
+            region.close();
+        } catch (RuntimeException | LinkageError failure) {
+            org.academy.AcademyCraft.LOGGER.error("Cannot close rolled-back capture region for {}", target, failure);
+        }
     }
 
     @Override

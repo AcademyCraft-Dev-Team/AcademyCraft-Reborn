@@ -4,12 +4,15 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jspecify.annotations.Nullable;
 import org.academy.api.common.structure.StructureHandle;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureWriteResult;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Server-thread executor boundary for one capture target backend. A transaction selects one
@@ -17,13 +20,57 @@ import java.util.Optional;
  * geometry and persistence step through it; the coordinator itself never addresses a backend.
  */
 public interface CaptureTarget {
+    /** Full, bounded content for restoration, never a culled render snapshot. */
+    default Optional<List<RestorationCell>> restorationCells(StructureRef reference) { return Optional.empty(); }
+
+    /** Durable backend location evidence retained before restoration removes the source. */
+    default Optional<net.minecraft.nbt.CompoundTag> restorationEvidence(StructureRef reference) { return Optional.empty(); }
+
+    /** Persist the complete original content before a transfer can need crash rollback. */
+    default boolean checkpointRestoration(StructureRef reference) { return false; }
+
+    /** Hide and suspend a journal-owned source until rollback or committed retirement completes. */
+    default boolean isolateRestoration(StructureRef reference) { return false; }
+
+    /** Idempotent source retirement, including its persistent owner and allocation. */
+    default boolean retireRestored(StructureRef reference, net.minecraft.nbt.CompoundTag evidence) { return false; }
+
+    record RestorationCell(BlockPos localPosition, BlockState state) {
+        public RestorationCell { localPosition = localPosition.immutable(); }
+    }
     /**
-     * Allocates a target for the selected origin and accepts the first content cell in capture
+     * Read-only allocation seed admission, evaluated after all source cells are validated.
+     * A body backend may require a positive-mass collision cell to survive its first write.
+     * Choosing a different seed never removes other admitted cells from the transaction.
+     */
+    default boolean canSeed(ServerLevel host, BlockPos position, BlockState state) {
+        return !state.isAir();
+    }
+
+    /**
+     * Allocates a target for the selected origin and accepts the first seedable cell in capture
      * order. A backend that can make the target non-empty in the same call chain writes that
      * seed before returning so a zero-mass allocation window never exists; a backend that
      * ignores it lets the coordinator fill the cell during the copy stage instead.
      */
     Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset, BlockState seedState);
+
+    /** Full selection bounds for backends whose storage must be sized before the first write. */
+    default Optional<StructureRef> allocate(ServerLevel host, BlockPos origin, BlockPos seedOffset,
+                                            BlockState seedState, List<BlockPos> positions, UUID transactionId) {
+        return allocate(host, origin, seedOffset, seedState);
+    }
+
+    /** Stable backend-specific reason when allocation cannot reserve a target. */
+    default String allocationFailureDetail() {
+        return "capture_capacity_unavailable";
+    }
+
+    /** Admission follows the target's storage capabilities, after the caller's permission gate. */
+    default @Nullable String rejectionDetail(ServerLevel host, BlockPos position, BlockState state,
+                                              @Nullable BlockEntity blockEntity) {
+        return NativeCaptureWhitelist.rejectionDetail(host, position, state, blockEntity);
+    }
 
     /**
      * Exact mass the given source cells will have as a target body when this backend can predict
@@ -58,6 +105,15 @@ public interface CaptureTarget {
     boolean save(StructureRef target);
 
     /**
+     * Persists a checkpoint with the source cells when the backend can scope its durability.
+     * The default keeps the backend's whole-target save; SubLevel uses the positions to write
+     * only the source host chunks instead of the entire host level.
+     */
+    default boolean save(StructureRef target, List<BlockPos> sourcePositions) {
+        return save(target);
+    }
+
+    /**
      * Releases an uncommitted target during rollback or capacity reclamation; true means the
      * target no longer exists, so the coordinator must not clear its cells. The Sable backend
      * removes the whole ship because per-cell clearing trips its zero-mass removal.
@@ -72,6 +128,28 @@ public interface CaptureTarget {
 
     /** Verifies the copied content against the source cell count and backend physics budgets. */
     boolean verifyCopy(StructureRef target, int expectedCells);
+
+    /**
+     * Finalizes backend-owned body state after every copied cell has been verified and before the
+     * transaction commits. Implementations must be idempotent for crash recovery and must not
+     * change the copied cell values. Returning false aborts and rolls back the transaction.
+     */
+    default boolean finalizeTarget(StructureRef target, BlockPos origin, List<BlockPos> positions) {
+        return true;
+    }
+
+    /**
+     * Creates the backend body/region while the source blocks are still present. A false result
+     * aborts and rolls back before the first source cell is removed. Backends whose body is
+     * created lazily may keep the default.
+     */
+    default boolean preparePhysics(ServerLevel host, StructureRef target, BlockPos origin, List<BlockPos> positions) {
+        return true;
+    }
+
+    /** Releases any body/region created by {@link #preparePhysics} during a rollback. */
+    default void releasePhysics(ServerLevel host, StructureRef target) {
+    }
 
     Identifier backendId();
 }

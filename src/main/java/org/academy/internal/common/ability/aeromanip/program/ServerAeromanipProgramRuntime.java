@@ -19,7 +19,10 @@ import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
 import org.academy.api.common.structure.StructureDynamics;
 import org.academy.api.common.structure.StructureRef;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
+import org.academy.internal.common.ability.program.ProgramStructureExtraction;
 import org.academy.api.common.structure.StructureSpaces;
+import org.academy.api.common.structure.StructureTransactions;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
@@ -29,12 +32,16 @@ import org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStruct
 import org.academy.internal.common.ability.aeromanip.skills.lv3.LaminarCutter;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.program.ProgramActionTransaction;
+import org.academy.internal.common.ability.program.ProgramStructureCaptureMonitor;
 import org.academy.internal.common.ability.program.StructureProgramActions;
+import org.academy.internal.common.ability.program.SubLevelProgramControl;
+import org.academy.internal.common.ability.program.ProgramOrientationControl;
 import org.academy.internal.common.ability.program.StructureStaticizationRunner;
 import org.academy.internal.common.ability.program.registry.AbilityProgramSpatialRanges;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.ability.program.ServerProgramTargetResolver;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.common.sublevel.SubLevelStructureRefs;
 import org.academy.internal.common.world.entity.skill.HighSpeedJetNozzle;
 import org.jspecify.annotations.Nullable;
 
@@ -66,7 +73,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private final float costMultiplier;
     private final ServerProgramTargetResolver targets;
     private final UUID runtimeToken = UUID.randomUUID();
+    private final SubLevelProgramControl subLevelControls;
+    private final ProgramOrientationControl orientationControls;
     private @Nullable StructureRef pendingExtraction;
+    private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
     private long extractionDeadline;
     private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
     @Override
@@ -82,6 +92,8 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         this.player = Objects.requireNonNull(player, "player");
         this.costMultiplier = requireCostMultiplier(costMultiplier);
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
+        subLevelControls = new SubLevelProgramControl(player, runtimeToken, MAX_ACTION_RANGE);
+        orientationControls = new ProgramOrientationControl(player, MAX_ACTION_RANGE, this::validateOrientationControl);
     }
 
     @Override
@@ -334,13 +346,21 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             }
             pendingExtraction = HighSpeedJetStructureService.diagnostic(player)
                     .map(state -> state.reference()).orElse(null);
-            extractionDeadline = player.level().getGameTime() + 400;
+            captureMonitor.track(HighSpeedJetStructureService.pendingProgramCapture(player));
+            extractionDeadline = player.level().getGameTime() + (StructureCaptureExtractions.enabled() ? 800 : 400);
             if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
+        }
+        var captureFailure = captureMonitor.pollFailure(id -> StructureTransactions.poll(player.level().getServer(), id));
+        if (captureFailure.isPresent()) {
+            StructureCaptureExtractions.release(player, pendingExtraction);
+            pendingExtraction = null;
+            return StructureOperation.result(captureFailure.get());
         }
         var reference = pendingExtraction;
         var state = HighSpeedJetStructureService.diagnostic(player).orElse(null);
         if (state == null || !state.reference().equals(reference)
                 || player.level().getGameTime() > extractionDeadline) {
+            StructureCaptureExtractions.release(player, pendingExtraction);
             pendingExtraction = null;
             return StructureOperation.rejected("capture_session_ended");
         }
@@ -348,6 +368,14 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
                 || org.academy.api.common.structure.StructureDynamics.motion(
                         (ServerLevel) player.level(), reference).isEmpty()) {
             return StructureOperation.result(ProgramStructureOperationResult.pending("capture_pending"));
+        }
+        var extraction = ProgramStructureExtraction.poll(player, reference);
+        if (extraction.status() == ProgramStructureOperationResult.Status.PENDING) {
+            return StructureOperation.result(extraction);
+        }
+        if (extraction.status() != ProgramStructureOperationResult.Status.COMPLETED) {
+            pendingExtraction = null;
+            return StructureOperation.result(extraction);
         }
         pendingExtraction = null;
         return StructureOperation.structure(programReference(reference),
@@ -358,6 +386,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation controlStructure(ProgramStructureReference structure) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_CONTROL_COST * costMultiplier,
+                    () -> controlSubLevelStructure(structure),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
                 STRUCTURE_CONTROL_COST * costMultiplier,
                 () -> HighSpeedJetStructureService.programControl(
@@ -385,6 +419,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_MOVE_COST * costMultiplier,
+                    () -> moveSubLevelStructure(control, target, anchor, seconds),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
+        }
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_MOVE_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
         }
@@ -412,9 +452,38 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation rotateStructure(ProgramStructureControl control,
                                               @Nullable ProgramStructurePose pose) {
-        var rejection = validateControl(control);
-        if (rejection != null) return StructureOperation.rejected(rejection);
-        return StructureOperation.unavailable("finite_torque_control_unavailable");
+        return StructureOperation.result(rotateOrientation(control, pose).result());
+    }
+
+    @Override
+    public Operation rotateOrientation(ProgramStructureControl control, @Nullable ProgramStructurePose pose) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.rotate(control, pose, Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation resetOrientation(ProgramStructureControl control, ResetRequest request) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.reset(control, request, Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation spinStructure(ProgramStructureControl control, SpinRequest request) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.spin(control, request, Skills.HIGH_SPEED_JET.get(), STRUCTURE_MOVE_COST * costMultiplier);
+    }
+
+    @Override
+    public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        return orientationControls.status(control, operationId);
+    }
+
+    @Override
+    public void closeOrientationCommands() {
+        orientationControls.close();
+        if (pendingExtraction != null) StructureCaptureExtractions.release(player, pendingExtraction);
+        pendingExtraction = null;
     }
 
     @Override
@@ -427,6 +496,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         if (rejection != null) return StructureOperation.rejected(rejection);
         if (!Double.isFinite(seconds) || seconds < 0.1 || seconds > MAXIMUM_LAUNCH_SECONDS) {
             return StructureOperation.rejected("invalid_duration");
+        }
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
+                    STRUCTURE_LAUNCH_COST * costMultiplier,
+                    () -> launchSubLevelStructure(control, direction, power),
+                    operation -> operation.result().status() == ProgramStructureOperationResult.Status.COMPLETED);
         }
         var normalized = normalizedVector(direction);
         var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
@@ -441,6 +516,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public StructureOperation releaseStructure(ProgramStructureControl control) {
         var rejection = validateControl(control);
         if (rejection != null) return StructureOperation.rejected(rejection);
+        orientationControls.cancel(control);
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) {
+            return StructureOperation.result(subLevelControls.release(control));
+        }
         var result = HighSpeedJetStructureService.programRelease(
                 player, control.reference(), control.controlId());
         return StructureOperation.result(operationResult(result));
@@ -449,13 +528,39 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation staticizeStructure(ProgramStructureReference structure,
                                                  @Nullable ProgramBlockPosition target) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
         Objects.requireNonNull(structure, "structure");
+        if (SubLevelStructureRefs.isSubLevel(structure.reference())) {
+            return StructureOperation.result(subLevelControls.staticize(structure, target));
+        }
         var cells = HighSpeedJetStructureService.programSession(player)
                 .filter(session -> session.reference().equals(structure.reference()))
                 .map(HighSpeedJetStructureService.Session::capturedCells)
                 .orElse(List.of());
         return StructureOperation.result(StructureStaticizationRunner.staticize(
                 player, structure, target, cells));
+    }
+
+    private StructureOperation controlSubLevelStructure(ProgramStructureReference structure) {
+        if (!subLevelControls.hasJetNozzles(structure)) return StructureOperation.rejected("support_unresolved");
+        var acquisition = subLevelControls.acquire(structure);
+        if (acquisition.control() == null) return StructureOperation.result(acquisition.result());
+        issuedControls.put(acquisition.control().controlId(), acquisition.control());
+        return StructureOperation.control(acquisition.control(), acquisition.result());
+    }
+
+    private StructureOperation launchSubLevelStructure(ProgramStructureControl control,
+                                                       ProgramDirection direction, float power) {
+        var speed = org.academy.api.common.ability.aeromanip.JetStructureControl.maximumSpeed(
+                ProgramPowerScale.require(power));
+        return StructureOperation.result(subLevelControls.launch(control, normalizedVector(direction), speed));
+    }
+
+    private StructureOperation moveSubLevelStructure(ProgramStructureControl control,
+                                                      @Nullable ProgramWorldPosition target,
+                                                      @Nullable ProgramStructureAnchor anchor,
+                                                      double seconds) {
+        return StructureOperation.result(subLevelControls.moveJet(control, target, anchor, seconds));
     }
 
     @Override
@@ -675,6 +780,12 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             case REJECTED -> ProgramStructureOperationResult.rejected(result.detail());
             case UNAVAILABLE -> ProgramStructureOperationResult.unavailable(result.detail());
         };
+    }
+
+    private @Nullable String validateOrientationControl(ProgramStructureControl control) {
+        var rejection = validateControl(control);
+        if (rejection != null) return rejection;
+        return SubLevelStructureRefs.isSubLevel(control.reference()) ? subLevelControls.validate(control) : null;
     }
 
     private @Nullable String validateControl(ProgramStructureControl control) {

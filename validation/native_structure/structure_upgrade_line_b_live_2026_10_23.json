@@ -1,0 +1,439 @@
+{
+  "schema": "academy-structure-upgrade-live-validation-v1",
+  "date": "2026-10-23",
+  "base_commit": "26635388",
+  "scope": "line_b_live_orientation_backends_and_nodes",
+  "orientation_enabled": true,
+  "orientation_readiness": "EXPERIMENTAL",
+  "draft_gameplay_enabled": false,
+  "native_production_changed": false,
+  "original_test_worlds_modified": false,
+  "checks": {
+    "test": {
+      "tests": 2978,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "nativePhysicsTest": {
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "development_build": "PASSED",
+    "release_build": "PASSED",
+    "rust_native_suite": "NOT_RERUN_KNOWN_S0_FAILURES"
+  },
+  "clients": {
+    "native_api": {
+      "path": "run/native-sublevel-direct-smoke-orientation-native-live-final-20261023/structure-orientation-result.json",
+      "result": {
+        "passed": true,
+        "backend": "academy:sublevel",
+        "cases": [
+          {
+            "scenario": "arbitrary_axis_negative_rotate",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 22,
+            "max_angular_speed": 2.0000333906539636,
+            "max_com_step": 0.01072968750003156,
+            "actual_angle_error": 0.008996494974546727,
+            "pass": true
+          },
+          {
+            "scenario": "world_spin_brake",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 34,
+            "max_angular_speed": 1.1998803868548982,
+            "max_com_step": 0.01072968750003156,
+            "spin_axis_alignment": 0.9999986916502959,
+            "pass": true
+          },
+          {
+            "scenario": "local_spin_brake",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 34,
+            "max_angular_speed": 1.199997844372745,
+            "max_com_step": 0.01072968750003156,
+            "spin_axis_alignment": 0.9999976198367466,
+            "pass": true
+          },
+          {
+            "scenario": "nearest_grid_reset",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 30,
+            "max_angular_speed": 1.999948471606019,
+            "max_com_step": 0.01072968750003156,
+            "actual_angle_error": 0.009045799681511472,
+            "pass": true
+          },
+          {
+            "scenario": "replacement_rejects_old_stop",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 27,
+            "max_angular_speed": 1.9999998404309418,
+            "max_com_step": 0.01072968750003156,
+            "actual_angle_error": 0.008835803217385469,
+            "pass": true
+          },
+          {
+            "scenario": "wall_blocks_complete_rotation_arc",
+            "status": "BLOCKED",
+            "detail": "angular_sweep_blocked",
+            "ticks": 1,
+            "max_angular_speed": 1.4499090866930908E-13,
+            "max_com_step": 0.01072968750003156,
+            "remaining_angle": 1.5621819815232456,
+            "pass": true
+          },
+          {
+            "scenario": "queued_brake_stops_existing_inertia",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 8,
+            "max_angular_speed": 1.5000000000326323,
+            "max_com_step": 0.01072968750003156,
+            "pass": true
+          },
+          {
+            "pass": true,
+            "status": "COMPLETED",
+            "post_launch_ticks": 3,
+            "scenario": "launch_cancels_active_spin",
+            "post_launch_angular_speed": 0.0
+          },
+          {
+            "status": "STALE",
+            "pass": true,
+            "scenario": "lease_release_cancels_queued_operation"
+          },
+          {
+            "scenario": "removed_nonplayer_actor_releases_idle_lease",
+            "pass": true,
+            "waited_ticks": 1,
+            "automatic_tick_cleanup": true
+          }
+        ],
+        "failure": ""
+      }
+    },
+    "sable_api": {
+      "path": "run/native-sublevel-direct-smoke-orientation-sable-live-final-20261023/structure-orientation-result.json",
+      "result": {
+        "passed": true,
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "scenario": "arbitrary_axis_negative_rotate",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 22,
+            "max_angular_speed": 1.9941907232533151,
+            "max_com_step": 0.007232668250711722,
+            "actual_angle_error": 0.009346791512785542,
+            "pass": true
+          },
+          {
+            "scenario": "world_spin_brake",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 34,
+            "max_angular_speed": 1.197597933250742,
+            "max_com_step": 0.007232668250711722,
+            "spin_axis_alignment": 0.9999932208466148,
+            "pass": true
+          },
+          {
+            "scenario": "local_spin_brake",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 34,
+            "max_angular_speed": 1.1973066876920078,
+            "max_com_step": 0.007232668250711722,
+            "spin_axis_alignment": 0.999999999999994,
+            "pass": true
+          },
+          {
+            "scenario": "nearest_grid_reset",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 30,
+            "max_angular_speed": 1.995592330459867,
+            "max_com_step": 0.007232668250711722,
+            "actual_angle_error": 0.009318725656970485,
+            "pass": true
+          },
+          {
+            "scenario": "replacement_rejects_old_stop",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 27,
+            "max_angular_speed": 1.995510872717437,
+            "max_com_step": 0.007232668250711722,
+            "actual_angle_error": 0.0092054611108906,
+            "pass": true
+          },
+          {
+            "scenario": "wall_blocks_complete_rotation_arc",
+            "status": "BLOCKED",
+            "detail": "angular_sweep_blocked",
+            "ticks": 1,
+            "max_angular_speed": 3.600879486455735E-06,
+            "max_com_step": 0.007232668250711722,
+            "remaining_angle": 1.5615912318339167,
+            "pass": true
+          },
+          {
+            "scenario": "queued_brake_stops_existing_inertia",
+            "status": "COMPLETED",
+            "detail": "orientation_completed",
+            "ticks": 8,
+            "max_angular_speed": 1.49663317203585,
+            "max_com_step": 0.007232668250711722,
+            "pass": true
+          },
+          {
+            "pass": true,
+            "post_launch_angular_speed": 0.0,
+            "scenario": "launch_cancels_active_spin",
+            "post_launch_ticks": 3,
+            "status": "COMPLETED"
+          },
+          {
+            "scenario": "lease_release_cancels_queued_operation",
+            "pass": true,
+            "status": "STALE"
+          },
+          {
+            "automatic_tick_cleanup": true,
+            "waited_ticks": 1,
+            "pass": true,
+            "scenario": "removed_nonplayer_actor_releases_idle_lease"
+          }
+        ],
+        "failure": ""
+      }
+    },
+    "native_vm": {
+      "path": "run/native-sublevel-direct-smoke-program-orientation-native-ack-20261023/structure-program-orientation-result.json",
+      "result": {
+        "linear_gravity_support_only": true,
+        "actual_save_execute_packets": false,
+        "actual_node_vm": true,
+        "failure": "",
+        "passed": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ]
+      }
+    },
+    "sable_vm": {
+      "path": "run/native-sublevel-direct-smoke-program-orientation-sable-ack-20261023/structure-program-orientation-result.json",
+      "result": {
+        "failure": "",
+        "passed": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "linear_gravity_support_only": true,
+        "actual_save_execute_packets": false,
+        "actual_node_vm": true
+      }
+    }
+  },
+  "vm_fixture_initialization_regression": {
+    "result": "FIXTURE_RACE_FIXED_BOTH_BACKENDS_RETESTED",
+    "failed_log": "build/line-b-live-vm-native-final.log",
+    "failed_result": "run/native-sublevel-direct-smoke-program-orientation-native-final-20261023/structure-program-orientation-result.json",
+    "cause": "Client teleport acknowledgement overwrote server-only test aim before extract; seed_forward=false",
+    "fix": "Send actual aim in teleport and wait for acknowledgement, loaded client seed and two stable client/server position/aim ticks",
+    "extraction_retried_or_relaxed": false
+  },
+  "h_complex_terrain_regression": {
+    "result": "FAILED_PENDING_ATTRIBUTION",
+    "log": "build/line-b-live-h-regression.log",
+    "tier0_rise": 3.0643781249999336,
+    "tier0_hover_ticks": 200,
+    "tier1_rise": 0.31965964238450795,
+    "tier1_target": 5,
+    "tier1_source_origin": [
+      -79,
+      120,
+      47
+    ],
+    "native_body_count": 1,
+    "new_angular_session_active": false,
+    "prior_pass_origin": [
+      -78,
+      120,
+      56
+    ],
+    "fixed_coordinate_followup": "BOTH_INDEPENDENT_RUNS_PASSED_NOT_OLD_NEW_LOGIC_AB",
+    "tier1_full_cube_cells": 128,
+    "dynamic_boxes_upper_bound": 128,
+    "fixed_coordinate_runs": [
+      {
+        "source_origin": [
+          -78,
+          120,
+          56
+        ],
+        "anchor": "-155,123,70",
+        "tier": 1,
+        "rise": 5.064378124999905,
+        "hover_ticks": 200,
+        "result": "PASSED",
+        "log": "build/line-b-live-h-fixed-old.log"
+      },
+      {
+        "source_origin": [
+          -79,
+          120,
+          47
+        ],
+        "anchor": "-156,123,61",
+        "tier": 1,
+        "rise": 5.064378124999905,
+        "hover_ticks": 200,
+        "result": "PASSED",
+        "log": "build/line-b-live-h-fixed-new.log"
+      }
+    ],
+    "causality": "UNRESOLVED: isolated tier does not reproduce complete sequential world/contact history; no production fix claimed"
+  },
+  "limitations": [
+    "new_extraction_planner_and_provenance_not_wired",
+    "known_s0_native_contact_failures_not_fixed",
+    "conservative_contact_rotation_envelopes",
+    "post_hook_external_forces_remain_solver_authority",
+    "multi_body_performance_matrix_pending",
+    "large_welded_mutual_collision_pause_unload_reload_combinations_pending",
+    "manual_editor_visual_check_pending",
+    "editor_save_execute_packet_end_to_end_pending",
+    "no_mps_auto_restoration_or_fracture_enabled"
+  ]
+}

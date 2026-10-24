@@ -36,8 +36,10 @@ true_health_ceiling 同步附件，不接收服务端掩码，不推算服务端
 
 ## 字节码
 
-MixinPlugin 在应用 MixinTrueHealthOffset 后使用 HealthReadInliner 将读取、
-XOR 解码与钳制指令复制进 getHealth，随后移除注入辅助方法。
+字节码处理由 NeoForge CoreMod 完成，不再由 Mixin 插件发起：`AcademyCoremodProvider` 声明
+`runsAfter(MIXIN)`，其 health 处理器先调用 `HealthReadInliner.apply` 把读取、XOR 解码与
+钳制指令复制进 `getHealth`，再交给 `VectorHealthReadTransformer` 处理矢量血量读取，随后
+移除注入辅助方法。`MixinPlugin` 现在只负责 Sable 的 mixin 开关，不做任何字节码内联。
 这是实际字节码内联，不依赖 JIT。数值更新处也直接执行 XOR，不使用共享解码桥。
 
 XOR 和内联仅增加分析成本，不能构成同 JVM 内的安全边界。

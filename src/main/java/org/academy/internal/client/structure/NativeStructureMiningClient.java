@@ -11,7 +11,6 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.ClientHooks;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureHit;
@@ -19,7 +18,6 @@ import org.academy.internal.client.ability.mentalout.MentalIntrusionClientState;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.network.NativeStructureMinePacket;
 import org.academy.internal.common.network.NativeStructureMiningProgressPacket;
-import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.common.structure.space.NativeStructureMiningPolicy;
 import org.academy.internal.common.world.entity.structure.NativeStructureProjectionEntity;
 import org.jspecify.annotations.Nullable;
@@ -55,7 +53,7 @@ public final class NativeStructureMiningClient {
         if (!allowed(mc, missTime) || !eligible(mc, picked)) { abort(mc); return true; }
         if (ticks < cooldownUntil || lastInputTick == ticks) return true;
         lastInputTick = ticks;
-        if (!click(mc)) { abort(mc); return true; }
+        if (!click(mc, picked)) { abort(mc); return true; }
         picked = pick(mc);
         if (picked == null) { abort(mc); return true; }
         if (!allowed(mc, missTime) || !eligible(mc, picked)) { abort(mc); return true; }
@@ -75,7 +73,7 @@ public final class NativeStructureMiningClient {
         if (session != null && !matches(mc, picked)) abort(mc);
         if (ticks < cooldownUntil || lastInputTick == ticks) return true;
         lastInputTick = ticks;
-        if (!click(mc)) { abort(mc); return true; }
+        if (!click(mc, picked)) { abort(mc); return true; }
         picked = pick(mc);
         if (picked == null) { abort(mc); return true; }
         if (!allowed(mc, missTime) || !eligible(mc, picked)) { abort(mc); return true; }
@@ -109,14 +107,9 @@ public final class NativeStructureMiningClient {
         send(mc, NativeStructureMinePacket.Action.START, session.requestId, hit);
     }
 
-    private static boolean click(Minecraft mc) {
-        var event = ClientHooks.onClickInput(0, mc.options.keyAttack, InteractionHand.MAIN_HAND);
-        if (event.shouldSwingHand()) {
-            mc.player.swing(InteractionHand.MAIN_HAND);
-            // The existing Minecraft swing injection cannot observe a call made by this helper.
-            MisakaNetworkClient.send(PlayerLeftClickSwingPacket.INSTANCE);
-        }
-        return !event.isCanceled();
+    private static boolean click(Minecraft mc, NativeStructureRaycast.Hit hit) {
+        return StructureMiningFeedback.click(mc, hit.projection().view().getBlockState(hit.localPosition()),
+                hit.worldLocation(), session == null || ticks % 4L == 0);
     }
 
     private static void send(Minecraft mc, NativeStructureMinePacket.Action action, long requestId, @Nullable StructureHit hit) {

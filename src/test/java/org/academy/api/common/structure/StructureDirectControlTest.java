@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Pure registry decisions behind the shared Sable lightweight control lease. The backend probe
@@ -77,5 +79,25 @@ class StructureDirectControlTest {
                 Probe.occupied("traction_active"), standing, ACTOR, CONTROL));
         assertEquals(Status.UNAVAILABLE, StructureDirectControl.decideValidate(
                 Probe.unavailable("structure_unavailable"), standing, ACTOR, CONTROL));
+    }
+
+    @Test
+    void actorLifecycleEndsEveryBackendsStandingLeaseEvenAfterAngularWorkCompletes() {
+        assertFalse(StructureDirectControl.actorLeaseEnded(true, false, false, true));
+        assertTrue(StructureDirectControl.actorLeaseEnded(false, false, false, true));
+        assertTrue(StructureDirectControl.actorLeaseEnded(true, true, false, true));
+        assertTrue(StructureDirectControl.actorLeaseEnded(true, false, true, true));
+        assertTrue(StructureDirectControl.actorLeaseEnded(true, false, false, false));
+    }
+
+    @Test
+    void optionalBackendCleanupRequiresConfirmedNewEpochAndPreservesStaffAndPausePolicy() {
+        assertFalse(StructureDirectControl.probeRevokesLease(Probe.ready(RUNTIME), RUNTIME, false));
+        assertTrue(StructureDirectControl.probeRevokesLease(Probe.ready(UUID.randomUUID()), RUNTIME, false));
+        assertFalse(StructureDirectControl.probeRevokesLease(Probe.occupied("staff_active"), RUNTIME, false));
+        assertFalse(StructureDirectControl.probeRevokesLease(Probe.unavailable("solver_paused"), RUNTIME, false));
+        assertTrue(StructureDirectControl.probeRevokesLease(Probe.occupied("foreign_owner"), RUNTIME, true));
+        assertTrue(StructureDirectControl.probeRevokesLease(Probe.unavailable("body_missing"), RUNTIME, true));
+        assertFalse(StructureDirectControl.probeRevokesLease(Probe.ready(RUNTIME), RUNTIME, true));
     }
 }

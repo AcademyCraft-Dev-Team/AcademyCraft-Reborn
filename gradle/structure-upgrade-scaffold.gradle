@@ -1,0 +1,42 @@
+import groovy.json.JsonSlurper
+
+// Validate discoverability and disabled state; this is deliberately not gameplay acceptance.
+tasks.register('verifyStructureUpgradeScaffold') {
+    group = 'verification'
+    description = 'Checks replaceable physics/structure contracts and the disabled scaffold registration.'
+    dependsOn tasks.named('compileJava'), tasks.named('processResources')
+    doLast {
+        def spec = file('docs/structure_upgrade_fill_spec.zh-CN.md').getText('UTF-8')
+        ['UPG-CTRL', 'UPG-LIFE', 'UPG-DAMAGE', 'UPG-IMPACT', 'UPG-FRACTURE', 'UPG-ENGINE'].each { marker ->
+            if (!spec.contains(marker)) throw new GradleException('Missing upgrade handoff marker: ' + marker)
+        }
+        def template = new JsonSlurper().parse(file('src/main/resources/academy/structure_upgrade.template.json'))
+        if (template.status != 'UNVERIFIED' || template.gameplay_enabled != false || template.runtime_configuration != false) {
+            throw new GradleException('Upgrade template must remain disabled and UNVERIFIED')
+        }
+        def bootstrap = file('src/main/java/org/academy/internal/common/structure/upgrade/StructureUpgradeBootstrap.java').getText('UTF-8')
+        if (!bootstrap.contains('DRAFT_GAMEPLAY_ENABLED = false') || !bootstrap.contains('ORIENTATION_ENABLED = true')) {
+            throw new GradleException('Draft services stay disabled; live orientation must be explicit')
+        }
+        def registration = file('src/main/java/org/academy/AcademyCraftRegister.java').getText('UTF-8')
+        if (registration.count('StructureUpgradeBootstrap.register(modEventBus)') != 1) {
+            throw new GradleException('Upgrade scaffold must be registered exactly once')
+        }
+        ['StructureOperation', 'StructureCapabilities', 'StructureUpgradeServices', 'StructureExtraction',
+         'StructureOrientation', 'StructureProvenance', 'StructureGridRestoration', 'StructureDamage',
+         'StructureImpactFeed', 'StructureFracture'].each { name ->
+            if (!file('src/main/java/org/academy/api/common/structure/upgrade/' + name + '.java').isFile()) {
+                throw new GradleException('Missing public upgrade contract: ' + name)
+            }
+        }
+        if (!file('src/main/java/org/academy/api/common/physics/PhysicsProvider.java').isFile()) {
+            throw new GradleException('Missing replaceable physics provider')
+        }
+        def report = layout.buildDirectory.file('reports/structure-upgrade-scaffold/summary.txt').get().asFile
+        report.parentFile.mkdirs()
+        report.setText('SCAFFOLD_REGISTERED\nDraft gameplay: DISABLED\nLive orientation: EXPERIMENTAL\nLive extraction preview and binding: EXPERIMENTAL, gameplay disabled\nMPS runtime: NOT_LOADED\nFull upgrade acceptance: UNVERIFIED\n', 'UTF-8')
+        logger.lifecycle('Structure upgrade draft verified; live orientation and capture preview experimental, gameplay disabled.');
+    }
+}
+
+tasks.named('check') { dependsOn tasks.named('verifyStructureUpgradeScaffold') }

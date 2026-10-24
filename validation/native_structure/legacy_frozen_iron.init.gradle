@@ -1,0 +1,28 @@
+// Restore/move/mine the existing tilted iron fixture in a caller-prepared disposable test copy.
+// This script never copies or modifies run/saves/test.
+allprojects {
+    afterEvaluate {
+        def runRoot = rootProject.file('run').canonicalFile
+        def directory = rootProject.file(providers.gradleProperty('academyLegacyFrozenIronDirectory')
+                .getOrElse('run/legacy-frozen-iron-smoke-default')).canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath())
+                || !directory.name.startsWith('legacy-frozen-iron-smoke-')) {
+            throw new GradleException('Legacy iron smoke must use run/legacy-frozen-iron-smoke-*')
+        }
+        def world = new File(directory, 'saves/test').canonicalFile
+        if (!world.toPath().startsWith(directory.toPath()) || !new File(world, 'level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated saves/test copy in the smoke directory first')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.legacyFrozenIronSmoke', 'true'
+            systemProperty 'academy.legacyFrozenIronTarget', providers.gradleProperty('academyLegacyFrozenIronTarget')
+                    .getOrElse('860aa2e6-7a95-4f90-ac1a-98cdc3ba5b00')
+            systemProperty 'academy.legacyFrozenIronInitialY', providers.gradleProperty('academyLegacyFrozenIronInitialY')
+                    .getOrElse('65.21254')
+            systemProperty 'academy.legacyFrozenIronMotionOnly', providers.gradleProperty('academyLegacyFrozenIronMotionOnly')
+                    .getOrElse('false')
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

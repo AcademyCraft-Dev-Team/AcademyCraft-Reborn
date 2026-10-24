@@ -24,7 +24,7 @@ import java.util.function.Function;
  */
 public record NativePhysicsArtifact(Path library, Path manifest, String sha256, String platform) {
     public static final String ENGINE = "rapier3d-f64-0.36.1";
-    public static final int ABI = 1;
+    public static final int ABI = 2;
     public static final int ENGINE_VERSION = 3601;
     public static final String LIBRARY_PROPERTY = "academy.nativePhysics.library";
     public static final String MANIFEST_PROPERTY = "academy.nativePhysics.manifest";
@@ -34,14 +34,95 @@ public record NativePhysicsArtifact(Path library, Path manifest, String sha256, 
     public static final String HOME_ENVIRONMENT = "ACADEMY_NATIVE_PHYSICS_HOME";
     public static final String CONVENTIONAL_DIRECTORY = "academy/native_physics";
     public static final String MANIFEST_FILE_NAME = "academy_physics.properties";
+    /** Optional in-JAR fallback, laid out per platform so one JAR can carry several builds. */
+    public static final String BUNDLED_DIRECTORY = "/academy/native_physics/";
+    private static volatile @Nullable NativePhysicsArtifact bundledArtifact;
     private static final String FORMAT = "academy-native-physics-v1";
     private static final int MAX_MANIFEST_BYTES = 16_384;
     private static final long MAX_LIBRARY_BYTES = 64L * 1024 * 1024;
+    private static final int BASE64_LIMIT = (int) (MAX_LIBRARY_BYTES / 3 * 4 + 16);
     private static final Set<String> FIELDS = Set.of("format", "abi", "engine", "platform", "sha256", "library",
             "rustVersion", "sourceSha256", "target");
 
     public static NativePhysicsArtifact configured() throws IOException {
-        return resolve(System::getProperty, System::getenv, conventionalDirectory());
+        // An explicit deployment is authoritative: never mask a partial, mismatched or
+        // unreadable external artifact by silently replacing it with the bundled copy.
+        if (hasExplicitConfiguration()) return resolve(System::getProperty, System::getenv, null);
+        var conventional = conventionalDirectory();
+        if (conventional != null) {
+            var external = fromHome(conventional, currentPlatform());
+            if (external != null) return external;
+        }
+        var bundled = bundled();
+        if (bundled != null) return bundled;
+        return resolve(System::getProperty, System::getenv, conventional);
+    }
+
+    private static boolean hasExplicitConfiguration() {
+        return present(System.getProperty(LIBRARY_PROPERTY)) != null
+                || present(System.getProperty(MANIFEST_PROPERTY)) != null
+                || present(System.getenv(LIBRARY_ENVIRONMENT)) != null
+                || present(System.getenv(MANIFEST_ENVIRONMENT)) != null
+                || present(System.getProperty(HOME_PROPERTY)) != null
+                || present(System.getenv(HOME_ENVIRONMENT)) != null;
+    }
+
+    /**
+     * Resolves the optional in-JAR artifact for the current platform. The resource layout is
+     * {@code academy/native_physics/<platform>/academy_physics.properties} plus the platform
+     * library name. Extraction is bounded and verified with the same manifest contract as an
+     * external deployment. A missing resource is not an error; a present but invalid pair is.
+     */
+    public static @Nullable NativePhysicsArtifact bundled() throws IOException {
+        var platform = currentPlatform();
+        var root = BUNDLED_DIRECTORY + platform + "/";
+        var manifestResource = root + MANIFEST_FILE_NAME;
+        var libraryResource = root + expectedLibraryName(platform);
+        byte[] manifestBytes;
+        try (var stream = NativePhysicsArtifact.class.getResourceAsStream(manifestResource)) {
+            if (stream == null) return null;
+            manifestBytes = stream.readNBytes(MAX_MANIFEST_BYTES + 1);
+        }
+        if (manifestBytes.length > MAX_MANIFEST_BYTES) throw new IOException("Bundled native physics manifest is too large");
+        byte[] libraryBytes;
+        // Prefer the text envelope: it is tracked with the source manifest, so a rebuilt
+        // binary directory cannot silently pair a new DLL with an older hash.
+        try (var encoded = NativePhysicsArtifact.class.getResourceAsStream(libraryResource + ".b64")) {
+            if (encoded != null) {
+                var base64 = new String(encoded.readNBytes(BASE64_LIMIT), StandardCharsets.US_ASCII);
+                try {
+                    libraryBytes = java.util.Base64.getMimeDecoder().decode(base64);
+                } catch (IllegalArgumentException invalid) {
+                    throw new IOException("Bundled native physics library is not valid base64", invalid);
+                }
+            } else {
+                try (var stream = NativePhysicsArtifact.class.getResourceAsStream(libraryResource)) {
+                    if (stream == null) throw new IOException("Bundled native physics library is missing: " + libraryResource);
+                    libraryBytes = stream.readNBytes((int) MAX_LIBRARY_BYTES + 1);
+                }
+            }
+        }
+        if (libraryBytes.length == 0 || libraryBytes.length > MAX_LIBRARY_BYTES) {
+            throw new IOException("Bundled native physics library has an invalid size");
+        }
+        return extractBundled(platform, manifestBytes, libraryBytes);
+    }
+
+    private static synchronized NativePhysicsArtifact extractBundled(
+            String platform, byte[] manifestBytes, byte[] libraryBytes) throws IOException {
+        var cached = bundledArtifact;
+        if (cached != null) return cached;
+        var directory = Files.createTempDirectory("academy-native-physics-bundle-");
+        var library = directory.resolve(expectedLibraryName(platform));
+        var manifest = directory.resolve(MANIFEST_FILE_NAME);
+        Files.write(library, libraryBytes);
+        Files.write(manifest, manifestBytes);
+        library.toFile().deleteOnExit();
+        manifest.toFile().deleteOnExit();
+        directory.toFile().deleteOnExit();
+        var verified = verify(library, manifest, platform);
+        bundledArtifact = verified;
+        return verified;
     }
 
     /**
@@ -115,8 +196,9 @@ public record NativePhysicsArtifact(Path library, Path manifest, String sha256, 
 
     private static String expectedLibraryName(String platform) {
         return switch (platform) {
-            case "windows-x86_64" -> "academy_physics.dll";
-            case "linux-x86_64" -> "libacademy_physics.so";
+            case "windows-x86_64", "windows-aarch64" -> "academy_physics.dll";
+            case "linux-x86_64", "linux-aarch64", "android-x86_64", "android-aarch64" -> "libacademy_physics.so";
+            case "macos-x86_64", "macos-aarch64" -> "libacademy_physics.dylib";
             default -> throw new IllegalArgumentException("Unsupported native physics platform: " + platform);
         };
     }
@@ -214,14 +296,29 @@ public record NativePhysicsArtifact(Path library, Path manifest, String sha256, 
         }
     }
 
+    /**
+     * Explicit override first, then JVM OS/arch detection. Android reports Linux on several
+     * launchers, so its vendor string is checked before the generic Linux branch. Add a new
+     * platform only together with {@link #expectedLibraryName(String)} and a built artifact.
+     */
     public static String currentPlatform() {
-        var architecture = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
-        if (!architecture.equals("amd64") && !architecture.equals("x86_64")) {
-            throw new IllegalStateException("Native physics currently requires an x86_64 JVM");
+        var override = present(System.getProperty("academy.nativePhysics.platform"));
+        if (override != null) {
+            expectedLibraryName(override);
+            return override;
         }
+        var architecture = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
+        var bits = switch (architecture) {
+            case "amd64", "x86_64", "x64" -> "x86_64";
+            case "aarch64", "arm64" -> "aarch64";
+            default -> throw new IllegalStateException("Unsupported native physics architecture: " + architecture);
+        };
         var system = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        if (system.startsWith("windows")) return "windows-x86_64";
-        if (system.equals("linux")) return "linux-x86_64";
+        var vendor = System.getProperty("java.vendor", "").toLowerCase(Locale.ROOT);
+        if (system.startsWith("windows")) return "windows-" + bits;
+        if (system.startsWith("android") || vendor.contains("android")) return "android-" + bits;
+        if (system.equals("linux") || system.startsWith("linux")) return "linux-" + bits;
+        if (system.startsWith("mac") || system.startsWith("darwin")) return "macos-" + bits;
         throw new IllegalStateException("Unsupported native physics operating system: " + system);
     }
 }

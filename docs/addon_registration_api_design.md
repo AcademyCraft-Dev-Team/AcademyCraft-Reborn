@@ -13,7 +13,7 @@
 | 新分类通用程序、动作暂存与持续效果释放 | `ProgramProfile`、`ProgramNodes`、`ProgramExecutionContext.submit`、`AbilityProgramService` |
 | 目标免疫反馈与标签抗性 | 第 8.1 节，规则与上一轮保持一致 |
 
-当前尚未提供统一非玩家施术账户、可替换的分类运行 SPI、全内容登录清单和 Academy 专用 datagen 辅助；见第 8、10、11 节。
+统一非玩家施术边界已提供：`AbilityActorContext`（施术者、技能、能力强度、伤害倍率、熟练度、资源账户）与 `AbilityResourceAccount`（调用方自有账本）；仍缺非玩家程序动作服务、可替换的分类运行 SPI、全内容登录清单和 Academy 专用 datagen 辅助；见第 8、10、11 节。
 
 ## 1. 推荐方案
 
@@ -109,6 +109,8 @@
       （全内容玩法清单和差异报告仍待实现）
 ```
 
+实际顺序与上图的对应关系：`AcademyCraftRegister.java:133-174` 中，解析与关联（`AbilityRegistrationFinalizer.resolve`）在旧 `AbilitySystemFinalizedEvent` 之前，旧事件在校验（`AbilityRegistrationValidator.validate`）与分类 `seal()` 之前发出（`:170`），`AcademyRegistrationsReadyEvent` 在两者之后（`:173`）。上图保留目标顺序；新订阅方应只依赖 Ready，不要假定旧事件时关联已校验。
+
 Ready 事件已在 NeoForge 游戏事件总线上发布一次，发生在本进程静态内容关联、校验、冻结之后；它不代表世界数据包已可访问。静态初始化不得依赖其他 MOD 的 common setup 执行先后；所有必需信息必须随 registry 条目预先声明。
 
 旧 `AbilitySystemFinalizedEvent` 在兼容期保留原有中间阶段语义并标记弃用；不要直接把它改成新的 Ready 事件。技能的逐实例依赖监听已移除，统一关联在旧事件之前完成。
@@ -176,7 +178,7 @@ Ready 事件已在 NeoForge 游戏事件总线上发布一次，发生在本进�
 
 建议公开 `AbilityActor` 与 `AbilityExecutionContext`：提供服务器世界、实际施术实体、伤害直接来源/归属、能力 key、授权信息及资源账户。目标优先使用 `LivingEntity` 或明确类型的世界引用，玩家专属资料通过可选适配获取。
 
-本轮伤害和程序执行服务以 `ServerPlayer` 为施术者；统一 `AbilityActor`、上下文和非玩家资源授权适配留待下一轮。目标方案为：没有玩家学习/CP 数据的实体由调用方提供明确的授权和资源账户，未提供时拒绝需要这些能力的操作，不能自动获得免费施术权限。资源、权限与熟练度分别建模，不把 `ServerPlayer` 替换成 `LivingEntity` 后继续强转。
+非玩家施术边界已按实际类名落地：`AbilityActorContext` 提供服务器世界、实际施术实体、技能、能力强度与伤害倍率、熟练度及资源账户；`AbilityResourceAccount` 是调用方自有的资源账本契约；`AbilityDamageService.apply(LivingEntity, ...)` 已接受非玩家施术者。程序执行服务仍以 `ServerPlayer` 为施术者，非玩家程序动作服务尚未提供。目标方案为：没有玩家学习/CP 数据的实体由调用方提供明确的授权和资源账户，未提供时拒绝需要这些能力的操作，不能自动获得免费施术权限。资源、权限与熟练度分别建模，不把 `ServerPlayer` 替换成 `LivingEntity` 后继续强转。
 
 既有公开效果入口如 `AbilityHitEffects` 保持兼容。纯效果方法说明是否已经包含伤害完成附效；通用执行服务负责消耗和一次性触发，避免技能与节点各扣一次 CP 或各触发一次命中效果。
 
@@ -358,7 +360,7 @@ public ExampleAddon(IEventBus modBus) {
 - registry 的 `.sync(true)` 不等于同步 Java 实现或保证节点语义一致。建立玩法内容清单，至少包含 ID、依赖/归属、状态版本、节点 schema/compatibilityVersion、端口结构与伤害行为修订；区分 API 兼容版本、数据格式版本和玩法协议版本。
 - 登录时先比较玩法协议和清单，缺失必需条目或不兼容语义时显示具体差异并拒绝进入相关玩法。服务端始终重新校验程序，不信任客户端提交的能力列表、成本或目标权限。
 - 指纹按 namespaced ID 排序并使用确定编码。界面语言和图标不应导致玩法指纹不同；编辑元数据可维护独立摘要。显式 compatibilityVersion 仍由作者维护，摘要不能证明两端代码行为完全一致。
-- 存档、配置和长期导出文件只写稳定 key。当前 `AbilityCategory.CODEC` 和 `Skill.CODEC` 使用数字 ID，应新增 ID codec 并审计调用方；网络可以继续使用会话内同步映射。不要直接修改所有旧 codec 而不给已持久化数据安排迁移。
+- 存档、配置和长期导出文件只写稳定 key。`AbilityCategory.ID_CODEC`（`:42-46`）与 `Skill.ID_CODEC`（`:59-63`）已新增为字符串 ID codec，旧 `CODEC` 保留数字格式用于兼容；网络继续使用会话内同步映射，新增持久化调用方应使用 `ID_CODEC`。不要直接修改旧 codec 而不给已持久化数据安排迁移。
 - 当前玩家主要存档已有 namespaced 字符串，保持格式并补充必要别名。遗留裸数字 ID 若没有原始映射不能可靠恢复，必须报告问题，不按本次注册顺序猜测。
 - 缺失技能/节点保留原始数据和类型 ID；程序作为不可执行内容展示诊断。附属重新安装后可以恢复。状态和节点升级提供版本迁移，未知未来版本不覆盖原始数据。
 - 兼容政策以第 1.1 节为准：测试阶段只尽可能保障文档化的公开 API 契约。公开 API 变更优先提供兼容桥接、弃用说明和迁移指引；确有无法兼容的调整时明确说明受影响版本。现有特殊伤害兼容入口可在迁移期保留并验证，但不保证历史内部签名或 Mixin 注入点永久存在，附属应迁移到公开伤害服务。

@@ -1,30 +1,39 @@
 import java.security.MessageDigest
 
-// Native compilation is deliberately absent from check/build; native binaries are not packaged.
-// Only the Java bridge resource below is included in the mod.
-// Run nativePhysicsTest explicitly after installing the pinned Rust toolchain and a host linker.
+// The project's own Rapier solver is built and bundled as the in-JAR physics fallback.
+// The pinned Rust toolchain and host linker are required for packaging; the repository-local
+// standalone toolchain is used when present, otherwise cargo must be on PATH.
 def nativeRoot = file('native/academy_physics')
 def nativeOutput = layout.buildDirectory.dir('native-physics').get().asFile
 def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
 def arch = System.getProperty('os.arch').toLowerCase(Locale.ROOT)
 def windows = os.startsWith('windows')
-def linux = os == 'linux'
-def supported = (windows || linux) && arch in ['amd64', 'x86_64']
-def targetTriple = windows ? 'x86_64-pc-windows-msvc' : 'x86_64-unknown-linux-gnu'
-def hostPlatform = windows ? 'windows-x86_64' : 'linux-x86_64'
-def libraryName = windows ? 'academy_physics.dll' : 'libacademy_physics.so'
+def linux = os.startsWith('linux')
+def mac = os.startsWith('mac') || os.startsWith('darwin')
+def android = os.startsWith('android') || System.getProperty('java.vendor', '').toLowerCase(Locale.ROOT).contains('android')
+def bits = arch in ['amd64', 'x86_64', 'x64'] ? 'x86_64' : arch in ['aarch64', 'arm64'] ? 'aarch64' : null
+def supported = bits != null && (windows || linux || mac) && !android
+def targetTriple = windows ? "${bits}-pc-windows-msvc"
+        : mac ? "${bits}-apple-darwin"
+        : "${bits}-unknown-linux-gnu"
+def hostPlatform = windows ? "windows-${bits}" : mac ? "macos-${bits}" : "linux-${bits}"
+def libraryName = windows ? 'academy_physics.dll' : mac ? 'libacademy_physics.dylib' : 'libacademy_physics.so'
 def rustOutput = new File(nativeOutput, 'cargo')
 def rustLibrary = new File(rustOutput, "${targetTriple}/release/${libraryName}")
 def artifacts = new File(nativeOutput, 'artifacts')
 def library = new File(artifacts, libraryName)
 def manifest = new File(artifacts, 'academy_physics.properties')
-def cargo = providers.gradleProperty('academyCargo').getOrElse('cargo')
+def localRustBin = file('build/native-physics-tools/standalone/bin')
+def localCargo = new File(localRustBin, windows ? 'cargo.exe' : 'cargo')
+def cargo = providers.gradleProperty('academyCargo').getOrElse(
+        localCargo.isFile() ? localCargo.absolutePath : 'cargo')
 def nativeSources = fileTree(nativeRoot) {
     include 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'src/**/*.rs', 'ABI.md'
 }
 def requireHost = {
     if (!supported) {
-        throw new GradleException('The native physics prototype currently builds only on Windows/Linux x86_64')
+        throw new GradleException('The native physics artifact currently builds on Windows, Linux and macOS x86_64/aarch64; '
+                + 'Android requires the NDK target and a JVM with FFM support')
     }
 }
 def digest = { byte[] data -> MessageDigest.getInstance('SHA-256').digest(data).encodeHex().toString() }
@@ -44,6 +53,15 @@ tasks.named('processResources', ProcessResources) {
     }) {
         into 'academy/native_physics'
         rename { 'FfmPhysicsAccess.bin' }
+    }
+    // Windows uses the signed base64 envelope under src/main/resources as the authoritative
+    // packaged copy. Other hosts have no tracked envelope, so package the freshly verified
+    // host artifact directly; cross-platform releases must be built on each target host.
+    if (!hostPlatform.startsWith('windows') && artifacts.isDirectory()) {
+        from(artifacts) {
+            include libraryName, 'academy_physics.properties'
+            into "academy/native_physics/${hostPlatform}"
+        }
     }
 }
 
@@ -68,6 +86,19 @@ def buildRust = tasks.register('buildNativePhysics', Exec) {
     outputs.file(rustLibrary)
     doFirst { requireHost() }
 }
+// The repository-local standalone toolchain is optional; ordinary contributors use PATH.
+// When present, make the pinned rustc and its private CARGO_HOME explicit so autocfg and
+// build scripts do not depend on the launcher's ambient shell.
+[testRust, buildRust].each { provider ->
+    provider.configure {
+        if (localRustBin.isDirectory()) {
+            environment 'PATH', localRustBin.absolutePath + File.pathSeparator + (System.getenv('PATH') ?: '')
+            environment 'RUSTC', new File(localRustBin, 'rustc.exe').absolutePath
+            environment 'CARGO_HOME', file('build/native-physics-tools/cargo').absolutePath
+        }
+    }
+}
+
 def prepareNative = tasks.register('prepareNativePhysics') {
     group = 'academy'
     description = 'Copies the solver library and writes its checked ABI/platform/SHA-256 manifest'
@@ -88,7 +119,7 @@ def prepareNative = tasks.register('prepareNativePhysics') {
             sourceDigest.update(it.bytes)
         }
         manifest.setText("""format=academy-native-physics-v1
-abi=1
+abi=2
 engine=rapier3d-f64-0.36.1
 platform=${hostPlatform}
 library=${libraryName}
@@ -99,6 +130,10 @@ sourceSha256=${sourceDigest.digest().encodeHex()}
 """, 'UTF-8')
     }
 }
+
+// Packaging consumes the prepared artifact, so a clean build must build it first. This is
+// intentional: the mod ships the project's own solver rather than requiring a manual deploy.
+tasks.named('processResources', ProcessResources) { dependsOn prepareNative }
 
 def physicsTests = sourceSets.create('nativePhysicsTest') {
     compileClasspath += sourceSets.main.output

@@ -56,6 +56,7 @@ public final class SableStructureAccess {
             if (state == null) return Optional.empty();
             var subLevel = state.container.getSubLevel(reference.id());
             if (!(subLevel instanceof ServerSubLevel loaded) || loaded.isRemoved()) return Optional.empty();
+            if (SableRestorationIsolation.hidden(loaded)) return Optional.empty();
             var handle = state.handle(loaded);
             return handle.isCurrent() ? Optional.of(handle) : Optional.empty();
         }
@@ -160,6 +161,12 @@ public final class SableStructureAccess {
 
     public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
                                                   Vec3 trustedWorldTo, StructureHit proposed) {
+        return validate(host, trustedWorldFrom, trustedWorldTo, proposed, ClipContext.Block.OUTLINE);
+    }
+
+    public static StructureHitValidation validate(ServerLevel host, Vec3 trustedWorldFrom,
+                                                  Vec3 trustedWorldTo, StructureHit proposed,
+                                                  ClipContext.Block shape) {
         validateRay(host, trustedWorldFrom, trustedWorldTo);
         Objects.requireNonNull(proposed, "proposed");
         var reference = proposed.block().structure();
@@ -175,7 +182,7 @@ public final class SableStructureAccess {
                 || !SableStructureTransforms.equivalentPose(handle.pose(), proposed.pose())) {
             return failure(StructureHitValidation.Status.STALE);
         }
-        var current = raycast(host, trustedWorldFrom, trustedWorldTo).orElse(null);
+        var current = raycast(host, trustedWorldFrom, trustedWorldTo, shape).orElse(null);
         if (current == null || !current.block().equals(proposed.block())) {
             return failure(StructureHitValidation.Status.NOT_VISIBLE);
         }
@@ -209,6 +216,15 @@ public final class SableStructureAccess {
         requireThread(server);
         var hosts = SERVERS.remove(server);
         if (hosts != null) hosts.values().forEach(HostState::invalidate);
+        SableRestorationIsolation.shutdown(server);
+    }
+
+    static void invalidateActivation(ServerLevel host, UUID id) {
+        var hosts = SERVERS.get(host.getServer());
+        var state = hosts == null ? null : hosts.get(host);
+        if (state == null) return;
+        var previous = state.handles.remove(id);
+        if (previous != null) previous.invalidate();
     }
 
     /**

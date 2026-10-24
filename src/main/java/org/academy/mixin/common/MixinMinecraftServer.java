@@ -5,7 +5,6 @@ import net.minecraft.world.clock.ServerClockManager;
 import org.academy.AcademyCraftServer;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.common.ability.accelerator.reflection.VectorReflectionRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
 import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,7 +44,6 @@ public abstract class MixinMinecraftServer implements MinecraftServerContext {
 
     @Inject(method = "halt", at = @At("HEAD"))
     private void halt(boolean wait, CallbackInfo ci) {
-        VectorReflectionRuntime.shutdown();
         getAcademyCraftServer().getAbilitySystemServer().halt();
     }
 

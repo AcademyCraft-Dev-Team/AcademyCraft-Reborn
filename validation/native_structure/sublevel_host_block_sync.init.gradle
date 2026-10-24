@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academyHostBlockSyncDirectory')
+                .getOrElse('run/native-sublevel-host-sync-r1')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-host-sync-')) {
+            throw new GradleException('Host block sync requires an isolated run/native-sublevel-host-sync-* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.sublevelHostBlockSyncSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

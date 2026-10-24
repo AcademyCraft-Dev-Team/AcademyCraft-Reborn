@@ -1,0 +1,293 @@
+{
+  "schema": "academy-structure-parity-pilot-1",
+  "runs": [
+    {
+      "run": "local-ground-r5",
+      "backend": "local",
+      "fixture": "ground",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "1F4BDA062573C71938223548779797DF1AC9289ECA81A97CD0B912C900EF9612",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 9.930136612989092E-16,
+      "capture_call_ms": 191.0988,
+      "capture_ready_ms": 191.1071,
+      "mass": 127.99999999999994,
+      "lift_status": "FAILED",
+      "reached_tick": 30,
+      "hover_streak": 27,
+      "prelaunch_rise": 3.114449999984288,
+      "launch_speed": 50.0,
+      "flight_dx": 50.0,
+      "flight_seconds": 0.998913,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 1.8448,
+          "p95_ms": 4.2541,
+          "max_ms": 22.5871
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 1.7463,
+          "p95_ms": 3.1894,
+          "max_ms": 3.4003
+        }
+      }
+    },
+    {
+      "run": "sable-ground-r5",
+      "backend": "sable",
+      "fixture": "ground",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "1938386810E0B8964695C1E88E534EF31D87417AB15E408F782DDDF76A609FE8",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 3.075788123396621E-05,
+      "capture_call_ms": 72.8601,
+      "capture_ready_ms": 72.8689,
+      "mass": 256.0,
+      "lift_status": "PASSED",
+      "reached_tick": 38,
+      "hover_streak": 223,
+      "prelaunch_rise": 3.02972388079786,
+      "launch_speed": 50.0,
+      "flight_dx": 47.87218165397645,
+      "flight_seconds": 1.0011277,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 2.9692,
+          "p95_ms": 5.9665,
+          "max_ms": 16.7149
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 1.8892,
+          "p95_ms": 3.3775,
+          "max_ms": 3.8304
+        }
+      }
+    },
+    {
+      "run": "local-floating-r5",
+      "backend": "local",
+      "fixture": "floating",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "A21C5D15AB1170D878BE1BF1BC081C1BE79E9B57052E4CA65FEF035CC0F49CA9",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 9.930136612989092E-16,
+      "capture_call_ms": 200.2457,
+      "capture_ready_ms": 200.2539,
+      "mass": 127.99999999999994,
+      "lift_status": "FAILED",
+      "reached_tick": 30,
+      "hover_streak": 27,
+      "prelaunch_rise": 3.114449999984288,
+      "launch_speed": 50.0,
+      "flight_dx": 50.0,
+      "flight_seconds": 0.9982577,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 1.7997,
+          "p95_ms": 3.9305,
+          "max_ms": 21.831
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 1.7704,
+          "p95_ms": 3.134,
+          "max_ms": 4.5687
+        }
+      }
+    },
+    {
+      "run": "sable-floating-r5",
+      "backend": "sable",
+      "fixture": "floating",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "4531510F4130BE395FE2A32F43AC11090F2CEFEF713BC5E8E5D636EFEDF458CE",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 3.075788123396621E-05,
+      "capture_call_ms": 76.7793,
+      "capture_ready_ms": 76.7873,
+      "mass": 256.0,
+      "lift_status": "PASSED",
+      "reached_tick": 35,
+      "hover_streak": 226,
+      "prelaunch_rise": 3.02972388079786,
+      "launch_speed": 50.0,
+      "flight_dx": 47.8721809387207,
+      "flight_seconds": 0.9997987,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 2.7731,
+          "p95_ms": 5.2386,
+          "max_ms": 10.7646
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 2.112,
+          "p95_ms": 4.0205,
+          "max_ms": 4.2088
+        }
+      }
+    },
+    {
+      "run": "local-ground-r6",
+      "backend": "local",
+      "fixture": "ground",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "4DE2D70F937374BA20716D1875EDA86E5D719088850B97B7238DA644B4D9AD85",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 9.930136612989092E-16,
+      "capture_call_ms": 218.5466,
+      "capture_ready_ms": 218.5537,
+      "mass": 127.99999999999994,
+      "lift_status": "FAILED",
+      "reached_tick": 30,
+      "hover_streak": 27,
+      "prelaunch_rise": 3.114449999984288,
+      "launch_speed": 50.0,
+      "flight_dx": 50.0,
+      "flight_seconds": 0.9954748,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 2.2401,
+          "p95_ms": 4.4464,
+          "max_ms": 23.8318
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 1.893,
+          "p95_ms": 3.5343,
+          "max_ms": 3.5778
+        }
+      }
+    },
+    {
+      "run": "sable-ground-r6",
+      "backend": "sable",
+      "fixture": "ground",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "8713E809510D817F2A7257995C584ADFE19A4ED3A3DE4DCB710FF0826040BB9E",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 3.075788123396621E-05,
+      "capture_call_ms": 75.4632,
+      "capture_ready_ms": 75.4708,
+      "mass": 256.0,
+      "lift_status": "PASSED",
+      "reached_tick": 38,
+      "hover_streak": 223,
+      "prelaunch_rise": 3.02972388079786,
+      "launch_speed": 50.0,
+      "flight_dx": 47.87218165397645,
+      "flight_seconds": 0.9994149,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 2.852,
+          "p95_ms": 4.6757,
+          "max_ms": 15.6379
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 2.2012,
+          "p95_ms": 3.3563,
+          "max_ms": 3.3797
+        }
+      }
+    },
+    {
+      "run": "local-floating-r6",
+      "backend": "local",
+      "fixture": "floating",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "53FED5060E5CE557535BC7AA72112CE0E467EC3B712C0D80AD519703C15BC713",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 9.930136612989092E-16,
+      "capture_call_ms": 207.4295,
+      "capture_ready_ms": 207.437,
+      "mass": 127.99999999999994,
+      "lift_status": "FAILED",
+      "reached_tick": 30,
+      "hover_streak": 27,
+      "prelaunch_rise": 3.114449999984288,
+      "launch_speed": 50.0,
+      "flight_dx": 50.0,
+      "flight_seconds": 0.9974536,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 1.9697,
+          "p95_ms": 4.7485,
+          "max_ms": 21.2855
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 1.8381,
+          "p95_ms": 3.1601,
+          "max_ms": 3.7178
+        }
+      }
+    },
+    {
+      "run": "sable-floating-r6",
+      "backend": "sable",
+      "fixture": "floating",
+      "cells_sha256": "8aceaed0f3a99e84278ea9f1a27da4da8b61dd4fccf9274c7b5a2f2ad4676b38",
+      "raw_sha256": "DCABBA3E26853409DE63D38E119C6F14A5E6A2ADA76A9B464853CF26AA2932A0",
+      "measurement_status": "COMPLETE",
+      "alignment_error": 3.075788123396621E-05,
+      "capture_call_ms": 78.3242,
+      "capture_ready_ms": 78.3377,
+      "mass": 256.0,
+      "lift_status": "PASSED",
+      "reached_tick": 35,
+      "hover_streak": 226,
+      "prelaunch_rise": 3.02972388079786,
+      "launch_speed": 50.0,
+      "flight_dx": 47.8721809387207,
+      "flight_seconds": 0.9984831,
+      "ticks": {
+        "lift": {
+          "n": 259,
+          "p50_ms": 3.0545,
+          "p95_ms": 5.5081,
+          "max_ms": 11.7628
+        },
+        "flight": {
+          "n": 20,
+          "p50_ms": 2.5981,
+          "p95_ms": 3.5323,
+          "max_ms": 3.8998
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "fixture": "ground",
+      "runs_per_backend": 2,
+      "local_capture_mean_ms": 204.8227,
+      "sable_capture_mean_ms": 74.16165000000001,
+      "capture_ratio_local_over_sable": 2.761841194202124,
+      "local_lift_p95_mean_ms": 4.35025,
+      "sable_lift_p95_mean_ms": 5.3210999999999995,
+      "lift_p95_cost_ratio_local_over_sable": 0.8175471237150214,
+      "performance_equivalence": "UNVERIFIED: check lift outcome, mass/material, geometry and client metrics separately"
+    },
+    {
+      "fixture": "floating",
+      "runs_per_backend": 2,
+      "local_capture_mean_ms": 203.8376,
+      "sable_capture_mean_ms": 77.55175,
+      "capture_ratio_local_over_sable": 2.6284074827453927,
+      "local_lift_p95_mean_ms": 4.3395,
+      "sable_lift_p95_mean_ms": 5.37335,
+      "lift_p95_cost_ratio_local_over_sable": 0.807596750630426,
+      "performance_equivalence": "UNVERIFIED: check lift outcome, mass/material, geometry and client metrics separately"
+    }
+  ]
+}

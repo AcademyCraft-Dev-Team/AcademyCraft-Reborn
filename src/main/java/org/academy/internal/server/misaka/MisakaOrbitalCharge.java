@@ -264,13 +264,7 @@ public final class MisakaOrbitalCharge {
         var target = org.academy.api.server.ability.WorldBlockTargets.clip(
                 player, eye, end, ClipContext.Block.OUTLINE);
         if (!target.hit()) return null;
-        // Probe only the winning surface, within the structure API's 256-block limit.
-        // A structure behind a nearer terrain hit must not change the target kind.
-        var probeStart = target.position().subtract(look.scale(Math.min(1.0, eye.distanceTo(target.position()))));
-        var probeEnd = target.position().add(look.scale(1.0E-4));
-        boolean structure = org.academy.api.common.structure.StructureQueries.raycast(
-                player.level(), probeStart, probeEnd, ClipContext.Block.OUTLINE)
-                .filter(hit -> hit.worldPoint().distanceToSqr(target.position()) < 1.0E-8).isPresent();
+        boolean structure = target.source() == org.academy.api.server.ability.WorldBlockTargets.Source.STRUCTURE;
         // Step just inside the hit surface. Structure points remain world-space effects,
         // never addresses for editing the host terrain beneath a moving structure.
         return new StrikeTarget(BlockPos.containing(target.position().add(look.scale(1.0E-4))), !structure);

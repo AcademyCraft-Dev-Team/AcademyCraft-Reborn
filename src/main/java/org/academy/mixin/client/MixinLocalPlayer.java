@@ -7,6 +7,7 @@ import net.minecraft.client.player.LocalPlayer;
 import org.academy.api.common.ability.ImagineBreakerHealthAccess;
 import org.academy.internal.client.ability.VectorReflectionClientRuntime;
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
+import org.academy.internal.client.sublevel.SubLevelClientState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,6 +22,11 @@ public abstract class MixinLocalPlayer extends AbstractClientPlayer implements I
     @Override
     public void imaginebreaker(float amount) {
         VectorReflectionClientRuntime.imaginebreaker((LocalPlayer) (Object) this, amount);
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void academy$carrySubLevelSupportBeforeMovement(CallbackInfo ci) {
+        SubLevelClientState.carryLocalPlayer((LocalPlayer) (Object) this);
     }
 
     @Inject(

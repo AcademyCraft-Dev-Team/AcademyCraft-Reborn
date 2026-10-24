@@ -72,6 +72,12 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodePurity.ACTION,
                 capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
         put(result, AeromanipProgramNodeIds.STRUCTURE_MOVE, structureMoveType());
+        put(result, AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetType(
+                        capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_SPIN,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.spinType(
+                        capabilityScope(AeromanipProgramCapabilities.STRUCTURE)));
         put(result, AeromanipProgramNodeIds.STRUCTURE_ROTATE, unitType(
                 structureRotateSchema(),
                 ProgramNodeRole.ACTION,

@@ -11,6 +11,7 @@ import org.academy.internal.client.ability.mentalout.MentalResistanceClientState
 import org.academy.internal.client.ability.mentalout.PlayerControlClientState;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.client.structure.NativeStructureMiningClient;
+import org.academy.internal.client.sublevel.SubLevelClientInteraction;
 import org.misaka.MisakaNetworkClient;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,6 +34,10 @@ public abstract class MixinMinecraft {
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(true)) {
             NativeStructureMiningClient.abort((Minecraft) (Object) this);
+            cir.setReturnValue(false);
+            return;
+        }
+        if (SubLevelClientInteraction.attack((Minecraft) (Object) this)) {
             cir.setReturnValue(false);
             return;
         }
@@ -59,6 +64,10 @@ public abstract class MixinMinecraft {
             ci.cancel();
             return;
         }
+        if (SubLevelClientInteraction.continueAttack((Minecraft) (Object) this, down)) {
+            ci.cancel();
+            return;
+        }
         if (NativeStructureMiningClient.continueAttack((Minecraft) (Object) this, down, missTime)) ci.cancel();
     }
 
@@ -76,12 +85,16 @@ public abstract class MixinMinecraft {
 
     @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
     private void startUseItem(CallbackInfo ci) {
-        if (NativeStructureMiningClient.isActive()) {
+        if (NativeStructureMiningClient.isActive() || SubLevelClientInteraction.isMining()) {
             ci.cancel();
             return;
         }
         if (MentalIntrusionClientState.blocksWorldInteraction()
                 || PlayerControlClientState.blocksWorldInteraction(true)) {
+            ci.cancel();
+            return;
+        }
+        if (SubLevelClientInteraction.use((Minecraft) (Object) this)) {
             ci.cancel();
             return;
         }
@@ -93,9 +106,15 @@ public abstract class MixinMinecraft {
     private void runTick(CallbackInfo info) {
         NeoForge.EVENT_BUS.post(new MainLoopEvent());
         VectorReflectionClientRuntime.tick((Minecraft) (Object) this);
+        SubLevelClientInteraction.tick((Minecraft) (Object) this);
         MentalIntrusionClientState.tick();
         MentalResistanceClientState.tick();
         PlayerControlClientState.tick();
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void academy$tickSubLevelContact(CallbackInfo ci) {
+        org.academy.internal.client.sublevel.SubLevelClientState.tick();
     }
 
     @Inject(method = "close", at = @At("HEAD"), require = 0)
