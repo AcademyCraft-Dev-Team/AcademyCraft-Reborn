@@ -251,6 +251,11 @@ public final class StructureProgramOrientationSmoke {
             if (id.equals(action("extract"))) observePublishedCapture(now);
             if (id.equals(action("extract")) && step.outputs().containsKey("structure")) {
                 reference = ((ProgramStructureReference) step.outputs().get("structure").value()).reference();
+                StructureProvenanceSmokeAssertions.requireSkill(player, reference, AcademyCraft.academy(switch (categoryIndex) {
+                    case 0 -> "kinetic_throw";
+                    case 1 -> "magnet_manipulation";
+                    default -> "high_speed_jet";
+                }));
                 var state = motion();
                 actualExtractionRise = state.pose().localToWorldPoint(state.localCenterOfMass()).y
                         - Vec3.atCenterOf(seed).y;
@@ -331,6 +336,7 @@ public final class StructureProgramOrientationSmoke {
         var row = new LinkedHashMap<String, Object>();
         row.put("category", category.toString()); row.put("backend", reference.backend().toString());
         row.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
+        row.put("skill_provenance_verified", true);
         row.put("actual_extraction_rise", actualExtractionRise); row.put("expected_extraction_rise", expectedExtractionRise);
         row.put("wait_ticks", extractionWaitTicks);
         row.put("node_completion_order", List.copyOf(COMPLETED)); row.put("rotate_angle_error", rotationError);

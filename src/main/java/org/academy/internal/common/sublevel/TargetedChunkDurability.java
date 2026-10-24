@@ -41,7 +41,8 @@ public final class TargetedChunkDurability {
         if (!(level.getChunkSource() instanceof ServerChunkCache cache)) return false;
         try {
             for (var pos : chunks) {
-                LevelChunk chunk = level.getChunk(pos.x(), pos.z());
+                LevelChunk chunk = cache.getChunkNow(pos.x(), pos.z());
+                if (chunk == null) return false;
                 ((ChunkMapAccessor) (Object) cache.chunkMap).academy$save(chunk);
             }
             // ChunkMap.save queues region writes; join the same synchronize barrier used by

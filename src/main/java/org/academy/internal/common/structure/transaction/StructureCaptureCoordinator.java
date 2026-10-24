@@ -31,6 +31,8 @@ import org.academy.api.common.structure.StructureWriteResult;
 import org.academy.internal.common.structure.BlockStructureTransferState;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.space.NativeStructureDimensions;
+import org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance;
+import org.academy.internal.common.structure.upgrade.lifecycle.StructureProvenanceLedger;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
@@ -70,11 +72,13 @@ public final class StructureCaptureCoordinator {
     private final MinecraftServer server;
     private final StructureCaptureClaims claims = new StructureCaptureClaims();
     private final Map<UUID, PendingCapture> pending = new LinkedHashMap<>();
+    private final java.util.Set<StructureRef> retainedTargets = new HashSet<>();
     private final Map<UUID, StructureCaptureResult> finished = new LinkedHashMap<>();
     private final Map<UUID, StructureCaptureEvidence> finishedEvidence = new LinkedHashMap<>();
     private final Map<StructureCaptureRequest, PreviewInterest> extractionPreviews = new IdentityHashMap<>();
     private @Nullable StructureTransactionJournal journal;
     private boolean journalAttempted;
+    private boolean uncertainRecovery;
     private boolean closed;
 
     private StructureCaptureCoordinator(MinecraftServer server) {
@@ -107,6 +111,18 @@ public final class StructureCaptureCoordinator {
         synchronized (SERVERS) { coordinator = SERVERS.get(server); }
         if (coordinator == null || coordinator.closed) return Optional.empty();
         return coordinator.currentResult(transactionId);
+    }
+
+    /** A retained capture journal owns recovery; settlement must not race it, including after restart. */
+    public static boolean isPending(MinecraftServer server, StructureRef reference) {
+        if (!server.isSameThread()) throw new IllegalStateException("Structure capture requires the server thread");
+        StructureCaptureCoordinator coordinator;
+        synchronized (SERVERS) { coordinator = SERVERS.get(server); }
+        if (coordinator == null || coordinator.closed) return false;
+        var stable = StructureProvenanceLedger.stable(reference);
+        return coordinator.uncertainRecovery || coordinator.retainedTargets.contains(stable)
+                || coordinator.pending.values().stream().anyMatch(value ->
+                StructureProvenanceLedger.stable(value.target).equals(stable));
     }
 
     /** Same bounded lifetime as completed results; absent for pending, failed or recovered captures. */
@@ -200,6 +216,10 @@ public final class StructureCaptureCoordinator {
         long totalStarted = CaptureTimings.begin();
         requireRunning();
         var transactionId = UUID.randomUUID();
+        if (request.skillCreation().isPresent() && !LiveStructureProvenance.healthy(server)) {
+            return StructureCaptureResult.failure(transactionId,
+                    StructureCaptureResult.Status.JOURNAL_WRITE_FAILED, "provenance_ledger_unavailable");
+        }
         var status = StructureBackendRouter.status(server);
         if (status.mode() != StructureBackendStatus.Mode.NATIVE
                 && status.mode() != StructureBackendStatus.Mode.SABLE) {
@@ -294,7 +314,8 @@ public final class StructureCaptureCoordinator {
             CaptureTimings.record(transactionId.toString(), "capture_encode_cells", encodeStarted);
             var record = new StructureTransactionJournal.Record(transactionId, backend.backendId(),
                     host.dimension().identifier(), origin, StructureTransactionJournal.Stage.PREPARED, null,
-                    cells, null);
+                    cells, null, request.skillCreation().map(intent -> intent.capture(transactionId, host.getGameTime()))
+                            .orElse(null));
             long journalStarted = CaptureTimings.begin();
             boolean journalWritten = persistNew(record);
             CaptureTimings.record(transactionId.toString(), "journal_prepare", journalStarted);
@@ -770,6 +791,11 @@ public final class StructureCaptureCoordinator {
             }
             return;
         }
+        if (capture.record.provenance() != null
+                && !LiveStructureProvenance.commitCapture(server, capture.target, capture.record.provenance())) {
+            retain(capture, "creation_metadata_commit_failed", null);
+            return;
+        }
         if (!persistStage(capture, StructureTransactionJournal.Stage.PUBLISHED)) {
             retain(capture, "publish_journal_persist_failed", null);
             return;
@@ -813,6 +839,7 @@ public final class StructureCaptureCoordinator {
 
     private void finish(PendingCapture capture, StructureCaptureResult result) {
         capture.result = result;
+        retainedTargets.remove(StructureProvenanceLedger.stable(capture.target));
         pending.remove(capture.transactionId);
         claims.release(capture.transactionId);
         if (capture.reportResults) {
@@ -848,12 +875,14 @@ public final class StructureCaptureCoordinator {
 
     private void finishRecovery(PendingCapture capture) {
         capture.result = StructureCaptureResult.success(capture.transactionId, capture.target, 0);
+        retainedTargets.remove(StructureProvenanceLedger.stable(capture.target));
         pending.remove(capture.transactionId);
         claims.release(capture.transactionId);
         AcademyCraft.LOGGER.info("Structure capture transaction {} recovered and resolved", capture.transactionId);
     }
 
     private void retain(PendingCapture capture, String detail, @Nullable Throwable cause) {
+        retainedTargets.add(StructureProvenanceLedger.stable(capture.target));
         if (org.academy.internal.common.sublevel.SubLevelStructureRefs.isSubLevel(capture.target)) {
             releasePhysics(capture);
         }
@@ -1044,9 +1073,11 @@ public final class StructureCaptureCoordinator {
         if (mode != StructureBackendStatus.Mode.NATIVE && mode != StructureBackendStatus.Mode.SABLE) return;
         var journal = journal();
         if (journal == null || !journal.healthy()) {
+            uncertainRecovery = true;
             AcademyCraft.LOGGER.error("Structure transaction journal unavailable; pending records cannot be recovered");
             return;
         }
+        uncertainRecovery = !journal.corruptFiles().isEmpty();
         for (var file : journal.corruptFiles()) {
             AcademyCraft.LOGGER.error("Corrupt structure transaction record retained without guessing its direction: {}",
                     file);
@@ -1062,6 +1093,9 @@ public final class StructureCaptureCoordinator {
     }
 
     private void registerRecovery(StructureTransactionJournal.Record record) {
+        if (record.targetStructure() != null) {
+            retainedTargets.add(new StructureRef(record.targetStructure(), record.hostDimension(), record.backend(), 0));
+        }
         var backend = targetFor(server, record.backend());
         if (backend == null) {
             AcademyCraft.LOGGER.error("Structure transaction record belongs to an unsupported backend: {}",

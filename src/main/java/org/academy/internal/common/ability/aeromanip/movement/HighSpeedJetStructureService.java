@@ -233,7 +233,8 @@ public final class HighSpeedJetStructureService {
         if (direct != null) stopSubLevelSession(playerId, direct, "replaced_by_program_extract");
         var captureRequest = new StructureCaptureRequest(
                 positions, effectiveBudget, StructureCaptureRequest.MAXIMUM_SPAN,
-                capturePermission(player), true);
+                capturePermission(player), true)
+                .withSkillCreation(player.getUUID(), AcademyCraft.academy("high_speed_jet"));
         var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled()
                 ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, captureRequest, 1.0,
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
@@ -646,7 +647,8 @@ public final class HighSpeedJetStructureService {
         }
         if (nozzles.stream().noneMatch(mount -> mount.nozzle == plan.targetNozzle)) return Optional.empty();
         var captureRequest = new StructureCaptureRequest(
-                positions, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+                positions, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true)
+                .withSkillCreation(player.getUUID(), AcademyCraft.academy("high_speed_jet"));
         var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled()
                 ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, captureRequest, 1.0,
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)

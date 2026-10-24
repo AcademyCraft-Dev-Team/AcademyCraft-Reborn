@@ -62,9 +62,27 @@ public final class SubLevelServer {
     public static void started(ServerStartedEvent event) {
         var server = event.getServer();
         if (!StructureBackendRouter.nativeEnabled(server)) {
-            AcademyCraft.LOGGER.info("SubLevel backend skipped because the native structure backend is not selected");
-            return;
+            try {
+                var saved = SubLevelManifest.loadHosts(server.getWorldPath(LevelResource.ROOT)
+                        .resolve("data/academy/sublevels"), List.of());
+                if (saved.values().stream().flatMap(manifest -> manifest.entries().stream())
+                        .noneMatch(entry -> entry.state() != SubLevelState.REMOVED)) return;
+            } catch (IOException | RuntimeException failure) {
+                AcademyCraft.LOGGER.error("Cannot inspect saved local structures", failure);
+                return;
+            }
         }
+        initialize(server);
+    }
+
+    /** Start saved local maintenance alongside Sable without changing the capture backend. */
+    public static boolean ensureForMaintenance(MinecraftServer server) {
+        if (!server.isSameThread()) throw new IllegalStateException("SubLevel maintenance requires the server thread");
+        if (!RUNTIMES.containsKey(server)) initialize(server);
+        return RUNTIMES.containsKey(server);
+    }
+
+    private static void initialize(MinecraftServer server) {
         var plot = server.getLevel(NativeStructureDimensions.PLOT_KEY);
         if (plot == null) {
             AcademyCraft.LOGGER.error("SubLevel plot dimension is not loaded; native SubLevel backend disabled");

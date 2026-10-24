@@ -27,10 +27,16 @@ public final class StructureUpgradeBootstrap {
                 StructureCapabilities.Readiness.EXPERIMENTAL, true, "sublevel_sable_bounded_angular_control"));
         entries.put(StructureCapabilities.Capability.EXTRACTION, new StructureCapabilities.Support(
                 StructureCapabilities.Readiness.EXPERIMENTAL, EXTRACTION_ENABLED, "sublevel_sable_bounded_extraction"));
+        entries.put(StructureCapabilities.Capability.PROVENANCE, new StructureCapabilities.Support(
+                StructureCapabilities.Readiness.EXPERIMENTAL, true, "durable_skill_capture_provenance"));
+        entries.put(StructureCapabilities.Capability.GRID_RESTORATION, new StructureCapabilities.Support(
+                StructureCapabilities.Readiness.EXPERIMENTAL, true, "marked_rest_server_policy"));
         return new StructureUpgradeServices(new StructureCapabilities(entries),
                 org.academy.api.common.structure.upgrade.StructureExtractions.service(),
-                org.academy.api.common.structure.upgrade.StructureOrientations.service(), DRAFT.provenance(),
-                DRAFT.restoration(), DRAFT.damage(), DRAFT.impacts(), DRAFT.fracture());
+                org.academy.api.common.structure.upgrade.StructureOrientations.service(),
+                org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.INSTANCE,
+                org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.INSTANCE,
+                DRAFT.damage(), DRAFT.impacts(), DRAFT.fracture());
     }
 
     public static StructureUpgradeServices createScaffold() {

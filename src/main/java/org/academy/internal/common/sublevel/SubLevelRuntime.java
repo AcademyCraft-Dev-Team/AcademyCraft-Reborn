@@ -36,6 +36,8 @@ public final class SubLevelRuntime {
             Math.max(1, Integer.getInteger("academy.sublevel.snapshotBytes", 1_048_576)));
     private final SubLevelCollisionIndex collision = new SubLevelCollisionIndex();
     private final Map<SubLevelId, Managed> subLevels = new LinkedHashMap<>();
+    private final Map<SubLevelId, SubLevelState> restorationIsolation = new LinkedHashMap<>();
+    private final LinkedHashSet<SubLevelId> emptyMarkedCleanup = new LinkedHashSet<>();
     private final SubLevelSimulationBudget budget = SubLevelEnhancementBootstrap.SIMULATION;
     private boolean terrainNeedsUpdate = true;
     private boolean terrainBlocked;
@@ -126,7 +128,7 @@ public final class SubLevelRuntime {
     /** Finalizes a copied staging plot without changing the transaction's activation identity. */
     public boolean finalizeStaged(SubLevelId id) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
-        if (managed == null) return false;
+        if (managed == null || restorationIsolation.containsKey(id)) return false;
         if (managed.subLevel.state() == SubLevelState.ACTIVE || managed.subLevel.state() == SubLevelState.SLEEPING) {
             flushStorage();
             persist();
@@ -249,7 +251,8 @@ public final class SubLevelRuntime {
     /** Rebuilds body and collision after a plot block changes. */
     public void refreshGeometry(SubLevelId id) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
-        if (managed == null) return;
+        if (managed == null || restorationIsolation.containsKey(id)) return;
+        emptyMarkedCleanup.remove(id);
         var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
         var motion = universe.motion(id).orElse(null);
         universe.remove(id);
@@ -263,6 +266,8 @@ public final class SubLevelRuntime {
             SubLevelMotionController.cancel(id);
             SubLevelTerrainBreaker.forget(id);
             var remainingView = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+            if (remainingView.cells().isEmpty() && retireEmptyMarked(managed)) return;
+            if (remainingView.cells().isEmpty()) emptyMarkedCleanup.add(id);
             // Protection may retain decoration after the last collision cell is mined. It
             // remains selectable without manufacturing a zero-mass rigid body.
             managed.subLevel.setState(emptyBodyState(remainingView.cells().size()));
@@ -285,6 +290,25 @@ public final class SubLevelRuntime {
     public Optional<SubLevel> get(SubLevelId id) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         return managed == null ? Optional.empty() : Optional.of(managed.subLevel);
+    }
+
+    /** Missing activation does not imply that the durable source identity has been retired. */
+    public boolean hasPersisted(SubLevelId id) {
+        return manifest != null && manifest.get(Objects.requireNonNull(id, "id")).isPresent();
+    }
+
+    /** Recovery owns the plot until its transaction ends; hide only this source from gameplay. */
+    public boolean isolateRestoration(SubLevelId id) {
+        var managed = subLevels.get(id);
+        if (managed == null) return false;
+        if (restorationIsolation.containsKey(id)) return true;
+        restorationIsolation.put(id, managed.subLevel.state());
+        universe.remove(id);
+        collision.remove(id);
+        SubLevelMotionController.cancel(id);
+        managed.subLevel.setState(SubLevelState.LOADING);
+        terrainNeedsUpdate = true;
+        return true;
     }
 
     static SubLevelState emptyBodyState(int renderedCells) {
@@ -317,9 +341,47 @@ public final class SubLevelRuntime {
             throw failure;
         }
         subLevels.remove(id);
+        restorationIsolation.remove(id);
+        emptyMarkedCleanup.remove(id);
         storage.release(managed.lease);
         managed.subLevel.setState(SubLevelState.REMOVED);
+        retireCreationMark(managed.subLevel);
         return true;
+    }
+
+    private boolean retireEmptyMarked(Managed managed) {
+        var reference = budgetReference(managed.subLevel);
+        var server = host.getServer();
+        if (org.academy.internal.common.structure.transaction.StructureCaptureCoordinator.isPending(server, reference)
+                || org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(server, reference)
+                || org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.metadata(server, reference).isEmpty()) return false;
+        var entities = storage.loadedEntities(managed.subLevel.plot());
+        if (entities.isEmpty() || !entities.get().isEmpty()) return false;
+        // remove persists manifest retirement before releasing the lease. No entity/chunk load is requested.
+        return remove(managed.subLevel.id());
+    }
+
+    private void retireCreationMark(SubLevel subLevel) {
+        var reference = new StructureRef(subLevel.id().value(), host.dimension().identifier(), SubLevelStructureRefs.BACKEND, 0);
+        var server = host.getServer();
+        // A recovery transaction owns mark retirement until its durable transfer has completed.
+        if (org.academy.internal.common.structure.transaction.StructureCaptureCoordinator.isPending(server, reference)
+                || org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(server, reference)) return;
+        org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.metadata(server, reference)
+                .ifPresent(metadata -> org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.remove(
+                        server, reference, metadata.creationOperationId()));
+    }
+
+    private void retryEmptyMarkedCleanup() {
+        if (emptyMarkedCleanup.isEmpty() || host.getGameTime() % 20 != 0) return;
+        var iterator = emptyMarkedCleanup.iterator();
+        var id = iterator.next();
+        iterator.remove();
+        var managed = subLevels.get(id);
+        if (managed == null || !managed.view.cells().isEmpty()) return;
+        if (org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance
+                .metadata(host.getServer(), budgetReference(managed.subLevel)).isEmpty()) return;
+        if (!retireEmptyMarked(managed)) emptyMarkedCleanup.add(id);
     }
 
     /** Relative world-yaw rotation, preserving the center of mass and active body. */
@@ -335,7 +397,7 @@ public final class SubLevelRuntime {
     public boolean rotateTo(SubLevelId id, StructurePose target) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         Objects.requireNonNull(target, "target");
-        if (managed == null) return false;
+        if (managed == null || restorationIsolation.containsKey(id)) return false;
         var motion = universe.motion(id).orElse(null);
         var localCenter = motion == null ? managed.subLevel.localBounds().getCenter()
                 : new Vec3(motion.localCenterOfMass().x(), motion.localCenterOfMass().y(), motion.localCenterOfMass().z());
@@ -361,7 +423,7 @@ public final class SubLevelRuntime {
     public boolean launch(SubLevelId id, Vec3 direction, double speed) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
         var unit = SubLevelMotionController.normalized(direction);
-        if (managed == null || unit == null || !Double.isFinite(speed) || speed <= 0.0) return false;
+        if (managed == null || restorationIsolation.containsKey(id) || unit == null || !Double.isFinite(speed) || speed <= 0.0) return false;
         if (managed.subLevel.state() == SubLevelState.INACTIVE) {
             var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
             if (geometry.boxes().isEmpty()) return false;
@@ -380,7 +442,7 @@ public final class SubLevelRuntime {
     /** Translates the existing body without invalidating its identity, velocity or control. */
     public boolean shift(SubLevelId id, Vec3 delta) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
-        if (managed == null) return false;
+        if (managed == null || restorationIsolation.containsKey(id)) return false;
         var pose = managed.subLevel.pose();
         var shifted = new StructurePose(pose.worldOrigin().add(Objects.requireNonNull(delta, "delta")),
                 pose.rotationX(), pose.rotationY(), pose.rotationZ(), pose.rotationW());
@@ -409,7 +471,7 @@ public final class SubLevelRuntime {
 
     public boolean activate(SubLevelId id, PhysicsPose pose, List<PhysicsBox> boxes) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
-        if (managed == null || managed.subLevel.state() == SubLevelState.ACTIVE) return false;
+        if (managed == null || restorationIsolation.containsKey(id) || managed.subLevel.state() == SubLevelState.ACTIVE) return false;
         if (!addBody(id, pose, boxes)) return false;
         var localBoxes = localBoxes(boxes);
         var view = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
@@ -427,6 +489,8 @@ public final class SubLevelRuntime {
 
     /** Steps the shared universe once and publishes each body pose back to its SubLevel. */
     public void tick(double duration, int substeps) {
+        resumeRestorationSources();
+        retryEmptyMarkedCleanup();
         if (subLevels.isEmpty()) return;
         if (!Double.isFinite(duration) || duration <= 0.0 || substeps < 1) return;
         long serverTick = host.getGameTime();
@@ -656,6 +720,18 @@ public final class SubLevelRuntime {
                 continue;
             }
             try {
+                var reference = new StructureRef(entry.id().value(), host.dimension().identifier(), SubLevelStructureRefs.BACKEND, 0);
+                if (org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(host.getServer(), reference)) {
+                    // Keep the durable source readable by recovery, but never publish two owners.
+                    var isolated = new SubLevel(entry.id(), entry.plot(), entry.localBounds(), entry.pose());
+                    SubLevelActivationRegistry.activation(entry.id());
+                    isolated.setState(SubLevelState.LOADING);
+                    restorationIsolation.put(entry.id(), entry.state());
+                    subLevels.put(entry.id(), new Managed(isolated, lease, List.of(),
+                            org.academy.internal.common.structure.space.NativeStructureView.EMPTY));
+                    restored++;
+                    continue;
+                }
                 var geometry = PlotGeometry.capture(storage, entry.plot(), entry.localBounds());
                 if (entry.state() == SubLevelState.ALLOCATED || entry.state() == SubLevelState.LOADING) {
                     var staged = new SubLevel(entry.id(), entry.plot(), entry.localBounds(), entry.pose());
@@ -672,6 +748,7 @@ public final class SubLevelRuntime {
                     SubLevelActivationRegistry.activation(entry.id());
                     remaining.setState(emptyBodyState(view.cells().size()));
                     subLevels.put(entry.id(), new Managed(remaining, lease, List.of(), view));
+                    if (view.cells().isEmpty()) emptyMarkedCleanup.add(entry.id());
                     restored++;
                     continue;
                 }
@@ -696,6 +773,33 @@ public final class SubLevelRuntime {
         return restored;
     }
 
+    /** A rolled-back transfer may publish its retained source only after the journal was retired. */
+    private void resumeRestorationSources() {
+        if (restorationIsolation.isEmpty()) return;
+        for (var id : List.copyOf(restorationIsolation.keySet())) {
+            var reference = new StructureRef(id.value(), host.dimension().identifier(), SubLevelStructureRefs.BACKEND, 0);
+            if (org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(host.getServer(), reference)) continue;
+            var managed = subLevels.get(id);
+            if (managed == null) { restorationIsolation.remove(id); continue; }
+            var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+            var view = PlotView.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());
+            var original = restorationIsolation.get(id);
+            boolean simulate = original == SubLevelState.ACTIVE || original == SubLevelState.SLEEPING;
+            boolean active = simulate && !geometry.boxes().isEmpty()
+                    && addBody(id, physicsPose(managed.subLevel.pose()), geometry.boxes());
+            if (simulate && !geometry.boxes().isEmpty() && !active) continue;
+            var boxes = localBoxes(geometry.boxes());
+            managed.subLevel.setState(active ? original : geometry.boxes().isEmpty()
+                    ? emptyBodyState(view.cells().size()) : original);
+            SubLevelActivationRegistry.advance(id);
+            subLevels.put(id, new Managed(managed.subLevel, managed.lease, boxes, view));
+            collision.update(id, boxes, managed.subLevel.pose(), managed.subLevel.geometryRevision(), managed.subLevel.revision());
+            restorationIsolation.remove(id);
+            remember(managed.subLevel);
+            terrainNeedsUpdate = true;
+        }
+    }
+
     /** Persists active entries and closes bodies/leases without deleting their manifest rows. */
     public void close() {
         for (var managed : List.copyOf(subLevels.values())) {
@@ -715,6 +819,8 @@ public final class SubLevelRuntime {
             catch (RuntimeException failure) { AcademyCraft.LOGGER.warn("SubLevel plot close failed", failure); }
         }
         subLevels.clear();
+        restorationIsolation.clear();
+        emptyMarkedCleanup.clear();
         collision.clear();
         SubLevelCollisionRuntime.unregister(host, collision);
         SubLevelTerrainBreaker.forgetHost(host);
@@ -782,7 +888,7 @@ public final class SubLevelRuntime {
     private void remember(SubLevel subLevel) {
         if (manifest == null) return;
         manifest.put(new SubLevelManifest.Entry(subLevel.id(), subLevel.plot(), subLevel.localBounds(),
-                subLevel.pose(), subLevel.state(), subLevel.revision()));
+                subLevel.pose(), restorationIsolation.getOrDefault(subLevel.id(), subLevel.state()), subLevel.revision()));
     }
 
     private void forget(SubLevelId id) {

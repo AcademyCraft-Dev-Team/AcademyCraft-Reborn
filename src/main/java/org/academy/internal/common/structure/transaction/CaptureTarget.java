@@ -20,6 +20,24 @@ import java.util.UUID;
  * geometry and persistence step through it; the coordinator itself never addresses a backend.
  */
 public interface CaptureTarget {
+    /** Full, bounded content for restoration, never a culled render snapshot. */
+    default Optional<List<RestorationCell>> restorationCells(StructureRef reference) { return Optional.empty(); }
+
+    /** Durable backend location evidence retained before restoration removes the source. */
+    default Optional<net.minecraft.nbt.CompoundTag> restorationEvidence(StructureRef reference) { return Optional.empty(); }
+
+    /** Persist the complete original content before a transfer can need crash rollback. */
+    default boolean checkpointRestoration(StructureRef reference) { return false; }
+
+    /** Hide and suspend a journal-owned source until rollback or committed retirement completes. */
+    default boolean isolateRestoration(StructureRef reference) { return false; }
+
+    /** Idempotent source retirement, including its persistent owner and allocation. */
+    default boolean retireRestored(StructureRef reference, net.minecraft.nbt.CompoundTag evidence) { return false; }
+
+    record RestorationCell(BlockPos localPosition, BlockState state) {
+        public RestorationCell { localPosition = localPosition.immutable(); }
+    }
     /**
      * Read-only allocation seed admission, evaluated after all source cells are validated.
      * A body backend may require a positive-mass collision cell to survive its first write.

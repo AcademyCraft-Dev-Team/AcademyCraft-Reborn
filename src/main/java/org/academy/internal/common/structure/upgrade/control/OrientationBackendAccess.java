@@ -3,6 +3,7 @@ package org.academy.internal.common.structure.upgrade.control;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.structure.StructureRef;
 
 import java.util.List;
@@ -13,6 +14,17 @@ import java.util.UUID;
 /** Optional-mod-neutral live adapter. Reads and writes require the owning server thread. */
 public interface OrientationBackendAccess {
     Optional<Body> observe(ServerLevel host, StructureRef reference);
+
+    /**
+     * Motion-only sampling for rest detection. This does not authorize restoration: callers must
+     * obtain a fresh full body and repeat admission before changing any content. Backends whose
+     * geometry is expensive should override this without loading chunks or scanning cells.
+     */
+    default Optional<RestState> observeRest(ServerLevel host, StructureRef reference) {
+        return observe(host, reference).map(body -> new RestState(body.reference(), body.runtimeId(),
+                body.contentRevision(), body.motion().pose(), body.linearVelocity(),
+                body.motion().angularVelocity(), body.terrainReady()));
+    }
 
     /** Backend observation uncertainty only; never changes geometry or permits added penetration. */
     default Vec3 positionRounding(Body body) { return Vec3.ZERO; }
@@ -36,6 +48,18 @@ public interface OrientationBackendAccess {
 
     /** Transfer this exact token from older queued translation commands into planned extraction. */
     default void cancelQueuedTranslation(ServerLevel host, StructureRef reference, UUID controlId) {}
+
+    record RestState(StructureRef reference, UUID runtimeId, long contentRevision, StructurePose pose,
+                     Vec3 linearVelocity, Vec3 angularVelocity, boolean terrainReady) {
+        public RestState {
+            Objects.requireNonNull(reference, "reference");
+            Objects.requireNonNull(runtimeId, "runtimeId");
+            Objects.requireNonNull(pose, "pose");
+            OrientationTargets.requireFinite(linearVelocity, "linearVelocity");
+            OrientationTargets.requireFinite(angularVelocity, "angularVelocity");
+            if (contentRevision < 0) throw new IllegalArgumentException("Invalid live content revision");
+        }
+    }
 
     record LinearBody(Body body, double mass) {
         public LinearBody {

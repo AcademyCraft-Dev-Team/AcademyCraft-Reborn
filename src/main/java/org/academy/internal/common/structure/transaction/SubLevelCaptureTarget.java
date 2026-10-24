@@ -69,6 +69,103 @@ public final class SubLevelCaptureTarget implements CaptureTarget {
     }
 
     @Override public String allocationFailureDetail() { return "sublevel_plot_capacity_unavailable"; }
+
+    @Override
+    public Optional<List<RestorationCell>> restorationCells(StructureRef target) {
+        var runtime = runtime(target);
+        var body = runtime == null ? null : runtime.get(new SubLevelId(target.id())).orElse(null);
+        if (body == null || !runtime.storage().loadedEntities(body.plot()).map(List::isEmpty).orElse(false)) return Optional.empty();
+        var bounds = body.localBounds();
+        if (bounds.getXsize() * bounds.getYsize() * bounds.getZsize() > 32768) return Optional.empty();
+        var cells = new java.util.ArrayList<RestorationCell>();
+        for (var position : BlockPos.betweenClosed((int) Math.floor(bounds.minX), (int) Math.floor(bounds.minY),
+                (int) Math.floor(bounds.minZ), (int) Math.ceil(bounds.maxX) - 1,
+                (int) Math.ceil(bounds.maxY) - 1, (int) Math.ceil(bounds.maxZ) - 1)) {
+            var state = runtime.storage().blockState(body.plot(), position);
+            if (state.isAir()) continue;
+            if (state.hasBlockEntity() || !state.getFluidState().isEmpty()
+                    || runtime.storage().blockEntity(body.plot(), position) != null
+                    || cells.size() >= StructureTransactionJournal.MAX_CELLS) return Optional.empty();
+            cells.add(new RestorationCell(position, state));
+        }
+        return cells.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(cells));
+    }
+
+    @Override
+    public Optional<net.minecraft.nbt.CompoundTag> restorationEvidence(StructureRef target) {
+        var runtime = runtime(target);
+        var cells = restorationCells(target).orElse(null);
+        if (runtime == null || cells == null) return Optional.empty();
+        var tag = new net.minecraft.nbt.CompoundTag();
+        var images = new net.minecraft.nbt.ListTag();
+        for (var cell : cells) {
+            var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(
+                    net.minecraft.util.ProblemReporter.DISCARDING, runtime.host().registryAccess());
+            output.store("state", BlockState.CODEC, cell.state());
+            var image = output.buildResult();
+            image.putInt("x", cell.localPosition().getX()); image.putInt("y", cell.localPosition().getY()); image.putInt("z", cell.localPosition().getZ());
+            images.add(image);
+        }
+        tag.put("cells", images);
+        return Optional.of(tag);
+    }
+
+    @Override
+    public boolean checkpointRestoration(StructureRef target) {
+        var runtime = runtime(target);
+        if (runtime == null || !runtime.flushPlotChunks(new SubLevelId(target.id()))) return false;
+        runtime.persist();
+        return !NativeStructureStorageErrors.failed(runtime.storage().level());
+    }
+
+    @Override
+    public boolean isolateRestoration(StructureRef target) {
+        var runtime = runtime(target);
+        if (runtime == null) return false;
+        return runtime.isolateRestoration(new SubLevelId(target.id()));
+    }
+
+    @Override
+    public boolean retireRestored(StructureRef target, net.minecraft.nbt.CompoundTag evidence) {
+        // Recovery follows persistent identity even when reactivation changed its generation.
+        for (var level : server.getAllLevels()) {
+            if (!level.dimension().identifier().equals(target.dimension())) continue;
+            var runtime = SubLevelServer.runtime(level).orElse(null);
+            if (runtime == null) return false;
+            var id = new SubLevelId(target.id());
+            var body = runtime.get(id).orElse(null);
+            // An unavailable activation may still own a persisted plot. Keep the journal
+            // until its manifest ownership is actually retired, rather than losing cleanup.
+            if (body == null) return !runtime.hasPersisted(id);
+            var images = evidence.getList("cells").orElseThrow();
+            var cells = new java.util.LinkedHashMap<BlockPos, BlockState>();
+            for (var item : images) {
+                if (!(item instanceof net.minecraft.nbt.CompoundTag image)) return false;
+                var local = new BlockPos(image.getInt("x").orElseThrow(), image.getInt("y").orElseThrow(), image.getInt("z").orElseThrow());
+                var input = net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING,
+                        runtime.host().registryAccess(), image);
+                cells.put(local, input.read("state", BlockState.CODEC).orElseThrow());
+            }
+            // The durable commit owns only these source images. A partial prior cleanup is
+            // idempotent, but an unexpected edit or block entity retains the reservation.
+            for (var cell : cells.entrySet()) {
+                var current = runtime.storage().blockState(body.plot(), cell.getKey());
+                if (!current.isAir() && !current.equals(cell.getValue())
+                        || runtime.storage().blockEntity(body.plot(), cell.getKey()) != null) return false;
+            }
+            for (var cell : cells.entrySet()) {
+                var position = runtime.storage().worldPosition(body.plot(), cell.getKey());
+                var area = new net.minecraft.world.level.levelgen.structure.BoundingBox(position);
+                runtime.storage().level().getBlockTicks().clearArea(area);
+                runtime.storage().level().getFluidTicks().clearArea(area);
+                if (!runtime.storage().blockState(body.plot(), cell.getKey()).isAir()
+                        && !runtime.storage().setBlock(body.plot(), cell.getKey(), Blocks.AIR.defaultBlockState(), SubLevelCaptureService.TRANSACTION_FLAGS)) return false;
+            }
+            if (!runtime.flushPlotChunks(id)) return false;
+            return runtime.remove(id);
+        }
+        return false;
+    }
     @Override public int cellBudget() { return 256; }
 
     @Override

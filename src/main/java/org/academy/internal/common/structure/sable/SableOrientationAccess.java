@@ -32,8 +32,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /** Optional linkage boundary for angular control of loaded, unit-scale Sable block bodies. */
@@ -46,7 +46,8 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
     private static final double MAX_POSITION_ROUNDING = 1E-4;
     private static final OrientationTargets.Baselines NO_BASELINE =
             new OrientationTargets.Baselines(Optional.empty(), Optional.empty());
-    private final Map<SableStructureHandle, Geometry> geometry = new IdentityHashMap<>();
+    // Handles retain identity equality. Access order preserves hot bodies when another body arrives.
+    private final LinkedHashMap<SableStructureHandle, Geometry> geometry = new LinkedHashMap<>(16, .75f, true);
 
     private SableOrientationAccess() {}
 
@@ -73,6 +74,24 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
         var handle = SableStructureAccess.resolveHandle(host.getServer(), reference).orElse(null);
         // Read-only snapshots also describe static/paused/foreign-owned obstacles. Admission is a lease decision.
         return handle == null || handle.host() != host ? Optional.empty() : observation(handle);
+    }
+
+    @Override public Optional<RestState> observeRest(ServerLevel host, StructureRef reference) {
+        SableStructureAccess.requireThread(host.getServer());
+        var handle = SableStructureAccess.resolveHandle(host.getServer(), reference).orElse(null);
+        if (handle == null || handle.host() != host) return Optional.empty();
+        try {
+            if (!handle.isCurrent() || !handle.subLevel().getPlot().getContraptions().isEmpty()) return Optional.empty();
+            // Aggregate solver motion and content epochs are independent of plot size. In
+            // particular, do not call observation/geometry or read any chunk palette here.
+            var motion = SableStructureTraction.motion(host, reference).orElse(null);
+            if (motion == null) return Optional.empty();
+            return Optional.of(new RestState(handle.reference(), handle.runtimeId(), handle.contentRevision(),
+                    motion.pose(), motion.linearVelocity(), motion.angularVelocity(),
+                    SableStructureTraction.controllable(handle)));
+        } catch (IllegalStateException | IllegalArgumentException unavailable) {
+            return Optional.empty();
+        }
     }
 
     @Override public Nearby nearby(ServerLevel host, AABB bounds, int maximumBodies) {
@@ -241,11 +260,8 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
             }
         }
         var snapshot = new Geometry(handle.contentRevision(), keyBounds, List.copyOf(result));
-        if (geometry.size() >= MAX_CACHED_BODIES) {
-            geometry.keySet().removeIf(candidate -> !candidate.isCurrent());
-            if (geometry.size() >= MAX_CACHED_BODIES) geometry.clear();
-        }
         geometry.put(handle, snapshot);
+        if (geometry.size() > MAX_CACHED_BODIES) geometry.pollFirstEntry();
         return snapshot;
     }
 

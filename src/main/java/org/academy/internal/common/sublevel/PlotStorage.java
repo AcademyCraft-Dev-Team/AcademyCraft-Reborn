@@ -38,6 +38,13 @@ public final class PlotStorage {
     private final Map<PlotPos, Lease> leases = new LinkedHashMap<>();
     /** Empty, cleared leases kept resident so a capture does not synchronously generate chunks. */
     private final ArrayDeque<Lease> ready = new ArrayDeque<>();
+    /** Entity storage has a separate async lifecycle from block chunks in the paused plot level. */
+    private final ArrayDeque<PendingEntityLoad> pendingEntityLoads = new ArrayDeque<>();
+    private static final int ENTITY_LOAD_BUDGET = 4;
+    private static final boolean TRACE_ENTITY_RESIDENCY = Boolean.getBoolean("academy.sublevel.traceEntityResidency")
+            || Boolean.getBoolean("academy.structureRestorationSmoke");
+    private boolean reportedEntityWait;
+    private boolean reportedEntityReady;
     private PendingPrewarm pendingPrewarm;
 
     public PlotStorage(ServerLevel level) {
@@ -162,6 +169,7 @@ public final class PlotStorage {
             }
             var lease = new Lease(SERIALS.incrementAndGet(), plot, List.copyOf(chunks));
             leases.put(plot, lease);
+            pendingEntityLoads.addLast(new PendingEntityLoad(lease));
             return lease;
         } catch (RuntimeException failure) {
             for (var chunk : acquired) {
@@ -181,6 +189,7 @@ public final class PlotStorage {
      * warmup/idle ticks; it is not eliminated.
      */
     public void prewarmTick(int target) {
+        maintainEntityLoads();
         if (target <= 0) return;
         if (pendingPrewarm == null) {
             if (ready.size() >= target) return;
@@ -214,6 +223,30 @@ public final class PlotStorage {
         }
         ready.addLast(pending.lease);
         pendingPrewarm = null;
+    }
+
+    /**
+     * The plot ServerLevel deliberately does not run ordinary simulation. Queue at most four
+     * entity reads per tick and publish only completed reads, without flush/join or chunk loads.
+     * EntityStorage deserialization already runs on the server executor. Maintenance must also
+     * run when prewarming is disabled so claimed saves and fresh allocations become observable.
+     */
+    @SuppressWarnings("unchecked")
+    private void maintainEntityLoads() {
+        var manager = ((ServerLevelEntityManagerAccessor) level).academy$getEntityManager();
+        var access = (PersistentEntitySectionManagerAccessor<Entity>) (Object) manager;
+        for (int budget = 0; budget < ENTITY_LOAD_BUDGET && !pendingEntityLoads.isEmpty(); budget++) {
+            var pending = pendingEntityLoads.peekFirst();
+            if (leases.get(pending.lease.plot()) != pending.lease) {
+                pendingEntityLoads.removeFirst();
+                continue;
+            }
+            var chunk = pending.lease.chunks().get(pending.next++);
+            access.academy$ensureChunkQueuedForLoad(chunk.pack());
+            if (pending.next == pending.lease.chunks().size()) pendingEntityLoads.removeFirst();
+        }
+        // Unlike flush(false), this only consumes already completed async results.
+        manager.processPendingLoads();
     }
 
     private void abortPrewarm() {
@@ -271,10 +304,49 @@ public final class PlotStorage {
         return List.copyOf(result);
     }
 
+    /** Non-loading entity observation for maintenance previews; unknown storage defers the transfer. */
+    @SuppressWarnings("unchecked")
+    public Optional<List<Entity>> loadedEntities(PlotPos plot) {
+        if (!level.getServer().isSameThread()) throw new IllegalStateException("Plot entities require the server thread");
+        var lease = lease(plot).orElse(null);
+        if (lease == null) return Optional.empty();
+        var manager = ((ServerLevelEntityManagerAccessor) level).academy$getEntityManager();
+        var access = (PersistentEntitySectionManagerAccessor<Entity>) (Object) manager;
+        var result = new ArrayList<Entity>();
+        for (var chunk : lease.chunks()) {
+            if (!manager.areEntitiesLoaded(chunk.pack()) || level.getChunkSource().getChunkNow(chunk.x(), chunk.z()) == null) {
+                if (TRACE_ENTITY_RESIDENCY && !reportedEntityWait) {
+                    reportedEntityWait = true;
+                    AcademyCraft.LOGGER.info("SubLevel entity observation deferred: {}", entityLoadDiagnostics(plot));
+                }
+                return Optional.empty();
+            }
+            access.academy$getSectionStorage().getExistingSectionsInChunk(chunk.pack())
+                    .flatMap(section -> section.getEntities()).filter(entity -> !entity.isRemoved()).forEach(result::add);
+        }
+        if (TRACE_ENTITY_RESIDENCY && !reportedEntityReady) {
+            reportedEntityReady = true;
+            AcademyCraft.LOGGER.info("SubLevel entity observation ready: {} entities={}", entityLoadDiagnostics(plot), result.size());
+        }
+        return Optional.of(List.copyOf(result));
+    }
+
+    /** Pure residency evidence for diagnostics; never queues reads or loads chunks. */
+    public String entityLoadDiagnostics(PlotPos plot) {
+        var lease = leases.get(plot);
+        if (lease == null) return "plot=" + plot + ",lease=absent";
+        var manager = ((ServerLevelEntityManagerAccessor) level).academy$getEntityManager();
+        return "plot=" + plot + ",queued_leases=" + pendingEntityLoads.size() + ",chunks="
+                + lease.chunks().stream().map(chunk -> chunk + "[block="
+                + (level.getChunkSource().getChunkNow(chunk.x(), chunk.z()) != null)
+                + ",entities=" + manager.areEntitiesLoaded(chunk.pack()) + "]").toList();
+    }
+
     /** Releases every outstanding plot; called only when the owning runtime stops. */
     public void close() {
         pendingPrewarm = null;
         ready.clear();
+        pendingEntityLoads.clear();
         for (var lease : List.copyOf(leases.values())) release(lease);
     }
 
@@ -283,6 +355,15 @@ public final class PlotStorage {
         private int next;
 
         private PendingPrewarm(Lease lease) {
+            this.lease = lease;
+        }
+    }
+
+    private static final class PendingEntityLoad {
+        private final Lease lease;
+        private int next;
+
+        private PendingEntityLoad(Lease lease) {
             this.lease = lease;
         }
     }

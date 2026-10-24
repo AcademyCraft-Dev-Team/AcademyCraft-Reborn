@@ -2,7 +2,10 @@ package org.academy.internal.common.structure.transaction;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.Identifier;
+import org.academy.api.common.structure.upgrade.StructureProvenance;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -54,6 +57,26 @@ class StructureTransactionJournalTest {
     }
 
     @Test
+    void atomicOnlyOwnershipDecisionNeverDeletesPreviousJournalOnReplaceFailure() throws IOException {
+        var fail = new AtomicBoolean();
+        var fallback = new AtomicBoolean();
+        var journal = StructureTransactionJournal.atomicOnly(directory, (source, target, atomic) -> {
+            if (!atomic) fallback.set(true);
+            if (fail.get()) throw new AtomicMoveNotSupportedException(source.toString(), target.toString(), "injected");
+            defaultMove(source, target, atomic);
+        });
+        var original = prepared(UUID.randomUUID(), List.of(cell(1, 2, 3, "minecraft:iron_block"))).withTarget(UUID.randomUUID());
+        journal.persist(original);
+        fail.set(true);
+        assertThrows(IOException.class, () -> journal.persist(original.withStage(StructureTransactionJournal.Stage.COMMIT_DECIDED)));
+        assertFalse(fallback.get());
+        var reopened = StructureTransactionJournal.atomicOnly(directory);
+        assertEquals(StructureTransactionJournal.Stage.TARGET_ALLOCATED,
+                reopened.find(original.transactionId()).orElseThrow().stage());
+        assertEquals(original.cells(), reopened.find(original.transactionId()).orElseThrow().cells());
+    }
+
+    @Test
     void reopensEveryStageTargetAndEvidenceWithoutLosingCellPayloads() throws IOException {
         var journal = new StructureTransactionJournal(directory);
         var id = UUID.randomUUID();
@@ -77,6 +100,69 @@ class StructureTransactionJournalTest {
         assertEquals(2, decoded.cells().size());
         assertEquals("minecraft:stone", decoded.cells().getFirst().payload().getString("state").orElseThrow());
         assertEquals("rollback_blocked", decoded.failureEvidence().getString("reason").orElseThrow());
+    }
+
+    @Test
+    void captureProvenanceSurvivesEveryStageRecoveryEvidenceAndRestart() throws IOException {
+        var id = UUID.randomUUID();
+        var metadata = StructureProvenance.SkillCreation.resting(UUID.randomUUID(),
+                Identifier.parse("academy:high_speed_jet")).capture(id, 140);
+        var record = new StructureTransactionJournal.Record(id, BACKEND, DIMENSION, BlockPos.ZERO,
+                StructureTransactionJournal.Stage.PREPARED, null,
+                List.of(cell(0, 0, 0, "minecraft:stone")), null, metadata);
+        var journal = new StructureTransactionJournal(directory);
+        journal.persist(record);
+        assertEquals(metadata, new StructureTransactionJournal(directory).find(id).orElseThrow().provenance());
+        record = record.withTarget(UUID.randomUUID());
+        for (var stage : List.of(StructureTransactionJournal.Stage.TARGET_ALLOCATED,
+                StructureTransactionJournal.Stage.COPIED, StructureTransactionJournal.Stage.COMMIT_DECIDED,
+                StructureTransactionJournal.Stage.PUBLISHED)) {
+            var evidence = new CompoundTag();
+            evidence.putString("reason", "simulated_recovery");
+            record = record.withStage(stage).withEvidence(evidence);
+            journal.persist(record);
+            assertEquals(metadata, new StructureTransactionJournal(directory).find(id).orElseThrow().provenance());
+        }
+    }
+
+    @Test
+    void versionOneJournalRemainsUnmarkedAfterUpgrade() throws IOException {
+        var id = UUID.randomUUID();
+        var journal = new StructureTransactionJournal(directory);
+        journal.persist(prepared(id, List.of(cell(0, 0, 0, "minecraft:stone"))));
+        var path = directory.resolve(id + ".dat");
+        var encoded = NbtIo.readCompressed(path, NbtAccounter.unlimitedHeap());
+        encoded.putInt("version", 1);
+        NbtIo.writeCompressed(encoded, path);
+        var reopened = new StructureTransactionJournal(directory);
+        assertTrue(reopened.corruptFiles().isEmpty());
+        assertNull(reopened.find(id).orElseThrow().provenance());
+    }
+
+    @Test
+    void foreignOperationMetadataCannotEnterCaptureJournal() {
+        var metadata = StructureProvenance.SkillCreation.resting(UUID.randomUUID(),
+                Identifier.parse("academy:magnet_manipulation")).capture(UUID.randomUUID(), 1);
+        assertThrows(IllegalArgumentException.class, () -> new StructureTransactionJournal.Record(
+                UUID.randomUUID(), BACKEND, DIMENSION, BlockPos.ZERO,
+                StructureTransactionJournal.Stage.PREPARED, null,
+                List.of(cell(0, 0, 0, "minecraft:stone")), null, metadata));
+    }
+
+    @Test
+    void preparedMetadataCannotBeDroppedByALaterJournalWrite() throws IOException {
+        var id = UUID.randomUUID();
+        var metadata = StructureProvenance.SkillCreation.resting(UUID.randomUUID(),
+                Identifier.parse("academy:kinetic_throw")).capture(id, 1);
+        var record = new StructureTransactionJournal.Record(id, BACKEND, DIMENSION, BlockPos.ZERO,
+                StructureTransactionJournal.Stage.PREPARED, null,
+                List.of(cell(0, 0, 0, "minecraft:stone")), null, metadata);
+        var journal = new StructureTransactionJournal(directory);
+        journal.persist(record);
+        assertThrows(IOException.class, () -> journal.persist(new StructureTransactionJournal.Record(id,
+                BACKEND, DIMENSION, BlockPos.ZERO, StructureTransactionJournal.Stage.TARGET_ALLOCATED,
+                UUID.randomUUID(), record.cells(), null)));
+        assertEquals(metadata, new StructureTransactionJournal(directory).find(id).orElseThrow().provenance());
     }
 
     @Test

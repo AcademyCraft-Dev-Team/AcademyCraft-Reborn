@@ -25,6 +25,9 @@ public final class NativeStructureTickets {
             () -> new TicketType(TicketType.NO_TIMEOUT,
                     TicketType.FLAG_LOADING | TicketType.FLAG_KEEP_DIMENSION_ACTIVE));
     public static final int TICKET_LEVEL = ChunkLevel.byStatus(FullChunkStatus.ENTITY_TICKING);
+    public static final DeferredHolder<TicketType, TicketType> RESTORATION = TICKET_TYPES.register(
+            "sublevel_restoration", () -> new TicketType(TicketType.NO_TIMEOUT,
+                    TicketType.FLAG_LOADING | TicketType.FLAG_KEEP_DIMENSION_ACTIVE));
     public static final int COLLISION_TICKET_LEVEL = ChunkLevel.byStatus(FullChunkStatus.FULL);
 
     private NativeStructureTickets() {
@@ -56,6 +59,13 @@ public final class NativeStructureTickets {
             throw new IllegalArgumentException("Native structure tickets require a reserved dimension");
         }
         return hostStorage(level);
+    }
+
+    /** Exclusive batch-maintenance ticket; it cannot remove the physics terrain cache's ticket. */
+    public static void restoration(ServerLevel level, ChunkPos position, boolean acquire) {
+        var ticket = new Ticket(RESTORATION.get(), COLLISION_TICKET_LEVEL);
+        if (acquire) hostStorage(level).addTicket(position.pack(), ticket);
+        else hostStorage(level).removeTicket(position.pack(), ticket);
     }
 
     private static TicketStorage hostStorage(ServerLevel level) {

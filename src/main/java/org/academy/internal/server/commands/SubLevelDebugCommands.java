@@ -7,6 +7,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import org.academy.internal.common.sublevel.SubLevelServer;
+import org.academy.internal.common.structure.upgrade.lifecycle.LocalStructureRestorationBatch;
 
 /** Phase 1 diagnostics for the shared plot and unified physics universe. */
 final class SubLevelDebugCommands {
@@ -14,6 +15,10 @@ final class SubLevelDebugCommands {
 
     static LiteralArgumentBuilder<CommandSourceStack> register() {
         return Commands.literal("sublevel")
+                .then(Commands.literal("restore_all")
+                        .executes(context -> LocalStructureRestorationBatch.start(context.getSource()))
+                        .then(Commands.literal("status").executes(context -> LocalStructureRestorationBatch.report(context.getSource())))
+                        .then(Commands.literal("cancel").executes(context -> LocalStructureRestorationBatch.cancel(context.getSource()))))
                 .then(Commands.literal("status").executes(SubLevelDebugCommands::status))
                 .then(Commands.literal("probe").executes(SubLevelDebugCommands::probe))
                 .then(Commands.literal("capture").executes(SubLevelDebugCommands::capture))

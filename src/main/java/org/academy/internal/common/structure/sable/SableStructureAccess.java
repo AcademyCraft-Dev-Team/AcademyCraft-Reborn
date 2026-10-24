@@ -56,6 +56,7 @@ public final class SableStructureAccess {
             if (state == null) return Optional.empty();
             var subLevel = state.container.getSubLevel(reference.id());
             if (!(subLevel instanceof ServerSubLevel loaded) || loaded.isRemoved()) return Optional.empty();
+            if (SableRestorationIsolation.hidden(loaded)) return Optional.empty();
             var handle = state.handle(loaded);
             return handle.isCurrent() ? Optional.of(handle) : Optional.empty();
         }
@@ -215,6 +216,15 @@ public final class SableStructureAccess {
         requireThread(server);
         var hosts = SERVERS.remove(server);
         if (hosts != null) hosts.values().forEach(HostState::invalidate);
+        SableRestorationIsolation.shutdown(server);
+    }
+
+    static void invalidateActivation(ServerLevel host, UUID id) {
+        var hosts = SERVERS.get(host.getServer());
+        var state = hosts == null ? null : hosts.get(host);
+        if (state == null) return;
+        var previous = state.handles.remove(id);
+        if (previous != null) previous.invalidate();
     }
 
     /**

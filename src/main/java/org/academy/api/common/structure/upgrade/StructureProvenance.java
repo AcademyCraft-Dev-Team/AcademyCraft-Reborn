@@ -12,6 +12,7 @@ import java.util.UUID;
 
 /** Persistent creation metadata, committed by the capture/fragment transaction, never by this view. */
 public interface StructureProvenance {
+    Identifier SKILL_REST_POLICY = Identifier.fromNamespaceAndPath("academy", "marked_rest");
     int MAX_POLICY_PARAMETERS = 16;
     int MAX_PARAMETER_NAME_LENGTH = 64;
     double MAX_PARAMETER_MAGNITUDE = 1_000_000.0;
@@ -25,6 +26,24 @@ public interface StructureProvenance {
      * The owning transaction must recheck runtime/content identity and durably commit the image.
      */
     StructureOperation.Result<Preparation> prepare(StructureOperation.Context context, Metadata metadata);
+
+    /** Creation intent only. The capture transaction assigns its own operation id and creation time. */
+    record SkillCreation(UUID ownerId, Identifier skillId, RestorePolicy restorePolicy) {
+        public SkillCreation {
+            Objects.requireNonNull(ownerId, "ownerId");
+            Objects.requireNonNull(skillId, "skillId");
+            Objects.requireNonNull(restorePolicy, "restorePolicy");
+        }
+
+        public static SkillCreation resting(UUID ownerId, Identifier skillId) {
+            return new SkillCreation(ownerId, skillId, new RestorePolicy(SKILL_REST_POLICY, 1, Map.of()));
+        }
+
+        public Metadata capture(UUID operationId, long gameTime) {
+            return new Metadata(CreationKind.SKILL_CAPTURE, operationId, operationId, Optional.empty(),
+                    Optional.of(ownerId), skillId, new GridRotation(0, 0, 0, 1), restorePolicy, gameTime);
+        }
+    }
 
     enum CreationKind {
         SKILL_CAPTURE,

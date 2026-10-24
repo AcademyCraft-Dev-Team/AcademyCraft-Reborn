@@ -57,6 +57,7 @@ public interface StructureGridRestoration {
     enum Cause {
         MARKED_REST,
         EXPLICIT_REQUEST,
+        ADMINISTRATIVE_REQUEST,
         CHUNK_UNLOAD
     }
 

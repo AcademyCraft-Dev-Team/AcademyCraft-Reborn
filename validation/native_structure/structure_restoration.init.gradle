@@ -1,0 +1,23 @@
+// Real resting bodies, provenance and automatic grid restoration in a disposable copied save.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-restoration')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Restoration smoke requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        def mode = providers.gradleProperty('academyStructureRestorationMode').getOrElse('functional')
+        if (!(mode in ['functional', 'joint', 'multiblock', 'canopy', 'admin', 'admin_crash_targets_saved', 'admin_crash_commit_saved', 'prepare', 'verify', 'crash_targets_saved', 'crash_commit_saved', 'recover_verify'])) {
+            throw new GradleException('Unknown restoration smoke mode')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyStructureRestorationRun').getOrElse('clientDev')) {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.structureRestorationSmoke', 'true'
+            systemProperty 'academy.structureRestorationSmokeMode', mode
+            systemProperty 'academy.structureRestorationSmokeDirectory', smokeDirectory.absolutePath
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer',
+                    providers.gradleProperty('academySubLevelSmokeWorld').getOrElse('test'))
+        }
+    }
+}

@@ -1,0 +1,395 @@
+{
+  "format": "academy-local-restore-all-validation-v1",
+  "date": "2026-10-24",
+  "base_commit": "c09cc849afcf3efb7bf6922326c4497e97ebe291",
+  "status": "verified_supported_scope",
+  "commit_created": false,
+  "original_test_and_test2_modified": false,
+  "command": "/academy debug sublevel restore_all [status|cancel]",
+  "scope": "All persisted local SubLevel entries; safe retention reported for unsupported or unavailable entries; no Sable structures in the administrative queue",
+  "jvm_command": "./gradlew.bat test editorTest sableCompatTest nativePhysicsTest -x testNativePhysicsRust -DisDev=true -PacademyNativePhysicsLibrary=build/restoration-bundled-physics/academy_physics.dll -PacademyNativePhysicsManifest=build/restoration-bundled-physics/academy_physics.properties",
+  "jvm_log": "build/restoration-all-tests-final.log",
+  "jvm_tests": [
+    {
+      "task": "test",
+      "tests": 3069.0,
+      "failures": 0.0,
+      "errors": 0.0,
+      "skipped": 0.0
+    },
+    {
+      "task": "editorTest",
+      "tests": 104.0,
+      "failures": 0.0,
+      "errors": 0.0,
+      "skipped": 0.0
+    },
+    {
+      "task": "sableCompatTest",
+      "tests": 32.0,
+      "failures": 0.0,
+      "errors": 0.0,
+      "skipped": 0.0
+    },
+    {
+      "task": "nativePhysicsTest",
+      "tests": 36.0,
+      "failures": 0.0,
+      "errors": 0.0,
+      "skipped": 0.0
+    }
+  ],
+  "jvm_total": 3241.0,
+  "builds": [
+    {
+      "passed": true,
+      "log": "build/restoration-all-build-dev-final.log",
+      "command": "./gradlew.bat build -DisDev=true"
+    },
+    {
+      "passed": true,
+      "log": "build/restoration-all-build-release-final.log",
+      "command": "./gradlew.bat build -DisDev=false"
+    }
+  ],
+  "smoke_command_template": "./gradlew.bat runClientDev -DisDev=true -I validation/native_structure/structure_restoration.init.gradle -PacademyStructureRestorationMode=<mode> -PacademySubLevelSmokeDirectory=<isolated-directory>; Sable: runClientSable -PacademySableRuntime=sable -PacademyStructureRestorationRun=clientSable",
+  "smokes": [
+    {
+      "report": "run/native-sublevel-direct-smoke-functional-native-1024-final/structure-restoration-functional-result.json",
+      "sha256": "dff78d8fcd45f82ae5c161803f9694c049dd92ffbf84081b11c410da4abb2d4d",
+      "environment": "native",
+      "mode": "functional",
+      "cases": [
+        {
+          "marked": false,
+          "still_physical": true,
+          "waited_ticks": 180,
+          "case": "unmarked_retained",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": 2.482644074476313E-08,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "lease_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": 1.4308686912517142E-07,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "occupied_target_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": 36.91858914976668,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "tilted_yaw_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": 1.4308686912517142E-07,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "offline_owner_uuid": "f55147c0-2e91-4aff-aeaa-b418fff87514",
+          "offline_owner_events": 1,
+          "offline_attribution_created_by_trusted_fixture_api": true,
+          "case": "offline_owner_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": -0.0006021858994586236,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "cancelled_protection_events": 1,
+          "retry_after_listener_allowed": true,
+          "case": "protection_cancel_then_retry",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-functional-sable-1024-final/structure-restoration-functional-result.json",
+      "sha256": "ef9ece36dc47eb5463fdb87822761ca26fb7b7fbd4f8882eada604305ecfac34",
+      "environment": "sable",
+      "mode": "functional",
+      "cases": [
+        {
+          "still_physical": true,
+          "waited_ticks": 180,
+          "marked": false,
+          "case": "unmarked_retained",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": -0.0017870722715670343,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "lease_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": -0.0012565693446099317,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "occupied_target_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": 37.088306401741285,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "tilted_yaw_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": -0.0012565693446099317,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "offline_owner_uuid": "7e7fa6ce-6ab1-4485-b8c0-905b183c6a56",
+          "offline_owner_events": 1,
+          "offline_attribution_created_by_trusted_fixture_api": true,
+          "case": "offline_owner_then_rest",
+          "passed": true
+        },
+        {
+          "automatic_scheduler": true,
+          "placement_count": 1,
+          "settled_yaw_degrees": -0.0012565693446099317,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "cancelled_protection_events": 1,
+          "retry_after_listener_allowed": true,
+          "case": "protection_cancel_then_retry",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-canopy-native-1024-final/structure-restoration-canopy-result.json",
+      "sha256": "802b2eb43459de732357dc58ecee27879066a087e2614f494ec4890b62e4395e",
+      "environment": "native",
+      "mode": "canopy",
+      "cases": [
+        {
+          "automatic_scheduler": true,
+          "placement_count": 4,
+          "settled_yaw_degrees": -0.027552307667652397,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "tilted_rod_on_stepped_leaves",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-canopy-sable-1024-final/structure-restoration-canopy-result.json",
+      "sha256": "3cfc9c41493b5c05b4a7d8efb787a77010dbb58d687121251736b42f09713214",
+      "environment": "sable",
+      "mode": "canopy",
+      "cases": [
+        {
+          "automatic_scheduler": true,
+          "placement_count": 4,
+          "settled_yaw_degrees": 0.05049835360970033,
+          "server_body_removed": true,
+          "client_body_and_collision_removed": true,
+          "host_blocks_synced": true,
+          "backend_capacity_released": true,
+          "retention_ticks": 180,
+          "case": "tilted_rod_on_stepped_leaves",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-admin-native-1024-final/structure-restoration-admin-result.json",
+      "sha256": "97267212fc78a42b8169c0cfcc82a74549a555a4fef51d2a60f9a3713fbd2879",
+      "environment": "native",
+      "mode": "admin",
+      "cases": [
+        {
+          "case": "admin_all_hosts_unloaded_unmarked_and_protected",
+          "restored": 4,
+          "foreign_sable_untouched": false,
+          "passed": true,
+          "retained": {
+            "minecraft:overworld/e7bdebed-df5f-4890-b915-4f0fd36fb530": "unsupported_block_entity_or_fluid at -163, 284, 62",
+            "minecraft:overworld/a73c2a4b-c7db-45e1-8f33-dc2e613907d2": "restoration_event_cancelled at -158, 284, 62"
+          }
+        },
+        {
+          "case": "admin_retry_and_idempotence",
+          "restored": 1,
+          "foreign_sable_untouched": false,
+          "passed": true,
+          "retained": {
+            "minecraft:overworld/e7bdebed-df5f-4890-b915-4f0fd36fb530": "unsupported_block_entity_or_fluid at -163, 284, 62"
+          }
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-admin-sable-1024-final/structure-restoration-admin-result.json",
+      "sha256": "819a394a7367c890d935b31a98def9626a2d8f718d9dc223c551c770ef00cd45",
+      "environment": "sable",
+      "mode": "admin",
+      "cases": [
+        {
+          "retained": {
+            "minecraft:overworld/6f48c869-1284-4559-a677-06de76082e33": "unsupported_block_entity_or_fluid at -161, 284, 65",
+            "minecraft:overworld/08c2826c-5d98-489e-8974-c49372a6186d": "restoration_event_cancelled at -156, 284, 65"
+          },
+          "passed": true,
+          "foreign_sable_untouched": true,
+          "restored": 4,
+          "case": "admin_all_hosts_unloaded_unmarked_and_protected"
+        },
+        {
+          "retained": {
+            "minecraft:overworld/6f48c869-1284-4559-a677-06de76082e33": "unsupported_block_entity_or_fluid at -161, 284, 65"
+          },
+          "passed": true,
+          "foreign_sable_untouched": true,
+          "restored": 1,
+          "case": "admin_retry_and_idempotence"
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-admin-fault-targets-1024-a/structure-restoration-recover_verify-result.json",
+      "sha256": "a2eca15113d567690e5b8c00cc858ca08a207c9c64853ef0035bc1515d1336e2",
+      "environment": "native",
+      "mode": "recover_verify",
+      "cases": [
+        {
+          "case": "interrupted_restoration_TARGET_SAVED",
+          "passed": true,
+          "phase_hit": "TARGET_SAVED",
+          "source_copies": 1,
+          "target_copies": 0,
+          "pre_tick_visibility_observations": 41,
+          "quarantined_raw_source_observations": 0,
+          "sable_post_tick_detachment_observations": 0,
+          "new_automatic_attempts_blocked": 0,
+          "verified_stable_ticks": 40,
+          "receipt": "Result[status=DENIED, detail=restoration_receipt_unavailable, operationId=Optional.empty, value=Optional.empty]",
+          "ordinary_shutdown_used": false
+        }
+      ]
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-admin-fault-commit-1024-a/structure-restoration-recover_verify-result.json",
+      "sha256": "85a6fde72dceb882d572eb6d2c7cc92e5a342cd2ae0d3be7fcaf458c600446d4",
+      "environment": "sable_after_native_capture",
+      "mode": "recover_verify",
+      "cases": [
+        {
+          "case": "interrupted_restoration_COMMIT_SAVED",
+          "passed": true,
+          "phase_hit": "COMMIT_SAVED",
+          "source_copies": 0,
+          "target_copies": 1,
+          "pre_tick_visibility_observations": 41,
+          "quarantined_raw_source_observations": 1,
+          "sable_post_tick_detachment_observations": 0,
+          "new_automatic_attempts_blocked": 0,
+          "verified_stable_ticks": 40,
+          "receipt": "Result[status=COMPLETED, detail=restored, operationId=Optional[690879c4-a9bb-4be9-aad8-7e669118adcd], value=Optional[Progress[operationId=690879c4-a9bb-4be9-aad8-7e669118adcd, reference=StructureRef[id=f8098fdc-ee9b-478c-93a3-7863b2cda799, dimension=minecraft:overworld, backend=academy:sublevel, generation=1], phase=RESTORED, totalCells=1, completedCells=1]]]",
+          "ordinary_shutdown_used": false
+        }
+      ]
+    }
+  ],
+  "smoke_cases": 20.0,
+  "fault_injections": [
+    {
+      "evidence": "run/native-sublevel-direct-smoke-admin-fault-targets-1024-a/structure-restoration-crash.json",
+      "phase": "TARGET_SAVED",
+      "expected_exit_code": 81,
+      "marked": false
+    },
+    {
+      "evidence": "run/native-sublevel-direct-smoke-admin-fault-commit-1024-a/structure-restoration-crash.json",
+      "phase": "COMMIT_SAVED",
+      "expected_exit_code": 82,
+      "marked": false
+    }
+  ],
+  "release": {
+    "bundled_dll_sha256": "f68c901911b18be6f92a9ea9e44b1e09cea8d34dd75ff08af50f035f6dcf4a06",
+    "path": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\build\\libs\\academy-26.2.0-0.0.4-alpha-release.jar",
+    "test_interruption_code_excluded": true,
+    "sha256": "6e60c650d1c4742fa6482653016de003f6a456f22603e068b79941fefb5f09a7",
+    "bytes": 23692256,
+    "admin_class_present": true
+  },
+  "unrelated_rust": {
+    "unchanged": true,
+    "bundled_native_ffm_tests": 36,
+    "baseline_failed": 5,
+    "baseline_ignored": 1,
+    "baseline_log": "build/extraction-final-rust-baseline.log",
+    "rerun": false,
+    "sha256": "0b172501a5da088a1cda8ad13a41c88005d64b8d62d5347103db566f84ac3c70",
+    "baseline_passed": 23
+  },
+  "unverified": [
+    "Production dedicated-server deployment and real protection plugins; public cancellation event tested in integrated servers",
+    "Container/fluid/internal-entity restoration and over-budget bodies are intentionally retained, not implemented",
+    "Unavailable dimension/corrupt manifest recovery and mass thousands-of-structures performance benchmark not newly exercised",
+    "No manual multiplayer walking test; server/client collision removal verified by game fixtures"
+  ]
+}

@@ -796,7 +796,8 @@ public final class VectorStructureService {
         var level = player.level();
         var budget = cellBudget(level);
         var request = new StructureCaptureRequest(
-                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+                plan.positions(), budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true)
+                .withSkillCreation(player.getUUID(), AcademyCraft.academy("kinetic_throw"));
         var result = StructureCaptureExtractions.enabled()
                 ? StructureCaptureExtractions.capture(level, player, request, KineticThrow.liftHeight(plan.tier()),
                         program ? StructureCaptureExtractions.NODE_HANDOFF_TICKS : KineticThrow.HOVER_TICKS)

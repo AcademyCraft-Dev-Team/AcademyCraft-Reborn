@@ -59,6 +59,23 @@ public final class SubLevelInteractionController implements StructureInteraction
     private final Map<MinecraftServer, ServerSessions> servers = new WeakHashMap<>();
     private long generatedRequestId;
 
+    /** Existing finite mining/menu activity defers automatic staticization of this exact structure. */
+    public boolean restorationBusy(ServerLevel host, StructureRef reference) {
+        var state = servers.get(host.getServer());
+        if (state == null) return false;
+        for (var session : state.active.values()) {
+            if (!session.finished && session.host == host && session.reference.equals(reference)
+                    && host.getServer().getTickCount() - session.lastHoldTick <= LEASE_TICKS) return true;
+        }
+        for (var entry : state.menus.entrySet()) {
+            var actor = entry.getKey();
+            var menu = entry.getValue();
+            if (actor.level() == host && actor.containerMenu == menu.menu()
+                    && menu.id().value().equals(reference.id())) return true;
+        }
+        return false;
+    }
+
     /** Server-assigned id for legacy one-shot requests that carry no monotonic request number. */
     public synchronized long nextRequestId() {
         return generatedRequestId = Math.max(generatedRequestId + 1, 1);

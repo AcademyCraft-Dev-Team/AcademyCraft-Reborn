@@ -169,6 +169,7 @@ final class SubLevelDirectSkillSmoke {
             reference = diagnostic.reference();
             id = SubLevelStructureRefs.id(reference).orElseThrow();
             require(nozzle.isAttachedTo(reference), "jet nozzle failed to follow captured structure");
+            StructureProvenanceSmokeAssertions.requireSkill(player, reference, AcademyCraft.academy("high_speed_jet"));
             start = runtime.get(id).orElseThrow().worldCenter();
             requireExtractionHandoff(player, reference, jetExtractionControl, start.y - (jetSource.getY() + 0.5),
                     diagnostic.controlActive() && nozzle.activeTicks() > 0, "jet");
@@ -233,6 +234,7 @@ final class SubLevelDirectSkillSmoke {
             require(ticks <= 200, "kinetic transaction did not complete");
             if (diagnostic.stage() == VectorStructureService.Stage.CAPTURING) return;
             reference = diagnostic.reference();
+            StructureProvenanceSmokeAssertions.requireSkill(player, reference, AcademyCraft.academy("kinetic_throw"));
             id = SubLevelStructureRefs.id(reference).orElseThrow();
             start = runtime.get(id).orElseThrow().worldCenter();
             ticks = 0;
@@ -314,6 +316,7 @@ final class SubLevelDirectSkillSmoke {
                 return;
             }
             if (magneticTicks == 0) {
+                StructureProvenanceSmokeAssertions.requireSkill(player, reference, AcademyCraft.academy("magnet_manipulation"));
                 requireExtractionHandoff(player, reference, magneticExtractionControl,
                         runtime.get(id).orElseThrow().worldCenter().y - start.y,
                         magnetic.controlActive(), "magnetic");

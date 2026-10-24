@@ -52,6 +52,8 @@ public abstract class MixinSableSubLevelContainerTick {
     private static void academy$runGuarded(List<?> values, Consumer<?> action) {
         var consumer = (Consumer<Object>) action;
         for (var value : values) {
+            if (value instanceof dev.ryanhcode.sable.sublevel.SubLevel source
+                    && org.academy.internal.common.structure.sable.SableRestorationIsolation.hidden(source)) continue;
             SableContainerGuard.enterContainerTick();
             try {
                 consumer.accept(value);

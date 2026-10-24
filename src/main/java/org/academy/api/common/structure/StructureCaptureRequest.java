@@ -2,11 +2,15 @@ package org.academy.api.common.structure;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.resources.Identifier;
+import org.academy.api.common.structure.upgrade.StructureProvenance;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.BiPredicate;
 
 /**
@@ -20,7 +24,8 @@ public record StructureCaptureRequest(
         int maximumBlocks,
         int maximumSpan,
         BiPredicate<ServerLevel, BlockPos> permission,
-        boolean physical
+        boolean physical,
+        Optional<StructureProvenance.SkillCreation> skillCreation
 ) {
     public static final int MAXIMUM_BLOCKS = 256;
     public static final int MAXIMUM_SPAN = 24;
@@ -32,9 +37,25 @@ public record StructureCaptureRequest(
         this(positions, maximumBlocks, maximumSpan, permission, false);
     }
 
+    /** Existing callers remain unmarked, including legacy saves and generic/admin captures. */
+    public StructureCaptureRequest(List<BlockPos> positions, int maximumBlocks, int maximumSpan,
+                                   BiPredicate<ServerLevel, BlockPos> permission, boolean physical) {
+        this(positions, maximumBlocks, maximumSpan, permission, physical, Optional.empty());
+    }
+
+    /** Must be applied before preview: source intent is committed with this exact capture request. */
+    public StructureCaptureRequest withSkillCreation(UUID ownerId, Identifier skillId) {
+        return new StructureCaptureRequest(positions, maximumBlocks, maximumSpan, permission, physical,
+                Optional.of(StructureProvenance.SkillCreation.resting(ownerId, skillId)));
+    }
+
     public StructureCaptureRequest {
         Objects.requireNonNull(positions, "positions");
         Objects.requireNonNull(permission, "permission");
+        Objects.requireNonNull(skillCreation, "skillCreation");
+        if (!physical && skillCreation.isPresent()) {
+            throw new IllegalArgumentException("Skill restoration metadata requires a physical capture");
+        }
         if (maximumBlocks < 1 || maximumBlocks > MAXIMUM_BLOCKS) {
             throw new IllegalArgumentException("maximumBlocks must be between 1 and " + MAXIMUM_BLOCKS);
         }

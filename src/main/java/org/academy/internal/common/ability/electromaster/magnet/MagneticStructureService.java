@@ -128,7 +128,8 @@ public final class MagneticStructureService {
             return Optional.empty();
         }
         var request = new StructureCaptureRequest(
-                cropped, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+                cropped, budget, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true)
+                .withSkillCreation(player.getUUID(), AcademyCraft.academy("magnet_manipulation"));
         var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled()
                 ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, request, 1.0,
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)
@@ -402,7 +403,8 @@ public final class MagneticStructureService {
         if (selection.isEmpty()) return ProgramResult.rejected("selection_empty");
         var magneticCells = countMagnetic(level, selection);
         var request = new StructureCaptureRequest(
-                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true);
+                selection, limit, StructureCaptureRequest.MAXIMUM_SPAN, capturePermission(player), true)
+                .withSkillCreation(player.getUUID(), AcademyCraft.academy("magnet_manipulation"));
         var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled()
                 ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.capture(level, player, request, 1.0,
                         org.academy.api.common.structure.upgrade.StructureCaptureExtractions.NODE_HANDOFF_TICKS)

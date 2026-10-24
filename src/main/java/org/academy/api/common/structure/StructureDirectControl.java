@@ -81,6 +81,7 @@ public final class StructureDirectControl {
             var standing = LEASES.get(reference);
             var status = decideAcquire(probe, standing, actor.getUUID(), controlId);
             if (status == Status.ACTIVE) {
+                org.academy.internal.common.structure.upgrade.lifecycle.SkillStructureRestoration.activity(host.getServer(), reference);
                 if (standing != null && !standing.controlId().equals(controlId)) cancel(reference, standing.controlId());
                 LEASES.put(reference, new Lease(actor.getUUID(), controlId, probe.runtimeId()));
                 ACTORS.put(reference, actor);

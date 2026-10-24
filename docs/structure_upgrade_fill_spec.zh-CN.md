@@ -2,6 +2,10 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
+2026-10-24 管理维护补充：新增 `/academy debug sublevel restore_all`（含 status/cancel），扫描本地各维度存档条目；树冠/台阶倾斜支撑与归块对齐让位修复见[批量归块说明](structure_restore_all_2026_10_24.zh-CN.md)。管理员归块不补技能来源，且不处理 Sable 结构。
+
+2026-10-24 生命周期更新：技能创建标记与静止归块已接入 LIVE；本地与 Sable 共用策略、保护事件和持久事务，离线所有者也可归块。只处理 ACR 明确标记的创建，不处理航空学等外部模组结构。当前范围与验收以[技能结构标记与静止归块](structure_marked_restoration_2026_10_24.zh-CN.md)为准；下文“未注册自动归块”及 UPG-LIFE 全占位是此前阶段记录，不再描述 LIVE 服务，DRAFT 占位仍保留。
+
 最新预演/绑定实现与实机证据见[捕获预演活路径修复与验证](structure_upgrade_line_b_capture_validation_2026_10_23.zh-CN.md)。角控制状态不变；H 连续场景卡位仍未关闭。
 
 **状态：B 线本地/Sable 真实角控制及三系 rotate/reset_orientation/spin 已接线，ORIENTATION_ENABLED=true（EXPERIMENTAL）；捕获前预演与来源绑定（UPG-CTRL-10/11）已实现，但未接入玩法且能力关闭；其余 DRAFT_GAMEPLAY_ENABLED=false。** `StructureOrientations.service()` 与 `StructureUpgradeBootstrap.LIVE.orientation()` 使用实际子步服务；`LIVE.extraction()` 使用 `LiveStructureExtraction` 的预演/绑定，DRAFT 中的禁用占位实现继续返回 UNSUPPORTED。当前证据、限制和剩余验收见 [B 线接线记录](structure_upgrade_line_b_live_2026_10_23.zh-CN.md) 与 [捕获前规划与来源绑定](structure_upgrade_line_b_capture_preview_2026_10_23.zh-CN.md)，此前独立算法阶段见 [B 线第一阶段](structure_upgrade_line_b_2026_10_23.zh-CN.md)。
