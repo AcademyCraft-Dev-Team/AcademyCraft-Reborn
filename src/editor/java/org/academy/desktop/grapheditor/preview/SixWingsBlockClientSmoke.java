@@ -5,12 +5,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderFrameEvent;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
@@ -19,6 +21,7 @@ import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.client.render.vfx.DarkmatterSixWingsVfxClient;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
+import org.joml.Vector3f;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +37,11 @@ public final class SixWingsBlockClientSmoke {
     private static int total, warmup, ticks;
     private static ActiveEffect wings;
     private static int blockedCount;
+    private static final int[] rotationFrames = new int[3];
+    private static final double[] rotationError = new double[3];
+    private static final StringBuilder rotationSamples = new StringBuilder("stage,tick,partial_tick,angular_error_degrees\n");
+    private static float expectedYaw, expectedPitch;
+    private static boolean rotationSample;
 
     @SubscribeEvent public static void tick(ClientTickEvent.Post event) {
         if (!Boolean.getBoolean("academy.sixWingsBlockSmoke") || finished) return;
@@ -125,11 +133,26 @@ public final class SixWingsBlockClientSmoke {
             require(!mc.player.onGround() && mc.player.getAbilities().flying, "Flight view uses an airborne player");
             capture("flight_front");
         }
-        if (ticks == 155) server(p -> {
+        if (ticks == 215) {
+            boolean passed = true;
+            for (int stage = 0; stage < 3; stage++) {
+                passed &= rotationFrames[stage] >= 10 && rotationError[stage] < .05;
+                System.out.println("[six-wings-block-smoke] Rotation stage=" + stage
+                        + " frames=" + rotationFrames[stage] + " maximum error=" + rotationError[stage]);
+            }
+            try {
+                Files.createDirectories(output());
+                Files.writeString(output().resolve("rotation_samples.csv"), rotationSamples);
+                Files.writeString(output().resolve("rotation_result.txt"), passed ? "PASSED\n" : "FAILED\n");
+            } catch (Exception e) { throw new RuntimeException(e); }
+            if (!Boolean.getBoolean("academy.sixWingsRotationBaseline"))
+                require(passed, "Yaw, wrapped yaw and gliding pitch follow the interpolated render pose");
+        }
+        if (ticks == 220) server(p -> {
             p.getAbilities().flying = false; p.onUpdateAbilities();
             require(DarkmatterSixWings.Server.debugSetActive(p, false), "Server gamma state stopped");
         });
-        if (ticks == 175) {
+        if (ticks == 240) {
             require(DarkmatterSixWingsVfxClient.activeCount() == 0, "Stopped wings release their sampler and graph");
             try {
                 Files.createDirectories(output());
@@ -138,6 +161,52 @@ public final class SixWingsBlockClientSmoke {
             } catch (Exception e) { throw new RuntimeException(e); }
             finished = true; System.out.println("[six-wings-block-smoke] PASSED"); mc.stop();
         }
+    }
+
+    /** Drive known tick poses through the real render loop, including both sides of the yaw seam. */
+    @SubscribeEvent public static void beforeFrame(RenderFrameEvent.Pre event) {
+        rotationSample = false;
+        if (!Boolean.getBoolean("academy.sixWingsBlockSmoke") || ticks < 155 || ticks >= 215) return;
+        var mc = Minecraft.getInstance();
+        var actor = mc.player;
+        if (actor == null || wings == null) return;
+        int stage = (ticks - 155) / 20;
+        int step = (ticks - 155) % 20;
+        float direction = stage == 1 ? -1 : 1;
+        float yaw = direction * (130 + step * 12);
+        actor.yBodyRotO = Mth.wrapDegrees(yaw);
+        actor.yBodyRot = Mth.wrapDegrees(yaw + direction * 12);
+        actor.yRotO = actor.yHeadRotO = actor.yBodyRotO;
+        actor.setYRot(actor.yBodyRot);
+        actor.yHeadRot = actor.yBodyRot;
+        actor.xRotO = stage == 2 ? -45 + step * 4 : 0;
+        actor.setXRot(stage == 2 ? actor.xRotO + 4 : 0);
+        if (stage == 2) actor.startFallFlying();
+        float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        expectedYaw = yaw + direction * 12 * partialTick;
+        expectedPitch = stage == 2 ? actor.xRotO + 4 * partialTick : 0;
+        rotationSample = partialTick > .05f && partialTick < .95f;
+    }
+
+    @SubscribeEvent public static void afterFrame(RenderFrameEvent.Post event) {
+        if (!rotationSample) return;
+        rotationSample = false;
+        int stage = (ticks - 155) / 20;
+        // Compare transformed axes to an analytic continuous turn, independent of angle wrapping.
+        double yaw = Math.toRadians(expectedYaw), pitch = Math.toRadians(expectedPitch);
+        var expectedForward = new Vector3f((float) (-Math.sin(yaw) * Math.cos(pitch)),
+                (float) Math.sin(pitch), (float) (Math.cos(yaw) * Math.cos(pitch)));
+        var expectedRight = new Vector3f((float) Math.cos(yaw), 0, (float) Math.sin(yaw));
+        var forward = wings.rotation().transform(new Vector3f(0, 0, 1));
+        var right = wings.rotation().transform(new Vector3f(1, 0, 0));
+        double error = Math.toDegrees(2 * Math.asin(Math.min(1,
+                Math.max(forward.distance(expectedForward), right.distance(expectedRight)) * .5)));
+        rotationFrames[stage]++;
+        rotationError[stage] = Math.max(rotationError[stage], error);
+        rotationSamples.append(stage).append(',').append(ticks).append(',')
+                .append(Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false))
+                .append(',').append(error).append('\n');
+        if (rotationFrames[stage] == 20) capture("rotation_stage_" + stage);
     }
 
     private static int clipped() {

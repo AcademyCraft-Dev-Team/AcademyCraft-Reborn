@@ -1,6 +1,7 @@
 package org.academy.internal.client.render.vfx;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -82,8 +83,10 @@ public final class DarkmatterSixWingsVfxClient {
                 if (actor.level() != Minecraft.getInstance().level || actor.isRemoved() || !actor.isAlive()) return false;
                 var point = actor.getPosition(partialTick);
                 position.set((float) point.x, (float) point.y, (float) point.z);
-                rotation.rotationY((float) Math.toRadians(-actor.yBodyRot));
-                if (actor.isFallFlying()) rotation.rotateX((float) Math.toRadians(-actor.getXRot()));
+                // Match the body's render pose; raw tick angles make the wings step at 20 Hz.
+                float yaw = Mth.rotLerp(partialTick, actor.yBodyRotO, actor.yBodyRot);
+                rotation.rotationY(-yaw * Mth.DEG_TO_RAD);
+                if (actor.isFallFlying()) rotation.rotateX(-actor.getXRot(partialTick) * Mth.DEG_TO_RAD);
                 transform.translation(position).rotate(rotation);
                 return true;
             });
