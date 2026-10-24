@@ -4,7 +4,7 @@
   "neoforge": "26.2.0.70",
   "java": 25,
   "notes": [
-    "These local fork artifacts are external compile/test inputs, never Academy JarJar contents.",
+    "These private local fork artifacts are only opt-in runtime validation inputs, never compile/test requirements or Academy JarJar contents.",
     "Sable contains Companion common, Veil and Rapier. Runtime groups add only the top-level finished JARs.",
     "The Suite bundle is a fork build output, not a published Maven coordinate.",
     "Use academySableMaven or academySableFork for a provisioned fixed local repository; no automatic download or source substitution."
@@ -51,7 +51,7 @@
       "bytes": 33208554
     }
   },
-  "compileOnly": ["sable", "companion"],
+  "runtimeApiReferences": ["sable", "companion"],
   "runtimeGroups": {
     "sable": ["sable"],
     "suite": ["sable", "create", "suite"]

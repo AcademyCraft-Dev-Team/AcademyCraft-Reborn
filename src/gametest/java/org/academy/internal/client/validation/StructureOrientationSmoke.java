@@ -519,7 +519,7 @@ public final class StructureOrientationSmoke {
     /** Keep optional backend linkage out of the no-Sable fixture's class initialization. */
     private static final class SableGravity {
         private static Vec3 current() {
-            var gravity = dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData.getGravity(player.level());
+            var gravity = org.academy.internal.common.structure.sable.reflect.api.physics.config.dimension_physics.DimensionPhysicsData.getGravity(player.level());
             return new Vec3(gravity.x, gravity.y, gravity.z);
         }
     }

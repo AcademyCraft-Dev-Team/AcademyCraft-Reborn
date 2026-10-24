@@ -1,6 +1,6 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.companion.math.Pose3dc;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.Pose3dc;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;

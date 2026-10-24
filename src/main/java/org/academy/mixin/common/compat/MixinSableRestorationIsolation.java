@@ -1,10 +1,13 @@
 package org.academy.mixin.common.compat;
 
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.companion.math.BoundingBox3dc;
-import dev.ryanhcode.sable.sublevel.SubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.BoundingBox3dc;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel;
 import org.academy.internal.common.structure.sable.SableRestorationIsolation;
 import org.spongepowered.asm.mixin.Final;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.spongepowered.asm.mixin.injection.Coerce;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,35 +19,37 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 
 /** Pinned Sable compatibility: journal-owned sources remain private until rollback/retirement. */
-@Mixin(value = SubLevelContainer.class, remap = false)
+@Pseudo
+@Mixin(targets = "dev.ryanhcode.sable.api.sublevel.SubLevelContainer", remap = false)
 public abstract class MixinSableRestorationIsolation {
-    @Shadow @Final private List<SubLevel> allSubLevels;
+    @Shadow @Final private List<Object> allSubLevels;
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void academy$isolateBeforePublication(CallbackInfo callback) {
-        SableRestorationIsolation.beforeTick((SubLevelContainer) (Object) this, allSubLevels);
+        SableRestorationIsolation.beforeTick(SableReflection.wrap(SubLevelContainer.class, this),
+                SableReflection.list(SubLevel.class, allSubLevels));
     }
 
     @Inject(method = "getFirstEmptyPlot", at = @At("HEAD"))
     private void academy$reserveRecoveryPlots(CallbackInfoReturnable<org.joml.Vector2i> callback) {
-        SableRestorationIsolation.reservePendingPlots((SubLevelContainer) (Object) this);
+        SableRestorationIsolation.reservePendingPlots(SableReflection.wrap(SubLevelContainer.class, this));
     }
 
     @Inject(method = "getAllSubLevels", at = @At("RETURN"), cancellable = true)
-    private void academy$hideRecoverySources(CallbackInfoReturnable<List<? extends SubLevel>> callback) {
-        callback.setReturnValue(SableRestorationIsolation.visible(allSubLevels));
+    private void academy$hideRecoverySources(CallbackInfoReturnable<List<Object>> callback) {
+        callback.setReturnValue(SableRestorationIsolation.visibleRaw(allSubLevels));
     }
 
     @Redirect(method = "processSubLevelRemovals", at = @At(value = "FIELD",
             target = "Ldev/ryanhcode/sable/api/sublevel/SubLevelContainer;allSubLevels:Ljava/util/List;"))
-    private List<SubLevel> academy$keepPrivateSources(SubLevelContainer container) {
-        return SableRestorationIsolation.visible(allSubLevels);
+    private List<Object> academy$keepPrivateSources(@Coerce Object container) {
+        return SableRestorationIsolation.visibleRaw(allSubLevels);
     }
 
     @Inject(method = "queryIntersecting", at = @At("HEAD"), cancellable = true)
-    private void academy$excludePrivateCollision(BoundingBox3dc bounds, CallbackInfoReturnable<Iterable<SubLevel>> callback) {
-        var visible = SableRestorationIsolation.visible(allSubLevels);
+    private void academy$excludePrivateCollision(@Coerce Object bounds, CallbackInfoReturnable<Iterable<Object>> callback) {
+        var visible = SableRestorationIsolation.visibleRaw(allSubLevels);
         if (visible != allSubLevels) callback.setReturnValue(() -> visible.stream()
-                .filter(source -> source.boundingBox().intersects(bounds)).iterator());
+                .filter(source -> SableReflection.wrap(SubLevel.class, source).boundingBox().intersects(SableReflection.wrap(BoundingBox3dc.class, bounds))).iterator());
     }
 }

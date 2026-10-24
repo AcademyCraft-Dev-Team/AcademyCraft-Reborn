@@ -1,6 +1,6 @@
 package org.academy.internal.common.structure.sable.validation;
 
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.world.level.block.Blocks;

@@ -1,14 +1,15 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.block.BlockSubLevelCollisionShape;
-import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
-import dev.ryanhcode.sable.api.physics.collider.SableCollisionContext;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.companion.math.BoundingBox3i;
-import dev.ryanhcode.sable.companion.math.Pose3d;
-import dev.ryanhcode.sable.physics.chunk.VoxelNeighborhoodState;
-import dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData;
-import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.academy.internal.common.structure.sable.reflect.api.api.block.BlockSubLevelCollisionShape;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.PhysicsPipelineBody;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.collider.SableCollisionContext;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.BoundingBox3i;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.Pose3d;
+import org.academy.internal.common.structure.sable.reflect.api.physics.chunk.VoxelNeighborhoodState;
+import org.academy.internal.common.structure.sable.reflect.api.physics.config.dimension_physics.DimensionPhysicsData;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.system.SubLevelPhysicsSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -271,14 +272,14 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
         var pivot = new Vec3(0.5, 0.5, 0.5);
         for (var contraption : handle.subLevel().getPlot().getContraptions()) {
             if (!contraption.sable$isValid() || !contraption.sable$shouldCollide()) continue;
-            var bounds = new BoundingBox3i(0, 0, 0, 0, 0, 0);
+            var bounds = BoundingBox3i.create(0, 0, 0, 0, 0, 0);
             contraption.sable$getLocalBounds(bounds);
             var local = new AABB(bounds.minX(), bounds.minY(), bounds.minZ(),
                     bounds.maxX() + 1.0, bounds.maxY() + 1.0, bounds.maxZ() + 1.0);
             // The pinned Create adapter rotates about cell center and linearly interpolates its anchor.
             // Transforming that pivot removes rotation, so both ends plus a full radius cover the arc.
-            var from = contraption.sable$getLocalPose(new Pose3d(), partialTick - 1.0).transformPosition(pivot);
-            var to = contraption.sable$getLocalPose(new Pose3d(), partialTick + 1.0).transformPosition(pivot);
+            var from = contraption.sable$getLocalPose(Pose3d.create(), partialTick - 1.0).transformPosition(pivot);
+            var to = contraption.sable$getLocalPose(Pose3d.create(), partialTick + 1.0).transformPosition(pivot);
             result = result.minmax(pivotMotionBounds(local, pivot, from, to));
         }
         return result;
@@ -301,7 +302,8 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
         // Sable fluid colliders supply buoyancy; they are not solid rotational obstructions.
         if (VoxelNeighborhoodState.isLiquid(state)) return List.of();
         var getter = new ColliderView(state, host.getMinY(), host.getHeight());
-        var shape = state.getBlock() instanceof BlockSubLevelCollisionShape custom
+        var custom = SableReflection.optional(BlockSubLevelCollisionShape.class, state.getBlock());
+        var shape = custom != null
                 ? custom.getSubLevelCollisionShape(getter, state)
                 : state.getCollisionShape(getter, BlockPos.ZERO, SableCollisionContext.get());
         return clipToCell(shape.toAabbs());
@@ -348,7 +350,7 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
     }
 
     private static boolean readable(@Nullable SubLevelPhysicsSystem system, SableStructureHandle handle) {
-        return system != null && RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())
+        return system != null && RAPIER_PIPELINE.equals(SableReflection.runtimeName(system.getPipeline()))
                 && handle.subLevel().getRuntimeId() != PhysicsPipelineBody.NULL_RUNTIME_ID;
     }
 

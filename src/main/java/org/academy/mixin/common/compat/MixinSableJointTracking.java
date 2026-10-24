@@ -1,12 +1,13 @@
 package org.academy.mixin.common.compat;
 
-import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
-import dev.ryanhcode.sable.api.physics.constraint.PhysicsConstraintConfiguration;
-import dev.ryanhcode.sable.api.physics.constraint.PhysicsConstraintHandle;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.constraint.PhysicsConstraintHandle;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
 import org.academy.internal.common.structure.sable.SableJointIndex;
 import org.academy.internal.common.structure.sable.SableStructureJoints;
 import org.joml.Vector3dc;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.spongepowered.asm.mixin.injection.Coerce;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,9 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Observe constraint handles from the pinned pipeline; do not change any constraint operation. */
+@Pseudo
 @Mixin(targets = "dev.ryanhcode.sable.physics.impl.rapier.RapierPhysicsPipeline", remap = false)
 public abstract class MixinSableJointTracking implements SableStructureJoints.TrackedPipeline {
-    @Unique private final SableJointIndex<ServerSubLevel, PhysicsConstraintHandle> academy$joints =
+    @Unique private final SableJointIndex<Object, PhysicsConstraintHandle> academy$joints =
             new SableJointIndex<>(PhysicsConstraintHandle::isValid);
     @Unique private boolean academy$jointSceneReady;
 
@@ -28,16 +30,16 @@ public abstract class MixinSableJointTracking implements SableStructureJoints.Tr
     }
 
     @Inject(method = "addConstraint", at = @At("RETURN"))
-    private void academy$recordJoint(PhysicsPipelineBody first, PhysicsPipelineBody second,
-                                     PhysicsConstraintConfiguration<?> configuration,
-                                     CallbackInfoReturnable<PhysicsConstraintHandle> callback) {
-        var handle = callback.getReturnValue();
-        if (first instanceof ServerSubLevel source) academy$joints.record(source, handle);
-        if (second instanceof ServerSubLevel source) academy$joints.record(source, handle);
+    private void academy$recordJoint(@Coerce Object first, @Coerce Object second,
+                                     @Coerce Object configuration,
+                                     CallbackInfoReturnable<Object> callback) {
+        var handle = SableReflection.wrap(PhysicsConstraintHandle.class, callback.getReturnValue());
+        if (SableReflection.optional(ServerSubLevel.class, first) != null) academy$joints.record(first, handle);
+        if (SableReflection.optional(ServerSubLevel.class, second) != null) academy$joints.record(second, handle);
     }
 
     @Inject(method = "remove(Ldev/ryanhcode/sable/sublevel/ServerSubLevel;)V", at = @At("RETURN"))
-    private void academy$forgetRemovedBody(ServerSubLevel source, CallbackInfo callback) {
+    private void academy$forgetRemovedBody(@Coerce Object source, CallbackInfo callback) {
         academy$joints.remove(source);
     }
 
@@ -48,7 +50,7 @@ public abstract class MixinSableJointTracking implements SableStructureJoints.Tr
     }
 
     @Override
-    public boolean academy$hasJoint(ServerSubLevel source) {
+    public boolean academy$hasJoint(Object source) {
         return !academy$jointSceneReady || academy$joints.hasAny(source);
     }
 }

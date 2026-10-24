@@ -3,7 +3,7 @@ package org.academy.internal.common.structure.sable;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
-import dev.ryanhcode.sable.neoforge.event.ForgeSablePrePhysicsTickEvent;
+import org.academy.internal.common.structure.sable.reflect.api.neoforge.event.ForgeSablePrePhysicsTickEvent;
 import org.academy.api.common.structure.StructurePhysicsControl;
 import org.academy.api.common.structure.StructureMotionState;
 import org.academy.api.common.structure.StructureDynamics;

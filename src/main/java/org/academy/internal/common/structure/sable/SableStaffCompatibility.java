@@ -1,7 +1,8 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.internal.common.compat.PhysicsStaffHandlerAccess;
@@ -31,7 +32,7 @@ public final class SableStaffCompatibility {
         var hosts = HANDLERS.get(host.getServer());
         var handler = hosts == null ? null : hosts.get(host);
         if (handler == null) return Status.UNAVAILABLE;
-        return switch (handler.academy$staffOccupancy(ship, ship.getUniqueId())) {
+        return switch (handler.academy$staffOccupancy(SableReflection.unwrap(ship), ship.getUniqueId())) {
             case FREE -> Status.FREE;
             case OCCUPIED -> Status.OCCUPIED;
             case UNAVAILABLE -> Status.UNAVAILABLE;

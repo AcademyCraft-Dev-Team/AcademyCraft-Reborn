@@ -146,7 +146,7 @@ public final class StructurePayloadSmoke {
     }
     private static final class SableFixture {
         static BlockEntity entity(BlockPos local) {
-            var body = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level()).getSubLevel(reference.id());
+            var body = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level()).getSubLevel(reference.id());
             return player.level().getBlockEntity(body.getPlot().getCenterBlock().offset(local));
         }
     }

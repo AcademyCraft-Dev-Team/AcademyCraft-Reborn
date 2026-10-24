@@ -1,15 +1,15 @@
 package org.academy.internal.common.structure.sable.validation;
 
 import com.mojang.authlib.GameProfile;
-import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
-import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.companion.math.BoundingBox3i;
-import dev.ryanhcode.sable.companion.math.Pose3d;
-import dev.ryanhcode.sable.neoforge.event.ForgeSablePrePhysicsTickEvent;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import org.academy.internal.common.structure.sable.reflect.api.api.SubLevelAssemblyHelper;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.ServerSubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.BoundingBox3i;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.Pose3d;
+import org.academy.internal.common.structure.sable.reflect.api.neoforge.event.ForgeSablePrePhysicsTickEvent;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.SubLevelRemovalReason;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.Connection;
@@ -151,6 +151,10 @@ public final class SableStructureSmoke {
         if (initialized) return;
         require(Boolean.getBoolean("academy.sable.smoke"), "Sable smoke requires explicit opt-in");
         NeoForge.EVENT_BUS.register(SableStructureSmoke.class);
+        org.academy.internal.common.structure.sable.reflect.SableReflection.listen(
+                ForgeSablePrePhysicsTickEvent.class, EventPriority.HIGHEST, SableStructureSmoke::beforeControl);
+        org.academy.internal.common.structure.sable.reflect.SableReflection.listen(
+                ForgeSablePrePhysicsTickEvent.class, EventPriority.LOWEST, SableStructureSmoke::afterControl);
         if ("client".equals(System.getProperty("academy.sable.smoke.side"))) {
             // No client linkage is resolved by the dedicated server or ordinary optional bridge.
             try { Class.forName("org.academy.internal.common.structure.sable.validation.SableStructureClientSmoke")
@@ -311,9 +315,9 @@ public final class SableStructureSmoke {
         } finally { host.setBlockAndUpdate(obstruction, Blocks.AIR.defaultBlockState()); }
         var uuid = compound.getUniqueId();
         var origin = container.getOrigin();
-        int plotX = compound.getPlot().plotPos.x() - origin.x();
-        int plotZ = compound.getPlot().plotPos.z() - origin.y();
-        var pose = new Pose3d(compound.logicalPose());
+        int plotX = compound.getPlot().plotPos().x() - origin.x();
+        int plotZ = compound.getPlot().plotPos().z() - origin.y();
+        var pose = Pose3d.create(compound.logicalPose());
         container.removeSubLevel(compound, SubLevelRemovalReason.UNLOADED);
         require(old.lifecycle() == StructureLifecycle.UNLOADED && StructureSpaces.resolve(server, old.reference()).isEmpty(),
                 "Unloaded activation is still current");
@@ -450,7 +454,7 @@ public final class SableStructureSmoke {
 
     private void verifyCaptureGrid(ServerSubLevel ship, BlockPos origin, List<BlockPos> offsets) {
         var logical = ship.logicalPose();
-        var solver = new Pose3d(logical);
+        var solver = Pose3d.create(logical);
         container.physicsSystem().getPipeline().readPose(ship, solver);
         require(solver.position().distanceSquared(logical.position()) < 1.0E-8,
                 "Sable capture logical pose diverged from its native solver");
@@ -506,7 +510,7 @@ public final class SableStructureSmoke {
      */
     private void verifyCheckpointPrune() {
         var abandonedOrigin = BASE.offset(2, 0, -4);
-        var abandoned = container.allocateNewSubLevel(new Pose3d(
+        var abandoned = container.allocateNewSubLevel(Pose3d.create(
                 new Vector3d(abandonedOrigin.getX() + 0.5, abandonedOrigin.getY() + 0.5, abandonedOrigin.getZ() + 0.5),
                 new Quaterniond(), new Vector3d(), new Vector3d(1.0, 1.0, 1.0)));
         abandoned.markRemoved();
@@ -915,14 +919,12 @@ public final class SableStructureSmoke {
         publish();
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void beforeControl(ForgeSablePrePhysicsTickEvent event) {
         var probe = active;
         if (probe != null && probe.body != null && !probe.complete && probe.failure == null
                 && event.getPhysicsSystem() == probe.container.physicsSystem()) probe.preVelocity = probe.velocity();
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void afterControl(ForgeSablePrePhysicsTickEvent event) {
         var probe = active;
         if (probe == null || probe.body == null || probe.complete || probe.failure != null
@@ -963,7 +965,7 @@ public final class SableStructureSmoke {
 
     private ServerSubLevel assemble(List<BlockPos> cells) {
         var result = SubLevelAssemblyHelper.assembleBlocks(host, BASE, cells,
-                new BoundingBox3i(BASE.getX() - 1, BASE.getY() - 1, BASE.getZ() - 2,
+                BoundingBox3i.create(BASE.getX() - 1, BASE.getY() - 1, BASE.getZ() - 2,
                         BASE.getX() + 3, BASE.getY() + 2, BASE.getZ() + 2));
         fixtures.add(result);
         for (var cell : cells) require(host.getBlockState(cell).isAir(), "Public assembly retained original host cell");
@@ -1127,14 +1129,18 @@ public final class SableStructureSmoke {
     }
 
     private void callStaff(String name, Class<?>[] parameters, Object... arguments) {
-        try { staff.getClass().getMethod(name, parameters).invoke(staff, arguments); }
+        var types = java.util.Arrays.stream(parameters)
+                .map(org.academy.internal.common.structure.sable.reflect.SableReflection::runtimeType).toArray(Class<?>[]::new);
+        var values = java.util.Arrays.stream(arguments)
+                .map(org.academy.internal.common.structure.sable.reflect.SableReflection::unwrap).toArray();
+        try { staff.getClass().getMethod(name, types).invoke(staff, values); }
         catch (ReflectiveOperationException error) { throw new IllegalStateException("Suite public fixture call failed: " + name, error); }
     }
 
     private void remove(ServerSubLevel subLevel) {
         if (container.getSubLevel(subLevel.getUniqueId()) != subLevel) return;
         var origin = container.getOrigin(); var plot = subLevel.getPlot();
-        container.removeSubLevel(plot.plotPos.x() - origin.x(), plot.plotPos.z() - origin.y(), SubLevelRemovalReason.REMOVED);
+        container.removeSubLevel(plot.plotPos().x() - origin.x(), plot.plotPos().z() - origin.y(), SubLevelRemovalReason.REMOVED);
     }
 
     private void cleanup() {

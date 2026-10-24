@@ -1,9 +1,9 @@
 package org.academy.internal.common.structure.sable.validation;
 
-import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.companion.math.BoundingBox3i;
-import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import org.academy.internal.common.structure.sable.reflect.api.api.SubLevelAssemblyHelper;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.BoundingBox3i;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -37,7 +37,7 @@ public final class SablePayloadCapabilityProbe {
 
         // This is the same Sable assembly entry used by SimAssemblyHelper in Aeronautics.
         var ship = SubLevelAssemblyHelper.assembleBlocks(host, anchor, source,
-                new BoundingBox3i(anchor.getX(), anchor.getY(), anchor.getZ(),
+                BoundingBox3i.create(anchor.getX(), anchor.getY(), anchor.getZ(),
                         anchor.getX() + 1, anchor.getY() + 1, anchor.getZ()));
         var plot = ship.getPlot().getCenterBlock();
         check(source.stream().allMatch(cell -> host.getBlockState(cell).isAir()), "source was duplicated");
@@ -51,7 +51,7 @@ public final class SablePayloadCapabilityProbe {
 
         // Exercise the same transfer helper used by the suite's disassembly path.
         SubLevelAssemblyHelper.moveBlocks(host,
-                new SubLevelAssemblyHelper.AssemblyTransform(plot, anchor, 0, Rotation.NONE, host),
+                org.academy.internal.common.structure.sable.reflect.api.api.SubLevelAssemblyHelper$AssemblyTransform.create(plot, anchor, 0, Rotation.NONE, host),
                 List.of(plot, plot.above(), plot.east()));
         check(host.getBlockState(anchor.east()).equals(wetSlab), "restored waterlogging lost");
         var restored = host.getBlockEntity(anchor.above());

@@ -187,36 +187,6 @@ sourceSets.named("test") {
 
 tasks.named("check") { dependsOn(gametestSourceSet.compileJavaTaskName) }
 
-val apiExampleSourceSet = sourceSets.create("apiExample") {
-    java.srcDir("examples/addon/src/main/java")
-    resources.srcDir("examples/addon/src/main/resources")
-    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
-    runtimeClasspath += sourceSets.main.get().output + sourceSets.main.get().runtimeClasspath
-}
-
-tasks.register<Jar>("apiExampleJar") {
-    archiveBaseName.set("academy-api-example")
-    archiveVersion.set("1.0.0")
-    from(apiExampleSourceSet.output)
-}
-
-val verifyApiExample = tasks.register("verifyApiExample") {
-    dependsOn(tasks.named(apiExampleSourceSet.compileJavaTaskName))
-    val apiExampleSources = apiExampleSourceSet.allJava.files.toList()
-    inputs.files(apiExampleSources)
-    doLast {
-        apiExampleSources.forEach { source ->
-            require(!source.readText().contains("org.academy.internal")) {
-                "API example imports or references internal Academy implementation: $source"
-            }
-            require(!source.readText().contains("org.spongepowered.asm.mixin")) {
-                "API example must not depend on Mixin: $source"
-            }
-        }
-    }
-}
-tasks.named("check") { dependsOn(verifyApiExample) }
-
 val editorSourceSet = sourceSets.create("editor") {
     compileClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().compileClasspath
     runtimeClasspath += sourceSets.named("main").get().output + sourceSets.named("main").get().runtimeClasspath
@@ -401,9 +371,6 @@ neoForge {
     }
 
     mods {
-        if (providers.gradleProperty("academyApiExample").orNull == "true") {
-            create("academy_api_example") { sourceSet(apiExampleSourceSet) }
-        }
         create(modId) {
             sourceSet(sourceSets.main.get())
             sourceSet(editorSourceSet)
@@ -612,7 +579,7 @@ tasks.check {
 // Opt-in native solver prototype; normal builds require neither Rust nor a native library.
 apply(from = "gradle/native-physics.gradle")
 
-// Fixed external compile-only APIs; runtime integration is an explicit isolated opt-in.
+// Dependency-free reflection bridge; private runtime fixtures are an explicit local opt-in.
 apply(from = "gradle/sable-compat.gradle")
 
 // Agent B handoff contracts and resource templates; no unfinished runtime path is activated.

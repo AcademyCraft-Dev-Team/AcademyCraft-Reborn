@@ -1,6 +1,6 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.sublevel.storage.SubLevelOccupancySavedData;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.SubLevelOccupancySavedData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;

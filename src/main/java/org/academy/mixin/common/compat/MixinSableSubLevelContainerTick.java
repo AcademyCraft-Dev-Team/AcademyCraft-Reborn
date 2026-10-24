@@ -1,5 +1,6 @@
 package org.academy.mixin.common.compat;
 
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
 import org.academy.internal.common.structure.sable.SableContainerGuard;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -52,8 +53,9 @@ public abstract class MixinSableSubLevelContainerTick {
     private static void academy$runGuarded(List<?> values, Consumer<?> action) {
         var consumer = (Consumer<Object>) action;
         for (var value : values) {
-            if (value instanceof dev.ryanhcode.sable.sublevel.SubLevel source
-                    && org.academy.internal.common.structure.sable.SableRestorationIsolation.hidden(source)) continue;
+            var source = SableReflection.optional(
+                    org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel.class, value);
+            if (source != null && org.academy.internal.common.structure.sable.SableRestorationIsolation.hidden(source)) continue;
             SableContainerGuard.enterContainerTick();
             try {
                 consumer.accept(value);

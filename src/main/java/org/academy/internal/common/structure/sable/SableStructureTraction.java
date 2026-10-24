@@ -1,11 +1,12 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
-import dev.ryanhcode.sable.api.physics.mass.MassData;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.neoforge.event.ForgeSablePrePhysicsTickEvent;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.PhysicsPipelineBody;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.mass.MassData;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.neoforge.event.ForgeSablePrePhysicsTickEvent;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.system.SubLevelPhysicsSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -44,7 +45,7 @@ public final class SableStructureTraction {
         if (handle == null || handle.host() != host) return Optional.empty();
         var system = SubLevelPhysicsSystem.get(host);
         if (system == null || system.getPaused()
-                || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return Optional.empty();
+                || !RAPIER_PIPELINE.equals(SableReflection.runtimeName(system.getPipeline()))) return Optional.empty();
         var body = handle.subLevel();
         var mass = body.getMassTracker();
         if (body.getRuntimeId() == PhysicsPipelineBody.NULL_RUNTIME_ID
@@ -72,7 +73,7 @@ public final class SableStructureTraction {
         if (handle == null || handle.host() != host) return false;
         var system = SubLevelPhysicsSystem.get(host);
         if (system == null || system.getPaused()
-                || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return false;
+                || !RAPIER_PIPELINE.equals(SableReflection.runtimeName(system.getPipeline()))) return false;
         var subLevel = handle.subLevel();
         var mass = subLevel.getMassTracker();
         if (subLevel.getRuntimeId() == PhysicsPipelineBody.NULL_RUNTIME_ID
@@ -103,7 +104,7 @@ public final class SableStructureTraction {
         if (handle == null || handle.host() != host) return false;
         var system = SubLevelPhysicsSystem.get(host);
         if (system == null || system.getPaused()
-                || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return false;
+                || !RAPIER_PIPELINE.equals(SableReflection.runtimeName(system.getPipeline()))) return false;
         var subLevel = handle.subLevel();
         var mass = subLevel.getMassTracker();
         if (subLevel.getRuntimeId() == PhysicsPipelineBody.NULL_RUNTIME_ID
@@ -126,7 +127,7 @@ public final class SableStructureTraction {
     /** Called only after the optional bridge's exact version/hash compatibility gate succeeds. */
     public static synchronized void initialize() {
         if (initialized) return;
-        NeoForge.EVENT_BUS.addListener(SableStructureTraction::beforePhysics);
+        SableReflection.listen(ForgeSablePrePhysicsTickEvent.class, SableStructureTraction::beforePhysics);
         NeoForge.EVENT_BUS.addListener(SableStructureTraction::afterServerTick);
         NeoForge.EVENT_BUS.addListener(SableStructureTraction::entityLeft);
         NeoForge.EVENT_BUS.addListener(SableStructureTraction::playerLoggedOut);
@@ -396,7 +397,7 @@ public final class SableStructureTraction {
     static boolean controllable(SableStructureHandle handle) {
         var system = SubLevelPhysicsSystem.get(handle.host());
         if (system == null || system.getPaused()
-                || !RAPIER_PIPELINE.equals(system.getPipeline().getClass().getName())) return false;
+                || !RAPIER_PIPELINE.equals(SableReflection.runtimeName(system.getPipeline()))) return false;
         var body = handle.subLevel();
         var mass = body.getMassTracker();
         return body.getRuntimeId() != PhysicsPipelineBody.NULL_RUNTIME_ID

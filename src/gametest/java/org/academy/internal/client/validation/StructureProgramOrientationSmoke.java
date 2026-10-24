@@ -468,7 +468,7 @@ public final class StructureProgramOrientationSmoke {
     private static void check(boolean value, String detail) { if (!value) throw new IllegalStateException(detail); }
     private static final class SableGravity {
         static Vec3 current() {
-            var vector = dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData.getGravity(player.level());
+            var vector = org.academy.internal.common.structure.sable.reflect.api.physics.config.dimension_physics.DimensionPhysicsData.getGravity(player.level());
             return new Vec3(vector.x, vector.y, vector.z);
         }
     }

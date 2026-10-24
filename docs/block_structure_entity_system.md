@@ -1195,14 +1195,14 @@ Suite 兼容限于固定版本的物理手杖锁定与拖拽。早期门禁同�
 
 ### 固定依赖与复现
 
-[成品清单](D:/mcmodtest/AcademyCraft-Reborn-26.2/docs/sable_compat_artifacts.json)保存坐标、字节数和 SHA-256；[Gradle 集成](D:/mcmodtest/AcademyCraft-Reborn-26.2/gradle/sable-compat.gradle)在编译前检查固定 Sable、Companion 及嵌入依赖，在打包后递归检查桥存在且未夹带 Sable/Veil/ImGuiMC 类。普通测试 JVM 不含可选 API，`sableCompatTest` 单独加载实际 Companion。缺失或错误成品必须明确失败，不静默省略桥。
+[2026-10-25 无构建依赖改造](sable_reflection_bridge_2026_10_25.zh-CN.md)替代此前的固定 `compileOnly` 接入。普通编译、单元测试及开发／发布构建不读取或下载 Sable 成品；桥始终编译，通过本项目的接口视图与缓存反射访问运行时对象。打包检查仍递归确认桥存在且未夹带 Sable/Veil/ImGuiMC 类，单元测试检查桥与 Mixin 的字节码没有可选模组类型链接。`sableCompatTest` 现在也完全不需要外部 JAR。
 
-普通开发和 CI 现在需要预置这两个固定 compileOnly 成品。默认从 `../create-fork/.porting/maven` 读取，也可传 `-PacademySableFork=<目录>` 或 `-PacademySableMaven=<固定 Maven 目录>`；Suite 成品可传 `-PacademySableSuiteJar=<路径>`。这些依赖不会打包进入 Academy。运行组合只添加顶层 JAR：`sable` 为 Sable 本体，`suite` 为 Sable、Create、Suite，避免再次添加已嵌入的 Companion/Veil/Rapier。ImGuiMC 没有加入该运行组合。
+只有显式启用 `-PacademySableRuntime=sable|suite` 的本地实机验证才使用[成品清单](sable_compat_artifacts.json)，并验证私有本地文件的 SHA-256。可用 `-PacademySableFork=<目录>`、`-PacademySableMaven=<固定 Maven 目录>`、`-PacademySableSuiteJar=<路径>`指定已自行准备的文件；不提供自动下载来源，也不分发这些成品。运行组合只添加顶层 JAR：`sable` 为 Sable 本体，`suite` 为 Sable、Create、Suite，避免重复加载已嵌入的 Companion/Veil/Rapier。未启用这些参数的普通 CI 无需相邻的 create-fork 仓库。
 
 使用 JBR 25，在新的 `run/sable-compat/<批次>` 目录运行：
 
 ```powershell
-.\gradlew.bat verifySableCompatArtifacts testSableCompatBuildChecks -DisDev=true
+.\gradlew.bat testSableCompatBuildChecks -DisDev=true
 .\gradlew.bat test sableCompatTest -DisDev=true
 .\gradlew.bat runServerSable -DisDev=true -PacademySableRuntime=sable -PacademySableSmoke=true -PacademySableRunDirectory=run/sable-compat/<新批次>
 .\gradlew.bat runClientSable -DisDev=true -PacademySableRuntime=suite -PacademySableSmoke=true -PacademySableRunDirectory=run/sable-compat/<另一新批次>

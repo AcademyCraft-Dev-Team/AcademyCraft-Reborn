@@ -227,11 +227,11 @@ public final class StructureRestorationCrashSmoke {
     private static void check(boolean condition, String message) { if (!condition) throw new IllegalStateException(message); }
     private static final class Sable {
         static boolean rawPresent(net.minecraft.server.level.ServerLevel host, StructureRef reference) {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(host);
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(host);
             return container != null && container.getSubLevel(reference.id()) != null;
         }
         static void checkDetached(net.minecraft.server.level.ServerLevel host, StructureRef reference) {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(host);
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(host);
             var body = container.getSubLevel(reference.id());
             check(org.academy.internal.common.structure.sable.SableRestorationIsolation.detached(body),
                     "committed source was not detached before the Sable simulation tick");

@@ -561,7 +561,7 @@ Sable 和我方独立求解器不同时求解会互相接触的动态结构。�
 
 缺少原后端时保留注册表与最近一致的恢复检查点；Sable 自己的存档保留原样。在移除 Sable 前执行导出/迁移；卸载后不能保证仅凭我方元数据恢复它最后一次保存的全部内容，必须明确提示所需依赖或一致检查点。
 
-构建采用隔离兼容包及固定版本 `compileOnly`；兼容测试配置单独添加运行依赖。发布 Academy JAR 不嵌入 Sable、Veil、Suite 或其 JNI。公共方法签名与常驻静态初始化中不得出现可选类；[MixinPlugin](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/mixin/plugin/MixinPlugin.java:24) 增加模组和能力门禁。版本不兼容时明确关闭桥及新捕获，不把结构加载失败当作结构不存在。
+构建采用隔离兼容包及运行时反射视图（2026-10-25 替代原固定版本 `compileOnly` 方案）；普通编译与测试不需要 Sable 成品，本地实机验证才显式添加私有运行依赖。发布 Academy JAR 不嵌入 Sable、Veil、Suite 或其 JNI。方法签名与常驻静态初始化中不直接链接可选类；[MixinPlugin](D:/mcmodtest/AcademyCraft-Reborn-26.2/src/main/java/org/academy/mixin/plugin/MixinPlugin.java:24) 保留模组和能力门禁。版本不兼容时明确关闭桥及新捕获，不把结构加载失败当作结构不存在。详见 [反射接入说明](sable_reflection_bridge_2026_10_25.zh-CN.md)。
 
 ## 现有技能迁移
 

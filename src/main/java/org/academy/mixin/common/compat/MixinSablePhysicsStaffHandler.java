@@ -1,8 +1,8 @@
 package org.academy.mixin.common.compat;
 
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.SubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.internal.common.compat.PhysicsStaffDragAccess;
 import org.academy.internal.common.compat.PhysicsStaffHandlerAccess;
@@ -11,6 +11,8 @@ import org.academy.internal.common.structure.sable.SableStructureTraction;
 import org.joml.Quaterniondc;
 import org.joml.Vector3dc;
 import org.spongepowered.asm.mixin.Final;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
@@ -57,9 +59,10 @@ public abstract class MixinSablePhysicsStaffHandler implements PhysicsStaffHandl
 
     @Inject(method = "applyLockIfNeeded(Ldev/ryanhcode/sable/sublevel/SubLevel;)V",
             at = @At("HEAD"), cancellable = true, require = 1)
-    private void academy$preventCompetingRestoration(SubLevel subLevel, CallbackInfo ci) {
+    private void academy$preventCompetingRestoration(@Coerce Object subLevel, CallbackInfo ci) {
         academy$requireThread();
-        if (subLevel instanceof ServerSubLevel ship && SableStructureTraction.exclusiveOwner(level, ship)) ci.cancel();
+        var ship = SableReflection.optional(ServerSubLevel.class, subLevel);
+        if (ship != null && SableStructureTraction.exclusiveOwner(level, ship)) ci.cancel();
     }
 
     @Inject(method = "drag(Ljava/util/UUID;Ljava/util/UUID;Lorg/joml/Vector3dc;Lorg/joml/Vector3dc;Lorg/joml/Quaterniondc;)V",
@@ -72,8 +75,8 @@ public abstract class MixinSablePhysicsStaffHandler implements PhysicsStaffHandl
         if (existing == null) return;
         // This fork retains an existing drag's original body even if a packet names another.
         if (!(existing instanceof PhysicsStaffDragAccess access)) { ci.cancel(); return; }
-        if (access.academy$staffSubLevel() instanceof ServerSubLevel ship
-                && SableStructureTraction.exclusiveOwner(level, ship)) ci.cancel();
+        var ship = SableReflection.optional(ServerSubLevel.class, access.academy$staffSubLevel());
+        if (ship != null && SableStructureTraction.exclusiveOwner(level, ship)) ci.cancel();
     }
 
     @Unique private boolean academy$owned(UUID uuid) {

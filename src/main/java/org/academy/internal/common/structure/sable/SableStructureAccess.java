@@ -1,12 +1,12 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.api.sublevel.SubLevelObserver;
-import dev.ryanhcode.sable.companion.math.Pose3d;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.ServerSubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelObserver;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.Pose3d;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -103,7 +103,7 @@ public final class SableStructureAccess {
             for (var subLevel : List.copyOf(state.container.getAllSubLevels())) {
                 if (subLevel.isRemoved() || subLevel.getLevel() != host
                         || state.container.getSubLevel(subLevel.getUniqueId()) != subLevel) continue;
-                poses.add(new PoseObservation(subLevel, new Pose3d(subLevel.logicalPose())));
+                poses.add(new PoseObservation(subLevel, Pose3d.create(subLevel.logicalPose())));
                 var bounds = subLevel.getPlot().getBoundingBox();
                 if (bounds == null) continue;
                 var box = new AABB(bounds.minX(), bounds.minY(), bounds.minZ(),

@@ -1,9 +1,9 @@
 package org.academy.internal.client.validation;
 
-import dev.ryanhcode.sable.api.physics.constraint.FixedConstraintConfiguration;
-import dev.ryanhcode.sable.api.physics.constraint.PhysicsConstraintHandle;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.constraint.FixedConstraintConfiguration;
+import org.academy.internal.common.structure.sable.reflect.api.api.physics.constraint.PhysicsConstraintHandle;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
@@ -64,7 +64,7 @@ final class StructureSableJointSmoke {
         // The second body is the world, so its frame expressed in the first body is inverse(A).
         var relativeRotation = new Quaterniond(source.logicalPose().orientation()).conjugate();
         constraint = container.physicsSystem().getPipeline().addConstraint(source, null,
-                new FixedConstraintConfiguration(localAnchor, worldAnchor, relativeRotation));
+                FixedConstraintConfiguration.create(localAnchor, worldAnchor, relativeRotation));
         check(constraint != null && constraint.isValid(), "real fixed constraint creation failed");
         check(SableStructureJoints.hasAny(player.level(), source), "installed joint was not observed by the live gate");
         markedCreation = LiveStructureProvenance.metadata(player.level().getServer(), marked).orElseThrow().creationOperationId();

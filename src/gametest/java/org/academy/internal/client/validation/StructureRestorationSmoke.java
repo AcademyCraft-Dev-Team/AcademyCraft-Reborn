@@ -551,16 +551,16 @@ public final class StructureRestorationSmoke {
     /** Optional dependency is linked only in the Sable fixture run. */
     private static final class SableFixture {
         static int size() {
-            return dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level()).getAllSubLevels().size();
+            return org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level()).getAllSubLevels().size();
         }
         static boolean clientPresent(StructureRef ref) {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(Minecraft.getInstance().level);
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(Minecraft.getInstance().level);
             return container != null && container.getSubLevel(ref.id()) != null;
         }
         static void tilt(Quaterniond rotation) {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
-            var body = (dev.ryanhcode.sable.sublevel.ServerSubLevel) container.getSubLevel(reference.id());
-            var physics = dev.ryanhcode.sable.sublevel.system.SubLevelPhysicsSystem.get(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var body = (org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel) container.getSubLevel(reference.id());
+            var physics = org.academy.internal.common.structure.sable.reflect.api.sublevel.system.SubLevelPhysicsSystem.get(player.level());
             physics.getPipeline().teleport(body, new org.joml.Vector3d(body.logicalPose().position()).add(0, 2, 0), rotation);
             physics.updatePose(body); body.updateLastPose();
         }

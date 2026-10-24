@@ -1,7 +1,8 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
 import net.minecraft.server.level.ServerLevel;
 
 /** Read-only gate for restoring marked sources; unrelated Sable structures are never modified. */
@@ -15,7 +16,7 @@ public final class SableStructureJoints {
             var container = SubLevelContainer.getContainer(host);
             if (container == null) return true;
             var pipeline = container.physicsSystem().getPipeline();
-            return !(pipeline instanceof TrackedPipeline tracked) || tracked.academy$hasJoint(source);
+            return !(SableReflection.unwrap(pipeline) instanceof TrackedPipeline tracked) || tracked.academy$hasJoint(SableReflection.unwrap(source));
         } catch (RuntimeException | LinkageError unavailable) {
             return true;
         }
@@ -23,6 +24,6 @@ public final class SableStructureJoints {
 
     /** Implemented only by the fingerprint-gated audited Rapier pipeline mixin. */
     public interface TrackedPipeline {
-        boolean academy$hasJoint(ServerSubLevel source);
+        boolean academy$hasJoint(Object source);
     }
 }

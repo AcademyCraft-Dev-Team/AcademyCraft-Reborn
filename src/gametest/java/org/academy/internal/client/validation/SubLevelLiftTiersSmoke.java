@@ -546,9 +546,9 @@ public final class SubLevelLiftTiersSmoke {
     /** Optional backend linkage is resolved only when the fixture actually runs with Sable. */
     private static final class SableDisturbance {
         static void apply(Vec3 linear, Vec3 angular) {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             var body = container == null ? null : container.getSubLevel(reference.id());
-            if (!(body instanceof dev.ryanhcode.sable.sublevel.ServerSubLevel serverBody)) {
+            if (!(body instanceof org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel serverBody)) {
                 throw new IllegalStateException("Sable disturbance body is unavailable");
             }
             container.physicsSystem().getPhysicsHandle(serverBody).addLinearAndAngularVelocity(
@@ -559,7 +559,7 @@ public final class SubLevelLiftTiersSmoke {
 
     private static final class SableEvidence {
         static void addIdentities(Set<String> identities) {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             if (container == null) throw new IllegalStateException("Sable structure inventory is unavailable");
             for (var body : container.getAllSubLevels()) identities.add("academy:sable:" + body.getUniqueId());
         }

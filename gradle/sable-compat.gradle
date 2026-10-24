@@ -5,7 +5,7 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-// The bridge is always compiled and packaged. Only its external API inputs are compileOnly.
+// The reflection bridge is always compiled and packaged, without optional mod dependencies.
 def lockFile = file('docs/sable_compat_artifacts.json')
 def lock = new JsonSlurper().parse(lockFile)
 if (lock.format != 'academy-sable-compat-v1') throw new GradleException('Unsupported Sable artifact manifest')
@@ -45,40 +45,17 @@ def verifyArtifact = { String role ->
     }
 }
 
-lock.compileOnly.each { role ->
-    dependencies.add('compileOnly', files(artifactFile(role)))
-    dependencies.add('testCompileOnly', files(artifactFile(role)))
-}
-def verifyCompile = tasks.register('verifySableCompatArtifacts') {
-    group = 'verification'
-    description = 'Verifies the exact external Sable/Companion API JARs and the embedded Sable dependency closure.'
-    inputs.file(lockFile)
-    // Do not declare missing files as @InputFiles: our diagnostic must explain how to provision CI.
-    notCompatibleWithConfigurationCache('External fixed-artifact verification must execute for each compilation')
-    doLast { lock.compileOnly.each { verifyArtifact(it) } }
-}
-tasks.withType(JavaCompile).configureEach { dependsOn verifyCompile }
-tasks.withType(Javadoc).configureEach { dependsOn verifyCompile }
-tasks.matching { it.name == 'compileKotlin' }.configureEach { dependsOn verifyCompile }
-
-// The ordinary test JVM deliberately omits optional mods. Actual Companion pose tests
-// run separately, with only their two pinned API inputs added to the test classpath.
-tasks.named('test', Test) {
-    exclude '**/sable/**'
-    classpath = sourceSets.test.runtimeClasspath.filter { candidate ->
-        !lock.compileOnly.any { candidate.canonicalFile == artifactFile(it).canonicalFile }
-    }
-}
+// Normal builds and tests have no Sable inputs. Explicit local runs below retain
+// fingerprint checks for the privately provisioned runtime, without downloading it.
 def sableCompatTest = tasks.register('sableCompatTest', Test) {
     group = 'verification'
-    description = 'Runs Sable bridge transforms against the fixed real Companion API.'
-    dependsOn verifyCompile, tasks.named('testClasses')
+    description = 'Runs dependency-free Sable adapter and control tests.'
+    dependsOn tasks.named('testClasses')
     testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath + files(lock.compileOnly.collect { artifactFile(it) })
+    classpath = sourceSets.test.runtimeClasspath
     include '**/sable/**'
     useJUnitPlatform()
 }
-tasks.named('check') { dependsOn sableCompatTest }
 
 def bridgeEntries = ['org/academy/internal/common/structure/sable/SableStructureAccess.class',
                      'org/academy/internal/common/structure/sable/SableStructureDirectControl.class',
@@ -177,7 +154,6 @@ if (runtimeMode != 'none') {
     def verifyRuntime = tasks.register('verifySableCompatRuntime') {
         group = 'verification'
         description = 'Verifies the explicitly selected runtime closure before an isolated Sable launch.'
-        dependsOn verifyCompile
         notCompatibleWithConfigurationCache('Rechecks runtime artifacts and isolated mod directories for every launch')
         doLast {
             roles.each { verifyArtifact(it) }

@@ -1,10 +1,11 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.SubLevel;
-import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import org.academy.internal.common.structure.sable.reflect.SableReflection;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.ServerSubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import org.academy.api.common.structure.StructureRef;
@@ -20,6 +21,16 @@ public final class SableRestorationIsolation {
     private static final Set<ServerSubLevel> ISOLATED = Collections.newSetFromMap(new IdentityHashMap<>());
 
     private SableRestorationIsolation() {}
+
+    /** Mixin boundary keeps the original list and raw identities on the normal hot path. */
+    public static List<Object> visibleRaw(List<Object> sources) {
+        if (sources.isEmpty()) return sources;
+        var first = SableReflection.optional(ServerSubLevel.class, sources.getFirst());
+        if (first == null || ISOLATED.isEmpty() && !MarkedGridRestoration.hasPending(first.getLevel().getServer())) return sources;
+        var visible = sources.stream().filter(source -> !hidden(
+                SableReflection.wrap(SubLevel.class, source))).toList();
+        return visible.size() == sources.size() ? sources : visible;
+    }
 
     public static boolean hidden(SubLevel source) {
         if (!(source instanceof ServerSubLevel ship)) return false;

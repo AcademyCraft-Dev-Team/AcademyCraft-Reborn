@@ -1,0 +1,470 @@
+{
+  "format": "academy-sable-reflection-validation-v1",
+  "date": "2026-10-25",
+  "base_commit": "f6d895bb6a45a12a24f296393531a10692ce89f5",
+  "changes_committed_at_validation": false,
+  "pushed_at_validation": false,
+  "private_artifacts_distributed": false,
+  "compile_requires_sable": false,
+  "verifyApiExample_removed": true,
+  "commands": {
+    "dev": "./gradlew.bat test build -DisDev=true -PacademySableFork=build/absent-private-fork -PacademySableMaven=build/absent-private-maven --console=plain",
+    "release": "./gradlew.bat build -DisDev=false -PacademySableFork=build/absent-private-fork -PacademySableMaven=build/absent-private-maven --console=plain",
+    "runtime": "Use validation/native_structure/*.init.gradle and a fresh prepare_default_skill_smoke.ps1 copy. Exact directories and result payloads are listed below. Optional runtime uses academySableRuntime=sable|suite; native uses runClientDev."
+  },
+  "unit_tests": [
+    {
+      "task": "test",
+      "tests": 3239,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "editorTest",
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "builds": [
+    {
+      "mode": "dev",
+      "log": "build/reflection-final-dev.log",
+      "passed": true,
+      "jar": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "sha256": "EFBF59D5432728571BC93EAB1D3586B3E1B151DFD10DB4EFFFB8D8F22C55BC1C"
+    },
+    {
+      "mode": "release",
+      "log": "build/reflection-final-release.log",
+      "passed": true,
+      "jar": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "sha256": "F2CBBF1D142F1D3CDE22AC7D07976FA5EF65DE3C9EFA32F55D56C79EAF55B2AF"
+    }
+  ],
+  "runtime_checks": [
+    {
+      "name": "native_payload",
+      "file": "run/native-sublevel-direct-smoke-reflection-native-20261025-r1/structure-payload-result.json",
+      "sha256": "EE0897DC6D5DB5F9CDB420DB38F55D0EE414BD9FD4F85F10D0370A3706D093E0",
+      "result": {
+        "passed": true,
+        "failure": "",
+        "cases": [
+          {
+            "inventory_after_live_edit": true,
+            "drops": 0,
+            "case": "chest",
+            "automatic_restoration": true,
+            "cells": 1,
+            "backend": "academy:sublevel",
+            "passed": true
+          },
+          {
+            "inventory_after_live_edit": true,
+            "drops": 0,
+            "case": "barrel",
+            "automatic_restoration": true,
+            "cells": 1,
+            "backend": "academy:sublevel",
+            "passed": true
+          },
+          {
+            "inventory_after_live_edit": true,
+            "drops": 0,
+            "case": "double_trapped_chest",
+            "automatic_restoration": true,
+            "cells": 2,
+            "backend": "academy:sublevel",
+            "passed": true
+          },
+          {
+            "inventory_after_live_edit": true,
+            "drops": 0,
+            "case": "waterlogged",
+            "automatic_restoration": true,
+            "cells": 3,
+            "backend": "academy:sublevel",
+            "passed": true
+          },
+          {
+            "inventory_after_live_edit": false,
+            "drops": 0,
+            "case": "unopened_loot",
+            "automatic_restoration": true,
+            "cells": 1,
+            "backend": "academy:sublevel",
+            "passed": true
+          },
+          {
+            "inventory_after_live_edit": true,
+            "drops": 0,
+            "case": "placement_cancel_retry",
+            "automatic_restoration": true,
+            "cells": 1,
+            "backend": "academy:sublevel",
+            "passed": true
+          }
+        ],
+        "server_ticks": 1282
+      }
+    },
+    {
+      "name": "suite_payload",
+      "file": "run/native-sublevel-direct-smoke-reflection-suite-20261025-r1/structure-payload-result.json",
+      "sha256": "C7261028F8E408BBDCFDB26C629C59A1F089B22B49A6A4825855B77A7D1D3F6B",
+      "result": {
+        "server_ticks": 1274,
+        "cases": [
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "chest",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "barrel",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 2,
+            "automatic_restoration": true,
+            "case": "double_trapped_chest",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 3,
+            "automatic_restoration": true,
+            "case": "waterlogged",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": false,
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "unopened_loot",
+            "drops": 0
+          },
+          {
+            "inventory_after_live_edit": true,
+            "passed": true,
+            "backend": "academy:sable",
+            "cells": 1,
+            "automatic_restoration": true,
+            "case": "placement_cancel_retry",
+            "drops": 0
+          }
+        ],
+        "failure": "",
+        "passed": true
+      }
+    },
+    {
+      "name": "suite_default_skills",
+      "file": "run/native-sublevel-direct-smoke-reflection-default-suite-20261025-r1/structure-default-provenance-result.json",
+      "sha256": "A256FFB36E7530FBC9F4AC340AA598D3A0EEFA19EDCB94551420ECABCD18B4B7",
+      "result": {
+        "real_default_service_entries": true,
+        "payload_checked": true,
+        "actual_keyboard_or_network_packets": false,
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "soft_origin_checked": false,
+            "operation": "ce0f5bc2-5ca8-406e-8fc7-964d61566360",
+            "backend": "academy:sable",
+            "default_service": true,
+            "passed": true,
+            "skill": "kinetic_throw",
+            "ticks": 30,
+            "provenance_verified": true,
+            "actual_rise": 2.976470947265625
+          },
+          {
+            "soft_origin_checked": false,
+            "operation": "de7dda2a-1f41-4275-90a0-34830a7e9ce9",
+            "backend": "academy:sable",
+            "default_service": true,
+            "passed": true,
+            "skill": "magnet_manipulation",
+            "ticks": 23,
+            "provenance_verified": true,
+            "actual_rise": 0.9782307942708712
+          },
+          {
+            "soft_origin_checked": false,
+            "operation": "20fa6fd5-2af0-4fce-b640-330e754dd700",
+            "backend": "academy:sable",
+            "default_service": true,
+            "passed": true,
+            "skill": "high_speed_jet",
+            "ticks": 23,
+            "provenance_verified": true,
+            "actual_rise": 0.978240966796875
+          },
+          {
+            "backend": "academy:sable",
+            "case": "existing_unmarked_after_control_rotation",
+            "actual_rotate_to": true,
+            "passed": true,
+            "still_unmarked": true,
+            "rotation_error": 0.008808271820703907
+          }
+        ],
+        "passed": true,
+        "server_ticks": 102,
+        "failure": ""
+      }
+    },
+    {
+      "name": "sable_default_skills",
+      "file": "run/native-sublevel-direct-smoke-reflection-default-sable-20261025-r1/structure-default-provenance-result.json",
+      "sha256": "DCCB0DCBBB7B2EB956375FAB9E3E58A3891E1F2C3C2934FD85E7DD0DC399B95E",
+      "result": {
+        "passed": true,
+        "server_ticks": 102,
+        "failure": "",
+        "real_default_service_entries": true,
+        "payload_checked": true,
+        "actual_keyboard_or_network_packets": false,
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "passed": true,
+            "skill": "kinetic_throw",
+            "ticks": 30,
+            "provenance_verified": true,
+            "actual_rise": 2.976470947265625,
+            "soft_origin_checked": false,
+            "operation": "63dc94bf-41d3-4b3a-a0f3-eca57bac4706",
+            "backend": "academy:sable",
+            "default_service": true
+          },
+          {
+            "passed": true,
+            "skill": "magnet_manipulation",
+            "ticks": 23,
+            "provenance_verified": true,
+            "actual_rise": 0.9782307942708712,
+            "soft_origin_checked": false,
+            "operation": "f6f3a504-67db-4e7b-a72b-ee5497915de2",
+            "backend": "academy:sable",
+            "default_service": true
+          },
+          {
+            "passed": true,
+            "skill": "high_speed_jet",
+            "ticks": 23,
+            "provenance_verified": true,
+            "actual_rise": 0.978240966796875,
+            "soft_origin_checked": false,
+            "operation": "311af3ec-609c-47c6-9fc4-6e6732fcc4e2",
+            "backend": "academy:sable",
+            "default_service": true
+          },
+          {
+            "passed": true,
+            "still_unmarked": true,
+            "rotation_error": 0.008808271820703907,
+            "backend": "academy:sable",
+            "case": "existing_unmarked_after_control_rotation",
+            "actual_rotate_to": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "suite_precision_nodes",
+      "file": "run/native-sublevel-direct-smoke-reflection-nodes-suite-20261025-r1/structure-program-orientation-result.json",
+      "sha256": "1A62A6C605BB7A5F643CA67B42B59BEB36A6DBDE979E1C03BBDB1BCBEE2B7F23",
+      "result": {
+        "actual_node_vm": true,
+        "linear_gravity_support_only": true,
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "payload_checked": true,
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.976470947265625,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 22,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": true,
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": true,
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "suite_real_joint",
+      "file": "run/native-sublevel-direct-smoke-reflection-joint-suite-20261025-r1/structure-restoration-joint-result.json",
+      "sha256": "5FF75588816B70DEFE40CF022B293022DC3FA2014732BC9791E4E917C29B3AFE",
+      "result": {
+        "passed": true,
+        "mode": "joint",
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": -0.0017870722715670343,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "real_world_fixed_joint": true,
+            "joint_removed_before_retry": true,
+            "unmarked_companion_runtime": "c6af691a-a020-4f7a-8a35-cad0818466b8",
+            "joint_retention_checks": 180,
+            "unmarked_companion_uuid": "c0b5a5af-f575-4dc9-bcc4-aa5ec9754725",
+            "unmarked_companion_preserved": true,
+            "case": "sable_joint_then_rest",
+            "passed": true
+          }
+        ],
+        "failure": "",
+        "server_ticks": 505,
+        "automatic_restoration_requested_by_fixture": false,
+        "tilt_pose_is_fixture_setup_only": true,
+        "generic_capture_policy_fixture": true,
+        "real_default_skill_and_vm_provenance": "validated by separate default/VM fixtures"
+      }
+    },
+    {
+      "name": "suite_commit_recovery",
+      "file": "run/native-sublevel-direct-smoke-reflection-recovery-suite-20261025-r1/structure-restoration-recover_verify-result.json",
+      "sha256": "8089BC3010BAABEDD2F4907F21F829D9CDBC43AF40643863303E748730C28DF3",
+      "result": {
+        "passed": true,
+        "mode": "recover_verify",
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "case": "interrupted_restoration_COMMIT_SAVED",
+            "passed": true,
+            "phase_hit": "COMMIT_SAVED",
+            "source_copies": 0,
+            "target_copies": 1,
+            "pre_tick_visibility_observations": 41,
+            "quarantined_raw_source_observations": 0,
+            "sable_post_tick_detachment_observations": 0,
+            "new_automatic_attempts_blocked": 0,
+            "verified_stable_ticks": 40,
+            "payload_verified": true,
+            "receipt": "Result[status=COMPLETED, detail=restored, operationId=Optional[7de1430f-de55-498f-84ea-da8e99f9e5e8], value=Optional[Progress[operationId=7de1430f-de55-498f-84ea-da8e99f9e5e8, reference=StructureRef[id=c2d857f4-101a-44ee-9cc3-a7595b71a0fc, dimension=minecraft:overworld, backend=academy:sable, generation=0], phase=RESTORED, totalCells=1, completedCells=1]]]",
+            "ordinary_shutdown_used": false
+          }
+        ],
+        "failure": "",
+        "server_ticks": 41,
+        "automatic_restoration_requested_by_fixture": false,
+        "tilt_pose_is_fixture_setup_only": true,
+        "generic_capture_policy_fixture": true,
+        "real_default_skill_and_vm_provenance": "validated by separate default/VM fixtures"
+      }
+    }
+  ],
+  "forced_exit": {
+    "file": "run/native-sublevel-direct-smoke-reflection-recovery-suite-20261025-r1/structure-restoration-crash.json",
+    "phase": "COMMIT_SAVED",
+    "expected_exit_code": 82,
+    "recovery_passed": true
+  },
+  "unrelated_rust_preserved_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "unverified": [
+    "GitHub Actions / fresh Linux runner: not run at the time of this validation snapshot",
+    "Long-running dedicated multiplayer server",
+    "Manual keyboard/network interaction and simultaneous player inventories",
+    "Actual physics-staff lock/drag contention was not rerun in this turn",
+    "Unknown Sable/Companion/Simulated versions: existing fingerprint gate remains",
+    "Crash before restoration COMMIT and capture-phase crash were not rerun",
+    "Throughput/FPS comparison before and after reflection"
+  ]
+}

@@ -1,13 +1,13 @@
 package org.academy.internal.common.structure.sable;
 
-import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
-import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
-import dev.ryanhcode.sable.companion.math.BoundingBox3i;
-import dev.ryanhcode.sable.companion.math.Pose3d;
-import dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertyHelper;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
-import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
-import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.BoundingBox3i;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.ServerSubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer;
+import org.academy.internal.common.structure.sable.reflect.api.companion.math.Pose3d;
+import org.academy.internal.common.structure.sable.reflect.api.physics.config.block_properties.PhysicsBlockPropertyHelper;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.plot.LevelPlot;
+import org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.SubLevelRemovalReason;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -92,7 +92,7 @@ public final class SableStructureTransactions implements CaptureTarget {
             // seed COM without translating the body, so this placeholder must be corrected
             // from the resulting mass data before returning the allocation.
             var position = new Vector3d(origin.getX() + 0.5, origin.getY() + 0.5, origin.getZ() + 0.5);
-            var pose = new Pose3d(position, new Quaterniond(), new Vector3d(), new Vector3d(1.0, 1.0, 1.0));
+            var pose = Pose3d.create(position, new Quaterniond(), new Vector3d(), new Vector3d(1.0, 1.0, 1.0));
             var allocated = SableContainerGuard.containerAllocation("sable.capture.allocate",
                     () -> container.allocateNewSubLevel(pose)).orElse(null);
             if (!(allocated instanceof ServerSubLevel serverSubLevel)) return Optional.empty();
@@ -176,9 +176,9 @@ public final class SableStructureTransactions implements CaptureTarget {
         var ship = ship(target);
         if (ship == null || SableContainerGuard.inContainerTick()) return Optional.empty();
         var tag = new net.minecraft.nbt.CompoundTag();
-        var grid = (org.academy.mixin.common.compat.SableContainerGridAccessor) (Object) container(target.dimension());
-        tag.putInt("plot_x", ship.getPlot().plotPos.x() - grid.academy$originX());
-        tag.putInt("plot_z", ship.getPlot().plotPos.z() - grid.academy$originZ());
+        var grid = container(target.dimension());
+        tag.putInt("plot_x", ship.getPlot().plotPos().x() - grid.originX());
+        tag.putInt("plot_z", ship.getPlot().plotPos().z() - grid.originZ());
         var pointer = ship.getLastSerializationPointer();
         tag.putBoolean("saved", pointer != null);
         if (pointer != null) {
@@ -201,14 +201,13 @@ public final class SableStructureTransactions implements CaptureTarget {
             // cannot authorize backend removal, even if this activation is currently absent.
             if (!evidence.getBoolean("saved").orElseThrow()) return false;
             var position = new ChunkPos(evidence.getInt("chunk_x").orElseThrow(), evidence.getInt("chunk_z").orElseThrow());
-            var storage = (org.academy.mixin.common.compat.SableStorageInvoker) (Object)
-                    container.getHoldingChunkMap().getStorage();
+            var storage = container.getHoldingChunkMap().getStorage();
             int storageIndex = evidence.getInt("storage").orElseThrow(), slot = evidence.getInt("slot").orElseThrow();
-            var pointer = new dev.ryanhcode.sable.sublevel.storage.holding.GlobalSavedSubLevelPointer(
+            var pointer = org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.GlobalSavedSubLevelPointer.create(
                     position, (short) storageIndex, (short) slot);
-            var file = storage.academy$storageFile(position, storageIndex);
+            var file = storage.getRegionStorageFile(position, storageIndex);
             var image = file.read(slot);
-            boolean ownedImage = image != null && dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelData.fromTag(image)
+            boolean ownedImage = image != null && org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.serialization.SubLevelData.fromTag(image)
                     .uuid().equals(target.id());
             boolean foreignImage = image != null && !ownedImage;
             // Removing a live source queues its pointer for deletion. Do not create that
@@ -222,14 +221,14 @@ public final class SableStructureTransactions implements CaptureTarget {
             if (foreignImage) return false;
             // Only a positively identified source image authorizes taking over delayed
             // deletion. A reused body's queue entry must survive this old journal's retry.
-            if (ownedImage) ((org.academy.mixin.common.compat.SableHoldingDeletionAccessor) (Object) container.getHoldingChunkMap())
-                    .academy$queuedDeletion().remove(pointer);
-            var region = storage.academy$regionFile(position);
+            if (ownedImage) container.getHoldingChunkMap()
+                    .queuedDeletion().remove(pointer);
+            var region = storage.getRegionFile(position);
             int index = region.getIndex(position.getRegionLocalX(), position.getRegionLocalZ());
             var holdingTag = region.read(index);
             if (holdingTag != null) {
-                var holding = dev.ryanhcode.sable.sublevel.storage.holding.SubLevelHoldingChunk.from(position, holdingTag);
-                var local = new dev.ryanhcode.sable.sublevel.storage.holding.SavedSubLevelPointer((short) storageIndex, (short) slot);
+                var holding = org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.SubLevelHoldingChunk.from(position, holdingTag);
+                var local = org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.SavedSubLevelPointer.create((short) storageIndex, (short) slot);
                 holding.getSubLevelPointers().remove(local);
                 var updated = new net.minecraft.nbt.CompoundTag();
                 holding.writeTo(updated);
@@ -248,12 +247,12 @@ public final class SableStructureTransactions implements CaptureTarget {
 
     /** Retires the exact cached source too: an unloaded holding image can otherwise respawn it after COMMIT. */
     private static boolean retireHoldingSource(ServerSubLevelContainer container, UUID source,
-            dev.ryanhcode.sable.sublevel.storage.holding.GlobalSavedSubLevelPointer pointer,
+            org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.GlobalSavedSubLevelPointer pointer,
             boolean ownedImage, boolean foreignImage) {
-        var holding = (org.academy.mixin.common.compat.SableHoldingDeletionAccessor) (Object) container.getHoldingChunkMap();
-        var indexed = holding.academy$holdingSources().get(source);
+        var holding = container.getHoldingChunkMap();
+        var indexed = holding.allHoldingSubLevels().get(source);
         if (indexed != null && !pointer.equals(indexed.pointer())) return false;
-        var chunk = holding.academy$holdingChunks().get(pointer.chunkPos().pack());
+        var chunk = holding.loadedHoldingChunks().get(pointer.chunkPos().pack());
         if (chunk == null) return indexed == null;
         boolean cachedSource = false;
         boolean foreignCachedPointer = false;
@@ -266,7 +265,7 @@ public final class SableStructureTransactions implements CaptureTarget {
         if (indexed != null && !cachedSource || !foreignImage && foreignCachedPointer) return false;
         boolean ownsPointer = ownedImage || cachedSource;
         if (!foreignImage && !ownsPointer && chunk.getSubLevelPointers().contains(pointer.local())) return false;
-        holding.academy$holdingSources().remove(source);
+        holding.allHoldingSubLevels().remove(source);
         chunk.removeHoldingSubLevel(source);
         if (!foreignImage && ownsPointer) chunk.getSubLevelPointers().remove(pointer.local());
         return true;
@@ -277,8 +276,8 @@ public final class SableStructureTransactions implements CaptureTarget {
         int x = evidence.getInt("plot_x").orElseThrow(), z = evidence.getInt("plot_z").orElseThrow();
         var replacement = container.getSubLevel(x, z);
         if (replacement != null) return false;
-        var holding = (org.academy.mixin.common.compat.SableHoldingDeletionAccessor) (Object) container.getHoldingChunkMap();
-        for (var cached : holding.academy$holdingSources().values()) {
+        var holding = container.getHoldingChunkMap();
+        for (var cached : holding.allHoldingSubLevels().values()) {
             var plot = cached.data().fullTag().getCompound("plot").orElse(null);
             if (plot == null || plot.getInt("plot_x").isEmpty() || plot.getInt("plot_z").isEmpty()) return false;
             if (plot.getInt("plot_x").orElseThrow() == x && plot.getInt("plot_z").orElseThrow() == z) return false;
@@ -302,19 +301,19 @@ public final class SableStructureTransactions implements CaptureTarget {
         var pointer = ship.getLastSerializationPointer();
         if (pointer == null) return false;
         try {
-            var storage = (org.academy.mixin.common.compat.SableStorageInvoker) (Object) container.getHoldingChunkMap().getStorage();
-            var file = storage.academy$storageFile(pointer.chunkPos(), pointer.storageIndex());
+            var storage = container.getHoldingChunkMap().getStorage();
+            var file = storage.getRegionStorageFile(pointer.chunkPos(), pointer.storageIndex());
             var existing = file.read(pointer.subLevelIndex());
-            if (existing != null && !dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelData.fromTag(existing).uuid().equals(target.id())) return false;
-            var data = dev.ryanhcode.sable.sublevel.storage.serialization.SubLevelSerializer.toData(ship, List.of());
+            if (existing != null && !org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.serialization.SubLevelData.fromTag(existing).uuid().equals(target.id())) return false;
+            var data = org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.serialization.SubLevelSerializer.toData(ship, List.of());
             file.write(pointer.subLevelIndex(), data.fullTag());
             file.flush();
-            var region = storage.academy$regionFile(pointer.chunkPos());
+            var region = storage.getRegionFile(pointer.chunkPos());
             int index = region.getIndex(pointer.chunkPos().getRegionLocalX(), pointer.chunkPos().getRegionLocalZ());
             var tag = region.read(index);
             var holding = tag == null
-                    ? new dev.ryanhcode.sable.sublevel.storage.holding.SubLevelHoldingChunk(pointer.chunkPos())
-                    : dev.ryanhcode.sable.sublevel.storage.holding.SubLevelHoldingChunk.from(pointer.chunkPos(), tag);
+                    ? org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.SubLevelHoldingChunk.create(pointer.chunkPos())
+                    : org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.SubLevelHoldingChunk.from(pointer.chunkPos(), tag);
             if (!holding.getSubLevelPointers().contains(pointer.local())) holding.getSubLevelPointers().add(pointer.local());
             var updated = new net.minecraft.nbt.CompoundTag();
             holding.writeTo(updated);

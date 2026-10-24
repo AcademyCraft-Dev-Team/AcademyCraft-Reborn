@@ -2,6 +2,8 @@
 
 适用当前工作区：Minecraft 26.2 / NeoForge 26.2.0.70 / Academy 0.0.4-alpha，Java 25。本文描述已实现接口；后续规划见 [注册 API 设计方案](addon_registration_api_design.md)。测试版只尽可能保障文档化的 API 兼容。
 
+2026-10-25 更新：`examples/` 已改为本地保留、不随 Git 分发；主项目中的 `verifyApiExample`、`apiExampleJar` 及 `academyApiExample` 运行接线已移除。下文涉及这些命令的验证记录属于当时的历史结果，不是当前 CI 的验证范围。公开附属 API 本身不受影响。
+
 ## 接入规则
 
 禁止破坏性注入，非必要禁止对 Academy 方法进行 Mixin。公开注册、事件、效果服务能完成的功能必须通过这些入口；不得用反射、覆写、字节码转换绕过冻结、授权、状态保护或费用校验。内部实现可随时重构，`public` 修饰符和公开方法签名稳定都不保证某个注入位置稳定。必要临时兼容的限制详见设计方案第 1.1 节。

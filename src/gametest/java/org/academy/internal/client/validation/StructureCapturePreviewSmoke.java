@@ -463,7 +463,7 @@ public final class StructureCapturePreviewSmoke {
     /** Sable's public Academy view is read-only; use its real plot update/event path in this fixture. */
     private static final class SableContent {
         private static void snapshotExisting() {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             check(container != null, "Sable fixture has no container");
             for (var body : container.getAllSubLevels()) INITIAL_SABLE_IDS.add(body.getUniqueId());
             sableTracking = true;
@@ -471,7 +471,7 @@ public final class StructureCapturePreviewSmoke {
 
         /** Only new bodies in the verified empty fixture arena, or proven children of owned roots. */
         private static void collectOwned() {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             check(container != null, "Sable fixture lost its container");
             var arena = new AABB(Vec3.atLowerCornerOf(seed.offset(-6, -16, -6)),
                     Vec3.atLowerCornerOf(seed.offset(14, 14, 9)));
@@ -516,7 +516,7 @@ public final class StructureCapturePreviewSmoke {
         }
 
         private static int liveOwnedCount() {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             check(container != null, "Sable fixture lost its container");
             int count = 0;
             for (var id : OWNED_SABLE_IDS) {
@@ -528,7 +528,7 @@ public final class StructureCapturePreviewSmoke {
 
         private static void cleanupOwned() {
             collectOwned();
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             check(container != null, "Sable cleanup has no container");
             for (var id : List.copyOf(OWNED_SABLE_IDS)) {
                 check(!INITIAL_SABLE_IDS.contains(id), "Refusing to remove a pre-existing Sable body");
@@ -544,7 +544,7 @@ public final class StructureCapturePreviewSmoke {
         }
 
         private static void change() {
-            var container = dev.ryanhcode.sable.api.sublevel.SubLevelContainer.getContainer(player.level());
+            var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(player.level());
             check(container != null, "Sable fixture has no container");
             var body = container.getSubLevel(reference.id());
             check(body != null, "Sable fixture has no body");
