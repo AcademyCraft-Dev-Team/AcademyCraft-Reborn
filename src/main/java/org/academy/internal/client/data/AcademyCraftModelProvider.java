@@ -20,6 +20,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.client.model.generators.template.ExtendedModelTemplateBuilder;
+import com.geckolib.renderer.internal.GeckolibItemSpecialRenderer;
 import org.academy.AcademyCraft;
 import org.academy.api.client.resources.model.cuboid.CoinModelGenerator;
 import org.academy.internal.client.renderer.special.*;
@@ -122,6 +123,10 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         blockModels.createTrivialBlock(Blocks.WIND_GEN_PILLAR.get(), providerW);
         blockModels.createTrivialBlock(Blocks.OMNI_CRAFTING_TABLE.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.SOLAR_GEN.get(), providerDB);
+        blockModels.createTrivialBlock(Blocks.AEROSPACE_SIGNAL_CABIN.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.SATELLITE_LAUNCH_PAD.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.ENERGY_LASER_TOWER.get(), providerW);
+        blockModels.createTrivialBlock(Blocks.HIBERNATION_POD.get(), providerW);
         blockModels.createTrivialBlock(Blocks.ABILITY_DEVELOPER.get(), providerDB);
         blockModels.createTrivialBlock(Blocks.IMAG_PHASE.get(), providerBlack);
         var configurableDarkmatterBlock = Blocks.DARKMATTER_BLOCK.get();
@@ -204,6 +209,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.IMAG_PHASE_PLATE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_CIRCUIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.NEEDLE.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(Items.LASER_DESIGNATOR.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_HELMET.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_CHESTPLATE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.DARK_MATTER_LEGGINGS.get(), ModelTemplates.FLAT_ITEM);
@@ -211,6 +217,73 @@ public final class AcademyCraftModelProvider extends ModelProvider {
         itemModels.generateFlatItem(Items.EMPTY_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.SPATIAL_STORAGE_UNIT.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.IMAG_PHASE_UNIT.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.itemModelOutput.accept(
+                Items.MISAKA_TOWER.get(),
+                ItemModelUtils.specialModel(
+                        academy("misaka_tower").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.MISAKA_TOWER_PROMAX.get(),
+                ItemModelUtils.specialModel(
+                        academy("misaka_tower_promax").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.SATELLITE_LAUNCH_PAD.get(),
+                ItemModelUtils.specialModel(
+                        academy("satellite_launch_pad").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.AEROSPACE_SIGNAL_CABIN.get(),
+                ItemModelUtils.specialModel(
+                        academy("aerospace_signal_cabin").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.ENERGY_LASER_TOWER.get(),
+                ItemModelUtils.specialModel(
+                        academy("energy_laser_tower").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.HIBERNATION_POD.get(),
+                ItemModelUtils.specialModel(
+                        academy("hibernation_pod").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(Items.MISAKA_SISTER_SPAWN_EGG.get(), ItemModelUtils.plainModel(
+                ModelTemplates.FLAT_ITEM.create(
+                        ModelLocationUtils.getModelLocation(Items.MISAKA_SISTER_SPAWN_EGG.get()),
+                        new TextureMapping().put(
+                                TextureSlot.LAYER0,
+                                // Placeholder until a dedicated Misaka Sister egg texture exists.
+                                new Material(AcademyCraft.vanilla("villager_spawn_egg").withPrefix("item/"))
+                        ),
+                        itemModels.modelOutput
+                )
+        ));
+        itemModels.itemModelOutput.accept(
+                Items.NETWORK_RELAY_SATELLITE.get(),
+                ItemModelUtils.specialModel(
+                        academy("relay_satellite").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
+        itemModels.itemModelOutput.accept(
+                Items.HYPER_NETWORK_RELAY_SATELLITE.get(),
+                ItemModelUtils.specialModel(
+                        academy("relay_satellite").withPrefix("item/"),
+                        new GeckolibItemSpecialRenderer.Unbaked<>()
+                )
+        );
         itemModels.itemModelOutput.accept(Items.PAPER_AIRPLANE.get(), ItemModelUtils.plainModel(
                 ModelTemplates.FLAT_ITEM.create(
                         ModelLocationUtils.getModelLocation(Items.PAPER_AIRPLANE.get()),

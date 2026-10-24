@@ -79,6 +79,39 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         protected set
     protected var gestureTarget: Widget? = null
 
+    /**
+     * Drop hover/gesture capture. Required when a container is hidden or disabled mid-press:
+     * parents clear their own [gestureTarget] on release forwarded to a GONE child, but the
+     * child's nested capture would otherwise survive and steal the next click after re-show.
+     */
+    protected fun clearPointerCapture() {
+        val hovered = hoveredWidget
+        if (hovered != null) {
+            var current: Widget? = hovered
+            while (current != null && current !== this) {
+                current.isHovered = false
+                current = current.parent
+            }
+            hoveredWidget = null
+        }
+        gestureTarget = null
+        for (child in children.values) {
+            if (child is AbstractWidgetContainer) {
+                child.clearPointerCapture()
+            }
+        }
+    }
+
+    override var visibility: Widget.Visibility
+        get() = super.visibility
+        set(value) {
+            val wasInteractive = super.visibility == Widget.Visibility.VISIBLE
+            super.visibility = value
+            if (wasInteractive && value != Widget.Visibility.VISIBLE) {
+                clearPointerCapture()
+            }
+        }
+
     private fun renderDebugLayoutBounds(widget: Widget, context: Canvas) {
         var outlineColor = -0x10000
         if (widget.isFocused) outlineColor = -0xff0100
@@ -373,7 +406,13 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
     }
 
     override fun dispatchEvent(event: InputEvent) {
-        if (!isAbsoluteEnabled() || visibility != Widget.Visibility.VISIBLE) return
+        if (!isAbsoluteEnabled() || visibility != Widget.Visibility.VISIBLE) {
+            // Parent may forward RELEASED to a now-GONE gestureTarget; drop nested capture.
+            if (gestureTarget != null || hoveredWidget != null) {
+                clearPointerCapture()
+            }
+            return
+        }
 
         val intercepted = onInterceptEvent(event)
         if (!intercepted) {

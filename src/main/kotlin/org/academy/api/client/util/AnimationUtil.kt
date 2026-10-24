@@ -4,6 +4,7 @@ import org.academy.api.client.gui.animation.Animator
 import org.academy.api.client.gui.animation.AnimatorListener
 import org.academy.api.client.gui.animation.EasingFunctions
 import org.academy.api.client.gui.animation.ObjectAnimator
+import org.academy.api.client.gui.animation.TimeInterpolator
 import org.academy.api.client.gui.widget.Widget
 
 object AnimationUtil {
@@ -11,13 +12,44 @@ object AnimationUtil {
     private const val Y_OFFSET = 20f
 
     fun show(widget: Widget) {
-        widget.cancelAnimations()
-        widget.alpha = 0f
-        widget.visibility = Widget.Visibility.VISIBLE
-        widget.isEnabled = true
+        reveal(
+            widget = widget,
+            targetAlpha = 1f,
+            alphaDuration = DURATION,
+            translationDuration = DURATION,
+            yInterpolator = EasingFunctions.EASE_OUT_BACK,
+            applyShowFlags = true
+        )
+    }
 
-        moveTranslationYShow(widget)
-        alphaShow(widget)
+    /**
+     * Fade + slide-up reveal. When [applyShowFlags] is false, only animates alpha/translation
+     * (used by machine open rails that already manage visibility).
+     */
+    fun reveal(
+        widget: Widget,
+        targetAlpha: Float = 1f,
+        alphaDuration: Long = DURATION,
+        translationDuration: Long = DURATION,
+        yInterpolator: TimeInterpolator = EasingFunctions.EASE_OUT_BACK,
+        applyShowFlags: Boolean = true
+    ) {
+        widget.cancelAnimations()
+        val endAlpha = targetAlpha.coerceIn(0f, 1f)
+        widget.alpha = 0f
+        widget.translationY = Y_OFFSET
+        if (applyShowFlags) {
+            widget.visibility = Widget.Visibility.VISIBLE
+            widget.isEnabled = true
+        }
+        widget.startAnimation(
+            ObjectAnimator.ofFloat({ widget.alpha = it }, 0f, endAlpha).setDuration(alphaDuration)
+        )
+        widget.startAnimation(
+            ObjectAnimator.ofFloat({ widget.translationY = it }, Y_OFFSET, 0f)
+                .setDuration(translationDuration)
+                .setInterpolator(yInterpolator)
+        )
     }
 
     fun hide(widget: Widget) {

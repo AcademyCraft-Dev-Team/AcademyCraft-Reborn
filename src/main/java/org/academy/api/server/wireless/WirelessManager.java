@@ -7,6 +7,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.api.common.wireless.*;
+import org.academy.internal.common.world.level.block.entity.OwnedDevice;
 import org.academy.internal.server.world.level.storage.WirelessNetworkData;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
@@ -91,6 +92,12 @@ public class WirelessManager {
         if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
             return;
         }
+        var be = level.getBlockEntity(nodePos);
+        if (be instanceof OwnedDevice owned && owned.getOwnerUuid() != null && !owned.isOwner(player)) {
+            LOGGER.warn("Player {} tried to rename owned node at {} without permission",
+                    player.getGameProfile().name(), nodePos);
+            return;
+        }
         var data = WirelessNetworkData.get(level);
 
         var oldCfg = data.getNodeConfig(nodePos);
@@ -117,6 +124,12 @@ public class WirelessManager {
                                    BlockPos nodePos,
                                    String newPass) {
         if (player.position().distanceToSqr(Vec3.atCenterOf(nodePos)) > 64.0) {
+            return;
+        }
+        var be = level.getBlockEntity(nodePos);
+        if (be instanceof OwnedDevice owned && owned.getOwnerUuid() != null && !owned.isOwner(player)) {
+            LOGGER.warn("Player {} tried to change password of owned node at {} without permission",
+                    player.getGameProfile().name(), nodePos);
             return;
         }
         var data = WirelessNetworkData.get(level);

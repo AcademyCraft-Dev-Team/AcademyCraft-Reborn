@@ -389,7 +389,7 @@ open class TextInputWidget(protected val maxLength: Int) : AbstractWidget(), Tex
         invalidate()
     }
 
-    override fun canFocus(): Boolean = true
+    override fun canFocus(): Boolean = isAbsoluteEnabled() && visibility == Widget.Visibility.VISIBLE
 
     override fun onFocusGained() {
         TextInputFocus.acquire(this)

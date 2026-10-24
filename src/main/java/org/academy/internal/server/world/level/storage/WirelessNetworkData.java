@@ -5,11 +5,13 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Keyable;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.academy.AcademyCraft;
 import org.academy.api.server.wireless.WirelessManager;
+import org.academy.internal.server.misaka.MisakaComputeIndex;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -56,6 +58,7 @@ public final class WirelessNetworkData extends SavedData {
 
     private final DualKeyMap<BlockPos, String, NodeConfig> nodes =
             new DualKeyMap<>(nodeConfig -> nodeConfig.name);
+    private @Nullable transient MinecraftServer owningServer;
 
     public WirelessNetworkData() {
     }
@@ -65,7 +68,38 @@ public final class WirelessNetworkData extends SavedData {
     }
 
     public static WirelessNetworkData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
+        var data = level.getDataStorage().computeIfAbsent(SAVED_DATA_TYPE);
+        data.owningServer = level.getServer();
+        return data;
+    }
+
+    private void markTopologyDirty() {
+        if (owningServer != null) {
+            MisakaComputeIndex.get(owningServer).markTopologyDirty();
+        }
+    }
+
+    /**
+     * Display name for a wireless node.
+     *
+     * @param fallbackOverworld when the node is missing in {@code level}, also try the server overworld
+     *                          (Misaka topology is overworld-authoritative).
+     */
+    public static String displayName(ServerLevel level, @Nullable BlockPos pos, boolean fallbackOverworld) {
+        if (level == null || pos == null) {
+            return "";
+        }
+        var config = get(level).getNodeConfig(pos);
+        if (config == null && fallbackOverworld) {
+            var server = level.getServer();
+            if (server != null) {
+                var overworld = server.overworld();
+                if (overworld != level) {
+                    config = get(overworld).getNodeConfig(pos);
+                }
+            }
+        }
+        return config != null ? config.name : "";
     }
 
     public boolean registerNode(BlockPos pos, String name, String password, int radius, int maxConnections) {
@@ -90,6 +124,7 @@ public final class WirelessNetworkData extends SavedData {
 
         setDirty();
         LOGGER.debug("Unregistered node '{}' at {}. Now disconnecting its users.", config.name, pos);
+        markTopologyDirty();
 
         var usersToDisconnect = new HashSet<>(config.connectedUsers.keySet());
         for (var userPos : usersToDisconnect) {
@@ -163,6 +198,7 @@ public final class WirelessNetworkData extends SavedData {
         }
         if (changed) {
             setDirty();
+            markTopologyDirty();
         }
         return true;
     }
@@ -176,6 +212,7 @@ public final class WirelessNetworkData extends SavedData {
         if (config.connectedUsers.remove(userPos) != null) {
             LOGGER.debug("Disconnected user {} from node '{}'", userPos, config.name);
             setDirty();
+            markTopologyDirty();
             return true;
         }
         return false;
@@ -191,6 +228,7 @@ public final class WirelessNetworkData extends SavedData {
         }
         if (removed) {
             setDirty();
+            markTopologyDirty();
         }
         return removed;
     }

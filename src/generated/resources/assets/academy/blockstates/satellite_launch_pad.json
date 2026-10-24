@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "academy:block/satellite_launch_pad"
+    }
+  }
+}

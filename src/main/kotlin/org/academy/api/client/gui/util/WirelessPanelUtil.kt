@@ -9,10 +9,7 @@ import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.text.model.Ellipsize
-import org.academy.api.client.gui.widget.FrameLayoutWidget
-import org.academy.api.client.gui.widget.LinearLayoutWidget
-import org.academy.api.client.gui.widget.Widget
-import org.academy.api.client.gui.widget.WidgetContainer
+import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
 import org.academy.api.common.wireless.ConnectNodePacket
 import org.academy.api.common.wireless.DisconnectNodePacket
@@ -24,6 +21,106 @@ import java.util.function.Consumer
 object WirelessPanelUtil {
     const val PANEL_WIDTH: Float = 176.0f
     const val PANEL_HEIGHT: Float = 187.0f
+
+    fun create(position: BlockPos, withBackground: Boolean): FrameLayoutWidget =
+        FrameLayoutWidget().apply {
+            layoutParams = WidgetContainer.LayoutParams().size(PANEL_WIDTH, PANEL_HEIGHT)
+            wirelessPanel(position, withBackground)
+        }
+
+    /**
+     * Shared wireless-style node row (Fill back, icon, name, connect/disconnect).
+     * [trailing] is invoked on the content row before action buttons (e.g. password field).
+     */
+    fun nodeRow(
+        nodeName: String,
+        isConnected: Boolean,
+        isNone: Boolean,
+        onConnect: () -> Unit,
+        onDisconnect: () -> Unit,
+        trailing: (LinearLayoutWidget) -> Unit = {}
+    ): FrameLayoutWidget {
+        val nodeViewPanel = FrameLayoutWidget()
+        val nodeBack = FillWidget(-0x1)
+        nodeBack.layoutParams = FrameLayoutWidget.LayoutParams()
+            .sizeMode(SizeMode.MATCH_PARENT)
+            .padding(2f, 2f)
+        nodeBack.alpha = 0.25f
+        nodeViewPanel.addChild("back", nodeBack)
+
+        val itemContent = LinearLayoutWidget()
+        itemContent.orientation = Orientation.HORIZONTAL
+        itemContent.layoutParams = FrameLayoutWidget.LayoutParams()
+            .sizeMode(SizeMode.MATCH_PARENT)
+            .gravity(Gravity.CENTER_VERTICAL)
+            .paddingHorizontal(4f)
+        itemContent.spacing = 4f
+        nodeViewPanel.addChild("content", itemContent)
+
+        val nodeIcon = ImageWidget(R.textures.gui.icon.icon_node)
+        nodeIcon.layoutParams = LinearLayoutWidget.LayoutParams()
+            .gravity(Gravity.CENTER)
+            .size(14f, 14f)
+        itemContent.addChild("icon", nodeIcon)
+
+        val nodeNameLabel = TextWidget(nodeName).apply {
+            maxLines = 1
+            ellipsize = Ellipsize.END
+        }
+        nodeNameLabel.layoutParams = LinearLayoutWidget.LayoutParams()
+            .weight(1f)
+            .height(10f)
+            .gravity(Gravity.CENTER_VERTICAL)
+        itemContent.addChild("node_name", nodeNameLabel)
+
+        trailing(itemContent)
+
+        if (!isConnected) {
+            val connectButton = ButtonWidget()
+            connectButton.layoutParams = LinearLayoutWidget.LayoutParams()
+                .gravity(Gravity.CENTER)
+                .size(14f, 14f)
+            connectButton.onClickListener = { onConnect() }
+            itemContent.addChild("button", connectButton) {
+                val content = ImageWidget()
+                val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
+                defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
+                val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_unconnected)
+                hoveredDrawable.tintColor = -0x1
+                val sld = StateListDrawable()
+                sld.setDefault(defaultDrawable)
+                sld.addState(Widget.HOVERED, hoveredDrawable)
+                sld.addState(Widget.FOCUSED, hoveredDrawable)
+                connectButton.background = sld
+                content.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT)
+                connectButton.addChild("content", content)
+            }
+        } else if (!isNone) {
+            val disconnectButton = ButtonWidget()
+            disconnectButton.onClickListener = { onDisconnect() }
+            disconnectButton.layoutParams = LinearLayoutWidget.LayoutParams()
+                .gravity(Gravity.CENTER)
+                .size(14f, 14f)
+            itemContent.addChild("button", disconnectButton) {
+                val content = ImageWidget()
+                val defaultDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
+                defaultDrawable.tintColor = 0xFFE6E6E6.toInt()
+                val hoveredDrawable = TextureDrawable(R.textures.gui.icon.icon_connected)
+                hoveredDrawable.tintColor = -0x1
+                val sld = StateListDrawable()
+                sld.setDefault(defaultDrawable)
+                sld.addState(Widget.HOVERED, hoveredDrawable)
+                sld.addState(Widget.FOCUSED, hoveredDrawable)
+                disconnectButton.background = sld
+                content.layoutParams = FrameLayoutWidget.LayoutParams()
+                    .sizeMode(SizeMode.MATCH_PARENT)
+                disconnectButton.addChild("content", content)
+            }
+        }
+        return nodeViewPanel
+    }
+
 }
 
 private const val MARGIN_HORIZONTAL = 12.0f

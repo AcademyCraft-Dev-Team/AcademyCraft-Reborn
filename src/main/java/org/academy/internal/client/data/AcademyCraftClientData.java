@@ -13,6 +13,8 @@ public final class AcademyCraftClientData {
     }
 
     public static void dataSetup(GatherDataEvent.Client event) {
+        // Datagen never starts a server/client lifecycle to close the network cleanup timer.
+        org.misaka.MisakaNetwork.shutdownExecutorService();
         event.createProvider(AcademyCraftModelProvider::new);
         event.createProvider((output, registries) -> new LootTableProvider(
                 output,

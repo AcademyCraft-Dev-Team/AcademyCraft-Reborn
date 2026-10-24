@@ -1,6 +1,7 @@
 package org.academy.internal.server.ability;
 
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -62,6 +63,10 @@ public class SyncManager {
 
     @Nullable ServerPlayer getOnlinePlayer(UUID uuid) {
         return context.getMinecraftServer().getPlayerList().getPlayer(uuid);
+    }
+
+    @Nullable MinecraftServer getMinecraftServer() {
+        return context.getMinecraftServer();
     }
 
     public void processPendingTasks() {

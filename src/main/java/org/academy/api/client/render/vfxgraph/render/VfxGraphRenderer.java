@@ -110,6 +110,7 @@ public final class VfxGraphRenderer {
     }
 
     private final ConcurrentHashMap<RenderSpec, RenderPipeline> pipelines = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<RenderSpec, RenderPipeline> pipelinesNoDepth = new ConcurrentHashMap<>();
     private final GpuBuffer quadBuffer;
     private final GpuBuffer cubeBuffer;
     private final GpuBuffer[] materialGridBuffers = new GpuBuffer[3];
@@ -228,7 +229,19 @@ public final class VfxGraphRenderer {
     }
 
     private RenderPipeline pipelineFor(RenderSpec spec) {
-        return pipelines.computeIfAbsent(spec, s -> {
+        return pipelineFor(spec, false);
+    }
+
+    /**
+     * @param ignoreDepthTest when true, depth compare is ALWAYS (still no depth write). Used with
+     *                        {@link WorldTransform#ignoreSceneDepth()} so trail billboards are not
+     *                        discarded when the main depth attachment is near-cleared or stale at
+     *                        late world-compose time — soft-particle farView alone is not enough.
+     */
+    private RenderPipeline pipelineFor(RenderSpec spec, boolean ignoreDepthTest) {
+        var map = ignoreDepthTest ? pipelinesNoDepth : pipelines;
+        return map.computeIfAbsent(spec, s -> {
+            // QUAD 采样噪声/深度（Sampler0/Sampler1）；ARC 走旧式管绑定组（GraphCamera + ArcLightning）
             var bindGroup = switch (s.geometry()) {
                 case QUAD, MATERIAL_SURFACE -> NOISE_BIND_GROUP;
                 case ARC -> ARC_BIND_GROUP;
@@ -249,11 +262,13 @@ public final class VfxGraphRenderer {
             var topology = s.geometry() == RenderSpec.Geometry.ARC
                     ? PrimitiveTopology.TRIANGLES
                     : PrimitiveTopology.QUADS;
-            var locationName = "vfx_graph_" + s.geometry().name().toLowerCase(Locale.ROOT)
+            // pipeline location 需是合法 Identifier（[a-z0-9/._-]）：用安全字段拼名，不用 record toString
+            var locationName = "vfx_graph_" + (ignoreDepthTest ? "nodepth_" : "")
+                    + s.geometry().name().toLowerCase(Locale.ROOT)
                     + "_" + s.blend().name().toLowerCase(Locale.ROOT)
                     + "_" + s.vertexShader().getPath() + "_" + s.fragmentShader().getPath();
             var pipeline = buildPipeline(locationName, s.vertexShader(), s.fragmentShader(),
-                    bindGroup, vertexFormat, instanceFormat, blend, topology);
+                    bindGroup, vertexFormat, instanceFormat, blend, topology, ignoreDepthTest);
             RenderSystem.getDevice().precompilePipeline(pipeline);
             return pipeline;
         });
@@ -269,7 +284,7 @@ public final class VfxGraphRenderer {
             var pipeline = buildPipeline(locationName, spec.vertexShader(), spec.fragmentShader(),
                     ARC_BIND_GROUP, ARC_TUBE_FORMAT, null,
                     bloomPass ? BlendFunction.ADDITIVE : BlendFunction.TRANSLUCENT,
-                    PrimitiveTopology.TRIANGLES);
+                    PrimitiveTopology.TRIANGLES, false);
             RenderSystem.getDevice().precompilePipeline(pipeline);
             return pipeline;
         });
@@ -280,7 +295,7 @@ public final class VfxGraphRenderer {
             surfacePipeline = buildPipeline("vfx_graph_surface",
                     R.shaders.core.vfxgraph_surface, R.shaders.core.vfxgraph_surface,
                     CAMERA_BIND_GROUP, SIMPLE_FORMAT, null,
-                    BlendFunction.TRANSLUCENT, PrimitiveTopology.TRIANGLES);
+                    BlendFunction.TRANSLUCENT, PrimitiveTopology.TRIANGLES, false);
             RenderSystem.getDevice().precompilePipeline(surfacePipeline);
         }
         return surfacePipeline;
@@ -297,7 +312,7 @@ public final class VfxGraphRenderer {
     private static RenderPipeline buildPipeline(
             String name, Identifier vs, Identifier fs,
             BindGroupLayout bindGroup, VertexFormat vertexFormat, @Nullable VertexFormat instanceFormat,
-            BlendFunction blend, PrimitiveTopology topology
+            BlendFunction blend, PrimitiveTopology topology, boolean ignoreDepthTest
     ) {
         var builder = RenderPipeline.builder()
                 .withLocation(Identifier.fromNamespaceAndPath("academy", "pipeline/" + name))
@@ -305,7 +320,12 @@ public final class VfxGraphRenderer {
                 .withFragmentShader(fs)
                 .withBindGroupLayout(bindGroup)
                 .withCull(false)
-                .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
+                // 深度测试：与 Minecraft 主渲染一致的反向 Z（近=1.0/远=0.0，GEQUAL 通过），
+                // 粒子与场景正确遮挡（不写深度——半透明粒子彼此不遮挡）。
+                // ignoreDepthTest：晚合成时深度附件可能已近清/失效，GEQUAL 会整批灭掉粒子。
+                .withDepthStencilState(new DepthStencilState(
+                        ignoreDepthTest ? CompareOp.ALWAYS_PASS : CompareOp.GREATER_THAN_OR_EQUAL,
+                        false))
                 .withColorTargetState(new ColorTargetState(blend))
                 .withPrimitiveTopology(topology)
                 .withVertexBinding(0, vertexFormat);
@@ -359,7 +379,7 @@ public final class VfxGraphRenderer {
         var encoder = device.createCommandEncoder();
         var preClearedDepth = false;
         var shaderPackInUse = IrisIntegration.isShaderPackInUse();
-        var useSceneDepth = specs.stream().anyMatch(s -> sceneDepthUsable(s, shaderPackInUse));
+        var useSceneDepth = !transform.ignoreSceneDepth() && specs.stream().anyMatch(s -> sceneDepthUsable(s, shaderPackInUse));
         if (useSceneDepth && depth != null) {
             if (clear) {
                 encoder.clearDepthTexture(depth.texture(), 0.0);
@@ -583,10 +603,10 @@ public final class VfxGraphRenderer {
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(instanceBuffer.slice(0, bytes), instanceData);
         uploadedInstanceBytes += bytes;
 
-        var depthView = sceneDepthUsable(spec, IrisIntegration.isShaderPackInUse())
+        var depthView = !transform.ignoreSceneDepth() && sceneDepthUsable(spec, IrisIntegration.isShaderPackInUse())
                 && sceneDepth.view() != null ? sceneDepth.view() : farView;
         var billboard = spec.geometry() == RenderSpec.Geometry.QUAD || materialSurface;
-        var pipeline = pipelineFor(spec);
+        var pipeline = pipelineFor(spec, transform.ignoreSceneDepth());
         if (!materialSurface) {
             drawInstancedPass(pass, pipeline, shapeBuffer, cameraUbo.slice(),
                     instanceBuffer.slice(0, bytes), matched, billboard, depthView, spec, 6);
@@ -671,7 +691,9 @@ public final class VfxGraphRenderer {
         out.putFloat(vx);
         out.putFloat(vy);
         out.putFloat(vz);
-        out.putFloat(buffer.size(i));
+        // WorldTransform.scale must also resize billboards; position/velocity alone leave
+        // radius-0 emitters (demo_fire) visually unchanged when callers setScale(...).
+        out.putFloat(buffer.size(i) * transform.scale());
         out.putFloat(buffer.colorR(i));
         out.putFloat(buffer.colorG(i));
         out.putFloat(buffer.colorB(i));
@@ -727,7 +749,7 @@ public final class VfxGraphRenderer {
         lineData.flip();
         RenderSystem.getDevice().createCommandEncoder().writeToBuffer(lineBuffer.slice(0, neededBytes), lineData);
 
-        pass.setPipeline(pipelineFor(spec));
+        pass.setPipeline(pipelineFor(spec, transform.ignoreSceneDepth()));
         pass.setUniform("GraphCamera", cameraUbo.slice());
         pass.setVertexBuffer(0, lineBuffer.slice(0, neededBytes));
         pass.setVertexBuffer(1, null);
@@ -800,7 +822,7 @@ public final class VfxGraphRenderer {
         for (int i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
             int size = buffer.trailSize(i);
-            float half = buffer.size(i) * 0.5f;
+            float half = buffer.size(i) * 0.5f * transform.scale();
             for (int k = 0; k < size - 1; k++) {
                 float ax = buffer.trailX(i, k);
                 float ay = buffer.trailY(i, k);

@@ -6,8 +6,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
 import org.academy.api.common.entitycontrol.AttackDecision;
 import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.api.server.entity.SurvivalDefense;
@@ -23,6 +25,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -311,6 +314,33 @@ public abstract class MixinEntity {
             VectorReflection.Server.maintainProtection(player);
             ci.cancel();
         }
+    }
+
+    @Inject(method = "canAddPassenger", at = @At("HEAD"), cancellable = true)
+    private void academy$allowMisakaSisterPassenger(Entity passenger, CallbackInfoReturnable<Boolean> cir) {
+        if (!(passenger instanceof MisakaSisterEntity) || !((Object) this instanceof Player)) {
+            return;
+        }
+        cir.setReturnValue(((Entity) (Object) this).getPassengers().isEmpty());
+    }
+
+    /**
+     * Players are {@code .noSave()} so {@code EntityType#canSerialize()} is false.
+     * Vanilla {@code startRiding} rejects that on the server even when {@code force} is true,
+     * which would make Misaka pickup always fail silently.
+     */
+    @Redirect(
+            method = "startRiding(Lnet/minecraft/world/entity/Entity;ZZ)Z",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/EntityType;canSerialize()Z"
+            )
+    )
+    private boolean academy$allowMisakaMountPlayer(EntityType<?> type) {
+        if ((Object) this instanceof MisakaSisterEntity && type == EntityTypes.PLAYER) {
+            return true;
+        }
+        return type.canSerialize();
     }
 
     @Inject(method = "markHurt", at = @At("HEAD"), cancellable = true)

@@ -5,6 +5,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
@@ -24,6 +25,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
 import org.academy.internal.server.config.AbilityConfig;
+import org.academy.internal.server.misaka.MisakaComputeIndex;
+import org.academy.internal.server.misaka.MisakaComputeUsageTracker;
+import org.academy.internal.server.misaka.MisakaDeviceQuotaSync;
+import org.academy.internal.server.misaka.ServerMisakaComputeAccess;
 import org.academy.internal.server.world.level.storage.Player;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
@@ -198,14 +203,20 @@ public class PlayerCPManager implements AbilitySubsystem {
         if (isAutomaticSkillDebugPlayer(player.getScoreboardName())) {
             skillDebugPlayers.add(player.getUUID());
         }
+        MisakaComputeIndex.get(player.level().getServer()).putPlayerName(player.getGameProfile().name(), player.getUUID());
         refreshCommonSkillBonuses(player.getUUID());
         syncManager.schedulePlayerSync(player.getUUID(), SyncTypes.CP_DATA);
+        ServerMisakaComputeAccess.INSTANCE.tickPlayer(player);
+        MisakaDeviceQuotaSync.sync(player);
     }
 
     @Override
     public void onPlayerLogout(ServerPlayer player) {
         skillDebugPlayers.remove(player.getUUID());
         cpIterationProgress.remove(player.getUUID());
+        MisakaComputeIndex.get(player.level().getServer()).removePlayerName(player.getGameProfile().name());
+        MisakaComputeUsageTracker.clearPlayer(player.getUUID());
+        org.academy.internal.server.misaka.MisakaOrbitalCharge.clear(player.getUUID());
     }
 
     @Override

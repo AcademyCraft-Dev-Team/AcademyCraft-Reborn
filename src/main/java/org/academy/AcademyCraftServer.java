@@ -13,6 +13,9 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import org.academy.api.common.misaka.MisakaComputeAccess;
+import org.academy.api.common.misaka.MisakaNAT;
+import org.academy.api.common.misaka.MisakaRelayAccess;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.util.FileUtil;
 import org.academy.api.server.ability.AbilitySystemServer;
@@ -30,6 +33,7 @@ import org.academy.internal.server.music.MusicRoomManager;
 import org.academy.internal.server.music.ResolveService;
 import org.academy.internal.server.music.ServerJukeboxManager;
 import org.academy.internal.server.music.SharedAccountService;
+import org.academy.internal.common.network.misaka.*;
 import org.academy.internal.common.network.PlayerLeftClickSwingPacket;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.FriendlyFireSetting;
@@ -40,6 +44,11 @@ import org.academy.internal.server.config.MusicConfig;
 import org.academy.internal.server.config.DimensionEffectsConfig;
 import org.academy.internal.server.entity.SurvivalDefenseRuntime;
 import org.academy.internal.server.time.TemporalRuntime;
+import org.academy.internal.server.misaka.MisakaComputeDevicesBootstrap;
+import org.academy.internal.server.misaka.SatelliteMisakaRelayAccess;
+import org.academy.internal.server.misaka.ServerMisakaComputeAccess;
+import org.academy.internal.server.misaka.WirelessForwardingMisakaNAT;
+import org.academy.internal.server.world.level.storage.Player;
 import org.academy.internal.server.world.level.storage.WorldData;
 import org.academy.internal.server.world.level.storage.WorldDataStore;
 import org.slf4j.Logger;
@@ -106,6 +115,12 @@ public final class AcademyCraftServer {
         org.academy.internal.common.network.NativeStructureMinePacket.initServer();
         org.academy.internal.common.world.item.CoinItem.initServer();
         MagneticHookActionPacket.initServer();
+        MisakaPackets.initServer();
+        MisakaNAT.install(WirelessForwardingMisakaNAT.INSTANCE);
+        MisakaRelayAccess.install(SatelliteMisakaRelayAccess.INSTANCE);
+        MisakaComputeAccess.install(ServerMisakaComputeAccess.INSTANCE);
+        ServerMisakaComputeAccess.INSTANCE.bindServer(server);
+        MisakaComputeDevicesBootstrap.registerBuiltins();
         AbilityProgramManager.initServer();
     }
 
@@ -148,6 +163,10 @@ public final class AcademyCraftServer {
         instance.serverConfig.save();
         // 关服前落盘音乐室，避免重启后房间消失喵.
         MusicRoomManager.saveState();
+        MisakaNAT.install(null);
+        MisakaRelayAccess.install(null);
+        MisakaComputeAccess.install(null);
+        ServerMisakaComputeAccess.INSTANCE.clearServer();
         AcademyProfiler.stopSampling();
         AcademyProfiler.stopZoneCapture();
         AcademyProfiler.unregisterThread(context.getRunningThread());

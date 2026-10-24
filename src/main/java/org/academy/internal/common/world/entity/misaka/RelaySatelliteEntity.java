@@ -1,0 +1,416 @@
+package org.academy.internal.common.world.entity.misaka;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.world.entity.EntityTypes;
+import org.academy.internal.common.world.entity.RenderOnlyEntity;
+import org.academy.internal.server.misaka.MisakaRelayOrbits;
+import org.academy.internal.server.world.level.storage.MisakaRelayRegistry;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.jspecify.annotations.Nullable;
+
+import com.geckolib.animatable.GeoEntity;
+import com.geckolib.animatable.instance.AnimatableInstanceCache;
+import com.geckolib.animatable.manager.AnimatableManager;
+import com.geckolib.util.GeckoLibUtil;
+
+import java.util.UUID;
+
+/**
+ * Cosmetic orbiting / launching / crashing Misaka relay satellite.
+ * Coverage authority is {@link MisakaRelayRegistry}.
+ */
+public final class RelaySatelliteEntity extends RenderOnlyEntity implements GeoEntity {
+    public static final float ORBIT_RADIUS = 48.0f;
+    public static final int LAUNCH_DURATION_TICKS = MisakaRelayOrbits.DEFAULT_LAUNCH_TICKS;
+
+    private static final EntityDataAccessor<Boolean> CRASHING =
+            SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> LAUNCHING =
+            SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> LAUNCH_AGE =
+            SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> HYPER =
+            SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Vector3fc> ORBIT_ANCHOR =
+            SynchedEntityData.defineId(RelaySatelliteEntity.class, EntityDataSerializers.VECTOR3);
+    private static final double ORBIT_SPEED = 0.01;
+    private static final double METEOR_AIR_DRAG = 0.995;
+    private static final float DEFAULT_CRASH_EXPLOSION_POWER = 5.0f;
+
+    private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
+    private @Nullable UUID satelliteId;
+    private double orbitAngle;
+    private int launchAge;
+    private double launchStartX;
+    private double launchStartY;
+    private double launchStartZ;
+    /** Snapshot of dive profile derived from launch duration at {@link #beginCrash()}. */
+    private double crashMaxSpeed;
+    private double crashAccel;
+
+    public RelaySatelliteEntity(EntityType<?> type, Level level) {
+        super(type, level);
+        noPhysics = true;
+        setNoGravity(true);
+    }
+
+    public RelaySatelliteEntity(Level level) {
+        this(EntityTypes.RELAY_SATELLITE.get(), level);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        builder.define(CRASHING, false);
+        builder.define(LAUNCHING, false);
+        builder.define(LAUNCH_AGE, 0);
+        builder.define(HYPER, false);
+        builder.define(ORBIT_ANCHOR, new Vector3f(0.0f, 0.0f, 0.0f));
+    }
+
+    public void setSatelliteId(UUID id) {
+        this.satelliteId = id;
+    }
+
+    public @Nullable UUID getSatelliteId() {
+        return satelliteId;
+    }
+
+    public void setOrbitAnchor(double x, double y, double z) {
+        entityData.set(ORBIT_ANCHOR, new Vector3f((float) x, (float) y, (float) z));
+    }
+
+    public Vector3fc getOrbitAnchor() {
+        return entityData.get(ORBIT_ANCHOR);
+    }
+
+    public void setHyper(boolean hyper) {
+        entityData.set(HYPER, hyper);
+    }
+
+    public boolean isHyper() {
+        return entityData.get(HYPER);
+    }
+
+    public boolean isCrashing() {
+        return entityData.get(CRASHING);
+    }
+
+    public boolean isLaunching() {
+        return entityData.get(LAUNCHING);
+    }
+
+    public float getLaunchProgress(float partialTick) {
+        if (!isLaunching()) {
+            return 1.0f;
+        }
+        int duration = launchDurationTicks();
+        return Mth.clamp((entityData.get(LAUNCH_AGE) + partialTick) / duration, 0.0f, 1.0f);
+    }
+
+    private int launchDurationTicks() {
+        if (level() instanceof ServerLevel serverLevel) {
+            return MisakaRelayOrbits.launchTicks(serverLevel.getServer());
+        }
+        return MisakaRelayOrbits.DEFAULT_LAUNCH_TICKS;
+    }
+
+    /**
+     * Derive dive speed/accel from current launch ascent duration and remaining fall height.
+     * Changing {@code misakaRelayLaunchTicks} automatically retargets crash fall time.
+     */
+    private void refreshCrashMotionProfile() {
+        int crashTicks = MisakaRelayOrbits.crashDurationTicks(launchDurationTicks());
+        double drop = Math.max(16.0, getY() - estimateCrashGroundY());
+        crashMaxSpeed = MisakaRelayOrbits.crashMaxSpeed(drop, crashTicks);
+        crashAccel = MisakaRelayOrbits.crashAccel(crashMaxSpeed);
+    }
+
+    private double estimateCrashGroundY() {
+        if (level() instanceof ServerLevel serverLevel) {
+            int x = Mth.floor(getX());
+            int z = Mth.floor(getZ());
+            if (serverLevel.hasChunk(x >> 4, z >> 4)) {
+                return serverLevel.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+            }
+        }
+        return level().getSeaLevel();
+    }
+
+    public void beginLaunch() {
+        entityData.set(LAUNCHING, true);
+        entityData.set(CRASHING, false);
+        noPhysics = true;
+        setNoGravity(true);
+        launchAge = 0;
+        entityData.set(LAUNCH_AGE, 0);
+        launchStartX = getX();
+        launchStartY = getY();
+        launchStartZ = getZ();
+        setDeltaMovement(new Vec3(0.0, 0.35, 0.0));
+    }
+
+    public void beginCrash() {
+        entityData.set(CRASHING, true);
+        entityData.set(LAUNCHING, false);
+        noPhysics = false;
+        setNoGravity(false);
+        refreshCrashMotionProfile();
+        var yaw = random.nextFloat() * Mth.TWO_PI;
+        var horizontal = crashMaxSpeed * (0.85 + random.nextDouble() * 1.05);
+        var dive = crashMaxSpeed * (0.50 + random.nextDouble() * 0.30);
+        setDeltaMovement(new Vec3(
+                Mth.cos(yaw) * horizontal,
+                -dive,
+                Mth.sin(yaw) * horizontal
+        ));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (level().isClientSide()) {
+            // Launch / crash trails: RelaySatelliteTrailVfxClient (demo_fire + mist_stream).
+            return;
+        }
+        if (isCrashing()) {
+            tickCrash();
+            return;
+        }
+        if (isLaunching()) {
+            tickLaunch();
+            return;
+        }
+        var anchor = getOrbitAnchor();
+        orbitAngle += ORBIT_SPEED;
+        double x = anchor.x() + Mth.cos((float) orbitAngle) * ORBIT_RADIUS;
+        double z = anchor.z() + Mth.sin((float) orbitAngle) * ORBIT_RADIUS;
+        setPos(x, anchor.y(), z);
+        setYRot((float) (Mth.wrapDegrees(orbitAngle * Mth.RAD_TO_DEG)));
+    }
+
+    private void tickLaunch() {
+        launchAge++;
+        int duration = launchDurationTicks();
+        if (launchAge % 5 == 0 || launchAge >= duration) {
+            entityData.set(LAUNCH_AGE, launchAge);
+        }
+        // Match laser-tower / abstract-orbit slot so beam and vanish point coincide.
+        var end = currentOrbitSlot();
+        if (launchAge >= duration) {
+            setPos(end.x, end.y, end.z);
+            setDeltaMovement(Vec3.ZERO);
+            finishLaunch();
+            return;
+        }
+
+        float t = launchAge / (float) duration;
+        // Smoothstep: quicker climb early, gentle insertion into orbit.
+        float eased = t * t * (3.0f - 2.0f * t);
+        // Quadratic Bezier: rise above start first, then curve into the orbit slot.
+        var control = new Vec3(launchStartX, end.y, launchStartZ);
+        double u = 1.0 - eased;
+        double x = u * u * launchStartX + 2.0 * u * eased * control.x + eased * eased * end.x;
+        double y = u * u * launchStartY + 2.0 * u * eased * control.y + eased * eased * end.y;
+        double z = u * u * launchStartZ + 2.0 * u * eased * control.z + eased * eased * end.z;
+
+        var prevX = getX();
+        var prevY = getY();
+        var prevZ = getZ();
+        setPos(x, y, z);
+        setDeltaMovement(x - prevX, y - prevY, z - prevZ);
+        setYRot((float) (Mth.atan2(x - prevX, z - prevZ) * Mth.RAD_TO_DEG));
+    }
+
+    /**
+     * Same world slot the energy laser aims at ({@link MisakaRelayOrbits#orbitSlotWorld}).
+     */
+    private Vec3 currentOrbitSlot() {
+        var anchor = getOrbitAnchor();
+        int seed = satelliteId != null ? satelliteId.hashCode() : 0;
+        return MisakaRelayOrbits.orbitSlotWorld(
+                BlockPos.containing(anchor.x(), anchor.y(), anchor.z()),
+                anchor.y(),
+                level().getGameTime(),
+                seed
+        );
+    }
+
+    private void finishLaunch() {
+        entityData.set(LAUNCHING, false);
+        entityData.set(LAUNCH_AGE, launchDurationTicks());
+        noPhysics = true;
+        setNoGravity(true);
+        setDeltaMovement(Vec3.ZERO);
+        if (level() instanceof ServerLevel serverLevel && satelliteId != null) {
+            MisakaRelayRegistry.get(serverLevel.getServer())
+                    .completeLaunch(serverLevel.getServer(), satelliteId);
+        }
+    }
+
+    private void tickCrash() {
+        if (!(crashMaxSpeed > 0.0) || !(crashAccel < 0.0)) {
+            refreshCrashMotionProfile();
+        }
+        var motion = getDeltaMovement();
+        motion = new Vec3(
+                motion.x * METEOR_AIR_DRAG,
+                motion.y + crashAccel,
+                motion.z * METEOR_AIR_DRAG
+        );
+        if (motion.y < -crashMaxSpeed) {
+            motion = new Vec3(motion.x, -crashMaxSpeed, motion.z);
+        }
+        setDeltaMovement(motion);
+
+        var from = position();
+        var to = from.add(motion);
+        var hit = level().clip(new ClipContext(
+                from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this
+        ));
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            var impact = hit.getLocation();
+            setPos(impact.x, impact.y, impact.z);
+            finishCrash();
+            return;
+        }
+
+        move(MoverType.SELF, motion);
+        if (onGround() || verticalCollision || getY() < level().dimensionType().minY() + 1) {
+            finishCrash();
+        }
+    }
+
+    private void finishCrash() {
+        if (!(level() instanceof ServerLevel serverLevel)) {
+            discard();
+            return;
+        }
+        explodeOnImpact(serverLevel);
+        if (satelliteId != null) {
+            MisakaRelayRegistry.get(serverLevel.getServer()).completeCrash(serverLevel.getServer(), satelliteId);
+        }
+        if (!isRemoved()) {
+            discard();
+        }
+    }
+
+    private void explodeOnImpact(ServerLevel serverLevel) {
+        var power = DEFAULT_CRASH_EXPLOSION_POWER;
+        var destroyBlocks = true;
+        var academy = serverLevel.getServer().getAcademyCraftServer();
+        if (academy != null) {
+            var config = academy.getGenericConfig();
+            power = Math.max(0.0f, config.misakaRelayCrashExplosionPower);
+            destroyBlocks = config.general.blockDestruction;
+        }
+        if (power <= 0.0f) {
+            return;
+        }
+        // Prefer the Ops force-crash initiator as explosion source so claim mods see a player
+        // explosion; power-timeout crashes keep the satellite as source (typical non-player TNT rules).
+        var explosionSource = resolveCrashExplosionSource(serverLevel);
+        serverLevel.explode(
+                explosionSource,
+                getX(),
+                getY(),
+                getZ(),
+                power,
+                false,
+                destroyBlocks ? Level.ExplosionInteraction.TNT : Level.ExplosionInteraction.NONE
+        );
+    }
+
+    private net.minecraft.world.entity.Entity resolveCrashExplosionSource(ServerLevel serverLevel) {
+        if (satelliteId == null) {
+            return this;
+        }
+        var entry = MisakaRelayRegistry.get(serverLevel.getServer()).get(satelliteId);
+        if (entry == null || entry.forceCrashInitiator == null) {
+            return this;
+        }
+        var player = serverLevel.getServer().getPlayerList().getPlayer(entry.forceCrashInitiator);
+        return player != null ? player : this;
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+        input.getString("satellite_id").ifPresent(id -> {
+            try {
+                satelliteId = UUID.fromString(id);
+            } catch (IllegalArgumentException ignored) {
+                satelliteId = null;
+            }
+        });
+        setOrbitAnchor(
+                input.getDoubleOr("anchor_x", getX()),
+                input.getDoubleOr("anchor_y", getY()),
+                input.getDoubleOr("anchor_z", getZ())
+        );
+        orbitAngle = input.getDoubleOr("orbit_angle", 0.0);
+        entityData.set(CRASHING, input.getBooleanOr("crashing", false));
+        entityData.set(LAUNCHING, input.getBooleanOr("launching", false));
+        entityData.set(HYPER, input.getBooleanOr("hyper", false));
+        launchAge = input.getIntOr("launch_age", 0);
+        entityData.set(LAUNCH_AGE, launchAge);
+        launchStartX = input.getDoubleOr("launch_start_x", getX());
+        launchStartY = input.getDoubleOr("launch_start_y", getY());
+        launchStartZ = input.getDoubleOr("launch_start_z", getZ());
+        crashMaxSpeed = input.getDoubleOr("crash_max_speed", 0.0);
+        crashAccel = input.getDoubleOr("crash_accel", 0.0);
+        if (isCrashing()) {
+            noPhysics = false;
+            setNoGravity(false);
+            if (!(crashMaxSpeed > 0.0) || !(crashAccel < 0.0)) {
+                refreshCrashMotionProfile();
+            }
+        } else {
+            noPhysics = true;
+            setNoGravity(true);
+        }
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+        if (satelliteId != null) {
+            output.putString("satellite_id", satelliteId.toString());
+        }
+        var anchor = getOrbitAnchor();
+        output.putDouble("anchor_x", anchor.x());
+        output.putDouble("anchor_y", anchor.y());
+        output.putDouble("anchor_z", anchor.z());
+        output.putDouble("orbit_angle", orbitAngle);
+        output.putBoolean("crashing", isCrashing());
+        output.putBoolean("launching", isLaunching());
+        output.putBoolean("hyper", isHyper());
+        output.putInt("launch_age", launchAge);
+        output.putDouble("launch_start_x", launchStartX);
+        output.putDouble("launch_start_y", launchStartY);
+        output.putDouble("launch_start_z", launchStartZ);
+        output.putDouble("crash_max_speed", crashMaxSpeed);
+        output.putDouble("crash_accel", crashAccel);
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return geoCache;
+    }
+}

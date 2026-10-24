@@ -172,6 +172,8 @@ public final class ActiveEffect {
         return step;
     }
     private @Nullable Entity followEntity;
+    /** Skip soft-particle scene depth (use far plane). See {@link WorldTransform#ignoreSceneDepth()}. */
+    private boolean ignoreSceneDepth;
     private boolean stopped;
 
     ActiveEffect(String assetKey, Graph graph, VfxNodeRegistry registry, Vector3f position) {
@@ -271,6 +273,18 @@ public final class ActiveEffect {
     }
 
     /**
+     * Skip soft-particle scene-depth sampling so billboards stay visible against water /
+     * nearby geometry that would otherwise drive depthDiff &lt; 0 and zero alpha.
+     */
+    public void setIgnoreSceneDepth(boolean ignoreSceneDepth) {
+        this.ignoreSceneDepth = ignoreSceneDepth;
+    }
+
+    public boolean ignoreSceneDepth() {
+        return ignoreSceneDepth;
+    }
+
+    /**
      * 为超大世界空间效果提供独立的最小远裁剪面，不受客户端区块视距降低影响。
      */
     public void setMinimumFarPlane(float minimumFarPlane) {
@@ -344,7 +358,7 @@ public final class ActiveEffect {
     }
 
     public WorldTransform worldTransform() {
-        return new WorldTransform(position, rotation, scale);
+        return new WorldTransform(position, rotation, scale, ignoreSceneDepth);
     }
 
     public void render(GpuTextureView target, @Nullable GpuTextureView depth,

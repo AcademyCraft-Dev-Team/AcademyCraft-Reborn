@@ -1,0 +1,225 @@
+package org.academy.internal.server.misaka;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import org.academy.api.common.misaka.MisakaRelayAccess;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.server.world.level.storage.MisakaNetworkRegistry;
+import org.academy.internal.server.world.level.storage.MisakaSisterRecord;
+import org.academy.internal.server.world.level.storage.WirelessNetworkData;
+import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Academy City energy-network footprint for a Misaka network topology component.
+ * Energy spheres are always read from the overworld wireless SavedData.
+ * Footprints are lazily cached and cleared on topology / radius invalidation.
+ */
+public final class MisakaNetworkCoverage {
+    public record Sphere(BlockPos nodePos, double radiusSqr) {
+        public Sphere {
+            nodePos = nodePos == null ? BlockPos.ZERO : nodePos.immutable();
+            radiusSqr = Math.max(0.0, radiusSqr);
+        }
+
+        public boolean contains(BlockPos pos) {
+            return pos != null && nodePos.distSqr(pos) <= radiusSqr;
+        }
+    }
+
+    private record FootprintKey(ResourceKey<Level> dimension, UUID networkId) {
+    }
+
+    private static final Map<FootprintKey, List<Sphere>> FOOTPRINT_CACHE = new HashMap<>();
+
+    private MisakaNetworkCoverage() {
+    }
+
+    public static void invalidate() {
+        FOOTPRINT_CACHE.clear();
+    }
+
+    /**
+     * Every wireless node bound to {@code networkId}, each with its configured radius sphere.
+     * {@code level} should be the energy-home level (overworld for Misaka).
+     */
+    public static List<Sphere> footprint(ServerLevel level, UUID networkId) {
+        if (level == null || networkId == null) {
+            return List.of();
+        }
+        var key = new FootprintKey(level.dimension(), networkId);
+        var cached = FOOTPRINT_CACHE.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        var data = WirelessNetworkData.get(level);
+        var registry = MisakaNetworkRegistry.get(level.getServer());
+        var spheres = new ArrayList<Sphere>();
+        for (var entry : data.getAllNodes().entrySet()) {
+            var nodePos = entry.getKey();
+            var resolved = registry.get(nodePos).orElseGet(() -> registry.resolveOrCreate(level, nodePos));
+            if (!resolved.equals(networkId)) {
+                continue;
+            }
+            double r = Math.max(0, entry.getValue().radius);
+            spheres.add(new Sphere(nodePos.immutable(), r * r));
+        }
+        var built = List.copyOf(spheres);
+        FOOTPRINT_CACHE.put(key, built);
+        return built;
+    }
+
+    public static boolean isInEnergyCoverage(ServerLevel energyHome, UUID networkId, BlockPos pos) {
+        if (pos == null || energyHome == null) {
+            return false;
+        }
+        for (var sphere : footprint(energyHome, networkId)) {
+            if (sphere.contains(pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Energy spheres apply only when the sample is in the energy-home dimension (overworld).
+     * Otherwise access is granted only via relay satellites for the sample dimension.
+     */
+    public static boolean canUseMisakaService(ServerLevel sampleLevel, UUID networkId, BlockPos pos) {
+        if (sampleLevel == null) {
+            return resolveServiceAccess(false, false, MisakaRelayAccess.get().grantsAccess(null, pos, networkId));
+        }
+        boolean sampleInEnergyHome = false;
+        boolean inEnergy = false;
+        var server = sampleLevel.getServer();
+        if (server != null) {
+            var energyHome = server.overworld();
+            sampleInEnergyHome = sampleLevel.dimension().equals(energyHome.dimension());
+            if (sampleInEnergyHome) {
+                inEnergy = isInEnergyCoverage(energyHome, networkId, pos);
+            }
+        }
+        return resolveServiceAccess(
+                sampleInEnergyHome,
+                inEnergy,
+                MisakaRelayAccess.get().grantsAccess(sampleLevel, pos, networkId)
+        );
+    }
+
+    /**
+     * Pure coverage decision used by {@link #canUseMisakaService} (and unit tests).
+     * Energy spheres win only when the sample is in the energy-home dimension and inside a footprint.
+     */
+    public static boolean resolveServiceAccess(
+            boolean sampleInEnergyHome,
+            boolean inEnergyFootprint,
+            boolean relayGrants
+    ) {
+        return (sampleInEnergyHome && inEnergyFootprint) || relayGrants;
+    }
+
+    /**
+     * Sample position for coverage checks.
+     * Loaded entity uses block pos; unloaded uses chunk center XZ + bound node Y;
+     * missing both falls back to bound node (in coverage of at least that node).
+     */
+    public static BlockPos samplePos(MisakaSisterRecord record, @Nullable Entity entity) {
+        if (entity != null && !entity.isRemoved()) {
+            return entity.blockPosition();
+        }
+        if (record == null) {
+            return BlockPos.ZERO;
+        }
+        if (record.lastKnownBlockPos != null) {
+            return record.lastKnownBlockPos.immutable();
+        }
+        if (record.lastKnownChunk != null) {
+            ChunkPos chunk = record.lastKnownChunk;
+            int y = record.networkNodePos != null ? record.networkNodePos.getY() : 64;
+            return new BlockPos(chunk.getMiddleBlockX(), y, chunk.getMiddleBlockZ());
+        }
+        if (record.networkNodePos != null) {
+            return record.networkNodePos.immutable();
+        }
+        return BlockPos.ZERO;
+    }
+
+    /**
+     * Resolve the level to use for coverage sampling (loaded entity dim, else lastKnownDimension).
+     */
+    public static ServerLevel sampleLevel(
+            MinecraftServer server,
+            MisakaSisterRecord record,
+            @Nullable MisakaSisterEntity entity
+    ) {
+        if (entity != null && !entity.isRemoved()) {
+            return (ServerLevel) entity.level();
+        }
+        ResourceKey<Level> key = record != null && record.lastKnownDimension != null
+                ? record.lastKnownDimension
+                : ResourceKey.create(
+                        net.minecraft.core.registries.Registries.DIMENSION,
+                        net.minecraft.resources.Identifier.withDefaultNamespace("overworld")
+                );
+        var level = server.getLevel(key);
+        return level != null ? level : server.overworld();
+    }
+
+    /**
+     * Find a loaded sister by roster {@code misakaUuid} across all dimensions
+     * (rebuild / manage only; not hot path).
+     * <p>
+     * This is <strong>not</strong> the entity UUID — use
+     * {@link MisakaPanelSupport#findLoadedEntityAnyDimension} for that.
+     * Lookup is O(1) via {@link MisakaLoadedSisterIndex}.
+     */
+    public static @Nullable MisakaSisterEntity findLoadedSister(MinecraftServer server, UUID misakaUuid) {
+        if (server == null || misakaUuid == null) {
+            return null;
+        }
+        return MisakaLoadedSisterIndex.getByMisakaUuid(misakaUuid);
+    }
+
+    /**
+     * Prefer roster uuid, then fall back to synched/persisted serial so a rebound
+     * entity (uuid lost on reload) is still reachable by {@code /misaka tp}.
+     */
+    public static @Nullable MisakaSisterEntity findLoadedSister(
+            MinecraftServer server,
+            UUID misakaUuid,
+            int serial
+    ) {
+        if (server == null) {
+            return null;
+        }
+        return MisakaLoadedSisterIndex.get(misakaUuid, serial);
+    }
+
+    /** Snapshot of currently loaded sisters keyed by roster uuid. */
+    public static Map<UUID, MisakaSisterEntity> loadedSistersByUuid(ServerLevel level) {
+        if (level == null) {
+            return Map.of();
+        }
+        var map = new HashMap<UUID, MisakaSisterEntity>();
+        for (var sister : MisakaLoadedSisterIndex.all()) {
+            if (sister.isRemoved() || sister.level() != level) {
+                continue;
+            }
+            var uuid = sister.getMisakaUuid();
+            if (uuid != null) {
+                map.put(uuid, sister);
+            }
+        }
+        return map;
+    }
+}

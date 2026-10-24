@@ -10,6 +10,8 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.resources.Identifier;
 import org.academy.AcademyCraft;
+import org.academy.internal.client.gui.screen.AerospaceSignalCabinScreen;
+import org.academy.internal.client.gui.screen.EnergyLaserTowerScreen;
 import org.academy.internal.client.gui.screen.OmniCraftingTableScreen;
 import org.academy.internal.client.gui.screen.SolarGenScreen;
 import org.academy.internal.client.gui.screen.WindGenScreen;
@@ -89,6 +91,22 @@ public final class JEIPlugin implements IModPlugin {
                 new IGuiContainerHandler<OmniCraftingTableScreen>() {
                     @Override
                     public List<Rect2i> getGuiExtraAreas(OmniCraftingTableScreen containerScreen) {
+                        return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
+                    }
+                }
+        );
+        registration.addGenericGuiContainerHandler(AerospaceSignalCabinScreen.class,
+                new IGuiContainerHandler<AerospaceSignalCabinScreen>() {
+                    @Override
+                    public List<Rect2i> getGuiExtraAreas(AerospaceSignalCabinScreen containerScreen) {
+                        return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
+                    }
+                }
+        );
+        registration.addGenericGuiContainerHandler(EnergyLaserTowerScreen.class,
+                new IGuiContainerHandler<EnergyLaserTowerScreen>() {
+                    @Override
+                    public List<Rect2i> getGuiExtraAreas(EnergyLaserTowerScreen containerScreen) {
                         return List.of(new Rect2i(0, 0, containerScreen.width, containerScreen.height));
                     }
                 }

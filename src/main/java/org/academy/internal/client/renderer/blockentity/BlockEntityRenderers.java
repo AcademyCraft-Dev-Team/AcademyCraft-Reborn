@@ -30,5 +30,13 @@ public final class BlockEntityRenderers {
                 _ -> WindGenPillarRenderer.INSTANCE);
         event.registerBlockEntityRenderer(BlockEntityTypes.SOLAR_GEN.get(),
                 _ -> SolarGenRenderer.INSTANCE);
+        event.registerBlockEntityRenderer(BlockEntityTypes.ENERGY_LASER_TOWER.get(),
+                EnergyLaserTowerRenderer::new);
+        event.registerBlockEntityRenderer(BlockEntityTypes.AEROSPACE_SIGNAL_CABIN.get(),
+                AerospaceSignalCabinRenderer::new);
+        event.registerBlockEntityRenderer(BlockEntityTypes.SATELLITE_LAUNCH_PAD.get(),
+                SatelliteLaunchPadRenderer::new);
+        event.registerBlockEntityRenderer(BlockEntityTypes.HIBERNATION_POD.get(),
+                HibernationPodRenderer::new);
     }
 }

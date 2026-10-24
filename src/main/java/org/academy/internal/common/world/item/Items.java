@@ -5,6 +5,8 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.equipment.ArmorType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import org.academy.AcademyCraft;
+import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.level.block.Blocks;
 
 import static org.academy.AcademyCraft.MOD_ID;
@@ -159,6 +161,52 @@ public final class Items {
             ITEMS.registerItem("empty_unit", EmptyUnitItem::new);
     public static final DeferredHolder<Item, ImagPhaseUnitItem> IMAG_PHASE_UNIT =
             ITEMS.registerItem("imag_phase_unit", ImagPhaseUnitItem::new);
+    public static final DeferredHolder<Item, MisakaTowerItem> MISAKA_TOWER =
+            ITEMS.registerItem("misaka_tower", MisakaTowerItem::new);
+    public static final DeferredHolder<Item, MisakaTowerPromaxItem> MISAKA_TOWER_PROMAX =
+            ITEMS.registerItem("misaka_tower_promax", MisakaTowerPromaxItem::new);
+    public static final DeferredHolder<Item, NetworkRelaySatelliteItem> NETWORK_RELAY_SATELLITE =
+            ITEMS.registerItem("network_relay_satellite", NetworkRelaySatelliteItem::new);
+    public static final DeferredHolder<Item, HyperNetworkRelaySatelliteItem> HYPER_NETWORK_RELAY_SATELLITE =
+            ITEMS.registerItem("hyper_network_relay_satellite", HyperNetworkRelaySatelliteItem::new);
+    public static final DeferredHolder<Item, LaserDesignatorItem> LASER_DESIGNATOR =
+            ITEMS.registerItem("laser_designator", LaserDesignatorItem::new);
+    public static final DeferredHolder<Item, SpawnEggItem> MISAKA_SISTER_SPAWN_EGG =
+            ITEMS.registerItem("misaka_sister_spawn_egg", properties -> new SpawnEggItem(
+                    properties.spawnEgg(EntityTypes.MISAKA_SISTER.get())));
+    public static final DeferredHolder<Item, GeoBlockItem> SATELLITE_LAUNCH_PAD =
+            ITEMS.registerItem("satellite_launch_pad",
+                    properties -> new GeoBlockItem(
+                            Blocks.SATELLITE_LAUNCH_PAD.get(),
+                            properties,
+                            AcademyCraft.academy("satellite_launch_pad"),
+                            0.85F,
+                            true
+                    ));
+    public static final DeferredHolder<Item, GeoMultiBlockItem> AEROSPACE_SIGNAL_CABIN =
+            ITEMS.registerItem("aerospace_signal_cabin",
+                    properties -> new GeoMultiBlockItem(
+                            Blocks.AEROSPACE_SIGNAL_CABIN.get(),
+                            properties,
+                            AcademyCraft.academy("aerospace_signal_cabin"),
+                            0.72F
+                    ));
+    public static final DeferredHolder<Item, GeoMultiBlockItem> ENERGY_LASER_TOWER =
+            ITEMS.registerItem("energy_laser_tower",
+                    properties -> new GeoMultiBlockItem(
+                            Blocks.ENERGY_LASER_TOWER.get(),
+                            properties,
+                            AcademyCraft.academy("energy_laser_tower"),
+                            0.9F
+                    ));
+    public static final DeferredHolder<Item, GeoMultiBlockItem> HIBERNATION_POD =
+            ITEMS.registerItem("hibernation_pod",
+                    properties -> new GeoMultiBlockItem(
+                            Blocks.HIBERNATION_POD.get(),
+                            properties,
+                            AcademyCraft.academy("hibernation_pod"),
+                            0.62F
+                    ));
 
     public static final DeferredHolder<Item, SpatialStorageUnitItem> SPATIAL_STORAGE_UNIT =
             ITEMS.registerItem("spatial_storage_unit", SpatialStorageUnitItem::new);

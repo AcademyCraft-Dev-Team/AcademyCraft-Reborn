@@ -1,0 +1,236 @@
+package org.academy.internal.client.gui.screen
+
+import net.minecraft.network.chat.Component
+import org.academy.api.client.gui.layout.Gravity
+import org.academy.api.client.gui.layout.Orientation
+import org.academy.api.client.gui.layout.SizeMode
+import org.academy.api.client.gui.widget.*
+import org.academy.internal.common.world.entity.misaka.MisakaPersonality
+import org.academy.internal.common.world.entity.misaka.MobRelation
+import org.academy.internal.common.world.entity.misaka.WanderStyle
+
+internal object MisakaPanelMainPage {
+    fun build(host: MisakaPanelHost): LinearLayoutWidget {
+        val page = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+            layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
+        }
+
+        page.addChild("title", TextWidget(host.screenTitle).apply {
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(10f)
+                .gravity(Gravity.CENTER)
+        })
+        page.addChild("title_rule", FillWidget(MisakaNetworkPanelScreen.PRIMARY_FOREGROUND).apply {
+            alpha = 0.8f
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(1f)
+                .marginTop(1f)
+                .marginBottom(1f)
+        })
+
+        // Body scrolls inside the fixed panel so privilege/wander/bind rows never clip out.
+        val listHost = LinearLayoutWidget().apply {
+            orientation = Orientation.HORIZONTAL
+            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .widthMode(SizeMode.MATCH_PARENT)
+                .height(0f)
+        }
+        page.addChild("body_host", listHost)
+
+        val scrollPanel = ScrollPanelWidget(Orientation.VERTICAL).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .weight(1f)
+                .width(0f)
+                .heightMode(SizeMode.MATCH_PARENT)
+        }
+        listHost.addChild("scroll_panel", scrollPanel)
+        listHost.addChild("scroll_bar", ScrollBarWidget(scrollPanel, Orientation.VERTICAL).apply {
+            layoutParams = LinearLayoutWidget.LayoutParams()
+                .width(MisakaNetworkPanelScreen.SCROLLBAR_WIDTH)
+                .heightMode(SizeMode.MATCH_PARENT)
+        })
+
+        val body = LinearLayoutWidget().apply {
+            orientation = Orientation.VERTICAL
+            spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+            layoutParams = FrameLayoutWidget.LayoutParams()
+                .widthMode(SizeMode.MATCH_PARENT)
+                .heightMode(SizeMode.WRAP_CONTENT)
+        }
+        scrollPanel.setContent(body)
+
+        body.addChild(
+            "serial",
+            host.infoRow(
+                Component.translatable("screen.academy.misaka_serial_label").string,
+                Component.translatable("screen.academy.misaka_serial_value", host.data.serial()).string
+            )
+        )
+        if (host.data.incapacitated()) {
+            body.addChild(
+                "incapacitated",
+                host.statusLine(
+                    Component.translatable("screen.academy.misaka_incapacitated_badge").string,
+                    MisakaNetworkPanelScreen.ACCENT_WARNING
+                )
+            )
+        }
+        if (host.data.reconstructionWork()) {
+            body.addChild(
+                "badge",
+                host.statusLine(
+                    Component.translatable("screen.academy.misaka_reconstruction_badge").string,
+                    MisakaNetworkPanelScreen.ACCENT_CAPACITY
+                )
+            )
+        }
+        val detailed = host.data.relation() >= MobRelation.DEFAULT.ordinal
+        val withheld = Component.translatable("screen.academy.misaka_value_withheld").string
+        body.addChild(
+            "perception",
+            host.infoRow(
+                Component.translatable("screen.academy.misaka_perception_label").string,
+                if (detailed) host.data.perception().toString() else withheld
+            )
+        )
+        body.addChild(
+            "msk",
+            host.infoRow(
+                Component.translatable("screen.academy.misaka_msk_label").string,
+                if (detailed) {
+                    Component.translatable(
+                        "screen.academy.misaka_msk_value",
+                        "%.1f".format(host.data.msk())
+                    ).string
+                } else {
+                    withheld
+                }
+            )
+        )
+        body.addChild(
+            "personality",
+            host.infoRow(
+                Component.translatable("screen.academy.misaka_personality_label").string,
+                personalityName(host)
+            )
+        )
+        body.addChild(
+            "node",
+            host.infoRow(
+                Component.translatable("screen.academy.misaka_node_label").string,
+                host.data.currentNodeName().ifEmpty {
+                    // Bound but withheld still reports "connected", just not which network.
+                    if (host.data.networkBound()) {
+                        Component.translatable("screen.academy.misaka_node_protected").string
+                    } else {
+                        Component.translatable("screen.academy.misaka_node_none").string
+                    }
+                }
+            )
+        )
+        body.addChild(
+            "relation",
+            host.infoRow(
+                Component.translatable("screen.academy.misaka_relation_label").string,
+                relationName(host)
+            )
+        )
+        if (host.data.reconstructionBlocked()) {
+            body.addChild(
+                "reconstruction",
+                host.statusLine(
+                    Component.translatable("screen.academy.misaka_reconstruction_blocked").string,
+                    MisakaNetworkPanelScreen.ACCENT_WARNING
+                )
+            )
+        }
+
+        val readOnly = !detailed
+        if (readOnly) {
+            body.addChild(
+                "locked",
+                host.statusLine(lockedReason(host), MisakaNetworkPanelScreen.ACCENT_WARNING)
+            )
+        }
+
+        if (!readOnly && host.data.privilege()) {
+            body.addChild("section_rule_wander", host.sectionRule())
+            body.addChild(
+                "wander_label",
+                host.sectionLabel(Component.translatable("screen.academy.misaka_wander_style").string)
+            )
+            val wanderRow = LinearLayoutWidget().apply {
+                orientation = Orientation.HORIZONTAL
+                spacing = MisakaNetworkPanelScreen.SPACING_MINOR
+                layoutParams = LinearLayoutWidget.LayoutParams()
+                    .widthMode(SizeMode.MATCH_PARENT)
+                    .height(MisakaNetworkPanelScreen.LIST_ITEM_HEIGHT)
+            }
+            body.addChild("wander_row", wanderRow)
+            wanderRow.addChild("waiting", host.styleButton(WanderStyle.WAITING))
+            wanderRow.addChild("free", host.styleButton(WanderStyle.FREE_MOVE))
+            wanderRow.addChild("follow", host.styleButton(WanderStyle.FOLLOW))
+            body.addChild(
+                "wander_anchor",
+                host.textActionButton(
+                    Component.translatable("screen.academy.misaka_wander_anchor").string
+                ) { host.setWanderAnchor() }
+            )
+        }
+
+        if (!readOnly && host.data.reconstructionWork() && host.data.privilege() && host.data.networkBound()) {
+            body.addChild("section_rule_manage", host.sectionRule())
+            body.addChild("manage_entry", host.manageMenuEntry())
+        }
+
+        val unbound = !host.data.networkBound()
+        val canBind = !readOnly && if (unbound) true else host.data.privilege()
+        if (canBind && (host.data.availableNodes().isNotEmpty() || !unbound)) {
+            body.addChild("section_rule_nodes", host.sectionRule())
+            body.addChild("bind_entry", host.bindMenuEntry())
+        }
+
+        body.addChild("section_rule_close", host.sectionRule())
+        body.addChild("close", host.textActionButton(
+            Component.translatable("screen.academy.misaka_close").string
+        ) { host.onClose() })
+        return page
+    }
+
+    private fun personalityName(host: MisakaPanelHost): String {
+        val values = MisakaPersonality.entries
+        val index = host.data.personality()
+        if (index !in values.indices) {
+            return Component.translatable("screen.academy.misaka_unknown").string
+        }
+        return Component.translatable("misaka.personality.${values[index].serializedName}").string
+    }
+
+    private fun relationName(host: MisakaPanelHost): String {
+        val values = MobRelation.entries
+        val index = host.data.relation()
+        if (index !in values.indices) {
+            return Component.translatable("screen.academy.misaka_unknown").string
+        }
+        return Component.translatable("misaka.relation.${values[index].name.lowercase()}").string
+    }
+
+    private fun lockedReason(host: MisakaPanelHost): String {
+        val values = MobRelation.entries
+        val index = host.data.relation()
+        val key = when {
+            index !in values.indices -> "screen.academy.misaka_locked_indifferent"
+            values[index] == MobRelation.DEADLY_ENEMY -> "screen.academy.misaka_locked_deadly"
+            values[index] == MobRelation.HOSTILE -> "screen.academy.misaka_locked_hostile"
+            else -> "screen.academy.misaka_locked_indifferent"
+        }
+        return Component.translatable(key).string
+    }
+}

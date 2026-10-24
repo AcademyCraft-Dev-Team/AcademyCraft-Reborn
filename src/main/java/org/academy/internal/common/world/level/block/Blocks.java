@@ -64,6 +64,14 @@ public final class Blocks {
                     LaboratoryMetalTrapdoorBlock::new,
                     Blocks::laboratoryTrapdoorProperties
             );
+    public static final DeferredHolder<Block, AerospaceSignalCabinBlock> AEROSPACE_SIGNAL_CABIN =
+            BLOCKS.registerBlock("aerospace_signal_cabin", AerospaceSignalCabinBlock::new, Blocks::machineProperties);
+    public static final DeferredHolder<Block, SatelliteLaunchPadBlock> SATELLITE_LAUNCH_PAD =
+            BLOCKS.registerBlock("satellite_launch_pad", SatelliteLaunchPadBlock::new, Blocks::machineProperties);
+    public static final DeferredHolder<Block, EnergyLaserTowerBlock> ENERGY_LASER_TOWER =
+            BLOCKS.registerBlock("energy_laser_tower", EnergyLaserTowerBlock::new, Blocks::machineProperties);
+    public static final DeferredHolder<Block, HibernationPodBlock> HIBERNATION_POD =
+            BLOCKS.registerBlock("hibernation_pod", HibernationPodBlock::new, Blocks::machineProperties);
     public static final DeferredHolder<Block, ImagPhaseLiquidBlock> IMAG_PHASE =
             BLOCKS.registerBlock(
                     "imag_phase",

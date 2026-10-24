@@ -75,6 +75,38 @@ public final class BlockEntityTypes {
                             Blocks.SOLAR_GEN.get()
                     )
             );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AerospaceSignalCabinBlockEntity>> AEROSPACE_SIGNAL_CABIN =
+            BLOCK_ENTITY_TYPES.register(
+                    "aerospace_signal_cabin",
+                    () -> new BlockEntityType<>(
+                            AerospaceSignalCabinBlockEntity::new,
+                            Blocks.AEROSPACE_SIGNAL_CABIN.get()
+                    )
+            );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SatelliteLaunchPadBlockEntity>> SATELLITE_LAUNCH_PAD =
+            BLOCK_ENTITY_TYPES.register(
+                    "satellite_launch_pad",
+                    () -> new BlockEntityType<>(
+                            SatelliteLaunchPadBlockEntity::new,
+                            Blocks.SATELLITE_LAUNCH_PAD.get()
+                    )
+            );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnergyLaserTowerBlockEntity>> ENERGY_LASER_TOWER =
+            BLOCK_ENTITY_TYPES.register(
+                    "energy_laser_tower",
+                    () -> new BlockEntityType<>(
+                            EnergyLaserTowerBlockEntity::new,
+                            Blocks.ENERGY_LASER_TOWER.get()
+                    )
+            );
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HibernationPodBlockEntity>> HIBERNATION_POD =
+            BLOCK_ENTITY_TYPES.register(
+                    "hibernation_pod",
+                    () -> new BlockEntityType<>(
+                            HibernationPodBlockEntity::new,
+                            Blocks.HIBERNATION_POD.get()
+                    )
+            );
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DarkmatterBlockEntity>> DARKMATTER_BLOCK =
             BLOCK_ENTITY_TYPES.register(
                     "darkmatter_block",
@@ -86,6 +118,4 @@ public final class BlockEntityTypes {
 
     private BlockEntityTypes() {
     }
-
-
 }

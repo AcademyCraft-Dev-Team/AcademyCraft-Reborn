@@ -5,6 +5,9 @@ import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
+import org.academy.internal.common.world.entity.misaka.MisakaSisterEntity;
+import org.academy.internal.common.world.entity.misaka.OrbitalStrikeProxyEntity;
+import org.academy.internal.common.world.entity.misaka.RelaySatelliteEntity;
 import org.academy.internal.common.world.entity.projectile.ThrownCoin;
 import org.academy.internal.common.world.entity.projectile.PaperAirplane;
 import org.academy.internal.common.world.entity.projectile.MagneticHook;
@@ -127,6 +130,21 @@ public class EntityTypes {
                     builder -> builder.sized(1.0f, 1.0f).noSave().noSummon()
                             .clientTrackingRange(10).updateInterval(1)
             );
+    public static final DeferredHolder<EntityType<?>, EntityType<MisakaSisterEntity>> MISAKA_SISTER =
+            ENTITY_TYPES.registerEntityType(
+                    "misaka_sister", MisakaSisterEntity::new, MobCategory.CREATURE,
+                    builder -> builder.sized(0.6f * MisakaSisterEntity.STEVE_SCALE, 1.8f * MisakaSisterEntity.STEVE_SCALE)
+                            .clientTrackingRange(10).updateInterval(3));
+    public static final DeferredHolder<EntityType<?>, EntityType<RelaySatelliteEntity>> RELAY_SATELLITE =
+            ENTITY_TYPES.registerEntityType(
+                    "relay_satellite", RelaySatelliteEntity::new, MobCategory.MISC,
+                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(256).updateInterval(2));
+    public static final DeferredHolder<EntityType<?>, EntityType<OrbitalStrikeProxyEntity>> ORBITAL_STRIKE_PROXY =
+            ENTITY_TYPES.registerEntityType(
+                    "orbital_strike_proxy", OrbitalStrikeProxyEntity::new, MobCategory.MISC,
+                    // Fire apex is STRIKE_APEX_HEIGHT (~160) above impact; worst case ≈ hypot(192,160)≈250.
+                    // Avoid 2048: that would keep every player in a ~128-chunk radius on the tracker with updateInterval 1.
+                    builder -> builder.sized(0.8f, 0.8f).clientTrackingRange(256).updateInterval(2));
 
     private EntityTypes() {
     }

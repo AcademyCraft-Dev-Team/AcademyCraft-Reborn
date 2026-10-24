@@ -64,6 +64,7 @@ import org.academy.internal.client.ability.ProficiencySkillSettingsClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
 import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
+import org.academy.internal.client.app.misaka.MisakaDeviceQuotaApp;
 import org.academy.internal.client.app.music.backend.MusicPlayerBackend;
 import org.academy.internal.client.app.music.ui.MusicApp;
 import org.academy.internal.client.app.props.PropsApp;
@@ -96,6 +97,8 @@ import org.academy.internal.common.core.particles.ParticleTypes;
 import org.academy.internal.common.network.SkillVfxPacket;
 import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import org.academy.internal.common.network.TemporalImmunitySyncPacket;
+import org.academy.internal.client.misaka.MisakaPickupClient;
+import org.academy.internal.common.network.misaka.MisakaPackets;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.Blocks;
@@ -134,6 +137,7 @@ public final class AcademyCraftClient {
         TerminalHud.Companion.addApp(MusicApp.INSTANCE);
         PropsIcon.INSTANCE.init();
         TerminalHud.Companion.addApp(PropsApp.INSTANCE);
+        TerminalHud.Companion.addApp(MisakaDeviceQuotaApp.INSTANCE);
         PropsClientState.init();
 
         MusicPlayerBackend.Companion.init();
@@ -157,6 +161,8 @@ public final class AcademyCraftClient {
         ProficiencySkillSettingsClient.init();
         ClientSyncManager.init();
         ImagPhaseDowsingRodClient.init();
+        MisakaPackets.initClient();
+        MisakaPickupClient.init();
         BeamVfxClient.register();
         SmokeVfxClient.register();
         DarkmatterSlashVfx.register();

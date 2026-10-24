@@ -1,0 +1,14 @@
+allprojects {
+    afterEvaluate {
+        sourceSets.main.java.srcDir(file('validation/misaka/java'))
+        def smoke = file('run/misaka-integration-smoke').canonicalFile
+        if (!new File(smoke, 'saves/Misaka Integration Smoke/level.dat').isFile()) {
+            throw new GradleException('Prepare the isolated Misaka Integration Smoke save first')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(smoke)
+            systemProperty 'academy.misakaIntegrationSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'Misaka Integration Smoke')
+        }
+    }
+}

@@ -1,0 +1,72 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"openning": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 0.5417,
+			"bones": {
+				"floatgraph": {
+					"scale": {
+						"0.0": {
+							"vector": [1, 1, 1]
+						},
+						"0.0417": {
+							"vector": [0, 1, 0]
+						}
+					}
+				},
+				"leftLid": {
+					"scale": {
+						"0.3333": {
+							"vector": [1, 1, 1]
+						},
+						"0.5417": {
+							"vector": [0, 1, 0]
+						}
+					}
+				},
+				"rightLid": {
+					"scale": {
+						"0.3333": {
+							"vector": [1, 1, 1]
+						},
+						"0.5417": {
+							"vector": [0, 1, 0]
+						}
+					}
+				},
+				"rightLid1": {
+					"scale": {
+						"0.0833": {
+							"vector": [1, 1, 1]
+						},
+						"0.3333": {
+							"vector": [0, 1, 1]
+						}
+					}
+				},
+				"leftLid1": {
+					"scale": {
+						"0.0833": {
+							"vector": [1, 1, 1]
+						},
+						"0.3333": {
+							"vector": [0, 1, 1]
+						}
+					}
+				}
+			}
+		},
+		"opened": {
+			"loop": true,
+			"animation_length": 1,
+			"bones": {
+				"lid": {
+					"scale": {
+						"vector": [1, 0, 1]
+					}
+				}
+			}
+		}
+	}
+}

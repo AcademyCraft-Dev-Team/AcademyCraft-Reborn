@@ -23,6 +23,9 @@ open class ButtonWidget() : FrameLayoutWidget() {
     }
 
     override fun onMousePressed(event: MouseEvent) {
+        if (!isAbsoluteEnabled()) {
+            return
+        }
         if (event.button == 0 && isMouseOver(event.x, event.y)) {
             isPointerDown = true
             updateStateAnimator()
@@ -40,6 +43,9 @@ open class ButtonWidget() : FrameLayoutWidget() {
     }
 
     protected fun handlePress(event: MouseEvent) {
+        if (!isAbsoluteEnabled()) {
+            return
+        }
         ClientUtil.playDownSound()
         if (onClickListener != null) onClickListener!!.onClick(this)
         event.consume()

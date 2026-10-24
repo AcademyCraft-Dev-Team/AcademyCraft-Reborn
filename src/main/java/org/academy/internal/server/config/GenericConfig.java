@@ -109,6 +109,56 @@ public class GenericConfig {
         return root.has(name) && root.get(name).isJsonObject() ? root.getAsJsonObject(name) : null;
     }
 
+    /** CP gained per 1 MSk of Misaka compute (1 MSk : 2 CP by default). */
+    @SerializedName("misakaCpPerMsk")
+    public float misakaCpPerMsk = 2.0f;
+
+    /** Energy drained per tick by an energy laser tower while powering a normal relay satellite.
+     * Hyper relays multiply by {@link #misakaRelayHyperDrainMultiplier}. While healing crash debt
+     * after an outage, the tower drains an additional equal amount to recover one debt tick per tick. */
+    @SerializedName("misakaRelayLaserDrainPerTick")
+    public int misakaRelayLaserDrainPerTick = 2000;
+
+    /** Multiplier applied to {@link #misakaRelayLaserDrainPerTick} for hyper relays (maintain + recovery). */
+    @SerializedName("misakaRelayHyperDrainMultiplier")
+    public int misakaRelayHyperDrainMultiplier = 2;
+
+    /** Consecutive unpowered ticks before a relay satellite crashes.
+     * Debt only decreases when a laser pays the recovery surcharge; restore power alone does not clear it. */
+    @SerializedName("misakaRelayCrashTicks")
+    public int misakaRelayCrashTicks = 6000;
+
+    /** Explosion radius when a crashed relay satellite hits the ground (TNT-like destroy). */
+    @SerializedName("misakaRelayCrashExplosionPower")
+    public float misakaRelayCrashExplosionPower = 5.0f;
+
+    /**
+     * Logical orbit altitude (Advanced Rocketry–style OrbitHeight).
+     * Visual Y is clamped to world top − 16.
+     */
+    @SerializedName("misakaRelayOrbitHeight")
+    public int misakaRelayOrbitHeight = 1000;
+
+    /** Ticks from launch pad to scheduled orbit insertion (default one game minute). */
+    @SerializedName("misakaRelayLaunchTicks")
+    public int misakaRelayLaunchTicks = 1200;
+
+    /** Cooldown between ActiveNetwork switches (0 = use code default). */
+    @SerializedName("misakaActiveNetworkCooldownTicks")
+    public int misakaActiveNetworkCooldownTicks = 0;
+
+    /** Legacy: treated as charge rate fallback when chargeRate field is unset. */
+    @SerializedName("misakaOrbitalStrikeMskCost")
+    public float misakaOrbitalStrikeMskCost = 200.0f;
+
+    /** Max MSk drawn per second from the player's allocated Misaka compute while charging. */
+    @SerializedName("misakaOrbitalStrikeChargeRateMskPerSec")
+    public float misakaOrbitalStrikeChargeRateMskPerSec = 200.0f;
+
+    /** Total MSk that must be charged before an orbital strike fires. */
+    @SerializedName("misakaOrbitalStrikeChargeNeedMsk")
+    public float misakaOrbitalStrikeChargeNeedMsk = 1000.0f;
+
     public static final class Action implements TypeHandler<GenericConfig> {
         public static final TypeHandler<GenericConfig> INSTANCE = new Action();
 
