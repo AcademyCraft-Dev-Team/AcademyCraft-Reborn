@@ -36,7 +36,7 @@ class SampleAssetsTest {
                 "plasma_cannon_focus", "plasma_cannon_projectile", "plasma_cannon_impact", "entity_smoke",
                 "platinum_execution", "aeromanip_mist_burst", "aeromanip_mist_field",
                 "aeromanip_mist_ring", "aeromanip_mist_stream", "aeromanip_mist_blade",
-                "aeromanip_mist_vortex"}) {
+                "aeromanip_mist_vortex", "bioelectric_surface", "bioelectric_hand"}) {
             var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + name + ".json");
             assertNotNull(stream, "sample asset " + name + " should be packaged");
             var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
@@ -55,6 +55,6 @@ class SampleAssetsTest {
                 effect.tick(1f / 60f);
             }
         }
-        assertEquals(22, VfxGraphManager.INSTANCE.effectCount());
+        assertEquals(24, VfxGraphManager.INSTANCE.effectCount());
     }
 }

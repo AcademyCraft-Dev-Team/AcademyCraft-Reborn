@@ -595,22 +595,6 @@ public final class AcademyCraftClient {
                 WirelessNodeSpecialRenderer.Unbaked.MAP_CODEC
         );
         event.register(
-                academy("wind_gen_base"),
-                WindGenBaseSpecialRenderer.Unbaked.MAP_CODEC
-        );
-        event.register(
-                academy("wind_gen_pillar"),
-                WindGenPillarSpecialRenderer.Unbaked.MAP_CODEC
-        );
-        event.register(
-                academy("wind_gen_top"),
-                WindGenTopSpecialRenderer.Unbaked.MAP_CODEC
-        );
-        event.register(
-                academy("ability_developer"),
-                AbilityDeveloperSpecialRenderer.Unbaked.MAP_CODEC
-        );
-        event.register(
                 academy("ability_control_tablet"),
                 AbilityControlTabletSpecialRenderer.Unbaked.MAP_CODEC
         );

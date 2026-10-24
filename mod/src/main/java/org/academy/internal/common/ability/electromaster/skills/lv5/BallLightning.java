@@ -19,20 +19,12 @@ import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.Branch;
-import org.academy.api.common.arc.modifier.HelixModifier;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.modifier.NoiseFieldModifier;
-import org.academy.api.common.arc.modifier.TaperModifier;
-import org.academy.api.common.arc.path.LinePath;
-import org.academy.api.common.arc.property.AttributeCurve;
-import org.academy.api.common.arc.property.Knot;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.MathUtil;
+import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.util.QuantumUtil;
@@ -40,12 +32,8 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.internal.common.world.entity.skill.ArcEffect;
 import org.academy.internal.common.world.entity.skill.LightOrb;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.joml.AxisAngle4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -159,17 +147,6 @@ public class BallLightning extends Skill {
         }
 
         public static class Context extends ServerContext {
-            private static final float BASE_SCALE = 0.2F;
-            private static final int RING_COUNT = 8;
-            private static final int RING_SEGMENTS = 12;
-            private static final AttributeCurve TAPER_CURVE = new AttributeCurve(List.of(
-                    new Knot(0.0f, 0.0f), new Knot(0.5f, 1.0f), new Knot(1.0f, 0.0f)
-            ));
-            private static final AttributeCurve NOISE_STR = new AttributeCurve(List.of(
-                    new Knot(0f, 0.8f), new Knot(1f, 0.8f)
-            ));
-
-            private final ArcEffect visualEntity;
             private final LightOrb coreOrb;
             private final float timeSeed;
             private final int proficiencyMilestone;
@@ -186,7 +163,7 @@ public class BallLightning extends Skill {
             private Entity targetEntity = null;
 
             private BehaviorState currentState;
-            private int stateTimer = 0;
+            private int stateTimer;
             private boolean ended;
 
             public Context(ServerPlayer player, int proficiencyMilestone) {
@@ -202,20 +179,18 @@ public class BallLightning extends Skill {
                 stateTimer = 12;
 
                 var level = level();
-                visualEntity = new ArcEffect(level, MAX_DURATION_TICKS);
                 coreOrb = new LightOrb(level, MAX_DURATION_TICKS, 0.15f, this::updateCoreOrb);
-
-                visualEntity.setPos(position);
                 coreOrb.setPos(position);
                 level.addFreshEntity(coreOrb);
-                level.addFreshEntity(visualEntity);
+                ElectromasterGraphEffects.spawnBallLightning(level, position, coreOrb.getId(),
+                        MAX_DURATION_TICKS / 20f, MathUtil.RANDOM.nextLong());
             }
 
             @SubscribeEvent
             public void onTick(ServerTickEvent.Post event) {
                 if (player.hasDisconnected() || !player.isAlive()
                         || !Skills.BALL_LIGHTNING.get().isEnabled(player)
-                        || existedTicks++ >= MAX_DURATION_TICKS || visualEntity.isRemoved()) {
+                        || existedTicks++ >= MAX_DURATION_TICKS) {
                     end();
                     return;
                 }
@@ -225,7 +200,6 @@ public class BallLightning extends Skill {
                 updateStateTransition();
                 updatePhysics();
                 checkImpact();
-                updateVisuals();
             }
 
             private void updateCoreOrb() {
@@ -282,11 +256,12 @@ public class BallLightning extends Skill {
                         }
                     }
                     case TRACK -> {
-                        if (!hasTarget) {
+                        var target = targetEntity;
+                        if (!hasTarget || target == null) {
                             currentState = BehaviorState.ROAMING;
                             return;
                         }
-                        var dist = position.distanceTo(targetEntity.getBoundingBox().getCenter());
+                        var dist = position.distanceTo(target.getBoundingBox().getCenter());
                         if (dist <= 12.0) {
                             selectCombatState();
                         } else {
@@ -331,8 +306,9 @@ public class BallLightning extends Skill {
                     }
                 }
 
-                if (hasTarget) {
-                    var toTarget = targetEntity.getBoundingBox().getCenter().subtract(position);
+                var target = targetEntity;
+                if (hasTarget && target != null) {
+                    var toTarget = target.getBoundingBox().getCenter().subtract(position);
 
                     switch (currentState) {
                         case TRACK -> {
@@ -351,7 +327,7 @@ public class BallLightning extends Skill {
                             var up = new Vec3(0, 1, 0);
                             var tangent = toTarget.cross(up).normalize().scale(strafeDir);
                             force = tangent.scale(0.12).add(toTarget.normalize().scale(0.04));
-                            var heightDiff = targetEntity.getY() + targetEntity.getBbHeight() / 2.0 - position.y;
+                            var heightDiff = target.getY() + target.getBbHeight() / 2.0 - position.y;
                             force = force.add(0, heightDiff * 0.03, 0);
                             drag = 0.95f;
                         }
@@ -372,8 +348,6 @@ public class BallLightning extends Skill {
                 velocity = velocity.scale(drag);
                 position = position.add(velocity);
 
-                visualEntity.setPos(position);
-                visualEntity.setDeltaMovement(velocity);
                 coreOrb.setPos(position);
                 coreOrb.setDeltaMovement(velocity);
             }
@@ -467,173 +441,7 @@ public class BallLightning extends Skill {
                 ended = true;
                 ACTIVE.remove(player, this);
                 unregister();
-                visualEntity.discard();
                 coreOrb.setLifeTime(10);
-            }
-
-            private void updateVisuals() {
-                List<ArcPath> paths = new ArrayList<>();
-                var time = existedTicks * 0.1f;
-
-                for (var i = 0; i < RING_COUNT; i++) {
-                    var breath = Mth.sin(time * 0.5f + i * 0.785f);
-                    var currentRadius = BASE_SCALE * (1.0f + 0.8f * breath);
-                    var rotSpeed = 1f + 0.6f * ((i * 12345L) % 100 / 100f);
-                    var seed = 1000L + i * 123L;
-
-                    var ax = ((seed * 31 % 100) / 50f) - 1f;
-                    var ay = ((seed * 53 % 100) / 50f) - 1f;
-                    var az = ((seed * 17 % 100) / 50f) - 1f;
-
-                    var rotation = new AxisAngle4f(time * rotSpeed + i, ax, ay, az).normalize();
-                    addRing(paths, rotation, currentRadius, time, i);
-                }
-
-                for (var i = 0; i < 8; i++) {
-                    paths.add(new ArcPath(
-                            new LinePath(randPos(0.6f), randPos(0.6f)),
-                            List.of(
-                                    new NoiseFieldModifier(NOISE_STR, 0.5f, 0.2f, 10086L + i * 100L),
-                                    new TaperModifier(TAPER_CURVE, 1.0f)
-                            ),
-                            1.8f,
-                            List.of()
-                    ));
-                }
-
-                var branchCount = MathUtil.RANDOM.nextInt(1, 4);
-                for (var i = 0; i < branchCount; i++) {
-                    if (MathUtil.RANDOM.nextFloat() < 0.6f) {
-                        var r = 2.0 + Math.abs(MathUtil.RANDOM.nextGaussian() * 4.0);
-                        if (r <= 6f) {
-                            var ang = Math.random() * 6.28;
-                            var target = position.add(r * Mth.cos(ang), MathUtil.RANDOM.nextDouble(-2, 2), r * Mth.sin(ang));
-                            paths.add(new ArcPath(
-                                    new LinePath(position.toVector3f(), target.toVector3f()),
-                                    List.of(
-                                            new HelixModifier(0.15f, 1.0f, 0),
-                                            new JaggedModifier(2f, 4, MathUtil.RANDOM.nextLong()),
-                                            new TaperModifier(TAPER_CURVE, 1.0f)
-                                    ),
-                                    2.5f,
-                                    generateRandomBranches(2.0f)
-                            ));
-                        }
-                    }
-                }
-                visualEntity.setArcPaths(paths);
-            }
-
-            private void addRing(List<ArcPath> paths, AxisAngle4f rot, float radius, float time, int seedIndex) {
-                var q = new Quaternionf(rot);
-                for (var i = 0; i < RING_SEGMENTS; i++) {
-                    var a1 = (float) (i * 6.28 / RING_SEGMENTS);
-                    var a2 = (float) ((i + 1) * 6.28 / RING_SEGMENTS);
-
-                    var p1 = new Vector3f(Mth.cos(a1) * radius, 0, Mth.sin(a1) * radius)
-                            .rotate(q).add(position.toVector3f());
-                    var p2 = new Vector3f(Mth.cos(a2) * radius, 0, Mth.sin(a2) * radius)
-                            .rotate(q).add(position.toVector3f());
-
-                    var tangent = new Vector3f(p2).sub(p1).normalize();
-
-                    paths.add(new ArcPath(
-                            new LinePath(p1, p2),
-                            List.of(
-                                    new HelixModifier(0.15f, 1.0f, time * 5.0f + seedIndex),
-                                    new JaggedModifier(0.4f, 2, 100L + seedIndex + i),
-                                    new TaperModifier(TAPER_CURVE, 1.0f)
-                            ),
-                            2f,
-                            generateSmallAngleBranches(tangent, 0.7f)
-                    ));
-                }
-            }
-
-            private List<Branch> generateSmallAngleBranches(Vector3f mainTangent, float scale) {
-                List<Branch> branches = new ArrayList<>();
-                if (MathUtil.RANDOM.nextFloat() < 0.6f) {
-                    var angle = MathUtil.RANDOM.nextFloat() * 0.1f;
-                    var rotAxis = generateOrthoVector(mainTangent);
-                    var branchDir = new Vector3f(mainTangent).rotateAxis(angle, rotAxis.x, rotAxis.y, rotAxis.z)
-                            .normalize().mul(scale * 0.4f);
-
-                    var mainBranchPath = new ArcPath(
-                            new LinePath(new Vector3f(), branchDir),
-                            List.of(
-                                    new JaggedModifier(0.4f, 3, MathUtil.RANDOM.nextLong()),
-                                    new TaperModifier(TAPER_CURVE, 1.0f)
-                            ),
-                            0.6f,
-                            List.of()
-                    );
-                    branches.add(new Branch(0.3f + MathUtil.RANDOM.nextFloat() * 0.4f, mainBranchPath));
-
-                    if (MathUtil.RANDOM.nextFloat() < 0.5f) {
-                        var subBranchProgress = 0.4f + MathUtil.RANDOM.nextFloat() * 0.4f;
-                        var subRotAxis = generateOrthoVector(branchDir);
-                        var subAngle = 0.1f + MathUtil.RANDOM.nextFloat() * 0.2f;
-                        var subDir = new Vector3f(branchDir).rotateAxis(subAngle, subRotAxis.x, subRotAxis.y, subRotAxis.z)
-                                .normalize().mul(scale * 0.2f);
-
-                        var subBranchPath = new ArcPath(
-                                new LinePath(new Vector3f(), subDir),
-                                List.of(
-                                        new JaggedModifier(0.3f, 2, MathUtil.RANDOM.nextLong()),
-                                        new TaperModifier(TAPER_CURVE, 1.0f)
-                                ),
-                                0.3f,
-                                List.of()
-                        );
-                        branches.add(new Branch(subBranchProgress, subBranchPath));
-                    }
-                }
-                return branches;
-            }
-
-            private List<Branch> generateRandomBranches(float scale) {
-                List<Branch> branches = new ArrayList<>();
-                if (MathUtil.RANDOM.nextFloat() < 0.3f) {
-                    var count = 1 + MathUtil.RANDOM.nextInt(2);
-                    for (var i = 0; i < count; i++) {
-                        var dir = new Vector3f(
-                                (float) MathUtil.RANDOM.nextGaussian(),
-                                (float) MathUtil.RANDOM.nextGaussian(),
-                                (float) MathUtil.RANDOM.nextGaussian()
-                        ).normalize().mul(scale);
-
-                        branches.add(new Branch(
-                                0.2f + MathUtil.RANDOM.nextFloat() * 0.6f,
-                                new ArcPath(
-                                        new LinePath(new Vector3f(), dir),
-                                        List.of(new JaggedModifier(0.6f, 2, MathUtil.RANDOM.nextLong())),
-                                        0.8f,
-                                        List.of()
-                                )
-                        ));
-                    }
-                }
-                return branches;
-            }
-
-            private Vector3f randPos(float scale) {
-                var r = (float) (BASE_SCALE * scale * Math.cbrt(MathUtil.RANDOM.nextDouble()));
-                var theta = (float) (MathUtil.RANDOM.nextDouble() * 6.28);
-                var phi = (float) Math.acos(2 * MathUtil.RANDOM.nextDouble() - 1);
-                return position.toVector3f().add(
-                        r * Mth.sin(phi) * Mth.cos(theta),
-                        r * Mth.sin(phi) * Mth.sin(theta),
-                        r * Mth.cos(phi)
-                );
-            }
-
-            private Vector3f generateOrthoVector(Vector3f input) {
-                var randomVec = new Vector3f((float) Math.random(), (float) Math.random(), (float) Math.random());
-                var ortho = new Vector3f(input).cross(randomVec).normalize();
-                if (ortho.lengthSquared() < 0.001f) {
-                    ortho = new Vector3f(input).cross(new Vector3f(0, 1, 0)).normalize();
-                }
-                return ortho;
             }
 
             private enum BehaviorState {

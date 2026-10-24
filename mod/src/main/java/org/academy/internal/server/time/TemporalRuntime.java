@@ -26,7 +26,6 @@ import org.academy.AcademyCraft;
 import org.academy.api.server.time.*;
 import org.academy.internal.common.ability.program.ServerProgramScheduler;
 import org.academy.internal.common.network.TemporalImmunitySyncPacket;
-import org.academy.mixin.common.LevelTicksAccessor;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -1113,8 +1112,7 @@ public final class TemporalRuntime implements TemporalService {
             LevelTicks<T> queue,
             TemporalChannel channel
     ) {
-        var containers = ((LevelTicksAccessor<T>) queue)
-                .academy$getAllContainers();
+        var containers = queue.allContainers;
         long pendingTicks = 0L;
         for (var container : containers.values()) {
             pendingTicks += container.getAll().count();
@@ -1239,8 +1237,7 @@ public final class TemporalRuntime implements TemporalService {
             binding.appliedFields = targetFields;
             return;
         }
-        var containers = ((LevelTicksAccessor<T>) queue)
-                .academy$getAllContainers();
+        var containers = queue.allContainers;
         var queuedTicks = new ArrayList<ScheduledTick<T>>();
         for (var container : containers.values()) {
             container.getAll().forEach(queuedTicks::add);

@@ -3,7 +3,10 @@ package org.academy.api.client.render.vfxgraph.nodes;
 import org.academy.api.client.render.vfxgraph.arc.*;
 import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
+import org.academy.api.client.render.vfxgraph.sim.SimContext;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
+import org.joml.Vector3f;
 
 final class SurfaceArcBlocks {
     private SurfaceArcBlocks() {
@@ -15,6 +18,7 @@ final class SurfaceArcBlocks {
         var oy = BlockProps.getFloat(properties, "origin_y", 0f);
         var oz = BlockProps.getFloat(properties, "origin_z", 0f);
         var mesh = BlockProps.getString(properties, "mesh", "builtin:plane");
+        var surfaceName = BlockProps.getString(properties, "surface", "");
         var density = BlockProps.getFloat(properties, "density", 3.8f);
         var probability = BlockProps.getFloat(properties, "probability", 0.5f);
         var frequency = BlockProps.getFloat(properties, "frequency", 1f);
@@ -30,11 +34,16 @@ final class SurfaceArcBlocks {
         var noiseStrength = BlockProps.getFloat(properties, "noise_strength", 0.5f);
         var driftSpeed = BlockProps.getFloat(properties, "drift_speed", 1.5f);
         var base = MeshAssets.resolve(mesh);
-        if (base == null) return OutputBlocks.noop(block, ports);
-        var surface = offsetTriangles(base, ox, oy, oz);
-        var distributor = new SurfaceDistributor(surface);
+        var surface = base == null ? null : offsetTriangles(base, ox, oy, oz);
+        var distributor = surface == null ? null : new SurfaceDistributor(surface);
+        if (distributor == null && surfaceName.isEmpty()) return OutputBlocks.noop(block, ports);
+        var sampledCount = Math.clamp((int) density, 1, 64);
+        var point = new Vector3f();
+        var normal = new Vector3f();
         long[] seed = {0L};
         long[] lastGateFrame = {Long.MIN_VALUE};
+        var resolved = distributor;
+        var resolvedSurface = surface;
         return (buf, ctx) -> {
             var frame = (long) (ctx.time() * fps);
             if (frequency > 0f) {
@@ -43,7 +52,18 @@ final class SurfaceArcBlocks {
             }
             lastGateFrame[0] = frame;
             seed[0]++;
-            var samples = distributor.distribute(density, probability, ctx.time(), frequency, seed[0]);
+            if (!surfaceName.isEmpty()) {
+                var sampler = ctx.sampler(surfaceName);
+                if (sampler != null) {
+                    emitSampled(ctx, sampler, seed[0], sampledCount, probability,
+                            height, curve, width, segments, lifetime,
+                            color[0] * emission, color[1] * emission, color[2] * emission, color[3],
+                            noiseStrength, driftSpeed, point, normal);
+                }
+                return;
+            }
+            if (resolved == null) return;
+            var samples = resolved.distribute(density, probability, ctx.time(), frequency, seed[0]);
             for (var s : samples) {
                 var arc = ctx.arcs().add();
                 CurveGenerator.generateSurfaceArc(
@@ -53,11 +73,38 @@ final class SurfaceArcBlocks {
                         height, curve, width, segments,
                         color[0] * emission, color[1] * emission, color[2] * emission, color[3],
                         lifetime, seed[0] * 31 + (long) (s.x() * 1000f));
-                arc.setSurface(surface);
+                arc.setSurface(resolvedSurface);
                 arc.setNoiseStrength(noiseStrength);
                 arc.setDriftSpeed(driftSpeed);
             }
         };
+    }
+
+    private static void emitSampled(SimContext ctx, SurfaceSampler sampler, long seed,
+                                    int count, float probability, float height, float curve,
+                                    float width, int segments, float lifetime,
+                                    float r, float g, float b, float a,
+                                    float noiseStrength, float driftSpeed,
+                                    Vector3f point, Vector3f normal) {
+        var slots = Math.max(1, sampler.slotCount());
+        var random = ctx.random();
+        for (var i = 0; i < count; i++) {
+            if (random.nextFloat() > probability) continue;
+            var slot = random.nextInt(slots);
+            var u = 0.12f + 0.76f * random.nextFloat();
+            var v = 0.12f + 0.76f * random.nextFloat();
+            if (!sampler.sample(slot, u, v, point, normal)) continue;
+            var arc = ctx.arcs().add();
+            CurveGenerator.generateSurfaceArc(
+                    arc,
+                    point.x, point.y, point.z,
+                    normal.x, normal.y, normal.z,
+                    height, curve, width, segments,
+                    r, g, b, a, lifetime, seed * 131L + slot * 17L + i);
+            arc.setAnchor(sampler, slot, u, v);
+            arc.setNoiseStrength(noiseStrength);
+            arc.setDriftSpeed(driftSpeed);
+        }
     }
 
     static SimNode contact(VfxBlock block, PortValueSource ports) {
@@ -139,7 +186,7 @@ final class SurfaceArcBlocks {
             var n = arcs.count();
             for (var a = 0; a < n; a++) {
                 var arc = arcs.arc(a);
-                if (!arc.fresh() || !arc.hasSurface()) continue;
+                if (!arc.fresh() || (!arc.hasSurface() && !arc.hasAnchor())) continue;
                 var size = arc.size();
                 if (size < 2) continue;
                 var spawned = 0;

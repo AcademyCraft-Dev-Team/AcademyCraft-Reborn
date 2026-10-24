@@ -31,7 +31,6 @@ public final class EntityRenderers {
         event.registerEntityRenderer(EntityTypes.KINETIC_SHOCKWAVE.get(), KineticShockwaveRenderer::new);
         event.registerEntityRenderer(EntityTypes.SMOKE.get(), SmokeRenderer::new);
         event.registerEntityRenderer(EntityTypes.CLEANING_ROBOT.get(), CleaningRobotRenderer::new);
-        event.registerEntityRenderer(EntityTypes.ARC_EFFECT.get(), ArcEffectRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_CUT_SLASH.get(), DarkmatterCutSlashRenderer::new);
         event.registerEntityRenderer(EntityTypes.DARKMATTER_FEATHER_PROJECTILE.get(),
                 NoopRenderer::new);

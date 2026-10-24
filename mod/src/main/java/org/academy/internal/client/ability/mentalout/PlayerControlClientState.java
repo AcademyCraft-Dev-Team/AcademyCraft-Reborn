@@ -15,7 +15,6 @@ import org.academy.api.common.entitycontrol.PlayerMovementMode;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.mentalout.control.PlayerControlSessionManager;
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
-import org.academy.mixin.client.ClientInputAccessor;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 
@@ -284,7 +283,7 @@ public final class PlayerControlClientState {
         if (sessionId == null || player != Minecraft.getInstance().player) return;
         var frame = isInputSubject() ? authorizedFrame : PlayerControlFrame.NEUTRAL;
         player.input.keyPresses = inputForFrame(frame);
-        ((ClientInputAccessor) player.input).academy$setMoveVector(moveVectorForFrame(frame));
+        player.input.moveVector = moveVectorForFrame(frame);
         if (!isInputSubject()) return;
 
         player.setYRot(frame.yaw());
@@ -440,7 +439,7 @@ public final class PlayerControlClientState {
         var player = minecraft.player;
         if (player == null || player.input == null) return;
         player.input.keyPresses = Input.EMPTY;
-        ((ClientInputAccessor) player.input).academy$setMoveVector(Vec2.ZERO);
+        player.input.moveVector = Vec2.ZERO;
     }
 
     private static int directionMask(Options options) {

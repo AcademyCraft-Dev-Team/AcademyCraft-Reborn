@@ -380,30 +380,30 @@ public final class VfxGraphManager {
     }
 
     public ActiveEffect spawn(Identifier assetId, Vector3f position) {
+        var effect = createDetached(assetId, position);
+        effects.add(effect);
+        return effect;
+    }
+
+    public ActiveEffect createDetached(Identifier assetId, Vector3f position) {
         var key = normalizedKey(assetId);
         var container = containerAssets.get(key);
+        if (container == null) {
+            loadFromResourceManager(assetId);
+            container = containerAssets.get(key);
+        }
         if (container != null) {
-            var effect = new ActiveEffect(key, container, vfxRegistry, blockRegistry, operatorRegistry, position);
-            effects.add(effect);
-            return effect;
+            return new ActiveEffect(key, container, vfxRegistry, blockRegistry, operatorRegistry, position);
         }
         var graph = assets.get(key);
         if (graph == null) {
-            var loaded = loadFromResourceManager(assetId);
-            graph = loaded;
-            container = containerAssets.get(key);
-            if (container != null) {
-                var effect = new ActiveEffect(key, container, vfxRegistry, blockRegistry, operatorRegistry, position);
-                effects.add(effect);
-                return effect;
-            }
+            loadFromResourceManager(assetId);
+            graph = assets.get(key);
         }
         if (graph == null) {
             throw new IllegalArgumentException("no vfx graph asset: " + assetId);
         }
-        var effect = new ActiveEffect(key, graph, vfxRegistry, position);
-        effects.add(effect);
-        return effect;
+        return new ActiveEffect(key, graph, vfxRegistry, position);
     }
 
     private static String normalizedKey(Identifier assetId) {

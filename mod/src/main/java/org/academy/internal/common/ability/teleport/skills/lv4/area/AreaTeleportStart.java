@@ -29,7 +29,6 @@ import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.ability.teleport.area.AreaTeleportState;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
 import org.academy.internal.common.network.PacketTypes;
-import org.academy.mixin.common.LevelTicksAccessor;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.annotation.SubscribePacket;
@@ -286,7 +285,7 @@ public final class AreaTeleportStart {
                 AreaTeleportState.Region region
         ) {
             var snapshots = new ArrayList<ScheduledTickSnapshot<T>>();
-            var containers = ((LevelTicksAccessor<T>) ticks).academy$getAllContainers();
+            var containers = ticks.allContainers;
             for (var container : containers.values()) {
                 container.getAll()
                         .filter(tick -> contains(region, tick.pos()))

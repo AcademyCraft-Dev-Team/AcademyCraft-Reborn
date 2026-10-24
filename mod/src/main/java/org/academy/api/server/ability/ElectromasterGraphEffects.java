@@ -8,14 +8,11 @@ import org.academy.internal.common.network.SpawnVfxGraphPacket;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Public visual entry points for abilities, programmable actions, and non-player emitters.
- */
 public final class ElectromasterGraphEffects {
     public enum BoltStyle {
-        ARC("arc_generate", 1.25f, 0.065f, 4, 1.10f),
+        ARC("arc_generate", 0.6f, 0.008f, 4, 1.10f),
         LANCE("thunder_lance", 0.75f, 0.17f, 5, 0.85f),
-        CHAIN("arc_generate", 0.65f, 0.055f, 2, 0.40f);
+        CHAIN("arc_generate", 0.4f, 0.006f, 2, 0.40f);
 
         final String asset;
         final float duration, width, strands, spread;
@@ -32,17 +29,11 @@ public final class ElectromasterGraphEffects {
     private ElectromasterGraphEffects() {
     }
 
-    /**
-     * A short analytic ring pulse, optionally following any entity at the supplied local height.
-     */
     public static void spawnNovaRing(ServerLevel level, Vec3 position, int entityId, float height,
                                      float radius, float radialSpeed, float duration, float phase, long seed) {
         spawnNovaRing(level, position, entityId, height, radius, radialSpeed, duration, phase, seed, -1);
     }
 
-    /**
-     * Nonnegative instance IDs renew an existing pulse; use a distinct ID for each overlapping cast.
-     */
     public static void spawnNovaRing(ServerLevel level, Vec3 position, int entityId, float height,
                                      float radius, float radialSpeed, float duration, float phase, long seed,
                                      int instanceId) {
@@ -56,9 +47,6 @@ public final class ElectromasterGraphEffects {
                 position, new Vec3(0, 1, 0), entityId, 1, duration + 0.1f, params);
     }
 
-    /**
-     * A five-tick pulse, following an optional entity; local +Y is the body's vertical axis.
-     */
     public static void spawnShield(ServerLevel level, Vec3 position, int entityId, long ageTicks) {
         SpawnVfxGraphPacket.broadcast(level, AcademyCraft.academy("vfxgraph/electromagnetic_shield"),
                 position, new Vec3(0, 1, 0), entityId, 1, 0.25f,
@@ -66,12 +54,8 @@ public final class ElectromasterGraphEffects {
                         "seed", (float) level.getRandom().nextInt(0x1000000)));
     }
 
-    /**
-     * A short pair of currents on the impacted face, normal to the incoming attack.
-     */
     public static void spawnShieldIntercept(ServerLevel level, Vec3 center, Vec3 direction) {
-        if (level == null || center == null || direction == null
-                || !Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1e-8) return;
+        if (!Double.isFinite(direction.lengthSqr()) || direction.lengthSqr() < 1e-8) return;
         SpawnVfxGraphPacket.broadcast(level, AcademyCraft.academy("vfxgraph/electromagnetic_shield"),
                 center, direction, -1, 1, 0.3f,
                 Map.of("impact", 1f, "duration", 0.3f, "radius", 0.72f, "width", 0.04f,
@@ -87,5 +71,20 @@ public final class ElectromasterGraphEffects {
                 Map.of("length", (float) length, "duration", style.duration, "width", style.width,
                         "strands", style.strands, "spread", style.spread,
                         "seed", (float) level.getRandom().nextInt(0x1000000)));
+    }
+
+    public static void spawnBallLightning(ServerLevel level, Vec3 position, int followEntityId,
+                                          float lifetimeSeconds, long seed) {
+        SpawnVfxGraphPacket.broadcast(level, AcademyCraft.academy("vfxgraph/ball_lightning"),
+                position, new Vec3(0, 1, 0), followEntityId, 1, lifetimeSeconds,
+                Map.of("seed", (float) (seed & 0xFFFFFFL), "radius", 0.2f, "bounds_radius", 8f));
+    }
+
+    public static void spawnChainArc(ServerLevel level, Vec3 start, Vec3 end) {
+        spawnBolt(level, start, end, BoltStyle.CHAIN);
+    }
+
+    public static void spawnShieldInterceptRing(ServerLevel level, Vec3 center, Vec3 direction) {
+        spawnShieldIntercept(level, center, direction);
     }
 }

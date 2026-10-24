@@ -78,6 +78,7 @@ public final class VfxBlocks {
 
     private static final List<PropertySpec> ARC_SURFACE_PROPS = List.of(
             prop("mesh", ValueType.STRING, Value.string("builtin:plane")),
+            prop("surface", ValueType.STRING, Value.string("")),
             prop("density", ValueType.FLOAT, Value.of(3.8f)),
             prop("probability", ValueType.FLOAT, Value.of(0.5f)),
             prop("frequency", ValueType.FLOAT, Value.of(1f)),
@@ -191,6 +192,9 @@ public final class VfxBlocks {
         metadata.register(type("vfx.block.electric_orbit", "spawn", "Charge Ring / Hot Arcs / Filaments",
                 ElectricArcEmitter.orbitProperties()));
         blocks.register("vfx.block.electric_orbit", ElectricArcEmitter::orbit);
+        metadata.register(type("vfx.block.ball_lightning", "spawn", "Ball Lightning Shell and Filaments",
+                BallLightningArcEmitter.properties()));
+        blocks.register("vfx.block.ball_lightning", BallLightningArcEmitter::create);
 
         metadata.register(type("vfx.block.axial_beam", "spawn", "Axial Burst / Beam Layer",
                 AxialBurstEmitter.beamProperties()));
@@ -211,27 +215,24 @@ public final class VfxBlocks {
                 SurfaceDischargeEmitter.properties()));
         blocks.register("vfx.block.surface_discharge", SurfaceDischargeEmitter::create);
 
-        metadata.register(typeWithPorts("vfx.block.spawn_rate", "spawn", "Spawn Rate",
+        metadata.register(spawnTypeWithPorts("vfx.block.spawn_rate", "Spawn Rate",
                 List.of(in("rate", "Rate", ValueType.FLOAT)),
-                List.of(prop("rate", ValueType.FLOAT, Value.of(10f)), prop("param", ValueType.STRING, Value.string(""))),
-                SPAWN_TAIL));
+                List.of(prop("rate", ValueType.FLOAT, Value.of(10f)), prop("param", ValueType.STRING, Value.string("")))));
         blocks.register("vfx.block.spawn_rate", SpawnBlocks::rate);
 
-        metadata.register(typeWithPorts("vfx.block.spawn_burst", "spawn", "Spawn Burst",
+        metadata.register(spawnTypeWithPorts("vfx.block.spawn_burst", "Spawn Burst",
                 List.of(),
-                List.of(prop("count", ValueType.INT, Value.of(10))), SPAWN_TAIL));
+                List.of(prop("count", ValueType.INT, Value.of(10)))));
         blocks.register("vfx.block.spawn_burst", SpawnBlocks::burst);
 
-        metadata.register(typeWithPorts("vfx.block.spawn_periodic", "spawn", "Spawn Periodic Burst",
+        metadata.register(spawnTypeWithPorts("vfx.block.spawn_periodic", "Spawn Periodic Burst",
                 List.of(),
-                List.of(prop("count", ValueType.INT, Value.of(5)), prop("interval", ValueType.FLOAT, Value.of(1f))),
-                SPAWN_TAIL));
+                List.of(prop("count", ValueType.INT, Value.of(5)), prop("interval", ValueType.FLOAT, Value.of(1f)))));
         blocks.register("vfx.block.spawn_periodic", SpawnBlocks::periodic);
 
-        metadata.register(typeWithPorts("vfx.block.spawn_distance", "spawn", "Spawn By Distance",
+        metadata.register(spawnTypeWithPorts("vfx.block.spawn_distance", "Spawn By Distance",
                 List.of(),
-                List.of(prop("rate", ValueType.FLOAT, Value.of(5f)), prop("speed", ValueType.FLOAT, Value.of(1f))),
-                SPAWN_TAIL));
+                List.of(prop("rate", ValueType.FLOAT, Value.of(5f)), prop("speed", ValueType.FLOAT, Value.of(1f)))));
         blocks.register("vfx.block.spawn_distance", SpawnBlocks::distance);
 
 
@@ -355,7 +356,8 @@ public final class VfxBlocks {
         blocks.register("vfx.block.collision_ground", CollisionBlocks::ground);
 
         metadata.register(type("vfx.block.collision_plane", "collision", "Plane Collision",
-                List.of(prop("height", ValueType.FLOAT, Value.of(0f))), BOUNCE_KILL));
+                Stream.concat(Stream.of(prop("height", ValueType.FLOAT, Value.of(0f))),
+                        BOUNCE_KILL.stream()).toList()));
         blocks.register("vfx.block.collision_plane", CollisionBlocks::plane);
 
         metadata.register(type("vfx.block.collision_sphere", "collision", "Sphere Collision",
@@ -707,24 +709,17 @@ public final class VfxBlocks {
         return new NodeType(id, category, name, List.of(), props);
     }
 
-    private static NodeType type(String id, String category, String name, List<PropertySpec> head, List<PropertySpec> tail) {
-        var props = new ArrayList<PropertySpec>(head.size() + tail.size());
-        props.addAll(head);
-        props.addAll(tail);
-        return new NodeType(id, category, name, List.of(), List.copyOf(props));
-    }
-
     private static NodeType typeWithPorts(String id, String category, String name, List<PortSpec> ports,
                                           List<PropertySpec> props) {
         return new NodeType(id, category, name, List.copyOf(ports), List.copyOf(props));
     }
 
-    private static NodeType typeWithPorts(String id, String category, String name, List<PortSpec> ports,
-                                          List<PropertySpec> head, List<PropertySpec> tail) {
-        var props = new ArrayList<PropertySpec>(head.size() + tail.size());
-        props.addAll(head);
-        props.addAll(tail);
-        return new NodeType(id, category, name, List.copyOf(ports), List.copyOf(props));
+    private static NodeType spawnTypeWithPorts(String id, String name, List<PortSpec> ports,
+                                               List<PropertySpec> props) {
+        var all = new ArrayList<PropertySpec>(props.size() + SPAWN_TAIL.size());
+        all.addAll(props);
+        all.addAll(SPAWN_TAIL);
+        return new NodeType(id, "spawn", name, List.copyOf(ports), List.copyOf(all));
     }
 
     private static PortSpec in(

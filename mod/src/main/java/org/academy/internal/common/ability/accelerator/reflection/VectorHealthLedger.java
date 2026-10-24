@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.accelerator.reflection;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
-import org.academy.mixin.common.LivingHealthDataAccessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,12 +141,12 @@ public final class VectorHealthLedger {
             protectedHealth = Math.max(1.0f, ProtectedHealthCache.health(entry.packed));
         }
         if (!Float.isFinite(actual) || actual < protectedHealth) {
-            entity.getEntityData().set(LivingHealthDataAccessor.academy$healthAccessor(), protectedHealth);
+            entity.getEntityData().set(LivingEntity.DATA_HEALTH_ID, protectedHealth);
         }
     }
 
     private static float rawHealth(LivingEntity entity) {
-        return entity.getEntityData().get(LivingHealthDataAccessor.academy$healthAccessor());
+        return entity.getEntityData().get(LivingEntity.DATA_HEALTH_ID);
     }
 
     private static Entry ensure(LivingEntity entity, float observedHealth) {

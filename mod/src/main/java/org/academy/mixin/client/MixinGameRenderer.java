@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -15,6 +16,7 @@ import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.PlayerRenderState;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.material.FogType;
@@ -34,8 +36,11 @@ import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientS
 import org.academy.internal.client.hud.HudManager;
 import org.academy.internal.client.render.vfxgraph.FrameProjectionContext;
 import org.academy.internal.client.render.vfxgraph.WorldLineOverlayPass;
-import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.api.client.render.vfxgraph.shape.FirstPersonHandSurface;
+import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose;
+import org.academy.api.client.render.vfxgraph.shape.ThirdPersonItemSurface;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.electromaster.skills.lv4.BioelectricOperation;
 import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -121,7 +126,31 @@ public abstract class MixinGameRenderer {
     private void renderLevelBefore(CallbackInfo ci) {
         assert minecraft.level != null;
         WorldLineOverlayPass.beginFrame(minecraft.level);
-        Accelerator.Client.WingAvatarRegistry.beginFrame();
+        HumanoidSurfacePose.beginFrame();
+        ThirdPersonItemSurface.beginFrame();
+    }
+
+    @Inject(method = "renderItemInHand", at = @At("HEAD"))
+    private void academy$beginFirstPersonHands(CallbackInfo ci) {
+        FirstPersonHandSurface.beginFrame();
+    }
+
+    @Inject(method = "renderItemInHand", at = @At("RETURN"))
+    private void academy$renderFirstPersonVfx(
+            CameraRenderState cameraState,
+            PlayerRenderState playerState,
+            GpuTextureView depthTextureView,
+            CallbackInfo ci
+    ) {
+        var target = Minecraft.getInstance().gameRenderer.mainRenderTarget().getColorTextureView();
+        if (target != null) {
+            BioelectricOperation.Client.HandVisuals.render(target, depthTextureView, cameraState);
+        }
+        GlowEffect.getInstance().begin();
+        var glowTarget = GlowEffect.glowTarget();
+        BioelectricOperation.Client.HandVisuals.renderGlow(
+                glowTarget.getColorTextureView(), depthTextureView, cameraState);
+        GlowEffect.getInstance().finish();
     }
 
     @Inject(
@@ -158,7 +187,8 @@ public abstract class MixinGameRenderer {
         DirectionalFieldRenderer.render(cameraState.pos,
                 cameraState.viewRotationMatrix, cameraState.projectionMatrix,
                 Darkmatter.Client.InterferenceFieldClient.areas());
-        GlowEffect.getInstance().process();
+        BioelectricOperation.Client.HandVisuals.requestGlow();
+        GlowEffect.getInstance().captureDepth();
         PostEffect.post();
     }
 

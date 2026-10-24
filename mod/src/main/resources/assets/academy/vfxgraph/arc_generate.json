@@ -40,15 +40,6 @@
       }
     },
     {
-      "id": "flicker_rate",
-      "name": "flicker rate",
-      "type": "FLOAT",
-      "default": {
-        "type": "FLOAT",
-        "value": 18
-      }
-    },
-    {
       "id": "length",
       "name": "length",
       "type": "FLOAT",
@@ -63,7 +54,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 0.065
+        "value": 0.008
       }
     },
     {
@@ -99,7 +90,7 @@
       "type": "FLOAT",
       "default": {
         "type": "FLOAT",
-        "value": 1.25
+        "value": 0.6
       }
     },
     {
@@ -125,14 +116,14 @@
           "type": "vfx.block.electric_tree",
           "properties": {
             "length": "16",
-            "width": "0.07",
+            "width": "0.008",
             "spread": "1.0",
             "strands": "4",
             "depth": "3",
             "split": "2",
-            "duration": "1.25",
+            "duration": "0.6",
             "density": "1.45",
-            "flicker_rate": "18"
+            "growth_time": "0.28"
           }
         }
       ]
@@ -149,11 +140,11 @@
           "type": "vfx.block.output_arc",
           "properties": {
             "vertex": "academy:core/vfxgraph_arc",
-            "shader": "academy:core/vfxgraph_axial_burst",
+            "shader": "academy:core/vfxgraph_arc",
             "blend": "glow",
             "layer": "electricity",
             "thickness": "1",
-            "emission": "1.15",
+            "emission": "6.0",
             "sparks": "0",
             "segments": "12",
             "overall_scale": "1",

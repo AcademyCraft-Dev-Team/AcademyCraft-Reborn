@@ -27,7 +27,6 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.server.time.*;
 import org.academy.internal.common.gametest.GameTestData;
-import org.academy.mixin.common.LevelTicksAccessor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
@@ -224,8 +223,7 @@ public final class TemporalScheduledTickGameTests {
             BlockPos position,
             T expectedType
     ) {
-        var containers = ((LevelTicksAccessor<T>) queue)
-                .academy$getAllContainers();
+        var containers = queue.allContainers;
         for (var container : containers.values()) {
             var found = container.getAll()
                     .filter(tick -> tick.type() == expectedType)

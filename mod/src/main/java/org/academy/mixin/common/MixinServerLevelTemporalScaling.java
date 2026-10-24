@@ -16,7 +16,6 @@ import org.academy.internal.server.time.TemporalRuntime;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -34,9 +33,6 @@ public abstract class MixinServerLevelTemporalScaling {
     @Shadow
     @Final
     private List<BlockEventData> blockEventsToReschedule;
-
-    @Invoker("advanceWeatherCycle")
-    protected abstract void academy$invokeAdvanceWeatherCycle();
 
     @Inject(method = "tickNonPassenger", at = @At("HEAD"), cancellable = true)
     private void academy$dispatchScaledEntityTicks(
@@ -89,13 +85,13 @@ public abstract class MixinServerLevelTemporalScaling {
     private void academy$dispatchWeatherTicks(ServerLevel level) {
         var context = (MinecraftServerContext) level.getServer();
         if (!context.hasAcademyCraftServer()) {
-            academy$invokeAdvanceWeatherCycle();
+            level.advanceWeatherCycle();
             return;
         }
         ((TemporalRuntime) context.getAcademyCraftServer().getTemporalService())
                 .dispatchWeatherTicks(
                         level,
-                        this::academy$invokeAdvanceWeatherCycle
+                        level::advanceWeatherCycle
                 );
     }
 

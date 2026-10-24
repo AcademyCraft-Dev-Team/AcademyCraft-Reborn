@@ -44,8 +44,6 @@ import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.entity.SurvivalDefense;
 import org.academy.internal.server.time.TemporalRuntime;
-import org.academy.mixin.common.CooldownInstanceAccess;
-import org.academy.mixin.common.ItemCooldownsAccess;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -226,15 +224,13 @@ public final class CategoryDamageRuntime {
                 var stack = player.getInventory().getItem(index);
                 if (stack.isEmpty()) continue;
                 var cooldowns = player.getCooldowns();
-                var access = (ItemCooldownsAccess) cooldowns;
                 var group = cooldowns.getCooldownGroup(stack);
-                var current = access.academy$cooldowns().get(group);
-                var end = current == null ? access.academy$tickCount()
-                        : ((CooldownInstanceAccess) current).academy$endTime();
+                var current = cooldowns.cooldowns.get(group);
+                var end = current == null ? cooldowns.tickCount : current.endTime();
                 var remaining = (int) Math.max(0L, state.interruptedUntil - now(target));
-                if (end - access.academy$tickCount() >= remaining) continue;
+                if (end - cooldowns.tickCount >= remaining) continue;
                 cooldowns.addCooldown(group, remaining);
-                state.cooldownEnds.put(group, access.academy$tickCount() + remaining);
+                state.cooldownEnds.put(group, cooldowns.tickCount + remaining);
             }
         }
     }
@@ -247,11 +243,11 @@ public final class CategoryDamageRuntime {
 
     private static void clearInterruption(LivingEntity target, ChargeState state) {
         if (target instanceof ServerPlayer player) {
-            var access = (ItemCooldownsAccess) player.getCooldowns();
+            var cooldowns = player.getCooldowns();
             state.cooldownEnds.forEach((group, ownEnd) -> {
-                var current = access.academy$cooldowns().get(group);
-                if (current != null && ((CooldownInstanceAccess) current).academy$endTime() == ownEnd) {
-                    player.getCooldowns().removeCooldown(group);
+                var current = cooldowns.cooldowns.get(group);
+                if (current != null && current.endTime() == ownEnd) {
+                    cooldowns.removeCooldown(group);
                 }
             });
         }

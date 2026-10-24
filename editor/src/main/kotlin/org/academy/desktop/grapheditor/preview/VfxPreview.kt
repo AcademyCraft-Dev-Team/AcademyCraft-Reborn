@@ -107,7 +107,9 @@ class VfxPreview(
             for (block in ctx.blocks.values) {
                 when (block.typeId) {
                     "vfx.block.arc_surface" -> {
-                        meshSurface(block, "mesh", "origin_", BLENDER_PLANE_COLOR)?.let(out::add)
+                        if (block.properties["surface"].isNullOrEmpty()) {
+                            meshSurface(block, "mesh", "origin_", BLENDER_PLANE_COLOR)?.let(out::add)
+                        }
                     }
 
                     "vfx.block.arc_contact" -> {

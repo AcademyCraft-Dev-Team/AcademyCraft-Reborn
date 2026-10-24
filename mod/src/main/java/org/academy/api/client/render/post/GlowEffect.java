@@ -145,12 +145,70 @@ public final class GlowEffect {
         }
     }
 
-    public void process() {
+    public static void requestGlow() {
+        hasBeenUsed = true;
+    }
+
+    public void captureDepth() {
         if (!hasBeenUsed && !VfxGraphManager.INSTANCE.hasGlowData()
                 && !VfxGlowHooks.hasGlowLines()) return;
+        var mainRenderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        input = ensureInput(mainRenderTarget);
+        input.copyDepthFrom(mainRenderTarget);
+    }
 
-        var mc = Minecraft.getInstance();
-        var mainRenderTarget = mc.gameRenderer.mainRenderTarget();
+    public void begin() {
+        var current = input;
+        if (current == null) return;
+        var mainRenderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        var main = mainRenderTarget.getColorTextureView();
+        var inputView = current.getColorTextureView();
+        if (main == null || inputView == null) return;
+
+        BEFORE.draw();
+        var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+        var textures = List.of(new TextureBinding("Sampler0", inputView, sampler));
+        Render.runBlitPass(
+                main, Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
+                Render.Buffers.getInstance().getFSQuadVBNDC(),
+                textures, List.of(),
+                false
+        );
+        AFTER.draw();
+    }
+
+    public void finish() {
+        var mainRenderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        var main = mainRenderTarget.getColorTextureView();
+        var scene = PostEffect.MAIN_SCENE.getColorTextureView();
+        var current = input;
+        try {
+            if (current == null || main == null) return;
+            var inputView = current.getColorTextureView();
+            if (inputView == null) return;
+            if (VfxGraphManager.INSTANCE.hasGlowData()) {
+                VfxGraphManager.INSTANCE.renderGlowFrame(inputView, current.getDepthTextureView());
+            }
+            VfxGlowHooks.renderGlowLines(inputView, current.getDepthTextureView());
+            blurAndBlend(inputView, mainRenderTarget, main);
+            if (scene != null) {
+                var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+                Render.runBlitPass(
+                        scene, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
+                        Render.Buffers.getInstance().getFSQuadVBNDC(),
+                        List.of(new TextureBinding("Sampler0", main, sampler)),
+                        List.of(),
+                        false
+                );
+            }
+            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), new Vector4f(0));
+        } finally {
+            releaseInput();
+            hasBeenUsed = false;
+        }
+    }
+
+    private void blurAndBlend(GpuTextureView source, RenderTarget mainRenderTarget, GpuTextureView main) {
         var width = mainRenderTarget.width;
         var height = mainRenderTarget.height;
         var resourcePool = Render.Buffers.getResourcePool();
@@ -172,30 +230,7 @@ public final class GlowEffect {
         RenderTarget ping = null;
 
         try {
-            var scene = PostEffect.MAIN_SCENE.getColorTextureView();
-            var main = mainRenderTarget.getColorTextureView();
-
-            input = ensureInput(mainRenderTarget);
-            var inputView = input.getColorTextureView();
-
-            if (scene == null || main == null || inputView == null) return;
-
-            input.copyDepthFrom(mainRenderTarget);
-            BEFORE.draw();
             var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
-            var textures = List.of(new TextureBinding("Sampler0", inputView, sampler));
-            Render.runBlitPass(
-                    main, Render.RenderPipelines.BLIT_SCREEN_PREMULTIPLIED_ALPHA,
-                    Render.Buffers.getInstance().getFSQuadVBNDC(),
-                    textures, List.of(),
-                    false
-            );
-            AFTER.draw();
-
-            if (VfxGraphManager.INSTANCE.hasGlowData()) {
-                VfxGraphManager.INSTANCE.renderGlowFrame(inputView, input.getDepthTextureView());
-            }
-            VfxGlowHooks.renderGlowLines(inputView, input.getDepthTextureView());
 
             {
                 ping = resourcePool.acquire(descHalf);
@@ -207,7 +242,7 @@ public final class GlowEffect {
             if (pingView == null || pongHalfView == null) return;
 
             runBlurPass(
-                    pingView, inputView,
+                    pingView, source,
                     new Vector2f(ping.width, ping.height), 1.0f, 0.0f, 4
             );
             runBlurPass(
@@ -273,16 +308,7 @@ public final class GlowEffect {
                     List.of(new UniformBinding("GlowInfo", glowUniformsBuffer.slice())),
                     false
             );
-            Render.runBlitPass(
-                    scene, Render.RenderPipelines.BLIT_SCREEN_WITHOUT_BLEND,
-                    Render.Buffers.getInstance().getFSQuadVBNDC(),
-                    List.of(new TextureBinding("Sampler0", main, sampler)),
-                    List.of(),
-                    false
-            );
-            RenderSystem.getDevice().createCommandEncoder().clearColorTexture(inputView.texture(), new Vector4f(0));
         } finally {
-            releaseInput();
             if (ping != null) {
                 if (ping.width == width / 2) resourcePool.release(descHalf, ping);
                 else if (ping.width == width / 4) resourcePool.release(descQuarter, ping);
@@ -291,7 +317,6 @@ public final class GlowEffect {
             if (pongHalf != null) resourcePool.release(descHalf, pongHalf);
             if (pongQuarter != null) resourcePool.release(descQuarter, pongQuarter);
             if (pongEighth != null) resourcePool.release(descEighth, pongEighth);
-            hasBeenUsed = false;
         }
     }
 

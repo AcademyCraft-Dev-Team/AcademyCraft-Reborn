@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -23,7 +24,6 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.gametest.GameTestData;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.mixin.common.LivingHealthDataAccessor;
 
 import java.util.List;
 
@@ -81,7 +81,7 @@ public final class VectorHealthCoremodGameTests {
 
         player.setHealth(5);
         near(helper, 20, player.getHealth(), "setHealth reduction");
-        var healthId = LivingHealthDataAccessor.academy$healthAccessor();
+        var healthId = LivingEntity.DATA_HEALTH_ID;
         player.getEntityData().set(healthId, 3.0f);
         near(helper, 20, player.getHealth(), "synched data reduction");
         near(helper, 20, player.getEntityData().get(healthId), "stored health after rejected write");

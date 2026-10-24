@@ -207,14 +207,13 @@ public final class TrueDamageCompatibility {
             if (target.isSleeping()) target.stopSleeping();
             target.stopUsingItem();
 
-            var invoker = (LivingEntityDamageInvoker) target;
-            invoker.academy$handleKillingBlow();
+            ((LivingEntityDamageInvoker) target).academy$handleKillingBlow();
             target.getCombatTracker().recheckStatus();
 
             var killer = source.getEntity();
             if (killer == null || !killer.killedEntity(level, target, source)) {
                 target.gameEvent(GameEvent.ENTITY_DIE);
-                invoker.academy$dropAllDeathLoot(level, source);
+                ((LivingEntityDamageInvoker) target).academy$dropAllDeathLoot(level, source);
             }
             level.broadcastEntityEvent(target, (byte) 3);
             target.setPose(Pose.DYING);
@@ -230,7 +229,7 @@ public final class TrueDamageCompatibility {
     }
 
     private static boolean isDeathCommitted(LivingEntity target) {
-        return target.isRemoved() || ((LivingEntityDamageInvoker) target).academy$isDead();
+        return target.isRemoved() || target.dead;
     }
 
     private static void enforceDepletedHealth(LivingEntity target) {

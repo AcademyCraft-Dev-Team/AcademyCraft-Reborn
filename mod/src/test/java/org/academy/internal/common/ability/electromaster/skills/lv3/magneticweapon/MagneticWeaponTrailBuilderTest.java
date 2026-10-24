@@ -1,13 +1,13 @@
+package org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon;
+
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.arc.modifier.ColorModifier;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.modifier.TaperModifier;
-import org.academy.internal.common.ability.electromaster.skills.lv3.magneticweapon.MagneticWeapon;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MagneticWeaponTrailBuilderTest {
     @Test
@@ -24,15 +24,5 @@ class MagneticWeaponTrailBuilderTest {
                 history, new Vec3(20.0, 0.0, 0.0), 8
         ));
         assertEquals(1, history.size());
-    }
-
-    @Test
-    void modifiersKeepJaggedTaperColorOrder() {
-        var modifiers = MagneticWeapon.Client.MagneticWeaponTrailBuilder.modifiers(42L, 0.7f);
-
-        assertEquals(3, modifiers.size());
-        assertInstanceOf(JaggedModifier.class, modifiers.get(0));
-        assertInstanceOf(TaperModifier.class, modifiers.get(1));
-        assertInstanceOf(ColorModifier.class, modifiers.get(2));
     }
 }

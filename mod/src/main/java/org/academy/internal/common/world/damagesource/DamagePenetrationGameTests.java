@@ -58,7 +58,6 @@ import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime;
 import org.academy.internal.common.gametest.GameTestData;
 import org.academy.internal.server.entity.SurvivalDefense;
-import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -405,12 +404,11 @@ public final class DamagePenetrationGameTests {
         level.addFreshEntity(target);
         var skill = Skills.SINGLE_HIGH_SPEED_ELECTRON_BEAM.get();
         var source = SkillDamageSource.of(attacker, skill, DamageTypes.MELT_DAMAGE);
-        var invoker = (LivingEntityDamageInvoker) (Object) target;
         try {
             target.setHealth(1);
             helper.assertTrue(SkillDamageUtil.applyDirect(level, target, source, 20),
                     "The first lethal direct hit must complete normally");
-            helper.assertTrue(invoker.academy$isDead() && target.damageCalls == 1,
+            helper.assertTrue(target.dead && target.damageCalls == 1,
                     "The first hit must enter actuallyHurt once and finish vanilla death");
             // Multipart forwarding and lingering displacement marks can both reach the same
             // corpse again before the death animation removes it from the level.
@@ -424,10 +422,10 @@ public final class DamagePenetrationGameTests {
                     "Rejected corpse hits must never enter actuallyHurt, even if its exception is caught");
             helper.assertTrue(!AeromanipTargeting.canAffectNegatively(attacker, target),
                     "Airflow must stop selecting a dead target before it is removed");
-            helper.assertTrue(invoker.academy$getDamageContainers().isEmpty(),
+            helper.assertTrue(target.damageContainers.isEmpty(),
                     "Rejected hits must leave the damage-container stack empty");
 
-            invoker.academy$setDead(false);
+            target.dead = false;
             target.setHealth(20);
             for (var amount : new float[]{0, -1, Float.NaN, Float.POSITIVE_INFINITY}) {
                 helper.assertTrue(!SkillDamageUtil.applyDirect(level, target, source, amount),

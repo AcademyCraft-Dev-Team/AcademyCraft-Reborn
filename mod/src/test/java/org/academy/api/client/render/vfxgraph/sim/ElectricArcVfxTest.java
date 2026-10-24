@@ -5,18 +5,15 @@ import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.path.LinePath;
-import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -102,9 +99,12 @@ class ElectricArcVfxTest {
     @Test
     void boundPathsReplacePreviewPreserveEndpointsAndClearWithoutAccumulating() throws Exception {
         var sim = simulator("magnetic_weapon");
-        var path = new ArcPath(new LinePath(
-                new Vector3f(2, 3, 4), new Vector3f(2, 25, 4)), List.of(), 8, List.of());
-        sim.setArcSource("paths", _ -> Collections.nCopies(40, path));
+        sim.setArcSource("paths", (out, _) -> {
+            for (int i = 0; i < 40; i++) {
+                ArcCurveBuilder.blueWhiteLine(out, 2, 3, 4, 2, 25, 4,
+                        0.01f, 8, 1f, 1f, i, 0, 0, 0, 0, 0);
+            }
+        });
         for (int frame = 0; frame < 100; frame++) {
             at(sim, frame * 0.016f);
             assertEquals(32, sim.arcBuffer().count());
@@ -115,7 +115,8 @@ class ElectricArcVfxTest {
             assertEquals(0.12f, arc.r());
             assertEquals(0.78f, sim.arcBuffer().arc(1).r());
         }
-        sim.setArcSource("paths", _ -> List.of());
+        sim.setArcSource("paths", (out, _) -> {
+        });
         at(sim, 2);
         assertEquals(0, sim.arcBuffer().count(), "An inactive blade must not show the editor demo");
     }
@@ -170,7 +171,7 @@ class ElectricArcVfxTest {
         var sim = simulator("arc_generate");
         for (float length : new float[]{16, 20, 48}) {
             sim.setLiveParam("length", Value.of(length));
-            at(sim, 0.12f);
+            at(sim, 0.25f);
             assertTrue(sim.arcBuffer().count() > 0);
             assertTrue(sim.arcBuffer().count() <= 128, "the delta must stay bounded");
             float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;

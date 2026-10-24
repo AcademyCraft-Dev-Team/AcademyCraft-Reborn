@@ -13,7 +13,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilt
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
-import org.academy.mixin.common.LivingEntityDamageInvoker;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
@@ -132,7 +131,7 @@ public final class VectorReflectionClientRuntime {
 
     public static void sanitize(LocalPlayer player) {
         if (player.isRemoved()) player.revive();
-        ((LivingEntityDamageInvoker) player).academy$setDead(false);
+        player.dead = false;
         clearHurtState(player);
         player.deathTime = 0;
         if (player.getPose() == Pose.DYING) player.setPose(Pose.STANDING);

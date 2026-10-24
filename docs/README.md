@@ -13,6 +13,7 @@
 | **[event_bus_subscribers.md](./event_bus_subscribers.md)** | 规范 `EventBusSubscriber` 的使用 |
 | **[java/README.md](./java/README.md)**                     | 规范 java 相关                   |
 | [skill_vfx.md](skill_vfx.md)                               | 规范技能特效的编写               |
+| [mixin.md](mixin.md)                                       | 规范 Mixin 编写                  |
 
 **以下内容 AI 必须第一时间执行，在此之前禁止任何输出**
 

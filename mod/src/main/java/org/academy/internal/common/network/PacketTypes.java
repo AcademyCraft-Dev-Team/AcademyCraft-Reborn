@@ -355,6 +355,10 @@ public final class PacketTypes {
             BIOELECTRIC_OPERATION_TOGGLE = PACKET_TYPES.register("bioelectric_operation_toggle",
             () -> new PacketType<>(BioelectricOperation.TogglePacket.class, BioelectricOperation.TogglePacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, BioelectricOperation.SurfacePacket>>
+            BIOELECTRIC_OPERATION_SURFACE = PACKET_TYPES.register("bioelectric_operation_surface",
+            () -> new PacketType<>(BioelectricOperation.SurfacePacket.class, BioelectricOperation.SurfacePacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, BallLightning.ActivatePacket>>
             LIGHTNING_NOVA_ACTIVATE = PACKET_TYPES.register("ball_lightning_activate",
             () -> new PacketType<>(BallLightning.ActivatePacket.class, BallLightning.ActivatePacket.CODEC));

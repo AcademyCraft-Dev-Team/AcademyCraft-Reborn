@@ -21,11 +21,11 @@ void main() {
     // 颜色 100% 由图数据顶点色驱动（零代码颜色常量）。
     vec3 base = max(vColor.rgb, vec3(1e-4));
     vec3 color = base * LightningParams.z;
+    if (LightningParams.y > 0.5) color *= vColor.a;
 
     if (LightningParams.x > 0.5) {
         color = acesApprox(color);
     }
 
-    // 不透明自发光（Blender alpha=1）
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color, vColor.a);
 }

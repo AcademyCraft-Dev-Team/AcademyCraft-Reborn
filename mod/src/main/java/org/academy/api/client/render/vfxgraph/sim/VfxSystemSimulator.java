@@ -18,6 +18,7 @@ import org.academy.api.client.render.vfxgraph.operator.VfxOperator;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
+import org.joml.Vector3f;
 
 import java.util.*;
 
@@ -40,6 +41,8 @@ public final class VfxSystemSimulator {
     private final ParticleBuffer buffer = new ParticleBuffer();
     private final ArcBuffer arcBuffer = new ArcBuffer();
     private final SurfaceConstraint surfaceConstraint = new SurfaceConstraint();
+    private final Vector3f anchorPoint = new Vector3f();
+    private final Vector3f anchorNormal = new Vector3f();
     private float arcDriftSpeed = 1.5f;
     private float arcNoiseStrength = 0.27f;
     private final float arcNoiseScale = 2.0f;
@@ -215,7 +218,11 @@ public final class VfxSystemSimulator {
                 if (arc.hasArchBase()) {
                     // 仿真区爬行（Blender 仿真区 Set Position）：弧基座沿切平面随机滑移累积，
                     // 端点随后被 SurfaceConstraint 吸附拉回表面（复刻「电弧群游走」观感）。
-                    wanderArcBase(arc, random);
+                    if (arc.hasAnchor()) {
+                        reanchorSurfaceArc(arc, dt);
+                    } else {
+                        wanderArcBase(arc, random);
+                    }
                     CurveGenerator.sampleSurfaceArch(arc);
                 }
                 var strength = arc.hasNoiseStrength() ? arc.noiseStrength() : arcNoiseStrength;
@@ -225,7 +232,7 @@ public final class VfxSystemSimulator {
                     NoiseAnimator.animate(arc, time, arcDriftSpeed, strength, arcNoiseScale,
                             arcNoiseSeed + arc.seed() * 7919L);
                 }
-                if (arc.hasSurface()) {
+                if (arc.hasSurface() || arc.hasAnchor()) {
                     surfaceConstraint.constrain(arc);
                 }
             }
@@ -430,6 +437,21 @@ public final class VfxSystemSimulator {
         var dy = arc.y(b) - arc.y(a);
         var dz = arc.z(b) - arc.z(a);
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    private void reanchorSurfaceArc(ArcCurve arc, float dt) {
+        var sampler = arc.anchorSampler();
+        if (sampler == null) return;
+        var stepScale = Math.clamp(dt * 60f, 0f, 2f);
+        var step = (0.01f + 0.02f * random.nextFloat())
+                * (arc.hasDriftSpeed() ? arc.driftSpeed() : arcDriftSpeed) * stepScale;
+        var angle = random.nextFloat() * (float) (Math.PI * 2.0);
+        arc.accumulateAnchorWander((float) Math.cos(angle) * step, (float) Math.sin(angle) * step);
+        var u = Math.clamp(arc.anchorU() + arc.anchorWanderU(), 0.03f, 0.97f);
+        var v = Math.clamp(arc.anchorV() + arc.anchorWanderV(), 0.03f, 0.97f);
+        if (!sampler.sample(arc.anchorIndex(), u, v, anchorPoint, anchorNormal)) return;
+        arc.reanchorSurface(anchorPoint.x, anchorPoint.y, anchorPoint.z,
+                anchorNormal.x, anchorNormal.y, anchorNormal.z);
     }
 
     /**

@@ -17,7 +17,6 @@ import net.neoforged.neoforge.event.entity.player.CanContinueSleepingEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.internal.common.world.level.block.entity.AbilityDeveloperBlockEntity;
-import org.academy.mixin.common.PlayerSleepCounterAccessor;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -49,7 +48,7 @@ public final class AbilityDeveloperSleep {
         }
 
         player.startSleeping(sleepPosition);
-        ((PlayerSleepCounterAccessor) player).academy$setSleepCounter(0);
+        player.sleepCounter = 0;
         if (canSkipTime(player)) {
             player.level().updateSleepingPlayerList();
         }

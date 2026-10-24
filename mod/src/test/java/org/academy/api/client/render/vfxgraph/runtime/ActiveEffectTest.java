@@ -13,8 +13,7 @@ import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -25,6 +24,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,18 +34,22 @@ class ActiveEffectTest {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
         VfxBlocks.registerAll(metadata, blocks);
-        try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/magnetic_weapon.json")) {
+        try (var stream = Objects.requireNonNull(
+                getClass().getResourceAsStream("/assets/academy/vfxgraph/magnetic_weapon.json"))) {
             var system = new JsonVfxGraphCodec(metadata).decode(
                     JsonParser.parseReader(new InputStreamReader(stream,
                             StandardCharsets.UTF_8)).getAsJsonObject());
             var active = new ActiveEffect("magnetic", system, vfxRegistry, blocks,
                     new VfxOperatorRegistry(), new Vector3f());
             boolean[] visible = {true};
-            var path = new ArcPath(new LinePath(
-                    new Vector3f(), new Vector3f(0, 2, 0)), List.of(), 4, List.of());
-            active.bindArcs("paths", _ -> visible[0] ? List.of(path) : List.of());
+            active.bindArcs("paths", (out, _) -> {
+                if (visible[0]) {
+                    ArcCurveBuilder.blueWhiteLine(out, 0, 0, 0, 0, 2, 0,
+                            0.01f, 4, 1f, 1f, 42L, 0, 0, 0, 0, 0);
+                }
+            });
             active.tick(0.05f);
-            assertEquals(2, active.effect().arcBuffer().count());
+            assertEquals(2, Objects.requireNonNull(active.effect().arcBuffer()).count());
             active.reload(system);
             active.tick(0.05f);
             assertEquals(2, active.effect().arcBuffer().count());
@@ -60,7 +64,8 @@ class ActiveEffectTest {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
         VfxBlocks.registerAll(metadata, blocks);
-        try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/darkmatter_repair.json")) {
+        try (var stream = Objects.requireNonNull(
+                getClass().getResourceAsStream("/assets/academy/vfxgraph/darkmatter_repair.json"))) {
             var system = new JsonVfxGraphCodec(metadata).decode(
                     JsonParser.parseReader(new InputStreamReader(stream,
                             StandardCharsets.UTF_8)).getAsJsonObject());
@@ -159,7 +164,6 @@ class ActiveEffectTest {
 
         var out = new float[3];
         effect.worldTransform().apply(1f, 0f, 0f, out);
-        // local (1,0,0) → scale(2) → rot Y90 → (0,0,-2) → +pos(1,2,3) = (1,2,1)
         assertEquals(1f, out[0], 1e-4f);
         assertEquals(2f, out[1], 1e-4f);
         assertEquals(1f, out[2], 1e-4f);
@@ -190,7 +194,6 @@ class ActiveEffectTest {
         effect.bind("p", () -> Value.of(1f));
         effect.tick(0.1f);
 
-        // 重载 → 换图，位置/绑定保留
         effect.reload(burstGraph("0"));
         assertEquals(5f, effect.position().x, 1e-5f);
         assertInstanceOf(WorldTransform.class, effect.worldTransform());

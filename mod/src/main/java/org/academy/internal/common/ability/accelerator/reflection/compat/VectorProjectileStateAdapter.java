@@ -7,8 +7,6 @@ import net.minecraft.world.entity.projectile.ShulkerBullet;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.entity.projectile.hurtingprojectile.AbstractHurtingProjectile;
 import net.minecraft.world.phys.Vec3;
-import org.academy.mixin.common.AbstractArrowVectorAccessor;
-import org.academy.mixin.common.ShulkerBulletVectorAccessor;
 import org.jspecify.annotations.Nullable;
 
 public final class VectorProjectileStateAdapter {
@@ -27,11 +25,9 @@ public final class VectorProjectileStateAdapter {
         if (projectile instanceof ShulkerBullet bullet) {
             var target = previousOwner != null && previousOwner.isAlive()
                     && previousOwner != projectile.getOwner() ? previousOwner : null;
-            var accessor = (ShulkerBulletVectorAccessor) bullet;
-            accessor.academy$setFinalTarget(
-                    target == null ? null : EntityReference.of(target));
-            var direction = accessor.academy$getCurrentMoveDirection();
-            accessor.academy$selectNextMoveDirection(
+            bullet.finalTarget = target == null ? null : EntityReference.of(target);
+            var direction = bullet.currentMoveDirection;
+            bullet.selectNextMoveDirection(
                     direction == null ? null : direction.getAxis(), target);
         }
         VectorProjectileTargeting.retargetAfterRedirect(projectile, previousOwner);
@@ -50,11 +46,10 @@ public final class VectorProjectileStateAdapter {
 
         if (projectile instanceof AbstractArrow arrow) {
             arrow.shakeTime = 0;
-            var accessor = (AbstractArrowVectorAccessor) arrow;
-            accessor.academy$setInGround(false);
-            accessor.academy$setLife(0);
-            accessor.academy$setInGroundTime(0);
-            accessor.academy$resetPiercedEntities();
+            arrow.setInGround(false);
+            arrow.life = 0;
+            arrow.inGroundTime = 0;
+            arrow.resetPiercedEntities();
         }
 
         if (projectile instanceof AbstractHurtingProjectile hurtingProjectile) {

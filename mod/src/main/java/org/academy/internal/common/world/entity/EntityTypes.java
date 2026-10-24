@@ -50,11 +50,6 @@ public class EntityTypes {
             ENTITY_TYPES.registerEntityType(
                     "arc", Arc::new, MobCategory.MISC
             );
-    public static final DeferredHolder<EntityType<?>, EntityType<ArcEffect>> ARC_EFFECT =
-            ENTITY_TYPES.registerEntityType(
-                    "arc_effect", ArcEffect::new, MobCategory.MISC,
-                    builder -> builder.sized(0.1f, 0.1f).clientTrackingRange(64).updateInterval(1)
-            );
     public static final DeferredHolder<EntityType<?>, EntityType<HighSpeedElectronBeam>> HIGH_SPEED_ELECTRON_BEAM =
             ENTITY_TYPES.registerEntityType(
                     "high_speed_electron_beam", HighSpeedElectronBeam::new, MobCategory.MISC,

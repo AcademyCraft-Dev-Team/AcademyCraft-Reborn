@@ -1,14 +1,20 @@
 package org.academy.mixin.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.item.ItemStack;
+import org.academy.api.client.render.vfxgraph.shape.FirstPersonHandSurface;
+import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose;
 import org.academy.internal.client.animation.AbilityDeveloperSleepClient;
 import org.academy.internal.client.animation.WingFlightAnimationClient;
-import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -36,7 +42,30 @@ public abstract class MixinAvatarRenderer {
         matrix.scale(-1.0f, -1.0f, 1.0f);
         matrix.scale(0.9375f);
         matrix.translate(0.0f, -1.501f, 0.0f);
-        Accelerator.Client.WingAvatarRegistry.capture(state.id, matrix);
+        HumanoidSurfacePose.captureRoot(state.id, matrix);
+    }
+
+    @Inject(method = "renderHand", at = @At("RETURN"))
+    private void academy$captureFirstPersonArm(
+            PoseStack poseStack,
+            SubmitNodeCollector submitNodeCollector,
+            int lightCoords,
+            Identifier skinTexture,
+            ModelPart arm,
+            boolean hasSleeve,
+            CallbackInfo ci
+    ) {
+        var model = ((AvatarRenderer<?>) (Object) this).getModel();
+        var side = arm == model.rightArm ? HumanoidArm.RIGHT
+                : arm == model.leftArm ? HumanoidArm.LEFT : null;
+        if (side == null) return;
+        var pose = new PoseStack();
+        pose.last().set(poseStack.last());
+        arm.translateAndRotate(pose);
+        var player = Minecraft.getInstance().player;
+        var slim = player != null && player.getSkin().model() == PlayerModelType.SLIM;
+        var view = Minecraft.getInstance().gameRenderer.mainCamera().getViewRotationMatrix(new Matrix4f());
+        FirstPersonHandSurface.addArm(side, view.mul(pose.last().pose()), slim);
     }
 
     @Inject(

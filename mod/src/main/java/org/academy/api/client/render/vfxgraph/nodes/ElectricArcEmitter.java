@@ -16,9 +16,6 @@ import java.util.Optional;
 
 import static org.academy.api.client.render.vfxgraph.shape.SkyDischargeGeometry.unit;
 
-/**
- * Analytic blue-white discharges: exact +Y endpoint bolts and filament-lined charging rings.
- */
 public final class ElectricArcEmitter {
     private ElectricArcEmitter() {
     }
@@ -33,7 +30,7 @@ public final class ElectricArcEmitter {
     public static List<PropertySpec> treeProperties() {
         return List.of(number("length", 10), number("width", 0.065f), number("spread", 1.1f),
                 number("strands", 2), number("depth", 3), number("split", 2), number("duration", 1),
-                number("flicker_rate", 18), number("opacity", 1), number("density", 1), number("detail", 1),
+                number("opacity", 1), number("density", 1), number("detail", 1),
                 number("growth_time", 0), number("downward", 0), number("origin_y", 0));
     }
 
@@ -120,13 +117,15 @@ public final class ElectricArcEmitter {
             float duration = value(block, ctx, "duration", 1, 0.05f, 20);
             float length = value(block, ctx, "length", 10, 0, 4096);
             float growth = value(block, ctx, "growth_time", 0, 0, 2);
-            if (growth > 0) length *= smooth(time / growth);
+            float growWindow = growth > 0f ? Math.max(0.05f, growth * 0.5f) : 0f;
             if (time >= duration || length <= 0.001f) return;
+            float life = Math.clamp(time / duration, 0f, 1f);
+            float phase = 0.15f * (1f - (1f - life) * (1f - life));
             float direction = value(block, ctx, "downward", 0, 0, 1) > 0.5f ? -1 : 1;
             float originY = value(block, ctx, "origin_y", 0, -4096, 4096);
             float opacity = value(block, ctx, "opacity", 1, 0, 1)
                     * value(block, ctx, "density", 1, 0, 2)
-                    * (1 - smooth((time / duration - 0.35f) / 0.65f));
+                    * (1 - smooth((life - 0.15f) / 0.85f));
             if (opacity <= 0.001f) return;
             float detail = value(block, ctx, "detail", 1, 0, 1);
             float width = value(block, ctx, "width", 0.065f, 0.001f, 2);
@@ -134,11 +133,9 @@ public final class ElectricArcEmitter {
             int roots = Math.clamp(Math.round(value(block, ctx, "strands", 2, 1, 8) * detail), 1, 8);
             int depth = Math.clamp(Math.round(value(block, ctx, "depth", 3, 1, 6)), 1, 6);
             int split = Math.clamp(Math.round(value(block, ctx, "split", 2, 1, 4)), 1, 4);
-            int frame = (int) (time * value(block, ctx, "flicker_rate", 18, 1, 40));
             long seed = (long) ctx.paramFloat("seed", 42);
             budget[0] = 64;
-            long baseRandom = seed + frame * 911L;
-            // No trunk: every branch springs from the single root point and fans forward.
+            long baseRandom = seed;
             for (int s = 0; s < roots && budget[0] > 0; s++) {
                 long random = baseRandom + s * 317L + 7L;
                 float px = (unit(random, 11) - 0.5f) * width * 2f;
@@ -149,7 +146,7 @@ public final class ElectricArcEmitter {
                 treeBranch(ctx, path, group, px, originY, pz,
                         lateral * (float) Math.cos(angle), direction, lateral * (float) Math.sin(angle),
                         branchLength, length, 1, depth, split, spread, width,
-                        random, opacity, budget);
+                        random, opacity, time, phase, 0f, growWindow, budget);
             }
         };
     }
@@ -159,31 +156,33 @@ public final class ElectricArcEmitter {
                                    float slopeX, float forward, float slopeZ,
                                    float len, float remaining, int level, int depth, int split,
                                    float spread, float width,
-                                   long random, float opacity, int[] budget) {
-        if (len <= 0.02f || budget[0] <= 0) return;
+                                   long random, float opacity, float time, float phase, float begin, float growWindow, int[] budget) {
+        float grow = growWindow > 0f ? Math.clamp((time - begin) / growWindow, 0f, 1f) : 1f;
+        float growInv = 1f - grow;
+        float grown = len * (1f - growInv * growInv * growInv);
+        if (grown <= 0.02f || budget[0] <= 0) return;
         // `forward` is the signed advance; lateral is a slope, and child length is bounded by the
         // remaining range, so the crown can never overshoot the target distance.
         int segments = Math.max(6, 14 - level * 2);
         // Smooth large-scale bending (scaled to the branch length) instead of straight or zig-zag lines.
-        float jitter = len * spread * (0.10f + 0.05f * level);
+        float jitter = grown * spread * (0.10f + 0.05f * level);
         boolean leaf = level >= depth;
         path.clearPoints();
         for (int i = 0; i <= segments; i++) {
             float u = (float) i / segments;
-            float envelope = (float) Math.sin(u * Math.PI);
-            float nx = noise(random, u, 2) * 0.65f + noise(random + 53, u * 1.6f, 3) * 0.35f;
-            float nz = noise(random + 91, u, 2) * 0.65f + noise(random + 137, u * 1.8f, 3) * 0.35f;
+            float envelope = (float) Math.sin(u * Math.PI * 0.5f);
+            float nx = noise(random, u + phase, 2) * 0.65f + noise(random + 53, u * 1.6f + phase * 1.7f, 3) * 0.35f;
+            float nz = noise(random + 91, u + phase, 2) * 0.65f + noise(random + 137, u * 1.8f + phase * 1.7f, 3) * 0.35f;
             // Segments stay close to full width where they meet a parent (no pinched junction) and
             // only the outermost tips taper away.
             float taper = 0.80f + 0.20f * smooth(u * 5f);
             if (leaf) taper *= 1f - 0.9f * smooth((u - 0.7f) / 0.3f);
-            path.addPoint(x + slopeX * len * u + nx * jitter * envelope,
-                    y + forward * len * u,
-                    z + slopeZ * len * u + nz * jitter * envelope,
+            path.addPoint(x + slopeX * grown * u + nx * jitter * envelope,
+                    y + forward * grown * u,
+                    z + slopeZ * grown * u + nz * jitter * envelope,
                     width * taper, level, 0);
         }
-        float flicker = 0.86f + unit(random, 51) * 0.14f;
-        emit(ctx, path, group, random, opacity * flicker * (float) Math.pow(0.80f, level), "electricity");
+        emitDemo(ctx, path, group, random, opacity, "electricity");
         budget[0]--;
 
         if (leaf || budget[0] <= 0) return;
@@ -193,16 +192,14 @@ public final class ElectricArcEmitter {
         float cone = spread * (0.14f + 0.10f * level);
         for (int c = 0; c < kids && budget[0] > 0; c++) {
             long childRandom = nodeRandom + c * 317L;
-            // Children leave at varied heights along the branch, never a fixed set of levels.
             float startU = 0.15f + 0.8f * unit(childRandom, 180);
-            float envelopeAt = (float) Math.sin(startU * Math.PI);
-            // Match the parent's own bend at that height, otherwise the branch starts off the line.
-            float sx = x + slopeX * len * startU
-                    + (noise(random, startU, 2) * 0.65f + noise(random + 53, startU * 1.6f, 3) * 0.35f) * jitter * envelopeAt;
-            float sz = z + slopeZ * len * startU
-                    + (noise(random + 91, startU, 2) * 0.65f + noise(random + 137, startU * 1.8f, 3) * 0.35f) * jitter * envelopeAt;
-            float sy = y + forward * len * startU;
-            float childRemaining = Math.max(0.05f, remaining - len * startU);
+            float envelopeAt = (float) Math.sin(startU * Math.PI * 0.5f);
+            float sx = x + slopeX * grown * startU
+                    + (noise(random, startU + phase, 2) * 0.65f + noise(random + 53, startU * 1.6f + phase * 1.7f, 3) * 0.35f) * jitter * envelopeAt;
+            float sz = z + slopeZ * grown * startU
+                    + (noise(random + 91, startU + phase, 2) * 0.65f + noise(random + 137, startU * 1.8f + phase * 1.7f, 3) * 0.35f) * jitter * envelopeAt;
+            float sy = y + forward * grown * startU;
+            float childRemaining = Math.max(0.05f, remaining - grown * startU);
             float childLen = Math.max(0.05f, childRemaining * (0.45f + 0.35f * unit(childRandom, 150)));
             float childAngle = unit(random, 130) * 6.2832f + c * 2.399963f
                     + (unit(childRandom, 70) - 0.5f) * 1.8f;
@@ -210,7 +207,7 @@ public final class ElectricArcEmitter {
             treeBranch(ctx, path, group, sx, sy, sz,
                     lateral * (float) Math.cos(childAngle), forward, lateral * (float) Math.sin(childAngle),
                     childLen, childRemaining, level + 1, depth, split, spread,
-                    width * 0.66f, childRandom, opacity, budget);
+                    width * 0.66f, childRandom, opacity, time, phase, begin + growWindow * startU, growWindow, budget);
         }
     }
 
@@ -322,6 +319,20 @@ public final class ElectricArcEmitter {
                 arc.addPoint(path.x(i), path.y(i), path.z(i), path.width(i) * BlueWhiteArcStyle.widthScale(shell),
                         path.generation(i), path.segment(i));
             }
+        }
+    }
+
+    static void emitDemo(SimContext ctx, ArcCurve path, long group, long seed, float opacity, String layer) {
+        var arc = ctx.arcs().add(group);
+        arc.setColor(0.8f, 0.9f, 1f, Math.clamp(opacity, 0f, 1f));
+        arc.setSeed(seed);
+        arc.setLifetime(1f);
+        arc.setNoiseStrength(0f);
+        arc.setDriftSpeed(0f);
+        arc.setLayer(layer);
+        for (int i = 0; i < path.size(); i++) {
+            arc.addPoint(path.x(i), path.y(i), path.z(i), path.width(i),
+                    path.generation(i), path.segment(i));
         }
     }
 

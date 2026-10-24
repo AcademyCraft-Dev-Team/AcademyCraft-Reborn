@@ -95,7 +95,7 @@ public final class SkillDamageUtil {
         // that check, including when a multipart entity forwards another hit to its dead parent.
         return level != null && target != null && source != null && target.level() == level
                 && amount > 0.0f && Float.isFinite(amount) && !target.isRemoved() && target.isAlive()
-                && !((LivingEntityDamageInvoker) target).academy$isDead()
+                && !target.dead
                 && source.getEntity() != target && source.getDirectEntity() != target;
     }
 
@@ -172,13 +172,12 @@ public final class SkillDamageUtil {
         if (!canApplyDirectDamage(level, target, source, amount)) return false;
         var beforeHealth = target.getHealth();
         var beforeAbsorption = target.getAbsorptionAmount();
-        var invoker = (LivingEntityDamageInvoker) target;
-        var containers = invoker.academy$getDamageContainers();
+        var containers = target.damageContainers;
         var container = new DamageContainer(source, amount);
         containers.push(container);
 
         try {
-            invoker.academy$actuallyHurt(level, source, amount);
+            ((LivingEntityDamageInvoker) target).academy$actuallyHurt(level, source, amount);
         } catch (Throwable error) {
             LOGGER.warn(
                     "Direct actuallyHurt failed for {}; preserving any damage already committed",
@@ -224,16 +223,15 @@ public final class SkillDamageUtil {
             boolean confirmedLethal,
             boolean checkDeathProtection
     ) {
-        var invoker = (LivingEntityDamageInvoker) target;
         if (attacker != null) {
             target.setLastHurtByPlayer(attacker, 100);
             target.setLastHurtByMob(attacker);
         } else if (source.getEntity() instanceof LivingEntity livingAttacker) {
             target.setLastHurtByMob(livingAttacker);
         }
-        invoker.academy$setLastHurt(originalAmount);
-        invoker.academy$setLastDamageSource(source);
-        invoker.academy$setLastDamageStamp(level.getGameTime());
+        target.lastHurt = originalAmount;
+        target.lastDamageSource = source;
+        target.lastDamageStamp = level.getGameTime();
         level.broadcastDamageEvent(target, source);
         if (attacker != null && skill != null) {
             PvpSetting.recordSkillDamage(attacker, target, inflictedAmount);
@@ -280,20 +278,20 @@ public final class SkillDamageUtil {
         }
 
         if (!confirmedLethal) {
-            invoker.academy$playHurtSound(source);
-            invoker.academy$playSecondaryHurtSound(source);
+            ((LivingEntityDamageInvoker) target).academy$playHurtSound(source);
+            target.playSecondaryHurtSound(source);
             return;
         }
 
         var protectedFromDeath = checkDeathProtection
-                && invoker.academy$checkTotemDeathProtection(source);
+                && target.checkTotemDeathProtection(source);
         if (protectedFromDeath) return;
 
-        var deathSound = invoker.academy$getDeathSound();
+        var deathSound = ((LivingEntityDamageInvoker) target).academy$getDeathSound();
         if (deathSound != null) {
-            target.playSound(deathSound, invoker.academy$getSoundVolume(), target.getVoicePitch());
+            target.playSound(deathSound, ((LivingEntityDamageInvoker) target).academy$getSoundVolume(), target.getVoicePitch());
         }
-        invoker.academy$playSecondaryHurtSound(source);
+        target.playSecondaryHurtSound(source);
         TrueDamageCompatibility.completeLethalDamage(level, target, source);
     }
 }

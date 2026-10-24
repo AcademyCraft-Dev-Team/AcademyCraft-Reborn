@@ -32,22 +32,13 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
+import org.academy.api.client.render.vfxgraph.arc.ArcEmission;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.PathModifier;
-import org.academy.api.common.arc.modifier.ColorModifier;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.modifier.TaperModifier;
-import org.academy.api.common.arc.path.LinePath;
-import org.academy.api.common.arc.path.PolylinePath;
-import org.academy.api.common.arc.property.AttributeCurve;
-import org.academy.api.common.arc.property.ColorKnot;
-import org.academy.api.common.arc.property.Gradient;
-import org.academy.api.common.arc.property.Knot;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
@@ -68,8 +59,6 @@ import org.academy.internal.common.world.entity.skill.MagneticWeaponBladeMotion.
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.ability.HostileTargets;
 import org.academy.internal.server.team.TeamRelations;
-import org.joml.Vector3f;
-import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -140,8 +129,12 @@ public class MagneticWeapon extends Skill {
 
             private final MagneticWeaponBlade blade;
             private final ArrayDeque<Vec3> history = new ArrayDeque<>();
-            private final List<ArcPath> paths = new ArrayList<>();
             private Vec3 origin = Vec3.ZERO;
+            private @Nullable Vec3 bladePosition;
+            private @Nullable Quality quality;
+            private Vec3 bladeDirection = Vec3.ZERO;
+            private float fade = 1f;
+            private long seed;
             private int lastEntityTick = Integer.MIN_VALUE;
             private boolean lastAttacking;
             private int trailDecayTicks;
@@ -154,7 +147,7 @@ public class MagneticWeapon extends Skill {
                 var adapter = new MagneticWeaponBladeArcVfx(blade);
                 var effect = VfxGraphManager.INSTANCE.spawn(AcademyCraft.academy("vfxgraph/magnetic_weapon"),
                         blade.position().toVector3f());
-                effect.bindArcs("paths", _ -> adapter.paths);
+                effect.bindArcs("paths", (out, _) -> adapter.emitPaths(out));
                 effect.bindGameTime("time");
                 effect.bindFrame(adapter::sample);
                 effect.setRenderDistance(48);
@@ -169,22 +162,28 @@ public class MagneticWeapon extends Skill {
             }
 
             private boolean sample(ActiveEffect effect, GraphCamera camera, float partialTick) {
-                paths.clear();
                 if (blade.level() != Minecraft.getInstance().level) return false;
                 boolean removed = blade.isRemoved() || !blade.isAlive();
                 if (removed && !Float.isFinite(removedAt)) removedAt = effect.gameAgeSeconds();
                 float fade = removed ? Math.max(0, 1 - (effect.gameAgeSeconds() - removedAt) / 0.15f) : 1;
-                if (fade <= 0) return false;
+                if (fade <= 0) {
+                    this.bladePosition = null;
+                    this.quality = null;
+                    return false;
+                }
                 var cameraPosition = new Vec3(camera.position().x(), camera.position().y(), camera.position().z());
                 var bladePosition = blade.isRemoved() || !blade.isAlive()
                         ? history.isEmpty() ? blade.position() : history.getFirst()
                         : blade.transform(partialTick).position();
                 origin = bladePosition;
+                this.bladePosition = bladePosition;
                 effect.setPosition(origin.toVector3f());
                 effect.setCullingSphere(origin.toVector3f(), 10);
                 var distanceSqr = bladePosition.distanceToSqr(cameraPosition);
                 if (distanceSqr > MAX_EFFECT_DISTANCE_SQR) {
                     history.clear();
+                    this.bladePosition = null;
+                    this.quality = null;
                     lastEntityTick = blade.tickCount;
                     lastAttacking = blade.clientAttacking();
                     return true;
@@ -195,19 +194,26 @@ public class MagneticWeapon extends Skill {
                 updateTickState(quality.maxHistory());
                 effect.effect().setLiveParam("opacity", Value.of(fade * (quality.glow() ? 1f : 0.7f)));
 
-                var seed = seed();
                 var transform = blade.transform(partialTick);
+                this.bladeDirection = Vec3.directionFromRotation(transform.pitch(), transform.yaw());
+                this.quality = quality;
+                this.fade = fade;
+                this.seed = seed();
+                return true;
+            }
+
+            private void emitPaths(ArcEmission out) {
+                var position = bladePosition;
+                var quality = this.quality;
+                if (position == null || quality == null) return;
                 if (blade.tickCount <= 4 && !blade.isRemoved()) {
-                    emitActivation(quality, bladePosition, seed);
+                    emitActivation(out, quality, position, seed, fade);
                 }
                 if (!blade.clientAttacking() && !blade.isRemoved()) {
-                    emitIdleSpark(bladePosition, seed,
-                            Vec3.directionFromRotation(transform.pitch(), transform.yaw()));
+                    emitIdleSpark(out, position, seed, bladeDirection, fade);
                 }
-
-                emitTrail(quality, bladePosition, seed);
-                emitImpact(quality, seed);
-                return true;
+                emitTrail(out, quality, position, seed, fade);
+                emitImpact(out, quality, seed, fade);
             }
 
             private void updateTickState(int maxHistory) {
@@ -250,21 +256,22 @@ public class MagneticWeapon extends Skill {
                 );
             }
 
-            private void emitTrail(Quality quality,
-                                   Vec3 bladePosition, long seed) {
+            private void emitTrail(ArcEmission out, Quality quality,
+                                   Vec3 bladePosition, long seed, float fade) {
                 if (history.size() < 2) return;
                 var points = new ArrayList<>(history);
                 if (!blade.isRemoved()) points.set(0, bladePosition);
                 while (points.size() > quality.maxHistory()) points.removeLast();
-                emit(MagneticWeaponTrailBuilder.trail(points.stream().map(p -> p.subtract(origin)).toList(), seed, 0.7f));
+                var local = points.stream().map(p -> p.subtract(origin).toVector3f()).toList();
+                ArcCurveBuilder.blueWhitePolyline(out, local, 0.07f, 0.012f, fade, 1f, seed);
 
                 if (quality.maxForks() <= 0 || points.size() < 3) return;
                 var random = new Random(seed ^ 0x6A09E667F3BCC909L);
                 for (var i = 0; i < quality.maxForks(); i++) {
                     var index = 1 + random.nextInt(points.size() - 1);
-                    var start = points.get(index);
+                    var startWorld = points.get(index);
                     var previous = points.get(Math.max(0, index - 1));
-                    var tangent = normalizedOr(previous.subtract(start), new Vec3(0.0, 1.0, 0.0));
+                    var tangent = normalizedOr(previous.subtract(startWorld), new Vec3(0.0, 1.0, 0.0));
                     var randomDirection = normalizedOr(new Vec3(
                             random.nextDouble() - 0.5,
                             random.nextDouble() - 0.5,
@@ -272,43 +279,54 @@ public class MagneticWeapon extends Skill {
                     ), new Vec3(1.0, 0.0, 0.0));
                     var perpendicular = normalizedOr(tangent.cross(randomDirection), new Vec3(1.0, 0.0, 0.0));
                     var length = 0.2 + random.nextDouble() * 0.4;
-                    var end = start.add(perpendicular.scale(length)).add(tangent.scale(0.12));
-                    emit(line(
-                            start, end, seed + i * 31L + 7L, 0.32f
-                    ));
+                    var endWorld = startWorld.add(perpendicular.scale(length)).add(tangent.scale(0.12));
+                    var start = startWorld.subtract(origin);
+                    var end = endWorld.subtract(origin);
+                    ArcCurveBuilder.blueWhiteLine(out,
+                            (float) start.x, (float) start.y, (float) start.z,
+                            (float) end.x, (float) end.y, (float) end.z,
+                            0.032f, 6, fade, 1f, seed + i * 31L + 7L,
+                            1, 1, 1.1f, 0.3f, 0.4f);
                 }
             }
 
-            private void emitActivation(Quality quality,
-                                        Vec3 bladePosition, long seed) {
+            private void emitActivation(ArcEmission out, Quality quality,
+                                        Vec3 bladePosition, long seed, float fade) {
                 var owner = blade.level().getEntity(blade.getOwnerId());
                 if (!(owner instanceof Avatar avatar)) return;
                 var forward = Vec3.directionFromRotation(0.0f, avatar.getYRot()).normalize();
                 var right = new Vec3(-forward.z, 0.0, forward.x);
                 var handSign = avatar.getMainArm() == HumanoidArm.RIGHT ? 1.0 : -1.0;
-                var hand = avatar.position()
+                var handWorld = avatar.position()
                         .add(0.0, avatar.getBbHeight() * 0.65, 0.0)
                         .add(right.scale(0.28 * handSign))
                         .add(forward.scale(0.12));
                 var count = quality.maxForks() > 0 ? 2 : 1;
                 for (var i = 0; i < count; i++) {
-                    var end = bladePosition.add(0.0, (i - 0.5) * 0.18, 0.0);
-                    emit(line(
-                            hand, end, seed + 101L * i, 0.45f
-                    ));
+                    var end = bladePosition.add(0.0, (i - 0.5) * 0.18, 0.0).subtract(origin);
+                    var start = handWorld.subtract(origin);
+                    ArcCurveBuilder.blueWhiteLine(out,
+                            (float) start.x, (float) start.y, (float) start.z,
+                            (float) end.x, (float) end.y, (float) end.z,
+                            0.045f, 8, fade, 1f, seed + 101L * i,
+                            1, 1, 1.1f, 0.3f, 0.4f);
                 }
             }
 
-            private void emitIdleSpark(Vec3 bladePosition, long seed, Vec3 direction) {
+            private void emitIdleSpark(ArcEmission out, Vec3 bladePosition, long seed, Vec3 direction, float fade) {
                 var interval = 12 + Mth.positiveModulo(blade.getId(), 8);
                 if (Mth.positiveModulo(blade.tickCount, interval) >= 2) return;
                 var side = normalizedOr(direction.cross(new Vec3(0.0, 1.0, 0.0)), new Vec3(1.0, 0.0, 0.0));
-                var start = bladePosition.subtract(direction.scale(0.25)).add(side.scale(0.12));
-                var end = bladePosition.add(direction.scale(0.35)).subtract(side.scale(0.15));
-                emit(line(start, end, seed, 0.28f));
+                var start = bladePosition.subtract(direction.scale(0.25)).add(side.scale(0.12)).subtract(origin);
+                var end = bladePosition.add(direction.scale(0.35)).subtract(side.scale(0.15)).subtract(origin);
+                ArcCurveBuilder.blueWhiteLine(out,
+                        (float) start.x, (float) start.y, (float) start.z,
+                        (float) end.x, (float) end.y, (float) end.z,
+                        0.028f, 6, fade, 1f, seed,
+                        1, 1, 1.1f, 0.3f, 0.4f);
             }
 
-            private void emitImpact(Quality quality, long seed) {
+            private void emitImpact(ArcEmission out, Quality quality, long seed, float fade) {
                 if (impactTicks <= 0) return;
                 var count = switch (quality.status()) {
                     case ALL -> 6;
@@ -321,24 +339,18 @@ public class MagneticWeapon extends Skill {
                             (random.nextDouble() * 2.0 - 1.0) * impactHalfSize.x,
                             (random.nextDouble() * 2.0 - 1.0) * impactHalfSize.y,
                             (random.nextDouble() * 2.0 - 1.0) * impactHalfSize.z
-                    );
+                    ).subtract(origin);
                     var start = impactCenter.add(
                             (random.nextDouble() - 0.5) * 0.2,
                             (random.nextDouble() - 0.5) * 0.2,
                             (random.nextDouble() - 0.5) * 0.2
-                    );
-                    emit(line(
-                            start, end, seed + 211L * i, 0.5f
-                    ));
+                    ).subtract(origin);
+                    ArcCurveBuilder.blueWhiteLine(out,
+                            (float) start.x, (float) start.y, (float) start.z,
+                            (float) end.x, (float) end.y, (float) end.z,
+                            0.05f, 8, fade, 1f, seed + 211L * i,
+                            1, 1, 1.1f, 0.3f, 0.4f);
                 }
-            }
-
-            private void emit(ArcPath path) {
-                paths.add(path);
-            }
-
-            private ArcPath line(Vec3 start, Vec3 end, long seed, float thickness) {
-                return MagneticWeaponTrailBuilder.line(start.subtract(origin), end.subtract(origin), seed, thickness);
             }
 
             private long seed() {
@@ -369,18 +381,6 @@ public class MagneticWeapon extends Skill {
             public static final int MINIMAL_HISTORY_SIZE = 6;
             public static final double DISCONTINUITY_DISTANCE_SQR = 16.0;
 
-            private static final AttributeCurve TAPER = new AttributeCurve(List.of(
-                    new Knot(0.0f, 1.0f),
-                    new Knot(0.35f, 0.78f),
-                    new Knot(0.72f, 0.28f),
-                    new Knot(1.0f, 0.02f)
-            ));
-            private static final Gradient COLOR = new Gradient(List.of(
-                    new ColorKnot(0.0f, new Vector3f(0.90f, 1.00f, 1.00f)),
-                    new ColorKnot(0.52f, new Vector3f(0.18f, 0.75f, 1.00f)),
-                    new ColorKnot(1.0f, new Vector3f(0.05f, 0.18f, 0.55f))
-            ));
-
             private MagneticWeaponTrailBuilder() {
             }
 
@@ -395,34 +395,6 @@ public class MagneticWeapon extends Skill {
                     history.removeLast();
                 }
                 return discontinuity;
-            }
-
-            public static ArcPath trail(List<Vec3> points, long seed, float thickness) {
-                List<Vector3fc> vertices = new ArrayList<>(points.size());
-                for (var point : points) vertices.add(point.toVector3f());
-                return new ArcPath(
-                        new PolylinePath(vertices),
-                        modifiers(seed, thickness),
-                        2.2f,
-                        List.of()
-                );
-            }
-
-            public static ArcPath line(Vec3 start, Vec3 end, long seed, float thickness) {
-                return new ArcPath(
-                        new LinePath(start.toVector3f(), end.toVector3f()),
-                        modifiers(seed, thickness),
-                        2.2f,
-                        List.of()
-                );
-            }
-
-            public static List<PathModifier> modifiers(long seed, float thickness) {
-                return List.of(
-                        new JaggedModifier(0.12f, 2, seed),
-                        new TaperModifier(TAPER, thickness),
-                        new ColorModifier(COLOR)
-                );
             }
         }
 
@@ -911,7 +883,7 @@ public class MagneticWeapon extends Skill {
 
                 blade.setAttackElapsed(elapsed);
                 if (elapsed <= pending.timeline.impactElapsed()
-                        && !matchesBoundWeapon(pending)) {
+                        && boundWeaponChanged(pending)) {
                     pending.timeline.cancel();
                 }
                 if (elapsed == 1) {
@@ -924,14 +896,14 @@ public class MagneticWeapon extends Skill {
                 }
             }
 
-            private boolean matchesBoundWeapon(PendingAttack pending) {
+            private boolean boundWeaponChanged(PendingAttack pending) {
                 var current = player.getInventory().getItem(pending.weaponSlot);
-                return isSupportedWeapon(current)
-                        && ItemStack.isSameItemSameComponents(current, pending.weaponSnapshot);
+                return !isSupportedWeapon(current)
+                        || !ItemStack.isSameItemSameComponents(current, pending.weaponSnapshot);
             }
 
             private void resolveImpact(ServerLevel level, AbilitySystemServer system, PendingAttack pending) {
-                if (!matchesBoundWeapon(pending)) pending.timeline.cancel();
+                if (boundWeaponChanged(pending)) pending.timeline.cancel();
                 if (!pending.timeline.claimImpact()) return;
                 var entity = level.getEntity(pending.targetId);
                 if (!(entity instanceof LivingEntity target)

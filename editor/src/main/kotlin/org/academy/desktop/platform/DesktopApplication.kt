@@ -43,13 +43,13 @@ object DesktopApplication {
         val surface = device.createSurface(window.handle) { window.isIconified }
         host.bind(window)
 
-        configureSurface(surface, window)
         precompilePipelines(device)
         Render.Buffers.init()
         initFonts()
 
         var lastNanos = Util.getNanos()
         var lastTitle: String? = null
+        var surfaceInvalid = false
         while (!window.shouldClose && !app.quitRequested()) {
             val now = Util.getNanos()
             val partialTick = ((now - lastNanos).toFloat() / NANOS_PER_TICK).coerceIn(0f, 1f)
@@ -62,20 +62,24 @@ object DesktopApplication {
 
             host.pollEvents()
 
-            if (host.surfaceNeedsReconfigure) {
-                host.surfaceNeedsReconfigure = false
+            if (host.surfaceNeedsReconfigure && !window.isIconified) {
                 try {
                     configureSurface(surface, window)
+                    surfaceInvalid = false
+                    host.surfaceNeedsReconfigure = false
                 } catch (e: SurfaceException) {
                     LOGGER.warn("Couldn't reconfigure surface", e)
+                    surfaceInvalid = true
                 }
             }
 
-            if (!window.isIconified) {
+            if (!window.isIconified && !surfaceInvalid) {
                 try {
                     surface.acquireNextTexture()
                 } catch (e: SurfaceException) {
                     LOGGER.warn("Couldn't acquire surface texture", e)
+                    surfaceInvalid = true
+                    host.surfaceNeedsReconfigure = true
                 }
             }
 

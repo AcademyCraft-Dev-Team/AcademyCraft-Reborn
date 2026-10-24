@@ -19,9 +19,10 @@ public final class WirelessNodeSpecialRenderer implements NoDataSpecialModelRend
 
     @Override
     public void getExtents(Consumer<Vector3fc> output) {
-        var posestack = new PoseStack();
-        posestack.scale(1.0F, -1.0F, -1.0F);
-        WirelessNodeRenderer.MODEL.root().getExtentsForGui(posestack, output);
+        var poseStack = new PoseStack();
+        poseStack.translate(0.5f, 1.5f, 0.5f);
+        poseStack.rotateAround(Axis.XP.rotationDegrees(180), 0, 0, 0);
+        WirelessNodeRenderer.MODEL.root().getExtentsForGui(poseStack, output);
     }
 
     @Override

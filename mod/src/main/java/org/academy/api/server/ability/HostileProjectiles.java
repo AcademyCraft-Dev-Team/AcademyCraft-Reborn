@@ -7,7 +7,6 @@ import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.phys.Vec3;
 import org.academy.internal.server.ability.HostileTargets;
 import org.academy.internal.server.team.TeamRelations;
-import org.academy.mixin.common.AbstractArrowVectorAccessor;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -42,7 +41,7 @@ public final class HostileProjectiles {
 
     public static boolean isThreatTo(LivingEntity actor, Projectile projectile) {
         if (!projectile.isAlive() || projectile.isRemoved() || projectile.level() != actor.level()) return false;
-        if (projectile instanceof AbstractArrow arrow && ((AbstractArrowVectorAccessor) arrow).academy$isInGround())
+        if (projectile instanceof AbstractArrow arrow && arrow.isInGround())
             return false;
         var owner = projectile.getOwner();
         if (owner == actor || owner != null && TeamRelations.areAllied(actor, owner)) return false;

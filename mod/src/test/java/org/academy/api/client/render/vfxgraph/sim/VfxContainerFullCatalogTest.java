@@ -20,9 +20,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * 容器块完整目录 + 全部算子注册、复杂容器系统全链路模拟（spawn→init→update→collision→over-life→output）。
- */
 class VfxContainerFullCatalogTest {
     private VfxBlockRegistry blocks;
     private VfxOperatorRegistry ops;
@@ -47,15 +44,6 @@ class VfxContainerFullCatalogTest {
 
     @Test
     void fullBlockCatalogRegistered() {
-        // M27：spawn 4 + init 8 + update 10 + collision 5 + over-life 4 + orient 4 + output 7 = 42 块；
-        // M22：arc 3 发射块（spawn 类）+ output_arc 1 = 46 块；
-        // M29：arc_surface 重写 + arc_contact/arc_spark 新增 = 48 块；
-        // 电浆炮：live follow + line tornado + volumetric tornado + plasma convergence + plasma shell + shockwave = 54 块。
-        // 旧 VFX 迁移：存活属性同步 + 径向涟漪 + 收缩线框盒 = 57 块。
-        // arc_generate 单点向前三角洲树：electric_tree = 58 块。
-        // E1 屏幕空间输出：output_screen_flash = 59 块。
-        // E7 实例化自定义纹理几何：output_instanced_tex = 60 块。
-        // E2 方块几何提交：output_block_geometry = 61 块。
         String[] expected = {
                 "vfx.block.spawn_rate", "vfx.block.spawn_burst", "vfx.block.spawn_periodic", "vfx.block.spawn_distance",
                 "vfx.block.init_position", "vfx.block.init_velocity", "vfx.block.init_color", "vfx.block.init_size",
@@ -77,7 +65,7 @@ class VfxContainerFullCatalogTest {
                 "vfx.block.sky_discharge", "vfx.block.storm_atmosphere", "vfx.block.surface_discharge",
                 "vfx.block.axial_beam", "vfx.block.axial_discharge", "vfx.block.axial_shock",
                 "vfx.block.electric_bolt", "vfx.block.electric_tree", "vfx.block.electric_orbit", "vfx.block.electric_shield", "vfx.block.electric_paths",
-                "vfx.block.electric_ring",
+                "vfx.block.electric_ring", "vfx.block.ball_lightning",
                 "vfx.block.material_sheets", "vfx.block.iron_sand", "vfx.block.organic_strands", "vfx.block.cloud_vortex",
                 "vfx.block.output_distortion_ring", "vfx.block.output_screen_flash",
                 "vfx.block.output_instanced_tex", "vfx.block.output_block_geometry"
@@ -103,9 +91,6 @@ class VfxContainerFullCatalogTest {
         }
     }
 
-    /**
-     * 全链路：burst 球面发射 → init 速度/尺寸/随机 → 积分 + 重力 + 地面碰撞 → 生命周期 → 输出。
-     */
     @Test
     void fullPipelineSimulates() {
         var system = new VfxSystem("full",
@@ -133,18 +118,15 @@ class VfxContainerFullCatalogTest {
                 List.of("bO"));
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
-        // 每帧 1/60s，跑 3 秒
         for (var i = 0; i < 180; i++) {
             sim.step(1f / 60f);
         }
         var buffer = sim.buffer();
-        // 粒子在重力+反弹下应保留在地面附近且 y>=0
         assertTrue(buffer.count() > 0);
         for (var i = 0; i < buffer.count(); i++) {
             assertTrue(buffer.positionY(i) >= -1e-4f, "particle must stay above ground");
             assertTrue(buffer.alpha(i) >= 0f, "alpha must not go negative");
         }
-        // 粒子位置在有限范围内（积分稳定，无 NaN）
         for (var i = 0; i < buffer.count(); i++) {
             assertTrue(Float.isFinite(buffer.positionX(i)));
             assertTrue(Float.isFinite(buffer.positionY(i)));
@@ -152,9 +134,6 @@ class VfxContainerFullCatalogTest {
         }
     }
 
-    /**
-     * over-life 引用黑板曲线/渐变参数：批次 init 后 alpha/size 随寿命曲线变化。
-     */
     @Test
     void overLifeCurveReferenced() {
         var curveParam = new GraphParameter(
@@ -189,24 +168,17 @@ class VfxContainerFullCatalogTest {
                 List.of());
 
         var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of(curveParam, gradientParam));
-        // 跑 0.5s（寿命 1s → t=0.5 → alpha≈0.5, size≈0.5）
         for (var i = 0; i < 30; i++) {
             sim.step(1f / 60f);
         }
         var buffer = sim.buffer();
         assertTrue(buffer.count() > 0);
-        // alpha = startAlpha(1) * curve(0.5) ≈ 0.5
         assertEquals(0.5f, buffer.alpha(0), 0.05f);
-        // size = startSize(1) * curve(0.5) ≈ 0.5
         assertEquals(0.5f, buffer.size(0), 0.05f);
-        // 颜色沿渐变：t≈0.5 → 橙偏暗
         assertTrue(buffer.colorR(0) > 0.4f);
         assertTrue(buffer.colorB(0) < 0.1f);
     }
 
-    /**
-     * arc 块 origin_x/y/z：曲线应以发射器 origin 为基点（此前硬编码 (0,0,0)，移动发射器对 arc 无效）。
-     */
     @Test
     void arcBoltRespectsOrigin() {
         var system = new VfxSystem("arcOrigin",
@@ -231,7 +203,6 @@ class VfxContainerFullCatalogTest {
         assertEquals(1, sim.arcBuffer().count());
         var arc = sim.arcBuffer().arc(0);
         assertTrue(arc.size() > 0);
-        // 主弧 from=(2,3,4) to=(2,5,4)，曲线落在 from/to 之间（噪声会轻微漂移 x/z，故不精确断言 x/z）
         for (var i = 0; i < arc.size(); i++) {
             var dy = arc.y(i);
             assertTrue(dy >= 2.9f && dy <= 5.6f, "arc point y out of range: " + dy);

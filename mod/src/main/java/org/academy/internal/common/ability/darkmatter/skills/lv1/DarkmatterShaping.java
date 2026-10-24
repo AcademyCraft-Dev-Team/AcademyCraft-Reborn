@@ -37,7 +37,6 @@ import org.academy.internal.common.world.item.DarkmatterBlockItem;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.mixin.client.AbstractContainerScreenAccessor;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -121,7 +120,7 @@ public final class DarkmatterShaping extends Skill {
                     || !(screen instanceof InventoryScreen
                     || screen instanceof CreativeModeInventoryScreen)
                     || minecraft.player == null) return;
-            var slot = ((AbstractContainerScreenAccessor) screen).academy$getHoveredSlot();
+            var slot = screen.hoveredSlot;
             if (slot == null || !slot.getItem().isEmpty() || !slot.mayPlace(
                     new ItemStack(Items.DARKMATTER.get()))) return;
             MisakaNetworkClient.send(CastPacket.material(slot.getContainerSlot()));

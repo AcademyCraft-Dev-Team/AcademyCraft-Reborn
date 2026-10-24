@@ -19,7 +19,6 @@ import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflecti
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.world.damagesource.TrueDamageCompatibility;
 import org.academy.internal.server.entity.SurvivalDefense;
-import org.academy.mixin.common.LivingEntityDamageInvoker;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -157,7 +156,7 @@ public final class TrueHealthOffsetRuntime {
             ACTIVE.remove(entity);
             return;
         }
-        if (((LivingEntityDamageInvoker) entity).academy$isDead()) {
+        if (entity.dead) {
             state.dead = true;
             state.encodedOffset = Double.doubleToRawLongBits(state.maximum) ^ state.mask;
         }

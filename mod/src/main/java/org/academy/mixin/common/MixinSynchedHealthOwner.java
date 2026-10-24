@@ -14,7 +14,7 @@ public abstract class MixinSynchedHealthOwner {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void academy$bindHealthItem(SyncedDataHolder holder, SynchedEntityData.DataItem<?>[] items, CallbackInfo ci) {
         if (!(holder instanceof LivingEntity living)) return;
-        var id = LivingHealthDataAccessor.academy$healthAccessor().id();
+        var id = LivingEntity.DATA_HEALTH_ID.id();
         if (id < items.length) ((HealthDataOwner) items[id]).academy$bindHealthOwner(living);
     }
 }

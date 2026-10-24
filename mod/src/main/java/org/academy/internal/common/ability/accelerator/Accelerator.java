@@ -1041,22 +1041,11 @@ public final class Accelerator extends AbilityCategory {
         }
 
         public static final class WingAvatarRegistry {
-            private static final Map<Integer, Matrix4f> ROOTS = new HashMap<>();
-
             private WingAvatarRegistry() {
             }
 
-            public static void beginFrame() {
-                ROOTS.clear();
-                HumanoidSurfacePose.beginFrame();
-            }
-
-            public static void capture(int entityId, Matrix4f root) {
-                ROOTS.put(entityId, root);
-            }
-
             public static Map<Integer, Matrix4f> entries() {
-                return Map.copyOf(ROOTS);
+                return HumanoidSurfacePose.roots();
             }
         }
 

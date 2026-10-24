@@ -48,9 +48,7 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.ability.electromaster.MagneticFieldTuning;
 import org.academy.api.common.ability.electromaster.MagneticMovement;
 import org.academy.api.common.ability.electromaster.MagneticTargets;
-import org.academy.api.common.arc.ArcPath;
-import org.academy.api.common.arc.modifier.JaggedModifier;
-import org.academy.api.common.arc.path.LinePath;
+import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.GravityControl;
 import org.academy.api.server.ability.ServerContext;
@@ -80,7 +78,6 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,9 +92,6 @@ public class MagnetManipulation extends Skill {
     static final double TARGET_FRONT_DISTANCE = 2.5;
     static final double HOLD_DISTANCE_MIN = 1.2;
     static final double HOLD_DISTANCE_MAX = 6.0;
-    /**
-     * One notch must exceed the pull stop tolerance, or the target would never leave its rest spot.
-     */
     static final double HOLD_DISTANCE_STEP = 1.0;
     static final float MOVE_CP_COST = 10.0f;
     static final int MOVE_CP_INTERVAL_TICKS = 20;
@@ -126,18 +120,12 @@ public class MagnetManipulation extends Skill {
         return MagneticMovement.calculatePullVelocity(current, origin, target, fallback, maxSpeed, stopDistance);
     }
 
-    /**
-     * One wheel notch moves the controlled target one block, clamped to the hold envelope.
-     */
     static double resolveHoldDistance(double current, double scrollOffset) {
         if (!Double.isFinite(current) || !Double.isFinite(scrollOffset)) return TARGET_FRONT_DISTANCE;
         return Math.clamp(current + Math.clamp(scrollOffset, -1, 1) * HOLD_DISTANCE_STEP,
                 HOLD_DISTANCE_MIN, HOLD_DISTANCE_MAX);
     }
 
-    /**
-     * Shared homing profile for ability-controlled falling blocks.
-     */
     public static Vec3 calculateControlledBlockVelocity(
             Vec3 currentVelocity,
             Vec3 origin,
@@ -203,10 +191,8 @@ public class MagnetManipulation extends Skill {
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_R, InputConstants.PRESS, 0),
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N, InputConstants.PRESS, 0),
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_X, InputConstants.PRESS, 0)),
-                _ -> Client.onMoveStart(PullMode.TARGET_TO_PLAYER),
+                _ -> Client.onMoveStart(),
                 _ -> Client.onMoveStop(PullMode.TARGET_TO_PLAYER),
-                // The maintained-binding heartbeat fires every 20 client ticks; the server drops the
-                // context after 40 silent ticks, so every callback must refresh it.
                 _ -> {
                     if (Client.activeMode != null) MisakaNetworkClient.send(MoveStartPacket.TARGET_TO_PLAYER);
                 },
@@ -290,7 +276,7 @@ public class MagnetManipulation extends Skill {
                 var iterator = EFFECTS.values().iterator();
                 while (iterator.hasNext()) {
                     var effect = iterator.next();
-                    if (!effect.valid()) {
+                    if (effect.invalid()) {
                         VfxGraphManager.INSTANCE.stop(effect.effect);
                         iterator.remove();
                     }
@@ -313,8 +299,9 @@ public class MagnetManipulation extends Skill {
             private static final class SupportEffect {
                 final LivingEntity subject;
                 final ActiveEffect effect;
-                final List<ArcPath> paths = new ArrayList<>(2);
                 Vec3 point;
+                @Nullable Vec3 origin;
+                @Nullable Vec3 end;
                 long updated;
 
                 SupportEffect(LivingEntity subject) {
@@ -325,30 +312,33 @@ public class MagnetManipulation extends Skill {
                             subject.position().toVector3f());
                     effect.setRenderDistance(96);
                     effect.bindGameTime("time");
-                    effect.bindArcs("paths", _ -> paths);
-                    effect.bindFrame((active, camera, partialTick) -> {
-                        if (!valid()) return false;
-                        var origin = subject.getPosition(partialTick);
-                        var end = point.subtract(origin);
-                        if (end.lengthSqr() > 64 * 64) return false;
+                    effect.bindArcs("paths", (out, _) -> {
+                        if (origin == null || end == null) return;
                         double yaw = Math.toRadians(subject.getYRot());
                         var right = new Vec3(Math.cos(yaw), 0, Math.sin(yaw)).scale(subject.getBbWidth() * 0.24);
-                        paths.clear();
                         for (int side : new int[]{-1, 1}) {
                             var start = right.scale(side).add(0, 0.18, 0);
-                            paths.add(new ArcPath(new LinePath(start.toVector3f(), end.toVector3f()),
-                                    List.of(new JaggedModifier(0.42f, 3,
-                                            subject.getId() * 31L + side + (subject.tickCount / 2) * 101L)), 1.5f, List.of()));
+                            long seed = subject.getId() * 31L + side + (subject.tickCount / 2) * 101L;
+                            ArcCurveBuilder.blueWhiteLine(out,
+                                    (float) start.x, (float) start.y, (float) start.z,
+                                    (float) end.x, (float) end.y, (float) end.z,
+                                    0.024f, 12, 1f, 1f, seed, 2, 2, 1.2f, 0.35f, 0.4f);
                         }
+                    });
+                    effect.bindFrame((active, camera, partialTick) -> {
+                        if (invalid()) return false;
+                        origin = subject.getPosition(partialTick);
+                        end = point.subtract(origin);
+                        if (end.lengthSqr() > 64 * 64) return false;
                         active.setPosition(origin.toVector3f());
                         active.setCullingSphere(origin.add(point).scale(0.5).toVector3f(), (float) end.length() * 0.5f + 1f);
                         return true;
                     });
                 }
 
-                boolean valid() {
-                    return world != null && subject.level() == world && subject.isAlive() && !subject.isRemoved()
-                            && world.getGameTime() - updated <= 6;
+                boolean invalid() {
+                    return world == null || subject.level() != world || !subject.isAlive() || subject.isRemoved()
+                            || world.getGameTime() - updated > 6;
                 }
             }
         }
@@ -375,26 +365,24 @@ public class MagnetManipulation extends Skill {
         private static @Nullable PullMode activeMode;
         private static int activeTicks;
 
-        public static void onMoveStart(PullMode mode) {
+        static void onMoveStart() {
             if (!AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
             var player = Minecraft.getInstance().player;
             if (player == null || Minecraft.getInstance().gui.screen() != null) return;
-            if (activeMode != null && activeMode != mode) {
+            if (activeMode != null && activeMode != PullMode.TARGET_TO_PLAYER) {
                 MisakaNetworkClient.send(MoveStopPacket.INSTANCE);
             }
-            activeMode = mode;
+            activeMode = PullMode.TARGET_TO_PLAYER;
             activeTicks = 0;
             stopLoopSound();
             loopSound = new LoopingPlayerSoundInstance(
                     player, SoundEvents.MAGNET_MOVE_LOOP.get(), 1.0f, 1.0f,
                     () -> activeMode != null && Minecraft.getInstance().player == player);
             Minecraft.getInstance().getSoundManager().play(loopSound);
-            MisakaNetworkClient.send(mode == PullMode.TARGET_TO_PLAYER
-                    ? MoveStartPacket.TARGET_TO_PLAYER
-                    : MoveStartPacket.PLAYER_TO_TARGET);
+            MisakaNetworkClient.send(MoveStartPacket.TARGET_TO_PLAYER);
         }
 
-        public static void onMoveStop(PullMode mode) {
+        static void onMoveStop(PullMode mode) {
             if (activeMode != mode) return;
             activeMode = null;
             stopLoopSound();
@@ -568,7 +556,7 @@ public class MagnetManipulation extends Skill {
 
         private @Nullable FallingBlockEntity createFallingBlockTarget(@Nullable BlockPos pos) {
             if (AbilityEffectPolicy.blockDestruction(level()) == AbilityEffectPolicy.Decision.DENY
-                    || pos == null || !level().hasChunkAt(pos) || !level().mayInteract(player, pos)
+                    || pos == null || !level().isLoaded(pos) || !level().mayInteract(player, pos)
                     || !SkillTuning.allowBlockDestruction(player, Skills.MAGNET_MANIPULATION.get())) return null;
             var state = level().getBlockState(pos);
             if (!isMagnetic(state)
@@ -676,9 +664,6 @@ public class MagnetManipulation extends Skill {
             }
         }
 
-        /**
-         * While a magnetic target is held, the wheel moves it closer or farther instead of switching slots.
-         */
         @SubscribeEvent
         public static void onScroll(MouseScrollEvent event) {
             if (event.yOffset == 0) return;
@@ -687,8 +672,6 @@ public class MagnetManipulation extends Skill {
             if (player == null || !player.isAlive() || minecraft.gui.screen() != null
                     || !player.getData(AttachmentTypes.MAGNET_MANIPULATION_ACTIVE)
                     || !AbilitySystemClient.canUseSkill(Skills.MAGNET_MANIPULATION.get())) return;
-            // Same wheel convention as PneumaticGrasp: positive yOffset (wheel up) pushes farther,
-            // negative (wheel down) draws the target closer.
             MisakaNetworkClient.send(new MoveDistancePacket(event.yOffset));
             event.setCanceled(true);
         }

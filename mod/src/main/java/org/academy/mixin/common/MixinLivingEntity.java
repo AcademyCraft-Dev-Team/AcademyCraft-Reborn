@@ -199,8 +199,7 @@ public abstract class MixinLivingEntity {
                     var remaining = reflection.getRight();
                     if (!VectorReflection.Server.usesFullInstanceProtection(player)
                             && remaining > 0.0f && Float.isFinite(remaining)) {
-                        ((LivingEntityDamageInvoker) this)
-                                .academy$actuallyHurt(level, source, remaining);
+                        ((LivingEntityDamageInvoker) (Object) this).academy$actuallyHurt(level, source, remaining);
                     }
                     return;
                 }

@@ -11,8 +11,6 @@ import org.academy.api.server.entity.SurvivalDefenseAspect;
 import org.academy.api.server.entity.SurvivalDefenseLease;
 import org.academy.api.server.entity.SurvivalDefenseProfile;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
-import org.academy.mixin.common.EntityStateAccessor;
-import org.academy.mixin.common.LivingEntityDamageInvoker;
 import org.slf4j.Logger;
 
 import java.lang.ref.WeakReference;
@@ -161,7 +159,7 @@ public final class SurvivalDefenseRuntime {
         var illegalRemoval = removalReason != null && !isLifecycleRemoval(removalReason);
         var protectsRemoval = defense.strength(SurvivalDefenseAspect.REMOVAL) > 0;
         var protectsDeath = defense.strength(SurvivalDefenseAspect.DEATH_STATE) > 0;
-        var dead = ((LivingEntityDamageInvoker) entity).academy$isDead();
+        var dead = entity.dead;
         var dying = dead || entity.deathTime > 0 || entity.getPose() == Pose.DYING;
         var repaired = false;
 
@@ -170,12 +168,12 @@ public final class SurvivalDefenseRuntime {
                 entity.revive();
             } catch (Throwable ignored) {
             }
-            ((EntityStateAccessor) entity).academy$setRemovalReason(null);
+            entity.removalReason = null;
             repaired = true;
         }
 
         if (protectsDeath && dying) {
-            ((LivingEntityDamageInvoker) entity).academy$setDead(false);
+            entity.dead = false;
             entity.deathTime = 0;
             entity.hurtTime = 0;
             entity.hurtDuration = 0;
@@ -287,7 +285,7 @@ public final class SurvivalDefenseRuntime {
     }
 
     private static Entity.RemovalReason rawRemovalReason(Entity entity) {
-        return entity == null ? null : ((EntityStateAccessor) entity).academy$getRemovalReason();
+        return entity == null ? null : entity.removalReason;
     }
 
     private static boolean isLifecycleRemoval(Entity.RemovalReason reason) {

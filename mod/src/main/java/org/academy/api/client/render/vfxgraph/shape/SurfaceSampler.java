@@ -10,6 +10,14 @@ import org.joml.Vector3f;
 public interface SurfaceSampler {
     boolean sample(int index, float u, float v, Vector3f position, Vector3f normal);
 
+    default int slotCount() {
+        return 1;
+    }
+
+    default boolean nearestPoint(float x, float y, float z, Vector3f destination) {
+        return false;
+    }
+
     /**
      * Samples one of the six faces of a box, optionally attached to a posed model part.
      */

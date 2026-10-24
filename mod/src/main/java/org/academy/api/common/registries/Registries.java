@@ -7,8 +7,6 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.program.ProgramNodeType;
-import org.academy.api.common.arc.PathModifierType;
-import org.academy.api.common.arc.PathType;
 import org.academy.api.common.damage.AbilityDamageProfile;
 import org.academy.api.common.sync.DataType;
 import org.academy.api.common.sync.SyncKey;
@@ -26,10 +24,6 @@ public final class Registries {
             new RegistryBuilder<>(Keys.SYNC_KEYS).sync(true).create();
     public static final Registry<DataType<?>> DATA_TYPES =
             new RegistryBuilder<>(Keys.DATA_TYPES).sync(true).create();
-    public static final Registry<PathType<?>> PATH_TYPES =
-            new RegistryBuilder<>(Keys.PATH_TYPES).sync(true).create();
-    public static final Registry<PathModifierType<?>> PATH_MODIFIER_TYPES =
-            new RegistryBuilder<>(Keys.PATH_MODIFIER_TYPES).sync(true).create();
 
     private Registries() {
     }
@@ -42,8 +36,6 @@ public final class Registries {
         public static final ResourceKey<Registry<AbilityDamageProfile>> DAMAGE_PROFILES = key("damage_profile");
         public static final ResourceKey<Registry<SyncKey>> SYNC_KEYS = key("sync_key");
         public static final ResourceKey<Registry<DataType<?>>> DATA_TYPES = key("data_type");
-        public static final ResourceKey<Registry<PathType<?>>> PATH_TYPES = key("path_type");
-        public static final ResourceKey<Registry<PathModifierType<?>>> PATH_MODIFIER_TYPES = key("path_modifier_type");
 
         private Keys() {
         }

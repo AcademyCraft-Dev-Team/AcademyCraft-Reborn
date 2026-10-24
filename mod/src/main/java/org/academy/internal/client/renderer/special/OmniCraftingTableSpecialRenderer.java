@@ -33,7 +33,7 @@ public final class OmniCraftingTableSpecialRenderer implements NoDataSpecialMode
     @Override
     public void getExtents(Consumer<Vector3fc> output) {
         var posestack = new PoseStack();
-        posestack.scale(1.0F, -1.0F, -1.0F);
+        posestack.scale(1.0F, 1f, -1.0F);
         OmniCraftingTableRenderer.MODEL.root().getExtentsForGui(posestack, output);
     }
 

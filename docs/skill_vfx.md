@@ -23,6 +23,6 @@
 | 归属 | 位置 | 适用 |
 |------|------|------|
 | 单一技能所有 | 该技能类的 `Client` 内部类 | 只有一个技能使用的特效 |
-| 多个技能共用且同属一个能力 | 该能力类的 `Client` 内部类 | 例如 SkyStrike（Thunderclap + LightningStorm）、ArcEffect（多个 electromaster 技能）、WingVfx（StormWing/BlackWing/WhiteWing/PlatinumWing） |
+| 多个技能共用且同属一个能力 | 该能力类的 `Client` 内部类 | 例如 SkyStrike（Thunderclap + LightningStorm）、BallLightning（球状闪电环壳与游离弧）、WingVfx（StormWing/BlackWing/WhiteWing/PlatinumWing） |
 
 跨能力共用的特效不属于任何一个能力，必须先按语义收敛到单一归属能力，或拆分为各能力自有的实现。

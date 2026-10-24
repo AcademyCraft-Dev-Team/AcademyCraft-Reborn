@@ -1,17 +1,26 @@
 package org.academy.internal.common.ability.electromaster.skills.lv4;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.phys.Vec3;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -19,6 +28,12 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
+import org.academy.api.client.render.post.GlowEffect;
+import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
+import org.academy.api.client.render.vfxgraph.runtime.FirstPersonVfxEffect;
+import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.api.client.render.vfxgraph.shape.FirstPersonHandSurfaceSampler;
+import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfaceSampler;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
@@ -33,10 +48,10 @@ import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
-import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcEffects;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.skilldata.BioelectricSurgeData;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -46,7 +61,9 @@ import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
@@ -82,6 +99,7 @@ public final class BioelectricOperation extends Skill {
         var key = getKey();
         AcademyCraftConfig.registerTypeHandler(key, Client.Config.Action.INSTANCE);
         Client.CONFIG = AcademyCraftClient.Config.INSTANCE.getConfig(key);
+        MisakaNetworkClient.NETWORK_MANAGER.register(SurfacePacket.Handler.class);
         InputSystem.addKeyBinding(
                 Client.KEY_NAME_TOGGLE,
                 Client.CONFIG.getKeyBinding(
@@ -124,6 +142,174 @@ public final class BioelectricOperation extends Skill {
             MisakaNetworkClient.send(TogglePacket.INSTANCE);
         }
 
+        @EventBusSubscriber(Dist.CLIENT)
+        public static final class SurfaceVisuals {
+            private static final Identifier ASSET = AcademyCraft.academy("vfxgraph/bioelectric_surface");
+            private static final long LEASE_TICKS = 40L;
+            private static final int MAX_EFFECTS = 64;
+            private static final Map<Integer, Visual> VISUALS = new HashMap<>();
+            private static @Nullable ClientLevel world;
+
+            private SurfaceVisuals() {
+            }
+
+            static void accept(SurfacePacket packet) {
+                var minecraft = Minecraft.getInstance();
+                if (!minecraft.isSameThread()) {
+                    minecraft.execute(() -> accept(packet));
+                    return;
+                }
+                resetWorld();
+                if (world == null || !world.dimension().identifier().equals(packet.dimension)) return;
+                if (!packet.active) {
+                    remove(packet.entityId);
+                    return;
+                }
+                if (!(world.getEntity(packet.entityId) instanceof LivingEntity subject)) {
+                    remove(packet.entityId);
+                    return;
+                }
+                var visual = VISUALS.get(packet.entityId);
+                if (visual != null && (visual.subject != subject || visual.effect.isStopped())) {
+                    remove(packet.entityId);
+                    visual = null;
+                }
+                if (visual == null) {
+                    if (VISUALS.size() >= MAX_EFFECTS) {
+                        var iterator = VISUALS.entrySet().iterator();
+                        if (iterator.hasNext()) {
+                            iterator.next().getValue().effect.stop();
+                            iterator.remove();
+                        }
+                    }
+                    try {
+                        var effect = VfxGraphManager.INSTANCE.spawn(ASSET, subject.position().toVector3f());
+                        effect.follow(subject);
+                        effect.setRenderDistance(64f);
+                        effect.bindSurfaceSampler("player", new HumanoidSurfaceSampler(packet.entityId));
+                        effect.bindFrame((active, camera, partialTick) -> {
+                            var firstPerson = subject == minecraft.getCameraEntity()
+                                    && minecraft.options.getCameraType().isFirstPerson();
+                            active.setFrameVisible(!firstPerson);
+                            active.setCullingSphere(active.position(), Math.max(1f, subject.getBbWidth() + 0.6f));
+                            return subject.isAlive() && subject.level() == world;
+                        });
+                        visual = new Visual(subject, effect, world.getGameTime());
+                        VISUALS.put(packet.entityId, visual);
+                    } catch (RuntimeException failure) {
+                        AcademyCraft.getLogger().error("Unable to create bioelectric surface effect", failure);
+                        return;
+                    }
+                }
+                visual.lease = world.getGameTime();
+                var player = minecraft.player;
+                if (player != null && player.getId() == packet.entityId) HandVisuals.enable();
+            }
+
+            @SubscribeEvent
+            public static void tick(ClientTickEvent.Post event) {
+                resetWorld();
+                if (world == null) {
+                    VISUALS.values().forEach(visual -> visual.effect.stop());
+                    VISUALS.clear();
+                    return;
+                }
+                var now = world.getGameTime();
+                var iterator = VISUALS.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    var visual = iterator.next().getValue();
+                    if (visual.effect.isStopped() || now - visual.lease > LEASE_TICKS) {
+                        visual.effect.stop();
+                        iterator.remove();
+                    }
+                }
+                var player = Minecraft.getInstance().player;
+                if (player == null || !VISUALS.containsKey(player.getId())) HandVisuals.disable();
+            }
+
+            private static void resetWorld() {
+                var next = Minecraft.getInstance().level;
+                if (next == world) return;
+                VISUALS.values().forEach(visual -> visual.effect.stop());
+                VISUALS.clear();
+                HandVisuals.disable();
+                world = next;
+            }
+
+            private static void remove(int entityId) {
+                var visual = VISUALS.remove(entityId);
+                if (visual != null) visual.effect.stop();
+                var player = Minecraft.getInstance().player;
+                if (player != null && player.getId() == entityId) HandVisuals.disable();
+            }
+
+            private static final class Visual {
+                private final LivingEntity subject;
+                private final ActiveEffect effect;
+                private long lease;
+
+                private Visual(LivingEntity subject, ActiveEffect effect, long lease) {
+                    this.subject = subject;
+                    this.effect = effect;
+                    this.lease = lease;
+                }
+            }
+        }
+
+        public static final class HandVisuals {
+            private static final Identifier ASSET = AcademyCraft.academy("vfxgraph/bioelectric_hand");
+            private static boolean enabled;
+            private static @Nullable FirstPersonVfxEffect effect;
+
+            private HandVisuals() {
+            }
+
+            static void enable() {
+                enabled = true;
+            }
+
+            static void disable() {
+                enabled = false;
+                if (effect != null) {
+                    effect.close();
+                    effect = null;
+                }
+            }
+
+            public static void render(GpuTextureView target, GpuTextureView depth, CameraRenderState state) {
+                var minecraft = Minecraft.getInstance();
+                if (!enabled || minecraft.player == null
+                        || !minecraft.options.getCameraType().isFirstPerson()) return;
+                if (effect == null) {
+                    try {
+                        effect = new FirstPersonVfxEffect(ASSET, "hand",
+                                new FirstPersonHandSurfaceSampler(minecraft.player.getId()));
+                    } catch (RuntimeException failure) {
+                        AcademyCraft.getLogger().error("Unable to create first-person bioelectric effect", failure);
+                        enabled = false;
+                        return;
+                    }
+                }
+                effect.render(target, depth, state);
+            }
+
+            public static void renderGlow(GpuTextureView glowTarget, GpuTextureView glowDepth,
+                                          CameraRenderState state) {
+                var minecraft = Minecraft.getInstance();
+                if (!enabled || effect == null || glowTarget == null || glowDepth == null || minecraft.player == null
+                        || !minecraft.options.getCameraType().isFirstPerson()) return;
+                effect.renderGlow(glowTarget, glowDepth, state);
+            }
+
+            public static void requestGlow() {
+                var minecraft = Minecraft.getInstance();
+                if (enabled && minecraft.player != null
+                        && minecraft.options.getCameraType().isFirstPerson()) {
+                    GlowEffect.requestGlow();
+                }
+            }
+        }
+
         public static final class Config extends KeyBindingConfig {
             public static final class Action implements TypeHandler<Config> {
                 public static final TypeHandler<Config> INSTANCE = new Action();
@@ -158,6 +344,7 @@ public final class BioelectricOperation extends Skill {
     public static final class Events {
         private static final Set<ServerPlayer> MIGRATED_PLAYERS =
                 Collections.newSetFromMap(new WeakHashMap<>());
+        private static final Map<ServerPlayer, Boolean> SURFACE_STATE = new WeakHashMap<>();
 
         private Events() {
         }
@@ -181,10 +368,6 @@ public final class BioelectricOperation extends Skill {
                 }
             }
 
-            if (enabled) {
-                if (player.tickCount % 40 == 0) spawnBioelectricArcs(player);
-            }
-
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var overload = false;
             if (enabled && milestone >= 3 && player.getHealth() < player.getMaxHealth() * 0.3f) {
@@ -201,6 +384,14 @@ public final class BioelectricOperation extends Skill {
             var power = enabled
                     ? system.getPlayerAbilityPowerMultiplier(player.getUUID())
                     : 0;
+            var surfaceActive = SURFACE_STATE.getOrDefault(player, false);
+            if (enabled && (player.tickCount % 10 == 0 || !surfaceActive)) {
+                SurfacePacket.broadcast(player, true);
+                SURFACE_STATE.put(player, true);
+            } else if (!enabled && surfaceActive) {
+                SurfacePacket.broadcast(player, false);
+                SURFACE_STATE.put(player, false);
+            }
             var nonDamageScale = milestone >= 2 ? 1.2 : 1.0;
             syncModifier(player.getAttribute(Attributes.MOVEMENT_SPEED),
                     0.1 * nonDamageScale + (overload ? 0.015 : 0.0), enabled);
@@ -214,39 +405,10 @@ public final class BioelectricOperation extends Skill {
             syncModifier(player.getAttribute(Attributes.SAFE_FALL_DISTANCE), 10.0 * nonDamageScale, enabled);
         }
 
-        private static void spawnBioelectricArcs(ServerPlayer player) {
-            var position = player.position();
-            var horizontalLook = new Vec3(player.getLookAngle().x, 0, player.getLookAngle().z);
-            if (horizontalLook.lengthSqr() <= 1.0E-6) {
-                horizontalLook = Vec3.directionFromRotation(0, player.getYRot());
-            } else {
-                horizontalLook = horizontalLook.normalize();
-            }
-            var left = new Vec3(-horizontalLook.z, 0, horizontalLook.x);
-            var right = left.scale(-1);
-            var height = player.getBbHeight();
-            var sideOffset = player.getBbWidth() * 0.5 + 0.65;
-
-            var leftUp = position.add(0, height * 0.85, 0).add(left.scale(sideOffset));
-            spawnArc(player, leftUp, leftUp.add(left.scale(0.8)).add(0, 0.45, 0));
-            var leftDown = position.add(0, height * 0.15, 0).add(left.scale(sideOffset));
-            spawnArc(player, leftDown, leftDown.add(left.scale(0.8)).add(0, -0.45, 0));
-            var rightUp = position.add(0, height * 0.85, 0).add(right.scale(sideOffset));
-            spawnArc(player, rightUp, rightUp.add(right.scale(0.8)).add(0, 0.45, 0));
-            var rightDown = position.add(0, height * 0.15, 0).add(right.scale(sideOffset));
-            spawnArc(player, rightDown, rightDown.add(right.scale(0.8)).add(0, -0.45, 0));
-        }
-
-        private static void spawnArc(ServerPlayer player, Vec3 start, Vec3 end) {
-            var paths = List.of(ElectromasterArcEffects.arc(start, end, MathUtil.RANDOM.nextLong()));
-            ElectromasterArcEffects.spawnArc(player.level(), paths, 8, start);
-        }
-
         private static void migrateLegacySkill(ServerPlayer player) {
             if (MIGRATED_PLAYERS.contains(player)) return;
             var system = AbilitySystemServer.getSystem(player);
             var playerData = system.getPlayerData(player.getUUID());
-            if (playerData == null) return;
             var map = playerData.getMutableSkillDataMap();
             var legacy = map.remove(LEGACY_BIOELECTRIC_SURGE);
             if (legacy != null) {
@@ -269,7 +431,7 @@ public final class BioelectricOperation extends Skill {
             target.setProficiency(Math.max(target.getProficiency(), legacy.getProficiency()));
         }
 
-        private static void syncModifier(AttributeInstance attribute, double amount, boolean enabled) {
+        private static void syncModifier(@Nullable AttributeInstance attribute, double amount, boolean enabled) {
             if (attribute == null) return;
             var current = attribute.getModifier(MODIFIER_ID);
             if (!enabled) {
@@ -297,6 +459,60 @@ public final class BioelectricOperation extends Skill {
         @Override
         public PacketType<ServerGamePacketListenerImpl, TogglePacket> getPacketType() {
             return PacketTypes.BIOELECTRIC_OPERATION_TOGGLE.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class SurfacePacket extends Packet<ClientPacketListener, SurfacePacket> {
+        public static final StreamCodec<ByteBuf, SurfacePacket> CODEC = StreamCodec.of(
+                (buffer, packet) -> {
+                    Identifier.STREAM_CODEC.encode(buffer, packet.dimension);
+                    ByteBufCodecs.VAR_INT.encode(buffer, packet.entityId);
+                    buffer.writeBoolean(packet.active);
+                },
+                buffer -> new SurfacePacket(
+                        Identifier.STREAM_CODEC.decode(buffer),
+                        ByteBufCodecs.VAR_INT.decode(buffer),
+                        buffer.readBoolean()
+                )
+        );
+
+        private final Identifier dimension;
+        private final int entityId;
+        private final boolean active;
+
+        private SurfacePacket(Identifier dimension, int entityId, boolean active) {
+            this.dimension = dimension;
+            this.entityId = entityId;
+            this.active = active;
+        }
+
+        public static void broadcast(ServerPlayer source, boolean active) {
+            if (!(source.level() instanceof ServerLevel level)) return;
+            var dimension = level.dimension().identifier();
+            var packet = new SurfacePacket(dimension, source.getId(), active);
+            var center = source.position();
+            var range = 64.0 * 64.0;
+            for (var observer : level.players()) {
+                if (observer == source || observer.position().distanceToSqr(center) <= range) {
+                    MisakaNetworkServer.send(observer, packet);
+                }
+            }
+        }
+
+        @Override
+        public PacketType<ClientPacketListener, SurfacePacket> getPacketType() {
+            return PacketTypes.BIOELECTRIC_OPERATION_SURFACE.get();
+        }
+
+        public static final class Handler {
+            private Handler() {
+            }
+
+            @SubscribePacket
+            public static void handle(SurfacePacket packet) {
+                Client.SurfaceVisuals.accept(packet);
+            }
         }
     }
 }

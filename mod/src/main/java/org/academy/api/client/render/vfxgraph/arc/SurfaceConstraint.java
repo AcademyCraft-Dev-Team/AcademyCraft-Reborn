@@ -1,5 +1,7 @@
 package org.academy.api.client.render.vfxgraph.arc;
 
+import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
+import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
 import java.util.IdentityHashMap;
@@ -23,6 +25,7 @@ import java.util.Map;
 public final class SurfaceConstraint {
     private final @Nullable SurfaceDistributor fixed;
     private final Map<float[], SurfaceDistributor> cache = new IdentityHashMap<>();
+    private final Vector3f sampled = new Vector3f();
 
     /**
      * 逐弧表面：约束目标取自 {@link ArcCurve#surface()}。
@@ -44,9 +47,32 @@ public final class SurfaceConstraint {
      * @param arc 目标弧线（就地修改端点位置）
      */
     public void constrain(ArcCurve arc) {
+        var sampler = arc.anchorSampler();
+        if (sampler != null) {
+            constrainSampled(arc, sampler);
+            return;
+        }
         var distributor = distributorFor(arc);
         if (distributor == null) return;
         constrain(arc, distributor);
+    }
+
+    private void constrainSampled(ArcCurve arc, SurfaceSampler sampler) {
+        if (arc.size() < 2) return;
+        var runStart = 0;
+        for (var i = 1; i <= arc.size(); i++) {
+            if (i == arc.size() || arc.segment(i) != arc.segment(i - 1)) {
+                if (!arc.pinStart()) constrainSampledPoint(arc, runStart, sampler);
+                constrainSampledPoint(arc, i - 1, sampler);
+                runStart = i;
+            }
+        }
+    }
+
+    private void constrainSampledPoint(ArcCurve arc, int i, SurfaceSampler sampler) {
+        if (sampler.nearestPoint(arc.x(i), arc.y(i), arc.z(i), sampled)) {
+            arc.setPoint(i, sampled.x, sampled.y, sampled.z);
+        }
     }
 
     private @Nullable SurfaceDistributor distributorFor(ArcCurve arc) {

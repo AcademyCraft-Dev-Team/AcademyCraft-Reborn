@@ -16,19 +16,13 @@ import org.joml.Vector4f;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
+import org.academy.api.client.render.vfxgraph.arc.ArcGroups;
 
 import static org.academy.api.client.render.vfxgraph.shape.SkyDischargeGeometry.*;
 
-/**
- * Bounded, graph-authored discharge layers. Geometry is local to the emitter, independent of players.
- */
 public final class SkyDischargeEmitter {
-    // Negative groups cannot collide with existing positive transient arc groups.
-    private static final AtomicLong NEXT_GROUP = new AtomicLong(-1);
-
     static long newGroup() {
-        return NEXT_GROUP.getAndDecrement();
+        return ArcGroups.next();
     }
 
     private SkyDischargeEmitter() {
@@ -48,7 +42,7 @@ public final class SkyDischargeEmitter {
     }
 
     public static SimNode channel(VfxBlock block, PortValueSource ports) {
-        long group = NEXT_GROUP.getAndDecrement();
+        long group = ArcGroups.next();
         var point = new Vector3f();
         var start = new Vector3f();
         float[] epoch = {Float.NaN};
@@ -139,10 +133,9 @@ public final class SkyDischargeEmitter {
     }
 
     public static SimNode atmosphere(VfxBlock block, PortValueSource ports) {
-        float owner = NEXT_GROUP.getAndDecrement();
+        float owner = ArcGroups.next();
         float[] epoch = {Float.NaN};
         return (buffer, context) -> {
-            // Replacing only this emitter's particles prevents overlap/ghosting at any frame rate.
             for (int i = buffer.count() - 1; i >= 0; i--) {
                 if (buffer.mass(i) == owner) buffer.kill(i);
             }
@@ -219,9 +212,7 @@ public final class SkyDischargeEmitter {
     }
 
     private static float time(SimContext context, float[] epoch) {
-        if (!Float.isFinite(epoch[0])) epoch[0] = context.time();
-        float override = context.paramFloat("time", -1);
-        return Math.max(0, Float.isFinite(override) && override >= 0 ? override : context.time() - epoch[0]);
+        return ElectricArcEmitter.time(context, epoch);
     }
 
     private static long seed(SimContext context) {
@@ -229,13 +220,7 @@ public final class SkyDischargeEmitter {
     }
 
     private static float value(VfxBlock block, SimContext context, String key, float fallback, float min, float max) {
-        float property = fallback;
-        try {
-            property = Float.parseFloat(block.properties().getOrDefault(key, Float.toString(fallback)));
-        } catch (NumberFormatException ignored) {
-        }
-        float value = context.paramFloat(key, property);
-        return Float.isFinite(value) ? Math.clamp(value, min, max) : fallback;
+        return ElectricArcEmitter.value(block, context, key, fallback, min, max);
     }
 
     private static PropertySpec number(String id, float value) {

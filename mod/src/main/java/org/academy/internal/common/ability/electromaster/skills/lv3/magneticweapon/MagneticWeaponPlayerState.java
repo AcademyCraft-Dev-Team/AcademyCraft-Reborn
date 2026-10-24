@@ -11,7 +11,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import org.academy.mixin.common.LivingEntityAttackStateAccessor;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -24,7 +23,6 @@ import java.util.Set;
  */
 final class MagneticWeaponPlayerState implements AutoCloseable {
     private final ServerPlayer player;
-    private final LivingEntityAttackStateAccessor attackState;
     private final int originalSelectedSlot;
     private final int originalAttackStrengthTicker;
     private final int originalItemSwapTicker;
@@ -44,10 +42,9 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
         }
 
         this.player = player;
-        attackState = (LivingEntityAttackStateAccessor) player;
         originalSelectedSlot = player.getInventory().getSelectedSlot();
-        originalAttackStrengthTicker = attackState.academy$getAttackStrengthTicker();
-        originalItemSwapTicker = attackState.academy$getItemSwapTicker();
+        originalAttackStrengthTicker = player.attackStrengthTicker;
+        originalItemSwapTicker = player.itemSwapTicker;
         originalSprinting = player.isSprinting();
         originalFallDistance = player.fallDistance;
         this.syntheticFallDistance = syntheticFallDistance;
@@ -82,8 +79,8 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
         applyWeaponModifiers();
 
         var fullChargeTicks = Math.max(1, Mth.ceil(player.getCurrentItemAttackStrengthDelay()) + 1);
-        attackState.academy$setAttackStrengthTicker(fullChargeTicks);
-        attackState.academy$setItemSwapTicker(fullChargeTicks);
+        player.attackStrengthTicker = fullChargeTicks;
+        player.itemSwapTicker = fullChargeTicks;
     }
 
     private void applyWeaponModifiers() {
@@ -116,8 +113,8 @@ final class MagneticWeaponPlayerState implements AutoCloseable {
             });
         } finally {
             player.getInventory().setSelectedSlot(originalSelectedSlot);
-            attackState.academy$setAttackStrengthTicker(originalAttackStrengthTicker);
-            attackState.academy$setItemSwapTicker(originalItemSwapTicker);
+            player.attackStrengthTicker = originalAttackStrengthTicker;
+            player.itemSwapTicker = originalItemSwapTicker;
             player.fallDistance = originalFallDistance;
             if (syntheticFallDistance >= 0.0f) {
                 player.setDeltaMovement(originalMovement);
