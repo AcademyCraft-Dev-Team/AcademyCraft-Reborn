@@ -2,10 +2,17 @@ package org.academy.api.client.render.vfxgraph.sim;
 
 import com.google.gson.JsonParser;
 import org.academy.api.client.render.graph.model.GraphNode;
+import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
 import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
+import org.academy.api.client.render.vfxgraph.model.VfxBlock;
+import org.academy.api.client.render.vfxgraph.model.VfxContext;
+import org.academy.api.client.render.vfxgraph.model.VfxContextType;
+import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
+import org.academy.api.client.render.vfxgraph.model.VfxSystem;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
@@ -16,6 +23,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -140,7 +148,7 @@ class ElectricArcVfxTest {
 
     @Test
     void boltsConnectActualEndpointsAtAllRangesAndKeepAnIndependentWidthBudget() throws Exception {
-        for (var asset : new String[]{"thunder_lance"}) {
+        for (var asset : new String[]{"vector_redirect_arc"}) {
             var sim = simulator(asset);
             for (float length : new float[]{0.02f, 16, 20, 32, 48, 72, 512}) {
                 sim.setLiveParam("length", Value.of(length));
@@ -167,38 +175,87 @@ class ElectricArcVfxTest {
     }
 
     @Test
-    void arcGenerateGrowsAForwardDeltaTreeFromASingleRoot() throws Exception {
-        var sim = simulator("arc_generate");
-        for (float length : new float[]{16, 20, 48}) {
-            sim.setLiveParam("length", Value.of(length));
-            at(sim, 0.25f);
-            assertTrue(sim.arcBuffer().count() > 0);
-            assertTrue(sim.arcBuffer().count() <= 128, "the delta must stay bounded");
-            float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-            int maxGeneration = 0;
-            for (int i = 0; i < sim.arcBuffer().count(); i++) {
-                var arc = sim.arcBuffer().arc(i);
-                assertTrue(arc.size() <= 32);
-                for (int p = 0; p < arc.size(); p++) {
-                    float y = arc.y(p);
-                    assertTrue(y >= -0.001f && y <= length + 0.05f, "tree must advance forward from the root");
-                    minY = Math.min(minY, y);
-                    maxY = Math.max(maxY, y);
-                    maxGeneration = Math.max(maxGeneration, (int) arc.generation(p));
+    void electricTreesGrowForwardDeltasFromASingleRoot() throws Exception {
+        for (var asset : new String[]{"arc_generate", "thunder_lance"}) {
+            var sim = simulator(asset);
+            for (float length : new float[]{16, 20, 48}) {
+                sim.setLiveParam("length", Value.of(length));
+                at(sim, 0.25f);
+                assertTrue(sim.arcBuffer().count() > 0);
+                assertTrue(sim.arcBuffer().count() <= 128, "the delta must stay bounded");
+                float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+                int maxGeneration = 0;
+                for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                    var arc = sim.arcBuffer().arc(i);
+                    assertTrue(arc.size() <= 32);
+                    for (int p = 0; p < arc.size(); p++) {
+                        float y = arc.y(p);
+                        assertTrue(y >= -0.001f && y <= length + 0.05f, "tree must advance forward from the root");
+                        minY = Math.min(minY, y);
+                        maxY = Math.max(maxY, y);
+                        maxGeneration = Math.max(maxGeneration, (int) arc.generation(p));
+                    }
                 }
+                assertTrue(minY <= 0.05f, "branches must share the single root point");
+                assertTrue(maxY >= length * 0.6f, "the fan must reach well forward");
+                assertTrue(maxGeneration >= 1, "the delta must fork as it advances");
             }
-            assertTrue(minY <= 0.05f, "branches must share the single root point");
-            assertTrue(maxY >= length * 0.6f, "the fan must reach well forward");
-            assertTrue(maxGeneration >= 1, "the delta must fork as it advances");
+            sim.setLiveParam("length", Value.of(16f));
+            at(sim, 1.25f);
+            assertEquals(0, sim.arcBuffer().count());
         }
-        sim.setLiveParam("length", Value.of(16f));
-        at(sim, 1.25f);
-        assertEquals(0, sim.arcBuffer().count());
+    }
+
+    @Test
+    void blockPropertiesWinOverParameterDefaultsUnlessExplicitlyBound() {
+        var length = new GraphParameter("length", "length", ValueType.FLOAT, Value.of(10f), Optional.empty());
+        var system = new VfxSystem("block-value",
+                List.of(
+                        new VfxContext("spawn", VfxContextType.SPAWN, "", List.of(
+                                new VfxBlock("tree", "vfx.block.electric_tree",
+                                        Map.of("length", "20", "width", "0.008", "duration", "1", "growth_time", "0"),
+                                        List.of())), 0, 0),
+                        new VfxContext("out", VfxContextType.OUTPUT, "", List.of(
+                                new VfxBlock("out", "vfx.block.output_arc", Map.of(), List.of())), 0, 0)
+                ),
+                List.of(),
+                List.of(new VfxFlowEdge("spawn", "out")),
+                List.of(),
+                List.of(),
+                List.of(length),
+                List.of("out"));
+        var metadata = new SimpleNodeRegistry();
+        var blocks = new VfxBlockRegistry();
+        VfxBlocks.registerAll(metadata, blocks);
+        var sim = new VfxSystemSimulator(system, blocks, 42, system.parameters());
+
+        at(sim, 0.1f);
+        var fromProperty = maxY(sim);
+        assertTrue(fromProperty > 10.1f, "the block property must beat the parameter default");
+        assertTrue(fromProperty <= 20.05f);
+
+        sim.setLiveParam("length", Value.of(30f));
+        at(sim, 0.1f);
+        var fromBinding = maxY(sim);
+        assertTrue(fromBinding > 20.1f, "an explicit binding must beat the block property");
+        assertTrue(fromBinding <= 30.05f);
+    }
+
+    private static float maxY(VfxSystemSimulator sim) {
+        var max = -Float.MAX_VALUE;
+        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            var arc = sim.arcBuffer().arc(i);
+            for (int p = 0; p < arc.size(); p++) {
+                max = Math.max(max, arc.y(p));
+            }
+        }
+        return max;
     }
 
     @Test
     void sharedShellAndCoreStayCoincidentAndDisappearWithoutAccumulation() throws Exception {
-        var sim = simulator("thunder_lance");
+        var sim = simulator("vector_redirect_arc");
+        sim.setLiveParam("duration", Value.of(0.75f));
         at(sim, 0.12f);
         int count = sim.arcBuffer().count();
         var outer = sim.arcBuffer().arc(0);

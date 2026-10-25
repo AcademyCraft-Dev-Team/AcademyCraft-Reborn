@@ -251,13 +251,7 @@ public final class SurfaceDischargeEmitter {
     }
 
     private static float value(VfxBlock block, SimContext context, String key, float fallback, float min, float max) {
-        float property = fallback;
-        try {
-            property = Float.parseFloat(block.properties().getOrDefault(key, Float.toString(fallback)));
-        } catch (NumberFormatException ignored) {
-        }
-        float result = context.paramFloat(key, property);
-        return Float.isFinite(result) ? Math.clamp(result, min, max) : fallback;
+        return BlockProps.resolve(block, context, key, fallback, min, max);
     }
 
     private static PropertySpec number(String id, float value) {

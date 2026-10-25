@@ -140,8 +140,7 @@ public final class CloudVortexEmitter {
     }
 
     private static float value(VfxBlock block, SimContext ctx, String key, float fallback, float min, float max) {
-        float value = ctx.paramFloat(key, property(block, key, fallback));
-        return Float.isFinite(value) ? Math.clamp(value, min, max) : fallback;
+        return BlockProps.resolve(block, ctx, key, fallback, min, max);
     }
 
     private static PropertySpec number(String id, float value) {

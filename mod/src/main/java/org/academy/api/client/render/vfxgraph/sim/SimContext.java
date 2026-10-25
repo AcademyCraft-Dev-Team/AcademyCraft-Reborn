@@ -11,9 +11,11 @@ import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.IntConsumer;
 
 /**
@@ -26,6 +28,7 @@ public final class SimContext {
     private final Map<String, Curve> curves;
     private final Map<String, Gradient> gradients;
     private final Map<String, Value> liveParams;
+    private final Set<String> overriddenParams;
     private final ArcBuffer arcs;
     private Map<String, SurfaceProjector> surfaces = Map.of();
     private Map<String, EffectArcSource> arcSources = Map.of();
@@ -76,12 +79,18 @@ public final class SimContext {
 
     public SimContext(float dt, float time, Random random, Map<String, Curve> curves, Map<String, Gradient> gradients,
                       Map<String, Value> liveParams, ArcBuffer arcs) {
+        this(dt, time, random, curves, gradients, liveParams, new HashSet<>(), arcs);
+    }
+
+    public SimContext(float dt, float time, Random random, Map<String, Curve> curves, Map<String, Gradient> gradients,
+                      Map<String, Value> liveParams, Set<String> overriddenParams, ArcBuffer arcs) {
         this.dt = dt;
         this.time = time;
         this.random = random;
         this.curves = curves;
         this.gradients = gradients;
         this.liveParams = liveParams;
+        this.overriddenParams = overriddenParams;
         this.arcs = arcs;
         this.spawnStart = 0;
     }
@@ -149,6 +158,10 @@ public final class SimContext {
         }
     }
 
+    public boolean isParamOverridden(String paramId) {
+        return overriddenParams.contains(paramId);
+    }
+
     /**
      * 读取存活浮点参数（有绑定返回绑定值，无则返回默认）。
      */
@@ -209,7 +222,9 @@ public final class SimContext {
      * 设置存活参数（如果不存在）。
      */
     public void paramIfAbsent(String id, Value value) {
-        liveParams.putIfAbsent(id, value);
+        if (liveParams.containsKey(id)) return;
+        liveParams.put(id, value);
+        overriddenParams.add(id);
     }
 
     /**

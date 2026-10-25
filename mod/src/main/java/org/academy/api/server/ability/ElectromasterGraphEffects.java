@@ -11,7 +11,7 @@ import java.util.Map;
 public final class ElectromasterGraphEffects {
     public enum BoltStyle {
         ARC("arc_generate", 0.6f, 0.008f, 4, 1.10f),
-        LANCE("thunder_lance", 0.75f, 0.17f, 5, 0.85f),
+        LANCE("thunder_lance", 0.5f, 0.008f, 4, 0.15f),
         CHAIN("arc_generate", 0.4f, 0.006f, 2, 0.40f);
 
         final String asset;
@@ -27,11 +27,6 @@ public final class ElectromasterGraphEffects {
     }
 
     private ElectromasterGraphEffects() {
-    }
-
-    public static void spawnNovaRing(ServerLevel level, Vec3 position, int entityId, float height,
-                                     float radius, float radialSpeed, float duration, float phase, long seed) {
-        spawnNovaRing(level, position, entityId, height, radius, radialSpeed, duration, phase, seed, -1);
     }
 
     public static void spawnNovaRing(ServerLevel level, Vec3 position, int entityId, float height,

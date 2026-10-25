@@ -20,6 +20,7 @@ class ImGuiImplSdl(
     private var mouseX = 0f
     private var mouseY = 0f
     private var haveMousePos = false
+    private var ownsTextInput = false
 
     private val io get() = ImGui.getIO()
 
@@ -70,10 +71,22 @@ class ImGuiImplSdl(
             mouseX = io.mousePosX
             mouseY = io.mousePosY
         }
+
+        if (io.wantTextInput && !ownsTextInput && !SDLKeyboard.SDL_TextInputActive(windowHandle)) {
+            SDLKeyboard.SDL_StartTextInput(windowHandle)
+            ownsTextInput = true
+        } else if (!io.wantTextInput && ownsTextInput) {
+            SDLKeyboard.SDL_StopTextInput(windowHandle)
+            ownsTextInput = false
+        }
     }
 
     fun shutdown() {
         if (!initialized) return
+        if (ownsTextInput) {
+            SDLKeyboard.SDL_StopTextInput(windowHandle)
+            ownsTextInput = false
+        }
         windowHandle = 0L
         initialized = false
     }

@@ -201,15 +201,13 @@ public class ThunderLance extends Skill {
                     .map(LivingEntity.class::cast).findFirst().orElse(null);
             if (origin == null) return;
             var chainRadius = Skills.THUNDER_LANCE.get().scaledRange(player, 6.0f);
-            var target = level.getEntitiesOfClass(LivingEntity.class,
+            level.getEntitiesOfClass(LivingEntity.class,
                             origin.getBoundingBox().inflate(chainRadius), candidate -> candidate != player
                                     && !hits.contains(candidate) && candidate.isAlive()
                                     && !TeamRelations.areAllied(player, candidate)
                                     && !PvpSetting.shouldPrevent(player, candidate))
-                    .stream().min(Comparator.comparingDouble(origin::distanceToSqr)).orElse(null);
-            if (target != null) {
-                ElectromasterArcActions.strikeChain(level, player, source, origin, target, damage * 0.4f);
-            }
+                    .stream().min(Comparator.comparingDouble(origin::distanceToSqr))
+                    .ifPresent(target -> ElectromasterArcActions.strikeChain(level, player, source, origin, target, damage * 0.4f));
         }
     }
 

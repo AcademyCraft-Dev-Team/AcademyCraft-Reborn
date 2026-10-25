@@ -22,21 +22,6 @@ import org.joml.Vector3f;
 
 import java.util.*;
 
-/**
- * 容器 VFX 模拟器（M24–M25）：按 Context 阶段 + flow 边批次驱动共享 [ParticleBuffer]；
- * 数据边（算子→块）经 [VfxOperator] 求值驱动块输入端口。
- *
- * <p><b>批次语义</b>：spawn context 的块批量生成粒子并 {@code emitBatch} 记录本帧新粒子批次；
- * 执行器按 flow 边把上游 spawn context 的批次注入下游 init context（{@code SimContext.incomingBatches}）；
- * init 块只处理传入批次——**多 spawn 独立 init 互不干扰**，替代旧 {@code spawnStart} 单点耦合。</p>
- *
- * <p><b>阶段顺序</b>：SPAWN → INITIALIZE → UPDATE（各阶段内按 flow 拓扑序）；OUTPUT 不执行模拟
- * （仅提供 RenderSpec）。update 块处理全部存活粒子（不区分批次）。</p>
- *
- * <p><b>数据流（M25）</b>：构造时按 {@code system.dataEdges()} 构建算子求值 DAG（算子 id →
- * {@link VfxOperator}，含算子间输入连接）；每个块构建 {[blockId, portId] → VfxOperator} 端口值源，
- * 块内读取端口时求值（attr-read 逐粒子）。算子图环检测抛 {@link IllegalStateException}。</p>
- */
 public final class VfxSystemSimulator {
     private final ParticleBuffer buffer = new ParticleBuffer();
     private final ArcBuffer arcBuffer = new ArcBuffer();
@@ -50,25 +35,14 @@ public final class VfxSystemSimulator {
     private final Map<String, List<BlockNode>> spawnBlocks = new LinkedHashMap<>();
     private final Map<String, List<BlockNode>> initBlocks = new LinkedHashMap<>();
     private final Map<String, List<BlockNode>> updateBlocks = new LinkedHashMap<>();
-    /**
-     * init context → 其上游（flow 直接相连的）SPAWN context id 列表。
-     */
     private final Map<String, List<String>> initUpstreamSpawns = new LinkedHashMap<>();
-    /**
-     * init 块 id → 其块级 flow 上游 spawn 块 id 列表（M28b）。
-     */
     private final Map<String, List<String>> initUpstreamSpawnBlocks = new LinkedHashMap<>();
-    /**
-     * 全图是否存在块级 flow：存在则进入「精确配对模式」（未配对 init 块收空批次），否则回退 context 级。
-     */
     private boolean hasBlockFlows;
-    /**
-     * 各阶段的 context 执行顺序（flow 拓扑序，保持 DAG 内相对顺序）。
-     */
     private final List<String> spawnOrder = new ArrayList<>();
     private final List<String> initOrder = new ArrayList<>();
     private final List<String> updateOrder = new ArrayList<>();
     private final Map<String, Value> liveParams = new LinkedHashMap<>();
+    private final Set<String> overriddenParams = new HashSet<>();
     private final Map<String, Curve> curves = new LinkedHashMap<>();
     private final Map<String, Gradient> gradients = new LinkedHashMap<>();
     private final Random random;
@@ -90,9 +64,6 @@ public final class VfxSystemSimulator {
         surfaces.put(name, Objects.requireNonNull(surface));
     }
 
-    /**
-     * 块执行节点：保留块 id 以便按块收集批次（块级 flow，M28b）。
-     */
     private record BlockNode(String blockId, SimNode node) {
     }
 
@@ -110,27 +81,21 @@ public final class VfxSystemSimulator {
         buildPlan(system, blockRegistry, operatorRegistry);
     }
 
-    /**
-     * 无算子注册的缺省构造（M24 兼容：数据边恒无绑定）。
-     */
     public VfxSystemSimulator(VfxSystem system, VfxBlockRegistry blockRegistry, long seed, List<GraphParameter> parameters) {
         this(system, blockRegistry, new VfxOperatorRegistry(), seed, parameters);
     }
 
-    /**
-     * 注入存活参数（不重建模拟器，M15-04）。
-     */
     public void setLiveParam(String parameterId, Value value) {
         liveParams.put(parameterId, value);
+        overriddenParams.add(parameterId);
     }
 
     public void step(float dt) {
-        var ctx = new SimContext(dt, time, random, curves, gradients, liveParams, arcBuffer);
+        var ctx = new SimContext(dt, time, random, curves, gradients, liveParams, overriddenParams, arcBuffer);
         ctx.setSurfaces(surfaces);
         ctx.setSamplers(samplers);
         ctx.setArcSources(arcSources);
 
-        // Phase 1: SPAWN（按块收集本帧批次 + 按 context 汇总）
         var spawnBatchesByBlock = new HashMap<String, List<SpawnBatch>>();
         var spawnBatchesByContext = new HashMap<String, List<SpawnBatch>>();
         for (var contextId : spawnOrder) {
@@ -145,8 +110,6 @@ public final class VfxSystemSimulator {
             spawnBatchesByContext.put(contextId, ctxBatches);
         }
 
-        // Phase 2: INITIALIZE（块级 flow 优先：该 init 块只处理其 blockFlow 上游 spawn 块的批次；
-        //  无块级上游则回退到 context 级上游 SPAWN context 的批次）
         for (var contextId : initOrder) {
             for (var bn : initBlocks.getOrDefault(contextId, List.of())) {
                 var upstreamBlocks = initUpstreamSpawnBlocks.getOrDefault(bn.blockId(), List.of());
@@ -159,7 +122,6 @@ public final class VfxSystemSimulator {
                         }
                     }
                 } else if (!hasBlockFlows) {
-                    // 无块级 flow 模式：回退 context 级（整上游 SPAWN context 批次）
                     for (var upstream : initUpstreamSpawns.getOrDefault(contextId, List.of())) {
                         var batches = spawnBatchesByContext.get(upstream);
                         if (batches != null) {
@@ -167,13 +129,11 @@ public final class VfxSystemSimulator {
                         }
                     }
                 }
-                // 精确配对模式：无块级上游的 init 块收空批次（不误伤其它 spawn 粒子）
                 ctx.setIncomingBatches(incoming);
                 bn.node().step(buffer, ctx);
             }
         }
 
-        // Phase 3: UPDATE（全部存活粒子；无传入批次）
         ctx.setIncomingBatches(List.of());
         for (var contextId : updateOrder) {
             for (var bn : updateBlocks.getOrDefault(contextId, List.of())) {
@@ -181,13 +141,9 @@ public final class VfxSystemSimulator {
             }
         }
 
-        // 电弧：复刻 Blender 每帧从基线几何求值——弧拱重采样（Set Handle Positions + Resample，
-        // 随 age 成长）+ 噪声位移 + 端点表面吸附 + 火花粒子速度/重力积分，然后老化。
         if (arcBuffer.count() > 0) {
             for (var i = 0; i < arcBuffer.count(); i++) {
                 var arc = arcBuffer.arc(i);
-                // 火花粒子：位置 += 速度×dt，速度 += 重力×dt（Blender Simulation Input.001 速度积分，
-                // 重力 Combine XYZ(0,0,重力G)）。迷你管整体平移，方向保持速度方向。
                 if (arc.sparkVelocity() != null) {
                     var v = arc.sparkVelocity();
                     float gx = 0f, gy = 0f, gz = -0.9f;
@@ -201,7 +157,6 @@ public final class VfxSystemSimulator {
                     var ux = len < 1e-6f ? 0f : vx / len;
                     var uy = len < 1e-6f ? 1f : vy / len;
                     var uz = len < 1e-6f ? 0f : vz / len;
-                    // 迷你管当前半长（按原两点距离）
                     var half = arc.size() >= 2 ? 0.5f * dist(arc, 0, 1) : 0f;
                     var cx = (arc.x(0) + arc.x(arc.size() - 1)) * 0.5f;
                     var cy = (arc.y(0) + arc.y(arc.size() - 1)) * 0.5f;
@@ -213,11 +168,7 @@ public final class VfxSystemSimulator {
                     arc.setPoint(arc.size() - 1, cx + ux * half, cy + uy * half, cz + uz * half);
                     continue;
                 }
-                // Blender 每帧从 Curve Line 基线重新求值：Set Spline Type(Bezier) +
-                // Set Handle Positions(控制柄随 age 成长) + Resample(12)。仅 Blender 弧（有 archBase）执行。
                 if (arc.hasArchBase()) {
-                    // 仿真区爬行（Blender 仿真区 Set Position）：弧基座沿切平面随机滑移累积，
-                    // 端点随后被 SurfaceConstraint 吸附拉回表面（复刻「电弧群游走」观感）。
                     if (arc.hasAnchor()) {
                         reanchorSurfaceArc(arc, dt);
                     } else {
@@ -227,8 +178,6 @@ public final class VfxSystemSimulator {
                 }
                 var strength = arc.hasNoiseStrength() ? arc.noiseStrength() : arcNoiseStrength;
                 if (strength > 1e-6f) {
-                    // 每弧独立噪声种子（Blender 唯一ID 子组：Index×100+SceneTime×100 → 每弧/每帧稳定唯一 ID），
-                    // 否则全部电弧共用同一噪声场 → 一起同向形变/同飘，观感"都长一个样"。
                     NoiseAnimator.animate(arc, time, arcDriftSpeed, strength, arcNoiseScale,
                             arcNoiseSeed + arc.seed() * 7919L);
                 }
@@ -254,14 +203,9 @@ public final class VfxSystemSimulator {
         return time;
     }
 
-    /**
-     * 设置累计时间（loop 重启时延续时间戳，避免 time 归零导致 UI 冻结，M28b）。
-     */
     public void setTime(float time) {
         this.time = time;
     }
-
-    // ---- 计划构建 ----
 
     private void buildPlan(VfxSystem system, VfxBlockRegistry blockRegistry, VfxOperatorRegistry operatorRegistry) {
         var contextsById = new LinkedHashMap<String, VfxContext>();
@@ -269,7 +213,6 @@ public final class VfxSystemSimulator {
             contextsById.put(ctx.id(), ctx);
         }
 
-        // 数据边 → 算子求值 DAG
         var operators = new LinkedHashMap<String, VfxOperator>();
         var operatorInputs = new LinkedHashMap<String, Map<String, Edge.PortRef>>();
         var operatorById = new LinkedHashMap<String, VfxOperatorNode>();
@@ -286,13 +229,11 @@ public final class VfxSystemSimulator {
             }
         }
 
-        // 递归构建算子（含算子间连接），环检测
         var building = new HashSet<String>();
         for (var opId : operatorById.keySet()) {
             buildOperator(opId, operatorById, operatorInputs, operators, building, operatorRegistry);
         }
 
-        // flow 拓扑排序（Kahn）→ 每阶段内执行顺序
         var inDegree = new HashMap<String, Integer>();
         var adjacency = new HashMap<String, List<String>>();
         for (var id : contextsById.keySet()) {
@@ -319,7 +260,6 @@ public final class VfxSystemSimulator {
             }
         }
 
-        // 上游 spawn 关系（init 直接上游的 SPAWN context）
         for (var edge : system.flowEdges()) {
             var fromCtx = contextsById.get(edge.fromContextId());
             if (fromCtx != null && fromCtx.type() == VfxContextType.SPAWN) {
@@ -327,14 +267,12 @@ public final class VfxSystemSimulator {
             }
         }
 
-        // 块级 flow（M28b）：init 块 → 其上游 spawn 块（精确批次配对）
         for (var edge : system.blockFlows()) {
             hasBlockFlows = true;
             initUpstreamSpawnBlocks.computeIfAbsent(edge.toBlockId(), _ -> new ArrayList<>())
                     .add(edge.fromBlockId());
         }
 
-        // 按 context 建块（带端口值源）
         for (var contextId : topoOrder) {
             var ctx = contextsById.get(contextId);
             if (ctx == null) continue;
@@ -361,7 +299,6 @@ public final class VfxSystemSimulator {
                     updateOrder.add(contextId);
                 }
                 case OUTPUT -> {
-                    // 无模拟；但扫描 output_arc 块读取动画参数
                     for (var block : ctx.blocks()) {
                         if ("vfx.block.output_arc".equals(block.type())) {
                             var props = block.properties();
@@ -454,12 +391,6 @@ public final class VfxSystemSimulator {
                 anchorNormal.x, anchorNormal.y, anchorNormal.z);
     }
 
-    /**
-     * M30 仿真区爬行（复刻 Blender 仿真区 {@code Set Position}）：
-     * 弧基座沿表面切平面随机滑移，偏移累积到 {@link ArcCurve#accumulateWander}。
-     * 偏移 = {@code cross(normalize(Random[±1]³), 表面法线) × Random[0.01..0.03] × 游离速度}。
-     * 端点随后被表面吸附拉回（复刻 Set Position.002），形成「电弧群游走/爬行」。
-     */
     private void wanderArcBase(ArcCurve arc, Random random) {
         float nx = arc.archNx(), ny = arc.archNy(), nz = arc.archNz();
         var rl = 0f;
@@ -475,7 +406,6 @@ public final class VfxSystemSimulator {
         rx /= rl;
         ry /= rl;
         rz /= rl;
-        // cross(r, normal) → 切平面方向
         var cx = ry * nz - rz * ny;
         var cy = rz * nx - rx * nz;
         var cz = rx * ny - ry * nx;
@@ -484,7 +414,6 @@ public final class VfxSystemSimulator {
         cx /= cl;
         cy /= cl;
         cz /= cl;
-        // Random[0.01..0.03] × 游离速度
         var step = (0.01f + 0.02f * random.nextFloat())
                 * (arc.hasDriftSpeed() ? arc.driftSpeed() : arcDriftSpeed);
         arc.accumulateWander(cx * step, cy * step, cz * step);

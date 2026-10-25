@@ -90,7 +90,8 @@ public final class ArcGenerate extends Skill {
 
         InputSystem.addKeyBinding(KEY_NAME_GENERATE, Client.CONFIG.getKeyBinding(KEY_NAME_GENERATE,
                 InputSystem.combo(InputSystem.InputType.MOUSE, InputConstants.MOUSE_BUTTON_LEFT, InputConstants.RELEASE, InputConstants.MOD_ALT)
-        ), ctx -> Client.handler());
+        ),
+_ -> Client.handler());
     }
 
     @Override

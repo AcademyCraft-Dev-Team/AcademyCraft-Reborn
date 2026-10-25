@@ -1,6 +1,8 @@
 package org.academy.api.client.render.vfxgraph.nodes;
 
+import org.academy.api.client.render.vfxgraph.model.VfxBlock;
 import org.academy.api.client.render.vfxgraph.shape.*;
+import org.academy.api.client.render.vfxgraph.sim.SimContext;
 
 import java.util.Map;
 
@@ -25,6 +27,26 @@ final class BlockProps {
 
     static String getString(Map<String, String> properties, String id, String def) {
         return properties.getOrDefault(id, def);
+    }
+
+    static float resolve(VfxBlock block, SimContext ctx, String id, float fallback, float min, float max) {
+        float property = Float.NaN;
+        var text = block.properties().get(id);
+        if (text != null) {
+            try {
+                property = Float.parseFloat(text);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        float value;
+        if (ctx.isParamOverridden(id)) {
+            value = ctx.paramFloat(id, fallback);
+        } else if (Float.isFinite(property)) {
+            value = property;
+        } else {
+            value = ctx.paramFloat(id, fallback);
+        }
+        return Float.isFinite(value) ? Math.clamp(value, min, max) : fallback;
     }
 
     static float[] getColor(Map<String, String> properties, String id) {
