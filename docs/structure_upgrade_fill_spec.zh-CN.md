@@ -2,6 +2,8 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
+2026-10-25 C 线首批更新：`LIVE.damage()` 接入 `LiveStructureDamage`，普通/精密冲击波使用同一球形范围破坏服务；UPG-DAMAGE-01/02/03/04 的活动玩家路径已进入 EXPERIMENTAL。发射账本、非玩家授权、射线/路径技能及 S4 仍未接入。契约、实际验证和已知边界见[破坏接续](structure_damage_2026_10_25.zh-CN.md)，下表 Scaffold 名称保留原填充入口，不代表当前 LIVE 仍返回占位结果。
+
 2026-10-24 管理维护补充：新增 `/academy debug sublevel restore_all`（含 status/cancel），扫描本地各维度存档条目；树冠/台阶倾斜支撑与归块对齐让位修复见[批量归块说明](structure_restore_all_2026_10_24.zh-CN.md)。管理员归块不补技能来源，且不处理 Sable 结构。
 
 2026-10-24 生命周期更新：技能创建标记与静止归块已接入 LIVE；本地与 Sable 共用策略、保护事件和持久事务，离线所有者也可归块。只处理 ACR 明确标记的创建，不处理航空学等外部模组结构。当前范围与验收以[技能结构标记与静止归块](structure_marked_restoration_2026_10_24.zh-CN.md)为准；下文“未注册自动归块”及 UPG-LIFE 全占位是此前阶段记录，不再描述 LIVE 服务，DRAFT 占位仍保留。

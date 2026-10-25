@@ -25,12 +25,6 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.BucketPickup;
-import net.minecraft.world.level.block.LiquidBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -59,7 +53,9 @@ import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.LevelUtil;
+import org.academy.api.common.structure.upgrade.StructureOperation;
+import org.academy.api.common.structure.upgrade.StructureDamages;
+import org.academy.api.common.structure.upgrade.StructureDamage;
 import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.vfx.SkillVfxService;
@@ -107,7 +103,6 @@ public class KineticEnergyApplied extends Skill {
     private static final String LEGACY_DIRECTED_SHOCK = "academy:directed_shock";
     private static final Map<UUID, ArrayDeque<BreakTask>> BREAK_TASKS = new HashMap<>();
     private static final Map<UUID, Long> LAST_IMPACT_TRIGGER_TICKS = new HashMap<>();
-    private static final Map<Integer, List<BlockOffset>> SPHERE_OFFSET_CACHE = new HashMap<>();
 
     public KineticEnergyApplied() {
         super(Builder
@@ -695,9 +690,9 @@ public class KineticEnergyApplied extends Skill {
                                              float radius, Vec3 direction, int impactLevel,
                                              BlockPos priorityBlock) {
             var tasks = BREAK_TASKS.computeIfAbsent(player.getUUID(), ignored -> new ArrayDeque<>());
-            while (tasks.size() >= MAX_TASKS_PER_PLAYER) tasks.pollFirst();
+            while (tasks.size() >= MAX_TASKS_PER_PLAYER) tasks.removeFirst().cancel();
             tasks.addLast(new BreakTask(
-                    level.dimension(), center, radius, direction, impactLevel, priorityBlock,
+                    level.dimension(), center, radius, impactLevel,
                     player.getData(AttachmentTypes.KINETIC_BLOCK_DROPS_ENABLED.get())
             ));
         }
@@ -713,9 +708,9 @@ public class KineticEnergyApplied extends Skill {
             var task = tasks.peekFirst();
             if (task == null) return;
             if (!task.dimension.equals(level.dimension()) || player.isDeadOrDying() || player.isRemoved()) {
-                tasks.pollFirst();
+                tasks.removeFirst().cancel();
             } else if (task.tick(level, player)) {
-                tasks.pollFirst();
+                tasks.removeFirst().cancel();
             }
             if (tasks.isEmpty()) BREAK_TASKS.remove(player.getUUID());
         }
@@ -872,23 +867,6 @@ public class KineticEnergyApplied extends Skill {
         }
     }
 
-    private static List<BlockOffset> sphereOffsetsFor(int blockRadius) {
-        return SPHERE_OFFSET_CACHE.computeIfAbsent(Math.max(0, blockRadius), KineticEnergyApplied::createSphereOffsets);
-    }
-
-    private static List<BlockOffset> createSphereOffsets(int blockRadius) {
-        var offsets = new ArrayList<BlockOffset>();
-        for (var dx = -blockRadius; dx <= blockRadius; dx++) {
-            for (var dy = -blockRadius; dy <= blockRadius; dy++) {
-                for (var dz = -blockRadius; dz <= blockRadius; dz++) {
-                    offsets.add(new BlockOffset(dx, dy, dz, dx * dx + dy * dy + dz * dz));
-                }
-            }
-        }
-        offsets.sort(Comparator.comparingInt(BlockOffset::distanceSquared));
-        return List.copyOf(offsets);
-    }
-
     static boolean isWithinProgramBreakRadius(
             Vec3 center,
             BlockPos origin,
@@ -904,86 +882,48 @@ public class KineticEnergyApplied extends Skill {
 
     private static final class BreakTask {
         private final ResourceKey<Level> dimension;
-        private final Vec3 center;
-        private final BlockPos origin;
-        private final double radiusSquared;
-        private final int impactLevel;
-        private final List<BlockOffset> offsets;
-        private final BlockPos priorityBlock;
-        private final boolean dropBlocks;
-        private int offsetIndex;
-        private boolean priorityProcessed;
+        private final StructureDamage.Request request;
+        private StructureDamage.ActiveActor authority;
+        private UUID operation;
 
-        private BreakTask(ResourceKey<Level> dimension, Vec3 center, float radius, Vec3 direction,
-                          int impactLevel, BlockPos priorityBlock, boolean dropBlocks) {
+        private BreakTask(ResourceKey<Level> dimension, Vec3 center, float radius, int impactLevel, boolean dropBlocks) {
             this.dimension = dimension;
-            this.center = center;
-            origin = BlockPos.containing(center);
-            radiusSquared = radius * radius;
-            this.impactLevel = impactLevel;
-            offsets = sphereOffsetsFor(Mth.ceil(radius));
-            this.priorityBlock = priorityBlock == null ? null : priorityBlock.immutable();
-            this.dropBlocks = dropBlocks;
+            request = new StructureDamage.Request(
+                    UUID.randomUUID(), center, radius, impactLevel, MAX_SCANS_PER_TASK_TICK,
+                    MAX_BLOCKS_PER_TASK_TICK, dropBlocks
+                    ? StructureDamage.DropPolicy.EXISTING_SKILL_RULES
+                    : StructureDamage.DropPolicy.NO_DROPS);
         }
 
         private boolean tick(ServerLevel level, ServerPlayer player) {
-            if (AbilityEffectPolicy.blockDestruction(level)
-                    == AbilityEffectPolicy.Decision.DENY) return true;
-            var changed = 0;
-            var scanned = 0;
-            if (!priorityProcessed) {
-                priorityProcessed = true;
-                scanned++;
-                if (priorityBlock != null && tryMutate(level, player, priorityBlock)) changed++;
+            var service = StructureDamages.service();
+            StructureDamage.Batch batch;
+            if (authority == null) {
+                authority = new StructureDamage.ActiveActor(
+                        new StructureOperation.ActorContext(level, player));
+                var query = service.query(authority, request);
+                operation = query.operationId().orElse(null);
+                if (operation == null) return true;
+                batch = query.value().orElse(null);
+            } else {
+                var progress = service.status(authority, operation);
+                if (progress.value().isEmpty()) return true;
+                var state = progress.value().orElseThrow();
+                if (state.phase() == StructureDamage.Phase.COMPLETED
+                        || state.phase() == StructureDamage.Phase.CANCELLED
+                        || state.phase() == StructureDamage.Phase.RECOVERY_REQUIRED) return true;
+                batch = state.preparedBatch().orElse(null);
             }
-
-            while (offsetIndex < offsets.size()
-                    && changed < MAX_BLOCKS_PER_TASK_TICK
-                    && scanned < MAX_SCANS_PER_TASK_TICK) {
-                var offset = offsets.get(offsetIndex++);
-                scanned++;
-                if (tryMutate(level, player, origin.offset(offset.dx(), offset.dy(), offset.dz()))) changed++;
-            }
-            return offsetIndex >= offsets.size();
+            if (batch == null) return false;
+            var result = service.apply(authority, batch);
+            return result.status() != StructureOperation.Status.RUNNING;
         }
 
-        private boolean tryMutate(ServerLevel level, ServerPlayer player, BlockPos pos) {
-            if (!isWithinProgramBreakRadius(center, origin, radiusSquared, pos)) return false;
-            if (!level.hasChunkAt(pos) || !level.mayInteract(player, pos)) return false;
-
-            var state = level.getBlockState(pos);
-            if (state.isAir()) return clearFluid(level, player, pos, state);
-
-            if (state.getDestroySpeed(level, pos) < 0.0f) {
-                return clearFluid(level, player, pos, state);
+        private void cancel() {
+            if (authority != null && operation != null) {
+                StructureDamages.service().cancel(authority, operation);
             }
-            return LevelUtil.destroyBlockSilently(level, pos, dropBlocks, player);
         }
-
-        private boolean clearFluid(ServerLevel level, ServerPlayer player, BlockPos pos, BlockState state) {
-            var fluidState = state.getFluidState();
-            if (fluidState.isEmpty()) return false;
-
-            if (state.getBlock() instanceof BucketPickup bucketPickup
-                    && !bucketPickup.pickupBlock(player, level, pos, state).isEmpty()) {
-                return true;
-            }
-            if (state.hasProperty(BlockStateProperties.WATERLOGGED)
-                    && state.getValue(BlockStateProperties.WATERLOGGED)) {
-                var dried = state.setValue(BlockStateProperties.WATERLOGGED, false);
-                level.setBlock(pos, dried, Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
-                level.updateNeighborsAt(pos, dried.getBlock());
-                return true;
-            }
-            if (state.getBlock() instanceof LiquidBlock) {
-                return level.setBlock(pos, Blocks.AIR.defaultBlockState(),
-                        Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS);
-            }
-            return false;
-        }
-    }
-
-    private record BlockOffset(int dx, int dy, int dz, int distanceSquared) {
     }
 
     @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -1028,10 +968,25 @@ public class KineticEnergyApplied extends Skill {
             if (!Server.canCreateShockwave(player)) return;
             if (!Server.claimImpactTrigger(player, player.level().getGameTime())) return;
 
-            var center = Vec3.atCenterOf(event.getPos());
+            var aim = org.academy.api.server.ability.WorldBlockTargets.clip(player, player.getEyePosition(),
+                    player.getEyePosition().add(player.getLookAngle().scale(player.blockInteractionRange())), ClipContext.Block.OUTLINE);
+            var structure = aim.source() == org.academy.api.server.ability.WorldBlockTargets.Source.STRUCTURE;
+            var center = structure ? aim.position() : Vec3.atCenterOf(event.getPos());
+            // Sable sends a plot address for its vanilla click. It is never a host impact center.
+            if (center.distanceToSqr(player.getEyePosition()) > 4096) return;
             var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
             Server.executeImpact(player.level(), player, center,
-                    center.subtract(player.getEyePosition()), impactLevel, event.getPos());
+                    center.subtract(player.getEyePosition()), impactLevel, structure ? null : event.getPos());
+        }
+
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onStructureMining(org.academy.api.common.structure.StructureMiningEvent event) {
+            if (event.isCanceled() || event.phase() != org.academy.api.common.structure.StructureMiningEvent.Phase.START) return;
+            var player = event.actor();
+            if (!Server.canCreateShockwave(player) || !Server.claimImpactTrigger(player, player.level().getGameTime())) return;
+            var center = event.hit().worldPoint();
+            var impactLevel = clampImpactLevel(player.getData(AttachmentTypes.KINETIC_IMPACT_LEVEL.get()));
+            Server.executeImpact(player.level(), player, center, center.subtract(player.getEyePosition()), impactLevel, null);
         }
 
         @SubscribeEvent
@@ -1050,7 +1005,8 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static void clearTransientState(ServerPlayer player) {
-            BREAK_TASKS.remove(player.getUUID());
+            var tasks = BREAK_TASKS.remove(player.getUUID());
+            if (tasks != null) tasks.forEach(BreakTask::cancel);
             LAST_IMPACT_TRIGGER_TICKS.remove(player.getUUID());
         }
 

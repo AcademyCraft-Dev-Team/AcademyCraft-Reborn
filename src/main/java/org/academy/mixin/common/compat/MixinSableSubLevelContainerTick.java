@@ -8,6 +8,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -33,7 +35,22 @@ public abstract class MixinSableSubLevelContainerTick {
             require = 1
     )
     private void academy$snapshotSubLevelIteration(List<?> subLevels, Consumer<?> tick) {
-        academy$runGuarded(new ArrayList<>(subLevels), tick);
+        var snapshot = new ArrayList<>(subLevels);
+        var existing = Collections.newSetFromMap(new IdentityHashMap<>());
+        existing.addAll(snapshot);
+        academy$runGuarded(snapshot, tick);
+        // A heat-map split can create a child after the snapshot was taken. Its full tick
+        // waits until next time, but physics chunk tickets run now and need assembled world
+        // bounds. Do not update existing bodies twice: that would erase their previous bounds.
+        for (var value : new ArrayList<>(subLevels)) {
+            if (existing.contains(value)) continue;
+            var source = SableReflection.optional(
+                    org.academy.internal.common.structure.sable.reflect.api.sublevel.SubLevel.class, value);
+            if (source != null && !source.isRemoved()
+                    && !org.academy.internal.common.structure.sable.SableRestorationIsolation.hidden(source)) {
+                source.updateBoundingBox();
+            }
+        }
     }
 
     @Redirect(

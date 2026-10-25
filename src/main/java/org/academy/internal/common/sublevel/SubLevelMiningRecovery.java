@@ -31,7 +31,7 @@ public final class SubLevelMiningRecovery {
     private SubLevelMiningRecovery() {
     }
 
-    static synchronized void retain(MinecraftServer server, NativeStructureBreakDrops.Scope scope,
+    public static synchronized void retain(MinecraftServer server, NativeStructureBreakDrops.Scope scope,
                                     Throwable failure) {
         var pending = new Pending(UUID.randomUUID(), scope, failure.toString());
         try {

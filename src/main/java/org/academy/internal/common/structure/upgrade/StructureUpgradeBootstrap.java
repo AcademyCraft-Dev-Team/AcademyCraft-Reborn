@@ -31,12 +31,14 @@ public final class StructureUpgradeBootstrap {
                 StructureCapabilities.Readiness.EXPERIMENTAL, true, "durable_skill_capture_provenance"));
         entries.put(StructureCapabilities.Capability.GRID_RESTORATION, new StructureCapabilities.Support(
                 StructureCapabilities.Readiness.EXPERIMENTAL, true, "marked_rest_server_policy"));
+        entries.put(StructureCapabilities.Capability.DAMAGE, new StructureCapabilities.Support(
+                StructureCapabilities.Readiness.EXPERIMENTAL, true, "bounded_active_player_sphere_damage"));
         return new StructureUpgradeServices(new StructureCapabilities(entries),
                 org.academy.api.common.structure.upgrade.StructureExtractions.service(),
                 org.academy.api.common.structure.upgrade.StructureOrientations.service(),
                 org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.INSTANCE,
                 org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.INSTANCE,
-                DRAFT.damage(), DRAFT.impacts(), DRAFT.fracture());
+                org.academy.api.common.structure.upgrade.StructureDamages.service(), DRAFT.impacts(), DRAFT.fracture());
     }
 
     public static StructureUpgradeServices createScaffold() {

@@ -54,6 +54,9 @@ public final class StructureBackendRouter {
 
     /** This neutral boundary contains no optional mod types, including in generic signatures. */
     public interface Bridge {
+        default boolean privateBlockPosition(ServerLevel host, BlockPos position) { return false; }
+        default java.util.List<org.academy.internal.common.structure.upgrade.damage.DamageDomain> damageDomains(
+                ServerLevel host, net.minecraft.world.phys.AABB area, int maximum) { return java.util.List.of(); }
         default Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess() {
             return Optional.empty();
         }
@@ -98,6 +101,26 @@ public final class StructureBackendRouter {
     }
 
     public static StructureBackendStatus status(MinecraftServer server) { return selection(server).status; }
+
+    public static boolean privateBlockPosition(ServerLevel host, BlockPos position) {
+        requireThread(host.getServer());
+        if (org.academy.internal.common.structure.space.NativeStructureDimensions.isStorageLevel(host.dimension())) return true;
+        var selected = selection(host.getServer());
+        return selected.bridge != null && selected.bridge.privateBlockPosition(host, position);
+    }
+
+    public static java.util.List<org.academy.internal.common.structure.upgrade.damage.DamageDomain> damageDomains(
+            ServerLevel host, net.minecraft.world.phys.AABB area, int maximum) {
+        requireThread(host.getServer());
+        var result = new java.util.ArrayList<>(org.academy.internal.common.sublevel.SubLevelDamageAccess.nearby(host, area, maximum));
+        var selected = selection(host.getServer());
+        if (selected.status.mode() == StructureBackendStatus.Mode.INCOMPATIBLE
+                || selected.status.mode() == StructureBackendStatus.Mode.MIGRATION_REQUIRED) {
+            throw new IllegalStateException("damage_backend_coverage_unavailable");
+        }
+        if (selected.bridge != null) result.addAll(selected.bridge.damageDomains(host, area, maximum - result.size()));
+        return java.util.List.copyOf(result);
+    }
 
     /** Optional mod types stay behind the verified bridge. Local plots can coexist with Sable. */
     public static Optional<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess> orientationAccess(

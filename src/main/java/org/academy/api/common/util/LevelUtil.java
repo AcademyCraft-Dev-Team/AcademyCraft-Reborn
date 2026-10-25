@@ -189,16 +189,55 @@ public class LevelUtil {
             boolean dropBlock,
             @Nullable ServerPlayer breaker
     ) {
+        var before = level.getBlockState(pos);
+        var entity = level.getBlockEntity(pos);
+        return destroyBlockSilently(level, pos, dropBlock, breaker,
+                () -> level.getBlockState(pos) == before && level.getBlockEntity(pos) == entity);
+    }
+
+    /** Ability removal with caller-owned activation/payload/pose validation across mod callbacks. */
+    public static boolean destroyBlockSilently(Level level, BlockPos pos, boolean dropBlock,
+                                               @Nullable ServerPlayer breaker,
+                                               java.util.function.BooleanSupplier stillCurrent) {
+        return destroyBlockSilently(level, pos, dropBlock, breaker, stillCurrent,
+                (position, state) -> canAbilityBreak(level, position, state, breaker));
+    }
+
+    /** The admission callback also budgets and protects unsupported neighbouring cells. */
+    public static boolean destroyBlockSilently(Level level, BlockPos pos, boolean dropBlock,
+                                               @Nullable ServerPlayer breaker,
+                                               java.util.function.BooleanSupplier stillCurrent,
+                                               java.util.function.BiPredicate<BlockPos, BlockState> admission) {
+        return destroyBlockSilently(level, pos, dropBlock, breaker,
+                new BreakGuard(stillCurrent, admission, ignored -> true, () -> true, ignored -> {}));
+    }
+
+    /** Bounded, protected callbacks used by world/structure ability destruction, never transfer. */
+    public record BreakGuard(java.util.function.BooleanSupplier stillCurrent,
+                             java.util.function.BiPredicate<BlockPos, BlockState> admission,
+                             java.util.function.Predicate<BlockPos> scanNeighbor,
+                             java.util.function.BooleanSupplier spaceCurrent,
+                             java.util.function.Consumer<BlockPos> removed) {}
+
+    public static boolean destroyBlockSilently(Level level, BlockPos pos, boolean dropBlock,
+                                               @Nullable ServerPlayer breaker, BreakGuard guard) {
         var state = level.getBlockState(pos);
-        if (state.isAir() || !canAbilityBreak(level, pos, state, breaker)) return false;
+        if (state.isAir() || !guard.stillCurrent.getAsBoolean()
+                || !guard.admission.test(pos, state) || !guard.stillCurrent.getAsBoolean()) return false;
         try (var ignored = AbilityBlockDrops.capture(breaker)) {
             if (dropBlock || breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
                 var blockEntity = state.hasBlockEntity() ? level.getBlockEntity(pos) : null;
                 Block.dropResources(state, level, pos, blockEntity, breaker, ItemStack.EMPTY);
             }
-            removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), breaker, dropBlock);
+            if (!guard.stillCurrent.getAsBoolean()) {
+                // Loot callbacks may already have effects. Never overwrite the replacement or
+                // pretend this is a rollback; projected callers retain the real output receipt.
+                throw new IllegalStateException("Ability target changed during loot callbacks");
+            }
+            removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), breaker, dropBlock,
+                    guard.admission, guard.scanNeighbor, guard.spaceCurrent, guard.removed);
         }
-        return true;
+        return level.getBlockState(pos) != state;
     }
 
     private static Pair<Boolean, Double> destroyBlocksAlongPathInternal(
@@ -424,6 +463,15 @@ public class LevelUtil {
             @Nullable ServerPlayer breaker,
             boolean dropNeighbors
     ) {
+        removeBlockAndUnsupportedNeighbors(level, pos, state, air, breaker, dropNeighbors,
+                (position, candidate) -> canAbilityBreak(level, position, candidate, breaker), ignored -> true, () -> true, ignored -> {});
+    }
+
+    private static void removeBlockAndUnsupportedNeighbors(Level level, BlockPos pos, BlockState state,
+            BlockState air, @Nullable ServerPlayer breaker, boolean dropNeighbors,
+            java.util.function.BiPredicate<BlockPos, BlockState> admission,
+            java.util.function.Predicate<BlockPos> scanNeighbor, java.util.function.BooleanSupplier spaceCurrent,
+            java.util.function.Consumer<BlockPos> onRemoved) {
         var removedBlocks = new ArrayList<RemovedBlock>();
         var pending = new ArrayDeque<BlockPos>();
         var visited = new LongOpenHashSet();
@@ -431,19 +479,27 @@ public class LevelUtil {
         // Suppress automatic shape propagation here. Otherwise an unsupported plant is routed
         // through Block.updateOrDestroy -> Level.destroyBlock, which emits event 2001.
         if (level.setBlock(pos, air, SILENT_BLOCK_UPDATE_FLAGS)) {
+            onRemoved.accept(pos);
             removedBlocks.add(new RemovedBlock(pos, state.getBlock()));
             enqueueNeighbors(pos, pending, visited);
         }
 
         while (!pending.isEmpty()) {
             var candidate = pending.removeFirst();
+            if (!scanNeighbor.test(candidate)) continue;
             var candidateState = level.getBlockState(candidate);
             if (candidateState.isAir() || candidateState.canSurvive(level, candidate)) continue;
-            if (!canAbilityBreak(level, candidate, candidateState, breaker)) continue;
+            var candidateEntity = level.getBlockEntity(candidate);
+            if (!admission.test(candidate, candidateState)
+                    || !spaceCurrent.getAsBoolean() || level.getBlockState(candidate) != candidateState || level.getBlockEntity(candidate) != candidateEntity) continue;
             if (dropNeighbors || breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
                 Block.dropResources(candidateState, level, candidate, level.getBlockEntity(candidate), breaker, ItemStack.EMPTY);
             }
+            if (!spaceCurrent.getAsBoolean() || level.getBlockState(candidate) != candidateState || level.getBlockEntity(candidate) != candidateEntity) {
+                throw new IllegalStateException("Ability neighbour changed during loot callbacks");
+            }
             if (!level.setBlock(candidate, air, SILENT_BLOCK_UPDATE_FLAGS)) continue;
+            onRemoved.accept(candidate);
 
             removedBlocks.add(new RemovedBlock(candidate, candidateState.getBlock()));
             enqueueNeighbors(candidate, pending, visited);
@@ -479,7 +535,7 @@ public class LevelUtil {
         return collision.isEmpty() ? outline : collision;
     }
 
-    private static boolean canAbilityBreak(
+    public static boolean canAbilityBreak(
             Level level,
             BlockPos pos,
             BlockState state,

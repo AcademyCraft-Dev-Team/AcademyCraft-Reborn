@@ -27,7 +27,12 @@ public interface StructureDamage {
         public Launched { Objects.requireNonNull(authority, "authority"); }
     }
 
-    /** Query actual content selection shapes, including plants with empty collision shapes. */
+    /**
+     * Query actual content selection shapes, including plants with empty collision shapes.
+     * The live sphere service returns bounded slices: apply READY once, then poll status for
+     * later slices until COMPLETED. maxScans/maxChanges are shared per-operation tick budgets.
+     * Active players are supported; launched/non-player authorization remains unsupported.
+     */
     StructureOperation.Result<Batch> query(Authority authority, Request request);
 
     /**
@@ -93,7 +98,7 @@ public interface StructureDamage {
         }
     }
 
-    /** A completed asynchronous query exposes its authenticated plan; mutation progress exposes counts. */
+    /** A ready query slice exposes its authenticated plan; mutation progress exposes cumulative counts. */
     record Progress(UUID operationId, UUID effectId, Phase phase, Receipt receipt, Optional<Batch> preparedBatch) {
         public Progress {
             Objects.requireNonNull(operationId, "operationId");

@@ -15,6 +15,14 @@ import java.util.function.BiPredicate;
 
 /** Loaded only after the common router has verified the installed optional dependency. */
 public final class SableStructureBridge implements StructureBackendRouter.Bridge {
+    @Override public boolean privateBlockPosition(ServerLevel host, BlockPos position) {
+        var container = org.academy.internal.common.structure.sable.reflect.api.api.sublevel.SubLevelContainer.getContainer(host);
+        return container != null && container.getPlot(new net.minecraft.world.level.ChunkPos(position.getX() >> 4, position.getZ() >> 4)) != null;
+    }
+    @Override public java.util.List<org.academy.internal.common.structure.upgrade.damage.DamageDomain> damageDomains(
+            ServerLevel host, net.minecraft.world.phys.AABB area, int maximum) {
+        return SableDamageAccess.nearby(host, area, maximum);
+    }
     public SableStructureBridge() {
         SableStructureTraction.initialize();
         if (Boolean.getBoolean("academy.sable.retention")) {

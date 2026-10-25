@@ -59,8 +59,22 @@ public final class NativeStructureBreakDrops {
     public static Scope open(ServerLevel host, ServerLevel storage, StructureHit hit,
                              StructureBlockData before, @Nullable BlockEntity oldBlockEntity,
                              BlockPos storageOrigin, AABB storageBounds) {
+        return open(host, storage, hit, before, oldBlockEntity, storageOrigin, storageBounds, false);
+    }
+
+    /** Sable stores plot cells in the host level itself; outputs still need exactly one projection. */
+    public static Scope openProjected(ServerLevel host, ServerLevel storage, StructureHit hit,
+                                     StructureBlockData before, @Nullable BlockEntity oldBlockEntity,
+                                     BlockPos storageOrigin, AABB storageBounds) {
+        return open(host, storage, hit, before, oldBlockEntity, storageOrigin, storageBounds, true);
+    }
+
+    private static Scope open(ServerLevel host, ServerLevel storage, StructureHit hit,
+                              StructureBlockData before, @Nullable BlockEntity oldBlockEntity,
+                              BlockPos storageOrigin, AABB storageBounds, boolean projectedHost) {
         if (!host.getServer().isSameThread() || host.getServer() != storage.getServer()
-                || CURRENT.get() != null || !NativeStructureDimensions.isStorageLevel(storage.dimension())
+                || CURRENT.get() != null || !(NativeStructureDimensions.isStorageLevel(storage.dimension())
+                    || projectedHost && storage == host)
                 || NativeStructureDimensions.isStorageLevel(host.dimension())) {
             throw new IllegalStateException("Invalid or nested native mining output scope");
         }
@@ -72,7 +86,7 @@ public final class NativeStructureBreakDrops {
     /** Only fresh item/XP entities from the exact scoped storage level are intercepted. */
     public static boolean tryCapture(ServerLevel level, Entity entity) {
         var scope = CURRENT.get();
-        if (scope == null || scope.storage != level) return false;
+        if (scope == null || scope.storage != level || scope.publishingEntity == entity) return false;
         if (entity instanceof ItemEntity item) scope.guard(() -> scope.captureItem(item));
         else if (entity instanceof ExperienceOrb orb) scope.guard(() -> scope.captureOrb(orb));
         else return false;
@@ -134,6 +148,7 @@ public final class NativeStructureBreakDrops {
         private boolean failed;
         private boolean publishing;
         private boolean completed;
+        private @Nullable Entity publishingEntity;
         private long experienceTotal;
 
         private Scope(ServerLevel host, ServerLevel storage, StructureHit hit,
@@ -175,7 +190,7 @@ public final class NativeStructureBreakDrops {
                     || item.isAddedToLevel() || item.isRemoved() || item.isPassenger() || item.isVehicle()) {
                 throw new IllegalStateException("Unsupported native item entity output");
             }
-            requireLocalPoint(output.position);
+            validateOutputPosition(output);
             requireFinite(output.velocity);
             requireOutputBudget();
         }
@@ -187,14 +202,18 @@ public final class NativeStructureBreakDrops {
             experienceRequests.add(request);
             experienceTotal += amount;
             if (publishing || experienceTotal > MAX_EXPERIENCE) throw new IllegalStateException("Native experience output budget exceeded");
-            requireLocalPoint(position);
+            // An inline backend may already have projected a vanilla XP callback.
+            boolean hostCoordinates = isProjectedHostPoint(position);
+            if (hostCoordinates) requireHostPoint(position); else requireLocalPoint(position);
             requireFinite(direction);
             int remaining = amount;
             while (remaining > 0) {
                 int value = ExperienceOrb.getExperienceValue(remaining);
                 // Transfer this amount to a receipt before checking the receipt count limit.
                 request.unassigned -= value;
-                ledger.capture(new Output(null, position, direction, value));
+                var output = new Output(null, position, direction, value);
+                output.hostCoordinates = hostCoordinates;
+                ledger.capture(output);
                 remaining -= value;
             }
             requireOutputBudget();
@@ -215,7 +234,7 @@ public final class NativeStructureBreakDrops {
             if (count < 1 || orb.getValue() < 1 || experienceTotal > MAX_EXPERIENCE) {
                 throw new IllegalStateException("Native experience output budget exceeded");
             }
-            requireLocalPoint(output.position);
+            validateOutputPosition(output);
             requireFinite(output.velocity);
             requireOutputBudget();
         }
@@ -272,13 +291,14 @@ public final class NativeStructureBreakDrops {
             publishing = true;
             ledger.publish(output -> {
                 if (failed) throw new IllegalStateException("Native drop scope failed during publication callbacks");
-                var world = pose.localToWorldPoint(output.position.subtract(storageOrigin));
+                var world = output.hostCoordinates ? output.position : pose.localToWorldPoint(output.position.subtract(storageOrigin));
+                var velocity = output.hostCoordinates ? output.velocity : pose.localToWorldDirection(output.velocity);
                 requireHostPoint(world);
                 Entity entity = output.entity;
                 if (entity == null) {
                     // Standard vanilla orb and denominations, with later normal pickup/merging.
                     // Avoid awardWithDirection's partially successful immediate merge loop.
-                    entity = new ExperienceOrb(host, world, pose.localToWorldDirection(output.velocity), output.experience);
+                    entity = new ExperienceOrb(host, world, velocity, output.experience);
                     entity.setUUID(output.id);
                     output.entity = entity;
                 } else {
@@ -287,10 +307,15 @@ public final class NativeStructureBreakDrops {
                     }
                     ((EntityNativeStructureDropAccess) entity).academy$setNativeDropLevel(host);
                     entity.setPos(world);
-                    entity.setDeltaMovement(pose.localToWorldDirection(output.velocity));
+                    entity.setDeltaMovement(velocity);
                 }
                 if (entity.isAddedToLevel() || entity.isRemoved()) throw new IllegalStateException("Native drop was already published or removed");
-                return host.addFreshEntity(entity);
+                publishingEntity = entity;
+                try {
+                    return host.addFreshEntity(entity);
+                } finally {
+                    publishingEntity = null;
+                }
             });
             if (failed) throw new IllegalStateException("Native drop scope failed during publication callbacks");
             completed = true;
@@ -312,6 +337,17 @@ public final class NativeStructureBreakDrops {
             var cell = BlockPos.containing(point);
             if (!storageBounds.contains(point) || storage.isOutsideBuildHeight(cell)
                     || !storage.hasChunkAt(cell)) throw new IllegalStateException("Native drop left its loaded storage domain");
+        }
+
+        /** Sable projects Containers.dropContents before addFreshEntity, unlike loot-table items. */
+        private boolean isProjectedHostPoint(Vec3 point) {
+            return host == storage && !storageBounds.contains(point)
+                    && storageBounds.contains(pose.worldToLocalPoint(point).add(storageOrigin));
+        }
+
+        private void validateOutputPosition(Output output) {
+            output.hostCoordinates = isProjectedHostPoint(output.position);
+            if (output.hostCoordinates) requireHostPoint(output.position); else requireLocalPoint(output.position);
         }
 
         private void requireOutputBudget() {
@@ -360,6 +396,7 @@ public final class NativeStructureBreakDrops {
                 row.putString("uuid", value.id.toString());
                 row.putString("status", entry.state().name());
                 row.putInt("experience", value.experience);
+                row.putString("coordinate_space", value.hostCoordinates ? "host_world" : "storage");
                 row.put("local_position", vector(value.position));
                 row.put("local_velocity", vector(value.velocity));
                 if (value.entity != null) row.put("entity", saveEntity(value.entity));
@@ -370,6 +407,7 @@ public final class NativeStructureBreakDrops {
             for (var request : experienceRequests) if (request.unassigned != 0) {
                 var row = new CompoundTag();
                 row.putInt("amount", request.unassigned);
+                row.putString("coordinate_space", isProjectedHostPoint(request.position) ? "host_world" : "storage");
                 row.put("local_position", vector(request.position));
                 row.put("local_direction", vector(request.direction));
                 outstandingExperience.add(row);
@@ -422,6 +460,7 @@ public final class NativeStructureBreakDrops {
         private final Vec3 position;
         private final Vec3 velocity;
         private final int experience;
+        private boolean hostCoordinates;
 
         private Output(@Nullable Entity entity, Vec3 position, Vec3 velocity, int experience) {
             this.entity = entity;
