@@ -50,6 +50,20 @@ public final class LiveStructureDamage implements StructureDamage {
     private LiveStructureDamage() {}
 
     @Override public StructurePathDamage.Result path(Authority authority, StructurePathDamage.Request path) {
+        return path(authority, path, null);
+    }
+
+    @Override public StructureCutDamage.Result cut(Authority authority, StructureCutDamage.Request cut) {
+        // Round up: the float broad phase must enclose the double-precision blade cross section.
+        float radius = (float) Math.hypot(cut.halfWidth(), cut.halfThickness());
+        if (radius < Math.hypot(cut.halfWidth(), cut.halfThickness())) radius = Math.nextUp(radius);
+        var result = path(authority, new StructurePathDamage.Request(cut.start(), cut.end(), radius,
+                Integer.MAX_VALUE, cut.drops(), true, false, cut.simulate(), false, false, null), cut);
+        return new StructureCutDamage.Result(result.status(), result.detail(), result.receipt());
+    }
+
+    private StructurePathDamage.Result path(Authority authority, StructurePathDamage.Request path,
+                                           StructureCutDamage.@Nullable Request cut) {
         var context = context(authority);
         if (context == null) return pathFailure(StructureOperation.Status.UNSUPPORTED, "damage_requires_active_player");
         requireThread(context.host());
@@ -70,6 +84,8 @@ public final class LiveStructureDamage implements StructureDamage {
         var op = new Operation(context, new Request(UUID.randomUUID(), path.start(), 0, 0,
                 32768, 1024, path.drops()), List.of());
         op.path = path;
+        op.cut = cut;
+        op.cutRegion = cut == null ? null : new DamageCutRegion(cut);
         int scans = op.scansLeft = Math.min(32768, budget.scans);
         int changes = op.changesLeft = Math.min(1024, budget.changes);
         var touched = new LinkedHashSet<DamageDomain>();
@@ -477,6 +493,8 @@ public final class LiveStructureDamage implements StructureDamage {
         final StructureOperation.ActorContext context;
         final Request request;
         StructurePathDamage.@Nullable Request path;
+        StructureCutDamage.@Nullable Request cut;
+        @Nullable DamageCutRegion cutRegion;
         final List<Cursor> cursors = new ArrayList<>();
         final Set<Activation> activations = new HashSet<>();
         final Set<Key> seen = new HashSet<>();
@@ -575,8 +593,19 @@ public final class LiveStructureDamage implements StructureDamage {
             var start = (domain == null ? path.start() : pose.worldToLocalPoint(path.start())).subtract(Vec3.atLowerCornerOf(local));
             var end = (domain == null ? path.end() : pose.worldToLocalPoint(path.end())).subtract(Vec3.atLowerCornerOf(local));
             var view = new DamageShapeView(level(op), domain);
+            if (op.cut != null && !op.cut.materials().accepts(payload.state(), view, position())) {
+                return Double.POSITIVE_INFINITY;
+            }
             var shape = payload.state().getCollisionShape(view, position());
             if (shape.isEmpty()) shape = payload.state().getShape(view, position());
+            if (op.cutRegion != null) {
+                var boxes = shape.isEmpty() ? List.of(new AABB(0, 0, 0, 1, 1, 1)) : shape.toAabbs();
+                double result = Double.POSITIVE_INFINITY;
+                for (var box : boxes) if (op.cutRegion.intersects(box.move(local), pose)) {
+                    result = Math.min(result, DamagePathRegion.entry(start, end, box.inflate(path.radius())));
+                }
+                return result;
+            }
             if (shape.isEmpty() && path.includeFluids() && !payload.state().getFluidState().isEmpty()) {
                 return DamagePathRegion.entry(start, end, new AABB(0, 0, 0, 1, 1, 1).inflate(path.radius()));
             }

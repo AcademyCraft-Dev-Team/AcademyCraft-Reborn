@@ -41,6 +41,12 @@ public interface StructureDamage {
                 "damage_path_unavailable", 0, new Receipt(0, 0, 0));
     }
 
+    /** Immediate material-filtered blade. Uses the same protected writes and output scopes as paths. */
+    default StructureCutDamage.Result cut(Authority authority, StructureCutDamage.Request request) {
+        return new StructureCutDamage.Result(StructureOperation.Status.UNSUPPORTED,
+                "damage_cut_unavailable", new Receipt(0, 0, 0));
+    }
+
     /**
      * Revalidate each target and protection after callbacks. Deduplicate by effect + stable cell,
      * not revision. BREAK uses the existing global drop path; TRANSFER never emits loot.

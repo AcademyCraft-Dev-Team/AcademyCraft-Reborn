@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -21,7 +20,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
@@ -37,8 +35,12 @@ import org.academy.api.common.damage.AbilityHitEffects;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
-import org.academy.api.server.ability.AbilityBlockDrops;
+import org.academy.api.common.structure.upgrade.StructureCutDamage;
+import org.academy.api.common.structure.upgrade.StructureDamage;
+import org.academy.api.common.structure.upgrade.StructureDamages;
+import org.academy.api.common.structure.upgrade.StructureOperation;
 import org.academy.api.server.ability.AbilitySystemServer;
+import org.academy.api.server.ability.WorldBlockTargets;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -436,7 +438,7 @@ public final class LaminarCutter extends Skill {
             }
             if (tier != AeromanipChargeTier.INSTANT) {
                 clearSoftBlocks(player, level, origin, end,
-                        direction, bladeRight, bladeNormal, tier);
+                        bladeRight, tier);
             }
             AeromanipVfx.blade(level, origin, direction, bladeRight, length, halfWidth * 2);
         }
@@ -472,13 +474,7 @@ public final class LaminarCutter extends Skill {
                 Vec3 origin,
                 Vec3 target
         ) {
-            return level.clip(new ClipContext(
-                    origin,
-                    target,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    player
-            )).getType() == HitResult.Type.MISS;
+            return !WorldBlockTargets.clip(level, player, origin, target, ClipContext.Block.COLLIDER).hit();
         }
 
         private static boolean intersectsBlade(LivingEntity target, Vec3 start, Vec3 direction,
@@ -533,46 +529,41 @@ public final class LaminarCutter extends Skill {
         }
 
         private static void clearSoftBlocks(ServerPlayer player, ServerLevel level,
-                                            Vec3 start, Vec3 end, Vec3 direction,
-                                            Vec3 bladeRight, Vec3 bladeNormal,
+                                            Vec3 start, Vec3 end, Vec3 bladeRight,
                                             AeromanipChargeTier tier) {
             var settings = AeromanipConfig.settings(player);
             if (!settings.allowSoftBlockInteraction
                     || !DestroyBlocksSetting.canDestroyBlocks(player, Skills.LAMINAR_CUTTER.get())) return;
-            var min = new Vec3(Math.min(start.x, end.x), Math.min(start.y, end.y), Math.min(start.z, end.z));
-            var max = new Vec3(Math.max(start.x, end.x), Math.max(start.y, end.y), Math.max(start.z, end.z));
-            var padding = Mth.ceil(BLADE_HALF_WIDTH) + 1;
-            var from = BlockPos.containing(min).offset(-padding, -2, -padding);
-            var to = BlockPos.containing(max).offset(padding, 2, padding);
-            for (var pos : BlockPos.betweenClosed(from, to)) {
-                var center = Vec3.atCenterOf(pos);
-                var relative = center.subtract(start);
-                var projection = relative.dot(direction);
-                if (projection < -0.5 || projection > start.distanceTo(end) + 0.5) continue;
-                if (Math.abs(relative.dot(bladeRight)) > bladeHalfWidth(tier) + 0.5) continue;
-                if (Math.abs(relative.dot(bladeNormal)) > BLADE_HALF_THICKNESS + 0.5) continue;
-                var state = level.getBlockState(pos);
-                if (state.is(Blocks.FIRE) || state.is(Blocks.SOUL_FIRE)) {
-                    level.removeBlock(pos, false);
-                    continue;
-                }
-                var predefinedSoft = state.is(Blocks.COBWEB)
-                        || state.is(Blocks.VINE)
-                        || state.is(Blocks.WEEPING_VINES)
-                        || state.is(Blocks.TWISTING_VINES)
-                        || state.is(Blocks.SHORT_GRASS)
-                        || state.is(Blocks.TALL_GRASS)
-                        || state.is(Blocks.FERN)
-                        || state.is(Blocks.LARGE_FERN)
-                        || state.is(Blocks.DEAD_BUSH)
-                        || state.is(Blocks.SEAGRASS)
-                        || state.is(Blocks.TALL_SEAGRASS)
-                        || state.is(Blocks.NETHER_SPROUTS)
-                        || state.is(BlockTags.LEAVES);
-                if (!predefinedSoft && (tier != AeromanipChargeTier.FULL || state.getDestroySpeed(level, pos) < 0.0f
-                        || state.getDestroySpeed(level, pos) > 1.5f)) continue;
-                AbilityBlockDrops.destroyBlock(level, pos.immutable(), true, player);
-            }
+            StructureDamages.service().cut(new StructureDamage.ActiveActor(
+                    new StructureOperation.ActorContext(level, player)),
+                    new StructureCutDamage.Request(start, end, bladeRight, bladeHalfWidth(tier), BLADE_HALF_THICKNESS,
+                            (state, view, pos) -> canCutBlock(tier, state, view, pos),
+                            StructureDamage.DropPolicy.EXISTING_SKILL_RULES, false));
+        }
+
+        /** The same material policy is used for world cells and both structure backends. */
+        public static boolean canCutBlock(AeromanipChargeTier tier,
+                                         net.minecraft.world.level.block.state.BlockState state,
+                                         net.minecraft.world.level.BlockGetter view, BlockPos pos) {
+            if (tier == AeromanipChargeTier.INSTANT || state.isAir()
+                    || state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) return false;
+            if (state.is(Blocks.FIRE) || state.is(Blocks.SOUL_FIRE)) return true;
+            var predefinedSoft = state.is(Blocks.COBWEB)
+                    || state.is(Blocks.VINE)
+                    || state.is(Blocks.WEEPING_VINES)
+                    || state.is(Blocks.TWISTING_VINES)
+                    || state.is(Blocks.SHORT_GRASS)
+                    || state.is(Blocks.TALL_GRASS)
+                    || state.is(Blocks.FERN)
+                    || state.is(Blocks.LARGE_FERN)
+                    || state.is(Blocks.DEAD_BUSH)
+                    || state.is(Blocks.SEAGRASS)
+                    || state.is(Blocks.TALL_SEAGRASS)
+                    || state.is(Blocks.NETHER_SPROUTS)
+                    || state.is(BlockTags.LEAVES);
+            if (predefinedSoft) return true;
+            var hardness = state.getDestroySpeed(view, pos);
+            return tier == AeromanipChargeTier.FULL && hardness >= 0 && hardness <= 1.5f;
         }
 
         private static void damageEquipment(LivingEntity target, int amount) {
