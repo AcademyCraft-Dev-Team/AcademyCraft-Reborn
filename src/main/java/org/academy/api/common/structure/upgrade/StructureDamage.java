@@ -35,6 +35,12 @@ public interface StructureDamage {
      */
     StructureOperation.Result<Batch> query(Authority authority, Request request);
 
+    /** Immediate beam/path entry. No asynchronous mutation may run after its distance is returned. */
+    default StructurePathDamage.Result path(Authority authority, StructurePathDamage.Request request) {
+        return new StructurePathDamage.Result(StructureOperation.Status.UNSUPPORTED,
+                "damage_path_unavailable", 0, new Receipt(0, 0, 0));
+    }
+
     /**
      * Revalidate each target and protection after callbacks. Deduplicate by effect + stable cell,
      * not revision. BREAK uses the existing global drop path; TRANSFER never emits loot.

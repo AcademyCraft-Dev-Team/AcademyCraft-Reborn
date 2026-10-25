@@ -12,6 +12,8 @@ public interface DamageDomain {
     BlockPos origin();
     AABB localBounds();
     boolean current();
+    /** Read-only proof for a just-emptied activation still owning its plot until tick cleanup. */
+    default boolean retiringEmptyCell(BlockPos local, org.academy.api.common.structure.StructurePose pose) { return false; }
     long contentRevision();
     /** Invalidate observations immediately, even if expensive rebuilding waits for the batch. */
     void changed();

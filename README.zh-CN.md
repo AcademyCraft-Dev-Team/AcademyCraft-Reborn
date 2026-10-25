@@ -14,6 +14,14 @@
 ## 开发者指南
 推荐 IntelliJ IDEA，并且需要 JetBrains Runtime 25。
 
+Gradle 启动默认关闭增强类重定义。需要 IDE 的结构性热替换时，显式使用：
+
+```bash
+./gradlew runClientDev -DisDev=true -PacademyEnhancedHotSwap=true
+```
+
+此选项用于开发调试。本机 JBR 25.0.3 曾出现间歇性原生崩溃，对照结果和适用边界见[启动配置验证记录](docs/structure_runtime_launch_2026_10_26.zh-CN.md)。
+
 ### 如果你需要使用 ClientDevWithRenderDoc 运行游戏
 ```bash
 ./gradlew setupRenderDoc

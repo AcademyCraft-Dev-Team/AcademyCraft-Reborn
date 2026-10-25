@@ -386,12 +386,12 @@ public final class Railgun extends Skill {
                 proficiencyMilestone = Skills.RAILGUN.get().getEffectiveProficiencyMilestone(player);
             }
 
-            private static void destroyBlocksAlongSegment(
+            private static double destroyBlocksAlongSegment(
                     LinearSegment segment,
                     ServerPlayer breaker,
                     float radius
             ) {
-                LevelUtil.destroyBlocksAlongPath(
+                return LevelUtil.destroyBlocksAlongPath(
                         breaker.level(),
                         segment.start(),
                         segment.end(),
@@ -402,7 +402,7 @@ public final class Railgun extends Skill {
                         false,
                         false,
                         breaker
-                );
+                ).getRight();
             }
 
             @Override
@@ -525,34 +525,22 @@ public final class Railgun extends Skill {
                         new LinearSegment(startPos, endPos),
                         payload
                 );
-                railgunRay.setBeamPath(
-                        (float) resolved.original().length(),
-                        profile.beamWidthMultiplier(),
-                        resolved.isReflected(),
-                        (float) resolved.outbound().length(),
-                        (float) resolved.returnVisualLength(),
-                        resolved.returnSegment()
-                                .map(LinearSegment::direction)
-                                .orElse(Vec3.ZERO)
-                );
-                player.level().addFreshEntity(railgunRay);
-
                 if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
-                    destroyBlocksAlongSegment(resolved.outbound(), player, destructionRadius);
+                    resolved = resolved.limitOutboundLength(destroyBlocksAlongSegment(resolved.outbound(), player, destructionRadius));
                 }
                 var outboundResult = LinearAttackExecutor.executeOutbound(
                         player.level(),
                         resolved,
                         payload
                 );
-                if (DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
-                    resolved.returnSegment().ifPresent(returnSegment -> resolved.reflectionCandidate()
-                            .ifPresent(candidate -> destroyBlocksAlongSegment(
-                                    returnSegment,
-                                    candidate.reflector(),
-                                    destructionRadius
-                            )));
+                if (resolved.isReflected() && DestroyBlocksSetting.canDestroyBlocks(player, skill)) {
+                    resolved = resolved.limitReturnLength(destroyBlocksAlongSegment(
+                            resolved.returnSegment().orElseThrow(), resolved.reflectionCandidate().orElseThrow().reflector(), destructionRadius));
                 }
+                railgunRay.setBeamPath((float) resolved.original().length(), profile.beamWidthMultiplier(),
+                        resolved.isReflected(), (float) resolved.outbound().length(), (float) resolved.returnVisualLength(),
+                        resolved.returnSegment().map(LinearSegment::direction).orElse(Vec3.ZERO));
+                player.level().addFreshEntity(railgunRay);
                 LinearAttackExecutor.executeReturn(
                         player.level(),
                         resolved,

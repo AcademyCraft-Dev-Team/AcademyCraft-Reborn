@@ -293,7 +293,7 @@ public final class MiningBeam extends Skill {
 
             if (breakTick && destroyBlocks) {
                 skill.reportActivity(player, true);
-                executeMiningSegment(initialLevel, attack.outbound(), breakRadius, false, player, player);
+                attack = attack.limitOutboundLength(executeMiningSegment(initialLevel, attack.outbound(), breakRadius, false, player, player));
             }
             LinearAttackExecutor.SegmentExecutionResult outboundResult = null;
             if (damageTick) {

@@ -248,11 +248,10 @@ public final class ParticleWaveCannon extends Skill {
                     DAMAGE_INTERVAL_TICKS,
                     damageTick
             );
-            updateVisual(attack);
 
             if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.PARTICLE_WAVE_CANNON.get())) {
                 skill.reportActivity(player, true);
-                MeltdownerBeamActions.destroyBlocksAlongSegment(
+                attack = attack.limitOutboundLength(MeltdownerBeamActions.executeBlocksAlongSegment(
                         initialLevel,
                         attack.outbound(),
                         breakRadius,
@@ -260,25 +259,28 @@ public final class ParticleWaveCannon extends Skill {
                         false,
                         true,
                         true,
+                        false,
                         player
-                );
+                ));
             }
             LinearAttackExecutor.SegmentExecutionResult outboundResult = null;
             if (damageTick) {
                 outboundResult = LinearAttackExecutor.executeOutbound(initialLevel, attack, payload);
             }
-            if (DestroyBlocksSetting.canDestroyBlocks(player, Skills.PARTICLE_WAVE_CANNON.get())) {
-                attack.returnSegment().ifPresent(segment -> MeltdownerBeamActions.destroyBlocksAlongSegment(
+            if (attack.isReflected() && DestroyBlocksSetting.canDestroyBlocks(player, Skills.PARTICLE_WAVE_CANNON.get())) {
+                attack = attack.limitReturnLength(MeltdownerBeamActions.executeBlocksAlongSegment(
                         initialLevel,
-                        segment,
+                        attack.returnSegment().orElseThrow(),
                         breakRadius,
                         MINING_TIER,
                         false,
                         true,
                         true,
+                        false,
                         attack.reflectionCandidate().orElseThrow().reflector()
                 ));
             }
+            updateVisual(attack);
             if (damageTick) {
                 var returnResult = LinearAttackExecutor.executeReturn(initialLevel, attack, payload, outboundResult);
                 if (proficiencyMilestone >= 3) updateResidualTargets(outboundResult, returnResult, system);

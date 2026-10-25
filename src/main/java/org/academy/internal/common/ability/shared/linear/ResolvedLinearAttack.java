@@ -103,6 +103,15 @@ public final class ResolvedLinearAttack {
         return calculateReturnVisualLength(mirrorPoint(), returnSegment);
     }
 
+    /** An obstruction before the mirror cancels the unreachable redirected segment. */
+    public ResolvedLinearAttack limitOutboundLength(double maximumLength) {
+        // LinearSegment uses float-length math; a clear double-precision trace must not erase
+        // a valid reflection solely because of the rounding difference at its endpoint.
+        if (Double.isFinite(maximumLength) && maximumLength + 1.0e-6 * Math.max(1, outbound.length()) >= outbound.length()) return this;
+        var limited = outbound.limitedTo(maximumLength);
+        return limited == outbound ? this : unreflected(limited);
+    }
+
     public ResolvedLinearAttack limitReturnLength(double maximumLength) {
         if (returnSegment == null) return this;
         var limited = limitReturnSegment(returnSegment, maximumLength);

@@ -120,7 +120,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         setNoGravity(false);
     }
 
-    private void destroyBlocks(
+    private double destroyBlocks(
             ServerLevel level,
             ServerPlayer breaker,
             LinearSegment segment
@@ -128,12 +128,12 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
         if (sourceSkill == Skills.MINING_BEAM.get()) {
             var harvester = resolveOwner(level);
             if (harvester != null) {
-                MiningBeam.executeMiningSegment(
+                return MiningBeam.executeMiningSegment(
                         level, segment, 0.25f, false, breaker, harvester);
             }
-            return;
+            return 0;
         }
-        LevelUtil.destroyBlocksAlongPath(
+        return LevelUtil.destroyBlocksAlongPath(
                 level,
                 segment.start(),
                 segment.end(),
@@ -144,7 +144,7 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 true,
                 false,
                 breaker
-        );
+        ).getRight();
     }
 
     private static void spawnBetaTrail(ServerLevel level, ResolvedLinearAttack attack) {
@@ -383,17 +383,18 @@ public class HighSpeedElectronBeam extends RenderOnlyEntity {
                 .build();
         var attack = LinearReflectionResolver.resolve(level, new LinearSegment(start, end), payload);
 
-        if (destroysBlocks()) destroyBlocks(level, owner, attack.outbound());
+        if (destroysBlocks()) attack = attack.limitOutboundLength(destroyBlocks(level, owner, attack.outbound()));
+        setBeamLength((float) attack.original().length());
         if (destroysProjectiles) {
             destroyProjectiles(level, owner, attack.outbound());
         }
         var outboundResult = LinearAttackExecutor.executeOutbound(level, attack, payload);
         if (destroysBlocks() && attack.isReflected()) {
-            destroyBlocks(
+            attack = attack.limitReturnLength(destroyBlocks(
                     level,
                     attack.reflectionCandidate().orElseThrow().reflector(),
                     attack.returnSegment().orElseThrow()
-            );
+            ));
         }
         if (attack.isReflected()) {
             if (destroysProjectiles) {

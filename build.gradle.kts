@@ -20,6 +20,8 @@ val modVersion = libs.versions.academy.get()
 
 val isDev = (System.getProperty("isDev") ?: System.getenv("IS_DEV") ?: "false").toBoolean()
 val isCompat = (System.getProperty("isCompat") ?: System.getenv("IS_COMPAT") ?: "false").toBoolean()
+val enhancedHotSwap = providers.gradleProperty("academyEnhancedHotSwap")
+    .map { it.toBooleanStrict() }.getOrElse(false)
 val modId = project.property("mod_id").toString()
 
 val renderDocVersion = libs.versions.renderdoc.get()
@@ -365,7 +367,9 @@ neoForge {
 
             systemProperty("mixin.debug.export", "true")
 
-            jvmArgument("-XX:+AllowEnhancedClassRedefinition")
+            // Structural IDE HotSwap is optional; ordinary game and validation runs use
+            // JBR's default mode after intermittent VM crashes with enhanced redefinition.
+            jvmArgument("-XX:${if (enhancedHotSwap) "+" else "-"}AllowEnhancedClassRedefinition")
             jvmArgument("-Xverify:none")
         }
     }

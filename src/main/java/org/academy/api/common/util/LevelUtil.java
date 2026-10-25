@@ -221,21 +221,34 @@ public class LevelUtil {
 
     public static boolean destroyBlockSilently(Level level, BlockPos pos, boolean dropBlock,
                                                @Nullable ServerPlayer breaker, BreakGuard guard) {
+        return destroyBlockForAbility(level, pos, dropBlock, breaker, guard, null, true);
+    }
+
+    /** Shared primary-cell mutation; caller projects outputs and effects for private structures. */
+    public static boolean destroyBlockForAbility(Level level, BlockPos pos, boolean dropBlock,
+            @Nullable ServerPlayer breaker, BreakGuard guard, @Nullable BlockDropHandler loot,
+            boolean silentNeighbors) {
         var state = level.getBlockState(pos);
         if (state.isAir() || !guard.stillCurrent.getAsBoolean()
                 || !guard.admission.test(pos, state) || !guard.stillCurrent.getAsBoolean()) return false;
         try (var ignored = AbilityBlockDrops.capture(breaker)) {
             if (dropBlock || breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
                 var blockEntity = state.hasBlockEntity() ? level.getBlockEntity(pos) : null;
-                Block.dropResources(state, level, pos, blockEntity, breaker, ItemStack.EMPTY);
+                boolean handled = loot != null && breaker != null && level instanceof ServerLevel server
+                        && loot.drop(server, pos, state, blockEntity, breaker);
+                if (!handled) Block.dropResources(state, level, pos, blockEntity, breaker, ItemStack.EMPTY);
             }
             if (!guard.stillCurrent.getAsBoolean()) {
                 // Loot callbacks may already have effects. Never overwrite the replacement or
                 // pretend this is a rollback; projected callers retain the real output receipt.
                 throw new IllegalStateException("Ability target changed during loot callbacks");
             }
-            removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), breaker, dropBlock,
-                    guard.admission, guard.scanNeighbor, guard.spaceCurrent, guard.removed);
+            if (silentNeighbors) {
+                removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), breaker, dropBlock,
+                        guard.admission, guard.scanNeighbor, guard.spaceCurrent, guard.removed);
+            } else if (level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
+                guard.removed.accept(pos);
+            }
         }
         return level.getBlockState(pos) != state;
     }
@@ -256,6 +269,21 @@ public class LevelUtil {
             boolean includeFluids
     ) {
         var pathLength = start.distanceTo(end);
+        if (level instanceof ServerLevel host && breaker != null) {
+            try {
+                var request = new org.academy.api.common.structure.upgrade.StructurePathDamage.Request(
+                        start, end, radius, miningLevel, dropBlock
+                        ? org.academy.api.common.structure.upgrade.StructureDamage.DropPolicy.EXISTING_SKILL_RULES
+                        : org.academy.api.common.structure.upgrade.StructureDamage.DropPolicy.NO_DROPS,
+                        spawnParticles, canBlock, simulate, removeUnsupportedBlocksSilently, includeFluids, dropHandler);
+                var result = org.academy.api.common.structure.upgrade.StructureDamages.service().path(
+                        new org.academy.api.common.structure.upgrade.StructureDamage.ActiveActor(
+                                new org.academy.api.common.structure.upgrade.StructureOperation.ActorContext(host, breaker)), request);
+                return Pair.of(result.distance() < pathLength, result.distance());
+            } catch (IllegalArgumentException invalidPath) {
+                return Pair.of(true, 0.0);
+            }
+        }
         var collectedBlocks = collectBlocksOptimized(
                 level,
                 start,

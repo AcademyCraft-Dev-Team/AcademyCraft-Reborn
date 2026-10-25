@@ -2,7 +2,7 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
-2026-10-25 C 线首批更新：`LIVE.damage()` 接入 `LiveStructureDamage`，普通/精密冲击波使用同一球形范围破坏服务；UPG-DAMAGE-01/02/03/04 的活动玩家路径已进入 EXPERIMENTAL。发射账本、非玩家授权、射线/路径技能及 S4 仍未接入。契约、实际验证和已知边界见[破坏接续](structure_damage_2026_10_25.zh-CN.md)，下表 Scaffold 名称保留原填充入口，不代表当前 LIVE 仍返回占位结果。
+2026-10-25 C 线更新：`LIVE.damage()` 接入 `LiveStructureDamage`，普通/精密冲击波使用同一球形范围破坏服务；后续新增 `StructureDamage.path`，将有活动玩家的公共射线/路径入口接入本地与 Sable 内容破坏。UPG-DAMAGE-01/02/03/04 的活动玩家路径已进入 EXPERIMENTAL。发射账本、非玩家授权及 S4 仍未接入。球形契约和前批结果见[破坏接续](structure_damage_2026_10_25.zh-CN.md)，最新路径接线、预算和验证边界见[路径破坏接续](structure_path_damage_2026_10_25.zh-CN.md)。下表 Scaffold 名称保留原填充入口，不代表当前 LIVE 仍返回占位结果。
 
 2026-10-24 管理维护补充：新增 `/academy debug sublevel restore_all`（含 status/cancel），扫描本地各维度存档条目；树冠/台阶倾斜支撑与归块对齐让位修复见[批量归块说明](structure_restore_all_2026_10_24.zh-CN.md)。管理员归块不补技能来源，且不处理 Sable 结构。
 
