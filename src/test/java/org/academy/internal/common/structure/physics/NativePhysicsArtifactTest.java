@@ -81,44 +81,45 @@ class NativePhysicsArtifactTest {
 
     @Test
     void resolvesExplicitPropertiesEnvironmentHomeAndConventionalDirectory() throws IOException {
+        var libraryName = System.mapLibraryName("academy_physics");
         var propertyHome = deployment("property_home");
         var environmentHome = deployment("environment_home");
         var convention = deployment("convention");
 
         var conventional = NativePhysicsArtifact.resolve(name -> null, name -> null, convention);
-        assertEquals(convention.resolve("academy_physics.dll").toRealPath(), conventional.library());
+        assertEquals(convention.resolve(libraryName).toRealPath(), conventional.library());
 
         var fromEnvironment = NativePhysicsArtifact.resolve(name -> null, name -> switch (name) {
             case NativePhysicsArtifact.LIBRARY_ENVIRONMENT ->
-                    environmentHome.resolve("academy_physics.dll").toString();
+                    environmentHome.resolve(libraryName).toString();
             case NativePhysicsArtifact.MANIFEST_ENVIRONMENT ->
                     environmentHome.resolve(NativePhysicsArtifact.MANIFEST_FILE_NAME).toString();
             default -> null;
         }, convention);
-        assertEquals(environmentHome.resolve("academy_physics.dll").toRealPath(), fromEnvironment.library());
+        assertEquals(environmentHome.resolve(libraryName).toRealPath(), fromEnvironment.library());
 
         var fromProperties = NativePhysicsArtifact.resolve(name -> switch (name) {
-            case NativePhysicsArtifact.LIBRARY_PROPERTY -> propertyHome.resolve("academy_physics.dll").toString();
+            case NativePhysicsArtifact.LIBRARY_PROPERTY -> propertyHome.resolve(libraryName).toString();
             case NativePhysicsArtifact.MANIFEST_PROPERTY ->
                     propertyHome.resolve(NativePhysicsArtifact.MANIFEST_FILE_NAME).toString();
             default -> null;
         }, name -> switch (name) {
             case NativePhysicsArtifact.LIBRARY_ENVIRONMENT ->
-                    environmentHome.resolve("academy_physics.dll").toString();
+                    environmentHome.resolve(libraryName).toString();
             case NativePhysicsArtifact.MANIFEST_ENVIRONMENT ->
                     environmentHome.resolve(NativePhysicsArtifact.MANIFEST_FILE_NAME).toString();
             default -> null;
         }, convention);
-        assertEquals(propertyHome.resolve("academy_physics.dll").toRealPath(), fromProperties.library());
+        assertEquals(propertyHome.resolve(libraryName).toRealPath(), fromProperties.library());
 
         var fromHome = NativePhysicsArtifact.resolve(
                 name -> NativePhysicsArtifact.HOME_PROPERTY.equals(name) ? environmentHome.toString() : null,
                 name -> null, convention);
-        assertEquals(environmentHome.resolve("academy_physics.dll").toRealPath(), fromHome.library());
+        assertEquals(environmentHome.resolve(libraryName).toRealPath(), fromHome.library());
 
         var fromHomeEnvironment = NativePhysicsArtifact.resolve(name -> null,
                 name -> NativePhysicsArtifact.HOME_ENVIRONMENT.equals(name) ? convention.toString() : null, null);
-        assertEquals(convention.resolve("academy_physics.dll").toRealPath(), fromHomeEnvironment.library());
+        assertEquals(convention.resolve(libraryName).toRealPath(), fromHomeEnvironment.library());
     }
 
     @Test
@@ -151,7 +152,7 @@ class NativePhysicsArtifactTest {
     private Path deployment(String name) throws IOException {
         var home = directory.resolve(name);
         Files.createDirectories(home);
-        var library = Files.write(home.resolve("academy_physics.dll"), new byte[]{1, 2, 3});
+        var library = Files.write(home.resolve(System.mapLibraryName("academy_physics")), new byte[]{1, 2, 3});
         writeManifest(home.resolve(NativePhysicsArtifact.MANIFEST_FILE_NAME), library);
         return home;
     }
@@ -162,7 +163,8 @@ class NativePhysicsArtifactTest {
 
     private Path writeManifest(Path target, Path library) throws IOException {
         return Files.writeString(target, "format=academy-native-physics-v1\nabi=2\nengine="
-                + NativePhysicsArtifact.ENGINE + "\nplatform=windows-x86_64\nlibrary=academy_physics.dll\nsha256="
+                + NativePhysicsArtifact.ENGINE + "\nplatform=" + NativePhysicsArtifact.currentPlatform()
+                + "\nlibrary=" + library.getFileName() + "\nsha256="
                 + NativePhysicsArtifact.digest(library) + "\n");
     }
 
