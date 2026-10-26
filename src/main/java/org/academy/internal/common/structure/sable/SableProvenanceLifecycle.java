@@ -84,6 +84,7 @@ public final class SableProvenanceLifecycle {
         try { state.journal.prepare(new SableProvenanceRetirements.Entry(reference, metadata, evidence)); }
         catch (IOException | RuntimeException failure) {
             // Never throw halfway through Sable's split/removal sweep. Retain the original mark on failure.
+            state.progress.record(reference, SableRetirementStatus.INTENT_WRITE_FAILED, server.getTickCount(), false);
             AcademyCraft.LOGGER.error("Sable permanent deletion provenance could not be journaled: {}", reference, failure);
         }
     }
@@ -101,6 +102,49 @@ public final class SableProvenanceLifecycle {
         return state.journal.contains(reference);
     }
 
+    public record Observation(StructureRef reference, SableRetirementStatus status, int attempts,
+                              long lastTick, long nextTick) {}
+    public record Diagnostics(String backend, String state, int pendingCount, int problemCount,
+                              java.util.List<SableProvenanceRetirements.Problem> problems,
+                              java.util.List<Observation> pending, java.util.List<Observation> recent) {
+        public Diagnostics {
+            problems = java.util.List.copyOf(problems);
+            pending = java.util.List.copyOf(pending);
+            recent = java.util.List.copyOf(recent);
+        }
+    }
+
+    /** Bounded read of loaded observations. Does not open world files, initialize a ledger or retry work. */
+    public static Diagnostics diagnostics(MinecraftServer server, @org.jspecify.annotations.Nullable StructureRef target) {
+        SableStructureAccess.requireThread(server);
+        var backend = SableContainerMixinGate.state();
+        var state = SERVERS.get(server);
+        if (backend != SableContainerMixinGate.State.VERIFIED || state == null) {
+            return new Diagnostics(backend.name(), backend == SableContainerMixinGate.State.VERIFIED
+                    ? "not_initialized" : "backend_unavailable", 0, 0, java.util.List.of(), java.util.List.of(), java.util.List.of());
+        }
+        var journal = state.journal;
+        var records = new java.util.ArrayList<Observation>();
+        if (journal != null) {
+            if (target != null) journal.entry(target).ifPresent(entry -> records.add(observation(state.progress.get(entry.reference()))));
+            else for (var entry : journal.entries()) {
+                records.add(observation(state.progress.get(entry.reference())));
+                if (records.size() == 10) break;
+            }
+        }
+        var recent = state.progress.recent().stream().filter(attempt -> target == null || attempt.reference().equals(target))
+                .map(SableProvenanceLifecycle::observation).toList();
+        return new Diagnostics(backend.name(), journal == null ? "journal_unavailable"
+                : !journal.healthy() ? "journal_unhealthy" : !state.ledgerObserved ? "creation_ledger_unobserved"
+                : !state.ledgerAvailable ? "creation_ledger_unavailable" : "ready",
+                journal == null ? 0 : journal.size(), journal == null ? 0 : journal.problemCount(),
+                journal == null ? java.util.List.of() : journal.problems(), records, recent);
+    }
+
+    private static Observation observation(SableRetirementProgress.Attempt attempt) {
+        return new Observation(attempt.reference(), attempt.status(), attempt.attempts(), attempt.lastTick(), attempt.nextTick());
+    }
+
     /** At most four records and one storage retirement per 20 ticks; never loads a world chunk. */
     @SubscribeEvent
     public static void tick(ServerTickEvent.Post event) {
@@ -108,35 +152,54 @@ public final class SableProvenanceLifecycle {
         var server = event.getServer();
         if (server.getTickCount() % 20 != 0) return;
         var state = state(server);
-        if (state.journal == null || !state.journal.healthy() || !LiveStructureProvenance.healthy(server)) return;
+        if (state.journal == null || !state.journal.healthy()) return;
+        state.ledgerAvailable = LiveStructureProvenance.healthy(server);
+        state.ledgerObserved = true;
+        if (!state.ledgerAvailable) return;
         if (state.iterator == null || !state.iterator.hasNext()) state.iterator = state.journal.entries().iterator();
         for (int i = 0; i < 4 && state.iterator.hasNext(); i++) {
             var entry = state.iterator.next();
             var reference = entry.reference();
+            if (!state.progress.due(reference, server.getTickCount())) continue;
             var current = LiveStructureProvenance.metadata(server, reference).orElse(null);
-            if (current != null && !current.equals(entry.metadata())) continue;
+            if (current != null && !current.equals(entry.metadata())) {
+                state.progress.record(reference, SableRetirementStatus.CREATION_CONFLICT, server.getTickCount(), true);
+                continue;
+            }
             var host = server.getLevel(net.minecraft.resources.ResourceKey.create(
                     net.minecraft.core.registries.Registries.DIMENSION, reference.dimension()));
-            if (host == null) continue;
-            var grid = SubLevelContainer.getContainer(host);
-            if (grid == null) continue;
+            var grid = host == null ? null : SubLevelContainer.getContainer(host);
+            if (grid == null) {
+                state.progress.record(reference, SableRetirementStatus.HOST_UNAVAILABLE, server.getTickCount(), true);
+                continue;
+            }
+            var status = SableRetirementStatus.STORAGE_FAILURE;
             try {
                 var evidence = entry.evidence();
-                boolean retired;
                 if (evidence.getBoolean("saved").orElseThrow()) {
-                    retired = new SableStructureTransactions(server).retireRemoved(reference, evidence);
+                    status = new SableStructureTransactions(server).retireRemovedStatus(reference, evidence);
                 } else {
                     // A never-saved child has no durable content to erase. An unexpected loaded
                     // activation is ambiguous (e.g. recovery before removal); do not guess.
-                    retired = grid.getSubLevel(reference.id()) == null;
-                    if (retired) SableRestorationDurability.occupancy(host);
+                    status = SableRetirementStatus.UNSAVED_SOURCE_LIVE;
+                    if (grid.getSubLevel(reference.id()) == null) {
+                        status = SableRetirementStatus.STORAGE_FAILURE;
+                        SableRestorationDurability.occupancy(host);
+                        status = SableRetirementStatus.RETIRED;
+                    }
                 }
-                if (retired && LiveStructureProvenance.remove(server, reference, entry.metadata().creationOperationId())) {
-                    state.journal.complete(entry);
+                if (status == SableRetirementStatus.RETIRED) {
+                    status = SableRetirementStatus.MARK_RETIREMENT_FAILED;
+                    if (LiveStructureProvenance.remove(server, reference, entry.metadata().creationOperationId())) {
+                        status = SableRetirementStatus.JOURNAL_COMPLETION_FAILED;
+                        state.journal.complete(entry);
+                        status = SableRetirementStatus.RETIRED;
+                    }
                 }
             } catch (IOException | RuntimeException failure) {
                 AcademyCraft.LOGGER.error("Sable permanent deletion remains pending: {}", reference, failure);
             }
+            state.progress.record(reference, status, server.getTickCount(), status != SableRetirementStatus.RETIRED);
             break;
         }
     }
@@ -159,6 +222,9 @@ public final class SableProvenanceLifecycle {
     @SubscribeEvent public static void stopped(ServerStoppedEvent event) { SERVERS.remove(event.getServer()); }
     private static final class State {
         final SableProvenanceRetirements journal;
+        final SableRetirementProgress progress = new SableRetirementProgress();
+        boolean ledgerAvailable;
+        boolean ledgerObserved;
         Iterator<SableProvenanceRetirements.Entry> iterator;
         State(SableProvenanceRetirements journal) { this.journal = journal; }
     }

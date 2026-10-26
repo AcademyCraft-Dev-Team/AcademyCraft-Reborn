@@ -16,6 +16,7 @@ final class StructureDebugCommands {
 
     static LiteralArgumentBuilder<CommandSourceStack> register() {
         return Commands.literal("structure")
+                .then(SableProvenanceCommands.register())
                 .then(Commands.literal("status").executes(StructureDebugCommands::status))
                 .then(Commands.literal("cleanup").executes(StructureDebugCommands::cleanup));
     }

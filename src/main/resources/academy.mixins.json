@@ -20,6 +20,7 @@
     "common.compat.MixinSableJointTracking",
     "common.compat.MixinSableProvenanceSplit",
     "common.compat.MixinSableProvenanceRemoval",
+    "common.compat.MixinSableStorageClear",
     "common.MixinCommonHooksDamageComposition",
     "common.ItemCooldownsAccess",
     "common.CooldownInstanceAccess",

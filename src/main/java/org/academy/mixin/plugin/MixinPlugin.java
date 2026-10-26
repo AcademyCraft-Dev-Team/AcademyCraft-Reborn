@@ -33,6 +33,7 @@ public class MixinPlugin implements IMixinConfigPlugin {
                 || mixinClassName.equals("org.academy.mixin.common.compat.MixinSableRestorationPhysics")
                 || mixinClassName.equals("org.academy.mixin.common.compat.MixinSableProvenanceSplit")
                 || mixinClassName.equals("org.academy.mixin.common.compat.MixinSableProvenanceRemoval")
+                || mixinClassName.equals("org.academy.mixin.common.compat.MixinSableStorageClear")
                 || mixinClassName.equals("org.academy.mixin.common.compat.MixinSableJointTracking")) {
             return SableContainerMixinGate.state() == SableContainerMixinGate.State.VERIFIED;
         }

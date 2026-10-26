@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Retirement fault injection requires an isolated copied save')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyRetirementFaultRun').getOrElse('clientSable')) {
+            gameDirectory.set(directory)
+            systemProperty 'academy.sableRetirementFaultSmoke', 'true'
+            systemProperty 'academy.sableRetirementCorruptJournal', providers.gradleProperty('academyRetirementCorruptJournal').getOrElse('false')
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

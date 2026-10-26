@@ -84,4 +84,33 @@ class SableProvenanceRetirementsTest {
         evidence.putInt("plot_x", 1); evidence.putInt("plot_z", 2);
         assertNotNull(new SableProvenanceRetirements.Entry(entry.reference(), entry.metadata(), evidence));
     }
+
+    @Test void failedCompletionPreservesReplayRecordAcrossRestart() throws IOException {
+        var entry = entry();
+        var journal = new SableProvenanceRetirements(directory,
+                org.academy.internal.common.structure.DurableFile.FileOperations.DEFAULT,
+                ignored -> { throw new IOException("simulated journal delete failure"); });
+        journal.prepare(entry);
+        assertThrows(IOException.class, () -> journal.complete(entry));
+        assertEquals(entry, journal.entry(entry.reference()).orElseThrow());
+        var reopened = new SableProvenanceRetirements(directory);
+        assertTrue(reopened.healthy());
+        assertEquals(entry, reopened.entry(entry.reference()).orElseThrow());
+        reopened.complete(entry);
+        assertEquals(0, new SableProvenanceRetirements(directory).size());
+    }
+
+    @Test void diagnosticSamplesAreBoundedAndNeverDiscardCorruptEvidence() throws IOException {
+        var entry = entry(); new SableProvenanceRetirements(directory).prepare(entry);
+        Path original;
+        try(var paths=Files.list(directory)) { original=paths.filter(path -> path.toString().endsWith(".dat")).findFirst().orElseThrow(); }
+        for(int i=0;i<12;i++) Files.copy(original,directory.resolve("wrong-identity-"+i+".dat"));
+        var journal=new SableProvenanceRetirements(directory);
+        assertFalse(journal.healthy()); assertEquals(1,journal.size());
+        assertEquals(12,journal.problemCount()); assertEquals(8,journal.problems().size());
+        assertTrue(journal.problems().stream().allMatch(problem -> problem.reason().equals("identity_mismatch")));
+        assertThrows(UnsupportedOperationException.class, () -> journal.problems().clear());
+        try(var paths=Files.list(directory)) { assertEquals(13,paths.count()); }
+        assertThrows(IOException.class, () -> journal.complete(entry));
+    }
 }

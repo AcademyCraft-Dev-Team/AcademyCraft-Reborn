@@ -192,23 +192,28 @@ public final class SableStructureTransactions implements CaptureTarget {
 
     @Override
     public boolean retireRestored(StructureRef target, net.minecraft.nbt.CompoundTag evidence) {
-        return retireSource(target, evidence, true);
+        return retireSource(target, evidence, true) == SableRetirementStatus.RETIRED;
     }
 
     /** External deletion already released the plot; it may now contain an unrelated live body. */
     public boolean retireRemoved(StructureRef target, net.minecraft.nbt.CompoundTag evidence) {
+        return retireRemovedStatus(target, evidence) == SableRetirementStatus.RETIRED;
+    }
+
+    public SableRetirementStatus retireRemovedStatus(StructureRef target, net.minecraft.nbt.CompoundTag evidence) {
         return retireSource(target, evidence, false);
     }
 
-    private boolean retireSource(StructureRef target, net.minecraft.nbt.CompoundTag evidence, boolean releasePlot) {
+    private SableRetirementStatus retireSource(StructureRef target, net.minecraft.nbt.CompoundTag evidence, boolean releasePlot) {
         SableStructureAccess.requireThread(server);
         var container = container(target.dimension());
-        if (container == null || SableContainerGuard.inContainerTick()) return false;
+        if (container == null) return SableRetirementStatus.HOST_UNAVAILABLE;
+        if (SableContainerGuard.inContainerTick()) return SableRetirementStatus.CONTAINER_BUSY;
         try {
             var ship = container.getSubLevel(target.id());
             // The creation checkpoint always assigns a pointer. Missing ownership evidence
             // cannot authorize backend removal, even if this activation is currently absent.
-            if (!evidence.getBoolean("saved").orElseThrow()) return false;
+            if (!evidence.getBoolean("saved").orElseThrow()) return SableRetirementStatus.MISSING_SAVED_POINTER;
             var position = new ChunkPos(evidence.getInt("chunk_x").orElseThrow(), evidence.getInt("chunk_z").orElseThrow());
             var storage = container.getHoldingChunkMap().getStorage();
             int storageIndex = evidence.getInt("storage").orElseThrow(), slot = evidence.getInt("slot").orElseThrow();
@@ -225,21 +230,21 @@ public final class SableStructureTransactions implements CaptureTarget {
                 // Our own retirement writes index-before-data, so a crash retry can
                 // finish here without rewriting either file. Ambiguous stale indexes wait.
                 var holding = container.getHoldingChunkMap();
-                if (holding.allHoldingSubLevels().containsKey(target.id())) return false;
+                if (holding.allHoldingSubLevels().containsKey(target.id())) return SableRetirementStatus.HOLDING_SOURCE_PRESENT;
                 var cached = holding.loadedHoldingChunks().get(position.pack());
                 if (cached != null) {
-                    if (cached.getSubLevelPointers().contains(pointer.local())) return false;
+                    if (cached.getSubLevelPointers().contains(pointer.local())) return SableRetirementStatus.EMPTY_SLOT_CACHED_INDEX;
                     for (var value : cached.getLoadedHoldingSubLevels()) {
-                        if (value.data().uuid().equals(target.id())) return false;
+                        if (value.data().uuid().equals(target.id())) return SableRetirementStatus.HOLDING_SOURCE_PRESENT;
                     }
                 }
                 var region = storage.getRegionFile(position);
                 var tag = region.read(region.getIndex(position.getRegionLocalX(), position.getRegionLocalZ()));
                 if (tag != null && org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.holding.SubLevelHoldingChunk
-                        .from(position, tag).getSubLevelPointers().contains(pointer.local())) return false;
+                        .from(position, tag).getSubLevelPointers().contains(pointer.local())) return SableRetirementStatus.EMPTY_SLOT_DURABLE_INDEX;
                 file.flush(); region.flush();
                 SableRestorationDurability.occupancy(container.getLevel());
-                return true;
+                return SableRetirementStatus.RETIRED;
             }
             if (!releasePlot && foreignImage && ship == null) {
                 // Sable may have processed the deletion and reused this slot before our
@@ -247,25 +252,25 @@ public final class SableStructureTransactions implements CaptureTarget {
                 // the old UUID in the live/holding maps permits retiring only its mark.
                 // Never edit the replacement's slot, index, queue entry or occupancy.
                 var holding = container.getHoldingChunkMap();
-                if (holding.allHoldingSubLevels().containsKey(target.id())) return false;
+                if (holding.allHoldingSubLevels().containsKey(target.id())) return SableRetirementStatus.HOLDING_SOURCE_PRESENT;
                 var cached = holding.loadedHoldingChunks().get(position.pack());
                 if (cached != null) for (var value : cached.getLoadedHoldingSubLevels()) {
-                    if (value.data().uuid().equals(target.id())) return false;
+                    if (value.data().uuid().equals(target.id())) return SableRetirementStatus.HOLDING_SOURCE_PRESENT;
                 }
                 file.flush();
                 storage.getRegionFile(position).flush();
                 SableRestorationDurability.occupancy(container.getLevel());
-                return true;
+                return SableRetirementStatus.RETIRED;
             }
             // Removing a live source queues its pointer for deletion. Do not create that
             // queue entry if its durable slot has already changed owner or lost its proof.
             if (ship != null && (!(ship instanceof ServerSubLevel live) || !ownedImage
-                    || !pointer.equals(live.getLastSerializationPointer()))) return false;
-            if (!retireHoldingSource(container, target.id(), pointer, ownedImage, foreignImage)) return false;
+                    || !pointer.equals(live.getLastSerializationPointer()))) return SableRetirementStatus.LIVE_POINTER_CONFLICT;
+            if (!retireHoldingSource(container, target.id(), pointer, ownedImage, foreignImage)) return SableRetirementStatus.HOLDING_POINTER_CONFLICT;
             if (ship != null) container.removeSubLevel(ship, SubLevelRemovalReason.REMOVED);
-            if (container.getSubLevel(target.id()) != null) return false;
+            if (container.getSubLevel(target.id()) != null) return SableRetirementStatus.SOURCE_STILL_LIVE;
             // An already-reused slot belongs to a different body; never erase its pointer or content.
-            if (foreignImage) return false;
+            if (foreignImage) return SableRetirementStatus.FOREIGN_SLOT;
             // Only a positively identified source image authorizes taking over delayed
             // deletion. A reused body's queue entry must survive this old journal's retry.
             if (ownedImage) container.getHoldingChunkMap()
@@ -285,12 +290,13 @@ public final class SableStructureTransactions implements CaptureTarget {
             // Retire the index before freeing the data slot, preventing stale-pointer reuse.
             file.write(slot, (net.minecraft.nbt.CompoundTag) null);
             file.flush();
-            if (releasePlot) return releaseRestoredPlot(container, target, evidence, ownedImage);
+            if (releasePlot) return releaseRestoredPlot(container, target, evidence, ownedImage)
+                    ? SableRetirementStatus.RETIRED : SableRetirementStatus.PLOT_OWNERSHIP_CONFLICT;
             SableRestorationDurability.occupancy(container.getLevel());
-            return true;
+            return SableRetirementStatus.RETIRED;
         } catch (java.io.IOException | RuntimeException failure) {
             AcademyCraft.LOGGER.error("Sable marked restoration retirement remains pending for {}", target.id(), failure);
-            return false;
+            return SableRetirementStatus.STORAGE_FAILURE;
         }
     }
 

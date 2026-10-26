@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "base_commit": "866404cd",
+  "runtime": "JetBrains Runtime 25",
+  "sable_runtime": "suite",
+  "sable_sha256": "21a22bcd6b0dd5bc742472e332f7e8a17dd83cbbd471ebe97087e153acc206ca",
+  "tests": [
+    {
+      "task": "test",
+      "tests": 3267,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "sableCompatTest",
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "editorTest",
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "build_logs": [
+    "build/retirement-final-dev-build.log",
+    "build/retirement-final-release-build.log"
+  ],
+  "client_runs": [
+    {
+      "report": "run/native-sublevel-direct-smoke-retirement-fault-final/sable-retirement-fault-result.json",
+      "log": "build/retirement-fault-final.log",
+      "expected_exit": 0,
+      "result": {
+        "cases": [
+          {
+            "tick": 12,
+            "passed": true,
+            "case": "diagnostic_commands_are_read_only"
+          },
+          {
+            "tick": 74,
+            "passed": true,
+            "case": "blocked_source_does_not_starve_other_retirement"
+          },
+          {
+            "tick": 94,
+            "passed": true,
+            "case": "empty_durable_index"
+          },
+          {
+            "tick": 174,
+            "passed": true,
+            "case": "empty_cached_index"
+          },
+          {
+            "tick": 254,
+            "passed": true,
+            "case": "holding_pointer_conflict"
+          },
+          {
+            "tick": 334,
+            "passed": true,
+            "case": "live_foreign_image"
+          },
+          {
+            "tick": 414,
+            "passed": true,
+            "case": "closed_storage_channel"
+          },
+          {
+            "tick": 494,
+            "passed": true,
+            "case": "storage_header_write_failure"
+          },
+          {
+            "tick": 574,
+            "passed": true,
+            "case": "malformed_storage_image"
+          },
+          {
+            "tick": 654,
+            "passed": true,
+            "case": "journal_completion_failure"
+          },
+          {
+            "tick": 674,
+            "passed": true,
+            "case": "foreign_slot_reused"
+          }
+        ],
+        "failure": "",
+        "passed": true,
+        "ticks": 674
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-retirement-native-final/sable-retirement-fault-result.json",
+      "log": "build/retirement-native-final.log",
+      "expected_exit": 0,
+      "result": {
+        "ticks": 1,
+        "passed": true,
+        "failure": "",
+        "cases": [
+          {
+            "passed": true,
+            "tick": 1,
+            "case": "absent_backend_reported"
+          },
+          {
+            "passed": true,
+            "tick": 1,
+            "case": "commands_read_only_and_permission_checked"
+          },
+          {
+            "passed": true,
+            "tick": 1,
+            "case": "no_backend_no_world_file_creation"
+          }
+        ]
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-retirement-corrupt-final/sable-retirement-fault-result.json",
+      "log": "build/retirement-corrupt-final.log",
+      "expected_exit": 0,
+      "result": {
+        "passed": true,
+        "failure": "",
+        "cases": [
+          {
+            "passed": true,
+            "tick": 2,
+            "case": "corrupt_journal_reports_bounded_problem"
+          },
+          {
+            "passed": true,
+            "tick": 2,
+            "case": "corrupt_evidence_preserved_by_command"
+          },
+          {
+            "passed": true,
+            "tick": 2,
+            "case": "corrupt_record_does_not_create_deletion_authority"
+          }
+        ],
+        "ticks": 2
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-retirement-lifecycle-final/sable-provenance-functional-result.json",
+      "log": "build/retirement-lifecycle-final.log",
+      "expected_exit": 0,
+      "result": {
+        "cases": [
+          "marked_split_inherits_exact_policy_owner_root",
+          "nested_split_keeps_root_and_direct_parent",
+          "duplicate_notification_idempotent",
+          "unmarked_split_stays_unmarked",
+          "unmarked_delete_no_provenance_intent",
+          "permanent_delete_waits_for_durable_retirement",
+          "retirement_keeps_descendant_lineage",
+          "replacement_survives_previous_plot_retirement",
+          "fragment_permanent_delete_retires_only_itself",
+          "unload_preserves_fragment_mark",
+          "heat_map_auto_split_inherits_creation",
+          "zero_mass_child_removal_retires_mark",
+          "last_cell_assembly_inherits_before_parent_is_retired",
+          "unsaved_fragment_allocates_source_checkpoint_and_auto_restores"
+        ],
+        "passed": true,
+        "ticks": 180,
+        "failure": "",
+        "mode": "functional"
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-retirement-restart-final/sable-provenance-crash-result.json",
+      "log": "build/retirement-crash-final.log",
+      "expected_exit": 86,
+      "result": {
+        "mode": "crash",
+        "failure": "",
+        "ticks": 14,
+        "passed": true,
+        "cases": [
+          "marked_split_inherits_exact_policy_owner_root",
+          "nested_split_keeps_root_and_direct_parent",
+          "duplicate_notification_idempotent",
+          "unmarked_split_stays_unmarked",
+          "unmarked_delete_no_provenance_intent",
+          "permanent_delete_waits_for_durable_retirement"
+        ]
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-retirement-restart-final/sable-provenance-verify-result.json",
+      "log": "build/retirement-recover-final.log",
+      "expected_exit": 0,
+      "result": {
+        "failure": "",
+        "ticks": 20,
+        "passed": true,
+        "cases": [
+          "crash_after_backend_remove_replays_exact_retirement",
+          "saved_nested_fragment_survives_restart_without_parent"
+        ],
+        "mode": "verify"
+      }
+    }
+  ],
+  "pre_fix_reproduction": {
+    "report": "run/native-sublevel-direct-smoke-retirement-header-repro/sable-retirement-fault-result.json",
+    "result": {
+      "passed": false,
+      "failure": "java.lang.IllegalStateException: fault was accepted as retired before repair: storage_header_write_failure",
+      "cases": [
+        {
+          "passed": true,
+          "tick": 12,
+          "case": "diagnostic_commands_are_read_only"
+        },
+        {
+          "passed": true,
+          "tick": 56,
+          "case": "blocked_source_does_not_starve_other_retirement"
+        },
+        {
+          "passed": true,
+          "tick": 96,
+          "case": "empty_durable_index"
+        },
+        {
+          "passed": true,
+          "tick": 176,
+          "case": "empty_cached_index"
+        },
+        {
+          "passed": true,
+          "tick": 256,
+          "case": "holding_pointer_conflict"
+        },
+        {
+          "passed": true,
+          "tick": 336,
+          "case": "live_foreign_image"
+        },
+        {
+          "passed": true,
+          "tick": 416,
+          "case": "closed_storage_channel"
+        }
+      ],
+      "ticks": 456
+    },
+    "log": "build/retirement-header-repro.log"
+  },
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32287118,
+      "sha256": "6E684CE47F7CA3AEBA6B58144A5AFC355D16395705123D63F162B48B6127B79D"
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24816017,
+      "sha256": "65EB4592FF6E2FBE4960A810286CFF4E04A55DC344ABF9BB75DB6DFD372CAC25"
+    }
+  ],
+  "packaging_verified": true,
+  "baseline_world_files_verified": 148,
+  "original_rust_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "validation_boundary": [
+    "Real-client automated fixtures; human keyboard/charge/walking and precision-node acceptance remains pending.",
+    "Crash preparation intentionally exits 86; other final runs save and exit normally.",
+    "JVM task totals are separate and can overlap; same-revision up-to-date/cache results are reused.",
+    "Storage clear rollback preserves in-memory ownership after exceptions; not an atomic power-loss or exhaustive short-write protocol.",
+    "Fault injections use Windows range locks and NOSHARE_DELETE in disposable copied saves.",
+    "Long-running scale, exhaustive combined I/O faults, S4 and preexisting native contact stress failures remain unverified."
+  ]
+}

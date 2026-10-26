@@ -31,8 +31,14 @@ public final class SableProvenanceRetirements {
     private static final int MAX_RECORDS = 65_536;
     private final Path directory;
     private final DurableFile.FileOperations files;
+    private final DeleteOperation delete;
     private final Map<StructureRef, Entry> entries = new ConcurrentHashMap<>();
+    private final java.util.List<Problem> problems = new java.util.ArrayList<>();
+    private int problemCount;
     private boolean healthy = true;
+
+    public record Problem(String file, String reason) {}
+    @FunctionalInterface interface DeleteOperation { void delete(Path path) throws IOException; }
 
     public record Entry(StructureRef reference, StructureProvenance.Metadata metadata, CompoundTag evidence) {
         public Entry {
@@ -61,8 +67,13 @@ public final class SableProvenanceRetirements {
     }
 
     SableProvenanceRetirements(Path directory, DurableFile.FileOperations files) throws IOException {
+        this(directory, files, Files::deleteIfExists);
+    }
+
+    SableProvenanceRetirements(Path directory, DurableFile.FileOperations files, DeleteOperation delete) throws IOException {
         this.directory = directory.toAbsolutePath().normalize();
         this.files = files;
+        this.delete = delete;
         Files.createDirectories(this.directory);
         try (var paths = Files.list(this.directory)) {
             var iterator = paths.iterator();
@@ -70,21 +81,31 @@ public final class SableProvenanceRetirements {
             while (iterator.hasNext()) {
                 var path = iterator.next();
                 if (!path.getFileName().toString().endsWith(".dat")) continue;
-                if (++count > MAX_RECORDS) { healthy = false; break; }
+                if (++count > MAX_RECORDS) { problem(path, "record_limit"); break; }
+                String reason = "record_unreadable";
                 try {
                     if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) || Files.size(path) > MAX_BYTES) {
+                        reason = "not_bounded_regular_file";
                         throw new IOException("Unbounded retirement image");
                     }
+                    reason = "record_invalid";
                     var entry = decode(NbtIo.readCompressed(path, NbtAccounter.create(MAX_BYTES)));
+                    reason = "identity_mismatch";
                     if (!file(entry.reference()).equals(path) || entries.putIfAbsent(entry.reference(), entry) != null) {
                         throw new IOException("Retirement identity mismatch");
                     }
-                } catch (IOException | RuntimeException failure) { healthy = false; }
+                } catch (IOException | RuntimeException failure) { problem(path, reason); }
             }
         }
     }
 
     public boolean healthy() { return healthy; }
+    public int size() { return entries.size(); }
+    public int problemCount() { return problemCount; }
+    public java.util.List<Problem> problems() { return java.util.List.copyOf(problems); }
+    public java.util.Optional<Entry> entry(StructureRef reference) {
+        return java.util.Optional.ofNullable(entries.get(StructureProvenanceLedger.stable(reference)));
+    }
     public Collection<Entry> entries() { return Collections.unmodifiableCollection(entries.values()); }
     public boolean contains(StructureRef reference) { return entries.containsKey(StructureProvenanceLedger.stable(reference)); }
 
@@ -113,8 +134,14 @@ public final class SableProvenanceRetirements {
     public void complete(Entry entry) throws IOException {
         requireHealthy();
         if (!entry.equals(entries.get(entry.reference()))) throw new IOException("Retirement ownership changed");
-        Files.deleteIfExists(file(entry.reference()));
+        delete.delete(file(entry.reference()));
         entries.remove(entry.reference(), entry);
+    }
+
+    private void problem(Path path, String reason) {
+        healthy = false;
+        problemCount++;
+        if (problems.size() < 8) problems.add(new Problem(path.getFileName().toString(), reason));
     }
 
     private Path file(StructureRef reference) {

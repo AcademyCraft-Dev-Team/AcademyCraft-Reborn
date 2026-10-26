@@ -2,6 +2,8 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
+2026-10-26 故障恢复补充：Sable 永久退休增加只读管理员诊断、具体失败阶段和逐记录有界退避；文件头写入失败时回滚槽位缓存，防止假空槽导致错误退休。真实存储/索引/日志删除故障与恢复验证见 [退休诊断接续](structure_sable_retirement_diagnostics_2026_10_26.zh-CN.md)；不提供凭缺席强删或自动猜修记录的入口，持久发射账本及 S4 状态不变。
+
 2026-10-26 生命周期补充：Sable 实际拆分完成点继承已标记父来源，永久删除采用持久意图与精确退休，卸载保留来源；未保存的可信子体通过后端分配器取得归块检查点。适用范围、验证与保守等待条件见 [Sable 生命周期接续](structure_sable_provenance_2026_10_26.zh-CN.md)。未将 Sable 原生拆分改造为跨父子内容的原子事务，未启用 S4。
 
 2026-10-26 C 线更新：新增同步 `StructureDamage.cut`，层流切割普通/精密入口共用有向刀面与材料规则，复用路径的保护、掉落和总预算。实际结果和剩余清点见[层流切割接续](structure_cut_damage_2026_10_26.zh-CN.md)，DRAFT 继续禁用。
