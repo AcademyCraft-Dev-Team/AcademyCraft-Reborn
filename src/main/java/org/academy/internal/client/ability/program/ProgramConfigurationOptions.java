@@ -136,6 +136,12 @@ public final class ProgramConfigurationOptions {
             return stringOptions("screen.academy.program.configuration.reset_mode.",
                     "capture_baseline", "world_up_keep_yaw", "nearest_grid_yaw");
         }
+        if (id.equals(CommonProgramNodeIds.FILTER_STRUCTURE_BLOCKS) && field.equals("match")) {
+            return stringOptions("screen.academy.program.configuration.structure_match.", "any", "all");
+        }
+        if (id.equals(CommonProgramNodeIds.FILTER_STRUCTURE_SOURCE) && field.equals("source_mode")) {
+            return stringOptions("screen.academy.program.configuration.structure_source.", "marked", "unmarked", "owned_by_caster", "skill", "fragment");
+        }
         if (orientationReset && field.equals("missing_baseline")) {
             return stringOptions("screen.academy.program.configuration.missing_baseline.", "reject", "use_world_grid");
         }

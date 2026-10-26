@@ -114,6 +114,21 @@ public final class SubLevelStructureHandle implements StructureHandle {
         }
 
         @Override
+        public java.util.Optional<org.academy.api.common.structure.StructureBlockSummary> summarize(int maximumCells) {
+            requireReady();
+            var bounds = subLevel.localBounds();
+            return org.academy.internal.common.structure.space.StructureBlockSummaries.scan(
+                    BlockPos.containing(bounds.minX, bounds.minY, bounds.minZ),
+                    BlockPos.containing(Math.ceil(bounds.maxX) - 1, Math.ceil(bounds.maxY) - 1, Math.ceil(bounds.maxZ) - 1),
+                    maximumCells, local -> {
+                        if (!storage.resident(subLevel.plot(), local)) return java.util.Optional.empty();
+                        var world = storage.worldPosition(subLevel.plot(), local);
+                        var chunk = storage.level().getChunkSource().getChunkNow(world.getX() >> 4, world.getZ() >> 4);
+                        return chunk == null ? java.util.Optional.empty() : java.util.Optional.of(chunk.getBlockState(world));
+                    });
+        }
+
+        @Override
         public StructureWriteResult compareAndSet(BlockPos localPosition, StructureBlockData expected,
                                                   StructureBlockData replacement) {
             var current = read(localPosition);

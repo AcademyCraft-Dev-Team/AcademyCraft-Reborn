@@ -146,6 +146,25 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
         return OptionalDouble.of(proximity.get().distance());
     }
 
+    @Override public boolean isStructureValid(ProgramStructureReference reference) {
+        return structureDistanceTo(reference, worldPosition(player.position())).isPresent();
+    }
+
+    @Override public Optional<org.academy.api.common.structure.StructureBlockSummary> structureContents(ProgramStructureReference reference) {
+        if (!isStructureValid(reference)) return Optional.empty();
+        return StructureSpaces.resolve(level().getServer(), reference.reference()).filter(reference::matches)
+                .flatMap(handle -> handle.world().summarize(4_096));
+    }
+
+    @Override public Optional<org.academy.api.common.ability.program.ProgramStructureSource> structureSource(ProgramStructureReference reference) {
+        if (!isStructureValid(reference)
+                || !org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.healthy(level().getServer())) return Optional.empty();
+        var metadata = org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance.metadata(level().getServer(), reference.reference());
+        return Optional.of(new org.academy.api.common.ability.program.ProgramStructureSource(metadata,
+                metadata.flatMap(org.academy.api.common.structure.upgrade.StructureProvenance.Metadata::ownerId)
+                        .filter(player.getUUID()::equals).isPresent()));
+    }
+
     @Override
     public Optional<ProgramVector> motionOf(Object entityReference) {
         if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {

@@ -48,6 +48,7 @@ import java.util.*;
 public final class StructureProgramOrientationSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureProgramOrientationSmoke");
     private static final boolean SELECTION = Boolean.getBoolean("academy.structureSelectionSmoke");
+    private static final boolean FILTERS = Boolean.getBoolean("academy.structureFilterSmoke");
     private static final int SPIN_TICKS = 250;
     private static final int ARENA_READY_TIMEOUT_TICKS = 200;
     private static final double ANGLE_TOLERANCE = 0.02;
@@ -191,8 +192,13 @@ public final class StructureProgramOrientationSmoke {
                 var neighbor = seed.offset(4, 1, 0);
                 check(player.level().setBlock(neighbor.below(), Blocks.STONE.defaultBlockState(), 3), "neighbor support failed");
                 check(player.level().setBlock(neighbor, Blocks.IRON_BLOCK.defaultBlockState(), 3), "neighbor placement failed");
+                if (FILTERS) {
+                    check(player.level().setBlock(neighbor.east().below(), Blocks.STONE.defaultBlockState(), 3), "mixed support failed");
+                    check(player.level().setBlock(neighbor.east(), Blocks.OAK_LOG.defaultBlockState(), 3), "mixed neighbor failed");
+                }
+                var cells = FILTERS ? List.of(neighbor, neighbor.east()) : List.of(neighbor);
                 var capture = StructureTransactions.capture(player.level(),
-                        new StructureCaptureRequest(List.of(neighbor), 1, 1, StructureCaptureRequest.ALLOW, true));
+                        new StructureCaptureRequest(cells, cells.size(), cells.size(), StructureCaptureRequest.ALLOW, true));
                 check(capture.succeeded() || capture.pending(), "neighbor capture failed: " + capture);
                 selectionCapture = capture.transactionId();
             }
@@ -362,6 +368,7 @@ public final class StructureProgramOrientationSmoke {
         row.put("payload_checked", StructurePayloadFixtureSupport.ENABLED);
         row.put("selection_nodes_and_foreach_control", SELECTION);
         row.put("multiple_structure_query_and_removal", SELECTION);
+        row.put("content_source_validity_filters", FILTERS);
         row.put("category", category.toString()); row.put("backend", reference.backend().toString());
         row.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
         row.put("skill_provenance_verified", true);
@@ -443,6 +450,16 @@ public final class StructureProgramOrientationSmoke {
                 edge(categoryIndex == 0 ? 27 : 26, "structure", 3, "structure"),
                 edge(10, "flow", 29, "flow"), edge(24, "value", 29, "values"), edge(29, "body", 30, "flow"),
                 edge(29, "value", 30, "structure"), edge(30, "flow", 31, "flow"), edge(30, "control", 31, "control")));
+        if (FILTERS) {
+            nodes.add(node(definition, 32, CommonProgramNodeIds.FILTER_STRUCTURE_VALID, new JsonObject()));
+            var blocks = new JsonObject(); blocks.addProperty("selectors", "minecraft:iron_block"); blocks.addProperty("match", "all");
+            nodes.add(node(definition, 33, CommonProgramNodeIds.FILTER_STRUCTURE_BLOCKS, blocks));
+            var source = new JsonObject(); source.addProperty("source_mode", "owned_by_caster");
+            nodes.add(node(definition, 34, CommonProgramNodeIds.FILTER_STRUCTURE_SOURCE, source));
+            edges.removeIf(edge -> edge.from().nodeId() == 22 && edge.to().nodeId() == 23);
+            edges.addAll(List.of(edge(22, "structures", 32, "structures"), edge(32, "structures", 33, "structures"),
+                    edge(33, "structures", 34, "structures"), edge(34, "structures", 23, "value")));
+        }
         return new ProgramGraph(nodes, edges);
     }
 
@@ -458,15 +475,19 @@ public final class StructureProgramOrientationSmoke {
         check(new ServerProgramTargetResolver(player, 32, 1).structuresAround(point, 8).equals(List.of(target)),
                 "result limit discarded the nearest structure");
         var removedNeighbor = neighbors.get(1);
+        if (FILTERS) StructureFilterFixtureSupport.verify(player, resolver, target, removedNeighbor);
         check(StructureTransactions.discard(player.level().getServer(), selectionNeighbor), "neighbor discard failed");
         check(resolver.structureDistanceTo(removedNeighbor, point).isEmpty(), "removed body remained selectable");
+        if (FILTERS) StructureFilterFixtureSupport.verifyUnavailable(resolver, removedNeighbor);
         selectionNeighbor = null;
         check(resolver.structureDistanceTo(target, point).orElseThrow() <= 1E-5, "COM inside cube has nonzero distance");
         var stale = new ProgramStructureReference(target.reference(), UUID.randomUUID());
         check(resolver.structureDistanceTo(stale, point).isEmpty(), "stale activation selected");
+        if (FILTERS) StructureFilterFixtureSupport.verifyUnavailable(resolver, stale);
         var foreign = new ProgramStructureReference(new StructureRef(target.reference().id(), Identifier.parse("minecraft:the_nether"),
                 target.reference().backend(), target.reference().generation()), target.runtimeId());
         check(resolver.structureDistanceTo(foreign, point).isEmpty(), "foreign dimension selected");
+        if (FILTERS) StructureFilterFixtureSupport.verifyUnavailable(resolver, foreign);
         check(resolver.structuresAround(new ProgramWorldPosition(point.dimension(), center.x, center.y + 10, center.z), 0).isEmpty(), "empty point selected body");
         check(before == StructureDirectControl.occupied(target.reference(), target.runtimeId()), "query changed control occupancy");
         for (double radius : new double[] {-1, Double.NaN, AbilityProgramDefinitions.require(category).spatialLimits().queryRange() + 1}) {
@@ -493,6 +514,7 @@ public final class StructureProgramOrientationSmoke {
         }
         selectionNeighbor = null; selectionCapture = null;
         if (SELECTION && seed != null) player.level().setBlock(seed.offset(4, 0, 0), Blocks.AIR.defaultBlockState(), 3);
+        if (FILTERS && seed != null) player.level().setBlock(seed.offset(5, 0, 0), Blocks.AIR.defaultBlockState(), 3);
         if (runtime != null) runtime.closeOrientationCommands();
         if (reference != null) check(StructurePayloadFixtureSupport.ENABLED ? StructurePayloadFixtureSupport.cleanup(player, reference)
                 : StructureTransactions.discard(player.level().getServer(), reference), "body cleanup failed");

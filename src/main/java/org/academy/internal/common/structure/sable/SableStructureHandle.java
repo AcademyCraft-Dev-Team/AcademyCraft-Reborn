@@ -89,6 +89,23 @@ final class SableStructureHandle implements StructureHandle, StructureWorldAcces
 
     @Override public StructureWorldAccess world() { requireThread(); return this; }
 
+    @Override public java.util.Optional<StructureBlockSummary> summarize(int maximumCells) {
+        requireActive();
+        StructureBlockSummary.requireBudget(maximumCells);
+        var plot = subLevel.getPlot();
+        var bounds = plot.getBoundingBox();
+        if (bounds == null) return java.util.Optional.of(new StructureBlockSummary(java.util.Map.of(), 0));
+        var summary = org.academy.internal.common.structure.space.StructureBlockSummaries.scan(
+                new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ()),
+                new BlockPos(bounds.maxX(), bounds.maxY(), bounds.maxZ()), maximumCells, position -> {
+                    var holder = plot.getChunkHolder(plot.toLocal(new ChunkPos(position.getX() >> 4, position.getZ() >> 4)));
+                    return holder == null ? java.util.Optional.empty()
+                            : java.util.Optional.of(holder.getChunk().getBlockState(position));
+                });
+        requireActive();
+        return summary;
+    }
+
     @Override public StructureBlockData read(BlockPos localPosition) {
         requireActive();
         var position = checkedPlotPosition(localPosition);

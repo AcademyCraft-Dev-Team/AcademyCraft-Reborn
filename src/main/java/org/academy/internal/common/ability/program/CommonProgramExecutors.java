@@ -768,6 +768,16 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 resolver(context).lookStructureTarget()
                         .map(target -> data("structure", ProgramValueTypes.STRUCTURE_REFERENCE, target))
                         .orElseGet(CommonProgramExecutors::emptyData));
+        put(result, CommonProgramNodeIds.STRUCTURE_VALID, (context, _, inputs) -> data("result", ProgramValueTypes.BOOLEAN,
+                resolver(context).isStructureValid((ProgramStructureReference) raw(inputs, "structure", ProgramValueTypes.STRUCTURE_REFERENCE))));
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_VALID, (context, _, inputs) ->
+                filterStructures(inputs, resolver(context)::isStructureValid));
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_BLOCKS,
+                (ProgramVmContext context, org.academy.api.common.ability.program.ProgramStructureFilters.Blocks configuration, ProgramInputView inputs) ->
+                        filterStructures(inputs, reference -> resolver(context).structureContents(reference).filter(configuration::matches).isPresent()));
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_SOURCE,
+                (ProgramVmContext context, org.academy.api.common.ability.program.ProgramStructureFilters.Source configuration, ProgramInputView inputs) ->
+                        filterStructures(inputs, reference -> resolver(context).structureSource(reference).filter(configuration::matches).isPresent()));
         for (var id : List.of(CommonProgramNodeIds.STRUCTURES_AROUND, CommonProgramNodeIds.NEAREST_STRUCTURE)) {
             put(result, id, (context, _, inputs) -> {
                 var radius = nonNegative(floatValue(inputs, "radius"), "radius");
@@ -967,6 +977,12 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                         CommonProgramNodeCatalog.CollectionDomain.ENTITY
                 ).stream().filter(predicate).toList())
         );
+    }
+
+    private static ProgramNodeStep filterStructures(ProgramInputView inputs, Predicate<ProgramStructureReference> predicate) {
+        return data("structures", ProgramValueTypes.STRUCTURE_SET,
+                collection(inputs, "structures", CommonProgramNodeCatalog.CollectionDomain.STRUCTURE).stream()
+                        .map(ProgramStructureReference.class::cast).filter(predicate).toList());
     }
 
     private static boolean isHostileTo(

@@ -1,0 +1,9 @@
+apply from: new File(initscript.sourceFile.parentFile, 'structure_program_orientation.init.gradle')
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named(providers.gradleProperty('academyStructureOrientationRun').getOrElse('clientDev')) {
+            systemProperty 'academy.structureSelectionSmoke', 'true'
+            systemProperty 'academy.structureFilterSmoke', 'true'
+        }
+    }
+}

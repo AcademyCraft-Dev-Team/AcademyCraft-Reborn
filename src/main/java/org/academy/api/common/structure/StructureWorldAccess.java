@@ -11,6 +11,16 @@ public interface StructureWorldAccess {
     StructureRef reference();
 
     /**
+     * Complete non-air state counts from already loaded cells, including non-colliding decorations.
+     * Empty Optional means unavailable/unsupported or over budget, never an empty structure.
+     * No chunk loads, block-entity serialization, content writes or control acquisition.
+     */
+    default java.util.Optional<StructureBlockSummary> summarize(int maximumCells) {
+        StructureBlockSummary.requireBudget(maximumCells);
+        return java.util.Optional.empty();
+    }
+
+    /**
      * Reads the live block state and detached block-entity data. Unavailable content must
      * not be reported as air; callers must handle the backend's loaded-content boundary.
      *

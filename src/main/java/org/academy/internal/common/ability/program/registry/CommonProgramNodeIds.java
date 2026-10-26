@@ -114,6 +114,10 @@ public final class CommonProgramNodeIds {
     public static final Identifier NEAREST_STRUCTURE = id("query/nearest_structure");
     public static final Identifier NEAREST_STRUCTURE_TO_POSITION = id("collection/structure/nearest_to_position");
     public static final Identifier FILTER_STRUCTURE_DISTANCE = id("filter/structure/distance");
+    public static final Identifier STRUCTURE_VALID = id("query/structure_valid");
+    public static final Identifier FILTER_STRUCTURE_VALID = id("filter/structure/valid");
+    public static final Identifier FILTER_STRUCTURE_BLOCKS = id("filter/structure/blocks");
+    public static final Identifier FILTER_STRUCTURE_SOURCE = id("filter/structure/source");
     public static final Identifier STRUCTURE_MOTION = id("query/structure_motion");
     public static final Identifier ENTITY_HEIGHT = id("query/entity_height");
     public static final Identifier ENTITY_DATA = id("query/entity_data");

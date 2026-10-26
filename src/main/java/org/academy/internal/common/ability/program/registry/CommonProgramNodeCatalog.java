@@ -601,6 +601,16 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         )));
         put(result, CommonProgramNodeIds.LOOK_STRUCTURE, queryType(outputSchema(
                 "structure", ProgramValueTypes.STRUCTURE_REFERENCE)));
+        put(result, CommonProgramNodeIds.STRUCTURE_VALID, queryType(unarySchema(
+                "structure", ProgramValueTypes.STRUCTURE_REFERENCE, "result", ProgramValueTypes.BOOLEAN)));
+        var structures = unarySchema("structures", ProgramValueTypes.STRUCTURE_SET, "structures", ProgramValueTypes.STRUCTURE_SET);
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_VALID, queryType(structures));
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_BLOCKS, type(
+                org.academy.api.common.ability.program.ProgramStructureFilters.Blocks.CODEC, _ -> structures,
+                ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY));
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_SOURCE, type(
+                org.academy.api.common.ability.program.ProgramStructureFilters.Source.CODEC, _ -> structures,
+                ProgramNodeRole.QUERY, ProgramNodePurity.WORLD_QUERY));
         for (var id : List.of(CommonProgramNodeIds.STRUCTURES_AROUND, CommonProgramNodeIds.NEAREST_STRUCTURE)) {
             put(result, id, queryType(new ProgramNodeSchema(
                     List.of(ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION),

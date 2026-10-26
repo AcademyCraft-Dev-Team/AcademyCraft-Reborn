@@ -1,0 +1,341 @@
+{
+  "base_commit": "80cfe99a",
+  "date": "2026-10-26",
+  "feature": "precision_structure_filters",
+  "commit_status": "user_authorized_this_commit",
+  "tests": {
+    "test": {
+      "tests": 3293,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "clients": [
+    {
+      "name": "native-r2",
+      "backend": "academy:sublevel",
+      "passed": true,
+      "normal_exit": true,
+      "report": "run/native-sublevel-direct-smoke-filters-native-r2/structure-program-orientation-result.json",
+      "report_sha256": "204570B75102528D1303DD1EDF08F6029D084F2D7F7784CB23500D01F77A8A28",
+      "cases": [
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "content_source_validity_filters": true,
+          "category": "academy:accelerator",
+          "backend": "academy:sublevel",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 2.9787865395054496,
+          "expected_extraction_rise": 3.0,
+          "wait_ticks": 23,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "content_source_validity_filters": true,
+          "category": "academy:electromaster",
+          "backend": "academy:sublevel",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.9798103654334795,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 16,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "content_source_validity_filters": true,
+          "category": "academy:aeromanip",
+          "backend": "academy:sublevel",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.9798103654334795,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 16,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "linear_gravity_support_only": true,
+          "passed": true
+        }
+      ],
+      "screenshot": "run/native-sublevel-direct-smoke-filters-native-r2/screenshots/structure-filters-editor.png",
+      "screenshot_sha256": "67294A35BD661FFAFAFD4003DB4B6113DBDBD923A5699ECF1EC5A77C3082614E",
+      "screenshot_visually_reviewed": true,
+      "log": "build/structure-filters-native-r2.log",
+      "log_sha256": "D126FD24BD7895BE8CEEF839A1AE33B0E80FBDC1B2FB0FC3BD9DE5988FB48849",
+      "success": true,
+      "duration": "1m 5s",
+      "task_summary": "19 actionable tasks: 1 executed, 18 up-to-date"
+    },
+    {
+      "name": "suite-r2",
+      "backend": "academy:sable",
+      "passed": true,
+      "normal_exit": true,
+      "report": "run/native-sublevel-direct-smoke-filters-suite-r2/structure-program-orientation-result.json",
+      "report_sha256": "C67D31BE9E86C1B68FB659E172352E683C054B9D43C45C4E29B24D84CD8DC13A",
+      "cases": [
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "content_source_validity_filters": true,
+          "category": "academy:accelerator",
+          "backend": "academy:sable",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 2.976470947265625,
+          "expected_extraction_rise": 3.0,
+          "wait_ticks": 22,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "content_source_validity_filters": true,
+          "category": "academy:electromaster",
+          "backend": "academy:sable",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.978240966796875,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 15,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "content_source_validity_filters": true,
+          "category": "academy:aeromanip",
+          "backend": "academy:sable",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.978240966796875,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 15,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "linear_gravity_support_only": true,
+          "passed": true
+        }
+      ],
+      "screenshot": "run/native-sublevel-direct-smoke-filters-suite-r2/screenshots/structure-filters-editor.png",
+      "screenshot_sha256": "99B0E2BA3CC0137ABF7091860ADF4134BBF5D15125BB4E8F6B6AA1CFC4EF88B4",
+      "screenshot_visually_reviewed": true,
+      "log": "build/structure-filters-suite-r2.log",
+      "log_sha256": "DC1C97BCABCCF905C187A43E68019A118AD76D839F9F5AA798806353840F73C7",
+      "success": true,
+      "duration": "1m 10s",
+      "task_summary": "20 actionable tasks: 2 executed, 18 up-to-date"
+    }
+  ],
+  "builds": {
+    "dev": {
+      "log": "build/structure-filters-dev-build.log",
+      "log_sha256": "12CC63109A3D191264B030F0516DBF7CAB7653513D3531A141A22CF6FF6C82C5",
+      "success": true,
+      "duration": "27s",
+      "task_summary": "32 actionable tasks: 7 executed, 25 up-to-date"
+    },
+    "release": {
+      "log": "build/structure-filters-release-build.log",
+      "log_sha256": "4A8ED645ED5F094BA810B7B2D79B2D3EB5924C348E36666047B14A9ED1404129",
+      "success": true,
+      "duration": "42s",
+      "task_summary": "32 actionable tasks: 15 executed, 1 from cache, 16 up-to-date"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32343588,
+      "sha256": "468D1BDEF71FA60DB6D83323CF72D06E6DA2E9D46EA43494E8E91AC59377E8EC",
+      "new_classes_present": true,
+      "fixtures_and_external_sable_classes_absent": true
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24872487,
+      "sha256": "D8C67CC7861F7FCE1D93309F80E50E80D358E73D6777236AA5C3FEFE0A07E112",
+      "new_classes_present": true,
+      "fixtures_and_external_sable_classes_absent": true
+    }
+  ],
+  "boundaries": {
+    "per_structure_content_scan_cells": 4096,
+    "chunk_loads": false,
+    "block_entity_nbt_reads": false,
+    "control_acquisition_by_filters": false,
+    "actual_save_execute_packets_tested": false,
+    "manual_multiplayer_protection_mod_acceptance": false,
+    "parallel_structure_control": false,
+    "s4_orbital_satellite_migration_completed": false
+  },
+  "test_run": {
+    "log": "build/structure-filters-tests-final.log",
+    "log_sha256": "21BD6B2D8555D8CADC51416BE657033190EE8BA3AF1A34FD9A77D1B54250A99B",
+    "success": true,
+    "duration": "14s",
+    "task_summary": "25 actionable tasks: 5 executed, 20 up-to-date"
+  },
+  "source_world": {
+    "files": 148,
+    "hashes_unchanged": true,
+    "original_user_saves_used": false
+  },
+  "excluded_preexisting_change": {
+    "path": "native/academy_physics/src/lib.rs",
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+    "not_modified_or_staged": true
+  },
+  "source_sha256": {
+    "src/gametest/java/org/academy/internal/client/validation/StructureProgramOrientationSmoke.java": "DB0A68B862E5AE5555AA6B7F3E88A8179C10A2D62F35A6DC132F2A99BADD36E1",
+    "src/gametest/java/org/academy/internal/client/validation/StructureSelectionEditorSmoke.java": "43D4034586AD24FFA1B510182D359AD4D3B05437C280FBDF472D3D50AB704ED8",
+    "src/gametest/java/org/academy/internal/common/ability/program/StructureFilterFixtureSupport.java": "2CC42A24197A22AD048AE2D0EBB1A92E19D7F32DF77BFDBAED163DD4DDBE0F92",
+    "src/main/java/org/academy/api/common/ability/program/ForwardingProgramTargetResolver.java": "05D5F6FD8D2143914CC5EFF3448B046B62DF8AA75D422384F3882DAE7ABDF0ED",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureFilters.java": "7D5CC39BA5B86E6647D938BE6047438F008911927B8E5F88D2B0A0FF2727096D",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureSource.java": "4BA0F8CC70E06EB4292EC4806A288C9123EE8E099C921F49AF074026EC681008",
+    "src/main/java/org/academy/api/common/ability/program/ProgramTargetResolver.java": "8E2DF7B0F51DB2FFF9B1FE8A28D1A759A6870B7A179DABFE1037562F19FF580B",
+    "src/main/java/org/academy/api/common/structure/StructureBlockSummary.java": "245D845D054E15C5E0659A467ABEA0D65E20F4513580DB460097C591ACB55E7B",
+    "src/main/java/org/academy/api/common/structure/StructureWorldAccess.java": "71DD27F6C1CB060105F75CD5BE400740BBBDE3061207DD8988CBB8C6A1F80E02",
+    "src/main/java/org/academy/internal/client/ability/program/ProgramConfigurationOptions.java": "9620AE3C4B67743EB315BC42BD574DB08AAD563C8BE54EE6471DD56EEC3BB00E",
+    "src/main/java/org/academy/internal/common/ability/program/CommonProgramExecutors.java": "30FDA23E398798D393612BE98B8EAEF9E225DC34DE1EBC62BE155E3F556BB436",
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramTargetResolver.java": "72BA183976EC79E5586BE01D855513F3CE3AE305E77AA663841088CD23D02369",
+    "src/main/java/org/academy/internal/common/ability/program/editor/ProgramEditorNodeCatalog.java": "4D0D29366E9301C5C7072854589C5692C6059D99D4192FEF4C01F407C17856BF",
+    "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeCatalog.java": "63A63A864D41026CBE6B4C94F0620C0EFC1E4BBD08B6DBF8DCE60621873EB743",
+    "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeIds.java": "C9354E2DF79B435375704E18725E736EBA5A80FFACB5DA0AEC013A1C83600A28",
+    "src/main/java/org/academy/internal/common/structure/sable/SableStructureHandle.java": "ED0EC398FEC6045D7EEF6D5B3547E848C65CA56D1D66BFBFD4F032AC0B1A17F3",
+    "src/main/java/org/academy/internal/common/structure/space/StructureBlockSummaries.java": "2E2D6CE5F28AE45FEFAE4C851A0CAEF4816261DCF7A2480DC271798868F76712",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelStructureHandle.java": "6C4CD35A6CAEE33C2F5E48E96697F44C3D255CD890C4322F031830F8451C2A07",
+    "src/main/resources/assets/academy/lang/en_us.json": "68E1D586A356A265030712E0C5DF95BE7424C2DD24F87EDD8D9C3F665B91C38D",
+    "src/main/resources/assets/academy/lang/zh_cn.json": "EA8D0AB3F2BB5A7829432CA66D30F6EB644ECE3AAC8C5E281B78F7461156F17D",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureFilterNodesTest.java": "07ECC0A3A74DD386BFEE087B0AEA16DD7E244B6F68F48FA6AE15B764022BDA60",
+    "src/test/java/org/academy/internal/common/structure/space/StructureBlockSummariesTest.java": "FB222DD38E7F086FBEDC22DFCE43E032A8CB8B1DDFEC91B64723A82445F8455E",
+    "validation/native_structure/structure_filters.init.gradle": "B257A875C3E03B9E086E40B511911413B8D88C7693D80FE250F1F897872433A9"
+  },
+  "prior_attempts": [
+    "Initial fixture compilation required moving its helper into the VM package; no production visibility was widened.",
+    "Targeted tests caught an empty block identifier and an incorrect test execution-frame setup; fixed before full passing tests.",
+    "First native launch failed during Gradle init before the game started due to nested initscript access; fixed init composition.",
+    "Native and suite r1 passed three categories; r2 adds a range assertion and a fully visible editor layout."
+  ],
+  "pending": [
+    "Human graph editing and skill handling in the target modpack",
+    "Simultaneous multi-structure lease/resource/cleanup design",
+    "Satellite/orbital/delayed launch authorization wiring",
+    "S4 first impact and bounded fragmentation",
+    "Long-term ledger GC, full I/O fault matrix and native contact stress red tests"
+  ]
+}

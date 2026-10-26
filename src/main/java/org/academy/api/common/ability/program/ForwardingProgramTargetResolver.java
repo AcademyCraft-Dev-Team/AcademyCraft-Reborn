@@ -18,6 +18,11 @@ public interface ForwardingProgramTargetResolver extends ProgramTargetResolver {
     @Override default OptionalDouble structureDistanceTo(ProgramStructureReference reference, ProgramWorldPosition point) {
         return targetResolver().structureDistanceTo(reference, point);
     }
+    @Override default boolean isStructureValid(ProgramStructureReference reference) { return targetResolver().isStructureValid(reference); }
+    @Override default Optional<org.academy.api.common.structure.StructureBlockSummary> structureContents(ProgramStructureReference reference) {
+        return targetResolver().structureContents(reference);
+    }
+    @Override default Optional<ProgramStructureSource> structureSource(ProgramStructureReference reference) { return targetResolver().structureSource(reference); }
     @Override default Optional<org.academy.api.common.structure.StructureDynamics.State> structureMotion(ProgramStructureReference reference) {
         return targetResolver().structureMotion(reference);
     }

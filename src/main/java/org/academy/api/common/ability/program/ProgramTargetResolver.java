@@ -38,6 +38,16 @@ public interface ProgramTargetResolver {
         return OptionalDouble.empty();
     }
 
+    default boolean isStructureValid(ProgramStructureReference reference) { return false; }
+
+    /** Complete bounded contents only; missing data must never satisfy an ALL filter. */
+    default Optional<org.academy.api.common.structure.StructureBlockSummary> structureContents(ProgramStructureReference reference) {
+        return Optional.empty();
+    }
+
+    /** Absent means unknown/unavailable; known unmarked is represented inside the value. */
+    default Optional<ProgramStructureSource> structureSource(ProgramStructureReference reference) { return Optional.empty(); }
+
     /** Solver units: blocks/second and radians/second. Never activates an unloaded structure. */
     default Optional<org.academy.api.common.structure.StructureDynamics.State> structureMotion(
             ProgramStructureReference reference) {

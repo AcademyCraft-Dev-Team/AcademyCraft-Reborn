@@ -220,6 +220,12 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("selectors", "minecraft:player");
         } else if (id.equals(CommonProgramNodeIds.FILTER_BLOCK_EXACT)) {
             configuration.addProperty("selectors", "minecraft:stone");
+        } else if (id.equals(CommonProgramNodeIds.FILTER_STRUCTURE_BLOCKS)) {
+            configuration.addProperty("selectors", "minecraft:iron_block");
+            configuration.addProperty("match", "any");
+        } else if (id.equals(CommonProgramNodeIds.FILTER_STRUCTURE_SOURCE)) {
+            configuration.addProperty("source_mode", "owned_by_caster");
+            configuration.addProperty("skill", "academy:kinetic_throw");
         } else if (id.equals(CommonProgramNodeIds.LOOK_TARGET)) {
             configuration.addProperty("target_type", "entity");
         } else if (id.equals(CommonProgramNodeIds.ENTITY_POSITION)) {
