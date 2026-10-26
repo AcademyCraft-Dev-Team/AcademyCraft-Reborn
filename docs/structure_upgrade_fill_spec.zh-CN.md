@@ -2,6 +2,8 @@
 
 日期：2026-10-23。来源：[主方案](structure_skill_physics_upgrade_plan_2026_10_23.zh-CN.md)、[MPS 评估](mps_physics_evaluation_2026_10_23.zh-CN.md)。
 
+2026-10-26 生命周期补充：Sable 实际拆分完成点继承已标记父来源，永久删除采用持久意图与精确退休，卸载保留来源；未保存的可信子体通过后端分配器取得归块检查点。适用范围、验证与保守等待条件见 [Sable 生命周期接续](structure_sable_provenance_2026_10_26.zh-CN.md)。未将 Sable 原生拆分改造为跨父子内容的原子事务，未启用 S4。
+
 2026-10-26 C 线更新：新增同步 `StructureDamage.cut`，层流切割普通/精密入口共用有向刀面与材料规则，复用路径的保护、掉落和总预算。实际结果和剩余清点见[层流切割接续](structure_cut_damage_2026_10_26.zh-CN.md)，DRAFT 继续禁用。
 
 2026-10-25 C 线更新：`LIVE.damage()` 接入 `LiveStructureDamage`，普通/精密冲击波使用同一球形范围破坏服务；后续新增 `StructureDamage.path`，将有活动玩家的公共射线/路径入口接入本地与 Sable 内容破坏。UPG-DAMAGE-01/02/03/04 的活动玩家路径已进入 EXPERIMENTAL。发射账本、非玩家授权及 S4 仍未接入。球形契约和前批结果见[破坏接续](structure_damage_2026_10_25.zh-CN.md)，最新路径接线、预算和验证边界见[路径破坏接续](structure_path_damage_2026_10_25.zh-CN.md)。下表 Scaffold 名称保留原填充入口，不代表当前 LIVE 仍返回占位结果。

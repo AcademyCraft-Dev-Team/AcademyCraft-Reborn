@@ -26,7 +26,7 @@ public final class SableRestorationIsolation {
     public static List<Object> visibleRaw(List<Object> sources) {
         if (sources.isEmpty()) return sources;
         var first = SableReflection.optional(ServerSubLevel.class, sources.getFirst());
-        if (first == null || ISOLATED.isEmpty() && !MarkedGridRestoration.hasPending(first.getLevel().getServer())) return sources;
+        if (first == null || ISOLATED.isEmpty() && !hasPending(first.getLevel().getServer())) return sources;
         var visible = sources.stream().filter(source -> !hidden(
                 SableReflection.wrap(SubLevel.class, source))).toList();
         return visible.size() == sources.size() ? sources : visible;
@@ -34,8 +34,17 @@ public final class SableRestorationIsolation {
 
     public static boolean hidden(SubLevel source) {
         if (!(source instanceof ServerSubLevel ship)) return false;
-        return ISOLATED.contains(ship) || MarkedGridRestoration.hasPending(ship.getLevel().getServer())
-                && MarkedGridRestoration.pending(ship.getLevel().getServer(), reference(ship));
+        return ISOLATED.contains(ship) || pending(ship);
+    }
+
+    private static boolean hasPending(MinecraftServer server) {
+        return MarkedGridRestoration.hasPending(server) || SableProvenanceLifecycle.hasPending(server);
+    }
+
+    private static boolean pending(ServerSubLevel ship) {
+        var server = ship.getLevel().getServer();
+        return MarkedGridRestoration.pending(server, reference(ship))
+                || SableProvenanceLifecycle.pending(server, reference(ship));
     }
 
     public static boolean detached(SubLevel source) {
@@ -45,7 +54,7 @@ public final class SableRestorationIsolation {
     public static List<SubLevel> visible(List<SubLevel> sources) {
         // The usual no-pending path reuses the backend's own list without allocating a copy.
         if (sources.isEmpty() || !(sources.getFirst() instanceof ServerSubLevel first)) return sources;
-        if (ISOLATED.isEmpty() && !MarkedGridRestoration.hasPending(first.getLevel().getServer())) return sources;
+        if (ISOLATED.isEmpty() && !hasPending(first.getLevel().getServer())) return sources;
         if (sources.stream().noneMatch(SableRestorationIsolation::hidden)) return sources;
         return sources.stream().filter(source -> !hidden(source)).toList();
     }
@@ -69,11 +78,10 @@ public final class SableRestorationIsolation {
     /** Called before any source/observer tick, including the first tick after deserialization. */
     public static void beforeTick(SubLevelContainer container, List<SubLevel> sources) {
         if (!(container instanceof ServerSubLevelContainer serverContainer)) return;
-        if (ISOLATED.isEmpty() && !MarkedGridRestoration.hasPending(serverContainer.getLevel().getServer())) return;
+        if (ISOLATED.isEmpty() && !hasPending(serverContainer.getLevel().getServer())) return;
         for (var source : sources) {
             if (!(source instanceof ServerSubLevel ship) || ship.isRemoved()) continue;
-            boolean pending = MarkedGridRestoration.pending(ship.getLevel().getServer(), reference(ship));
-            if (pending) isolate(ship.getLevel(), ship);
+            if (pending(ship)) isolate(ship.getLevel(), ship);
             else if (ISOLATED.contains(ship)) resume(serverContainer, ship);
         }
         ISOLATED.removeIf(ship -> ship.getLevel() == container.getLevel()

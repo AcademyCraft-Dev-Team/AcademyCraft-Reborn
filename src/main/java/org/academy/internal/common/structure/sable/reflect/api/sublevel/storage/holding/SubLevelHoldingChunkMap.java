@@ -14,6 +14,8 @@ public interface SubLevelHoldingChunkMap extends org.academy.internal.common.str
     java.util.Map<Long, SubLevelHoldingChunk> loadedHoldingChunks();
     void updateChunkStatus(net.minecraft.world.level.ChunkPos a0, boolean a1);
     void saveAll();
+    void moveToUnloaded(org.academy.internal.common.structure.sable.reflect.api.sublevel.ServerSubLevel subLevel,
+                        net.minecraft.world.level.ChunkPos position);
     org.academy.internal.common.structure.sable.reflect.api.sublevel.storage.serialization.SubLevelStorage getStorage();
     void close() throws java.lang.Exception;
 }

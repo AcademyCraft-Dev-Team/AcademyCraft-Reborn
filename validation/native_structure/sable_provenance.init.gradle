@@ -1,0 +1,18 @@
+// Only operates on a disposable copied save. Modes crash/verify use the same directory.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Sable provenance requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        def mode = providers.gradleProperty('academySableProvenanceMode').getOrElse('functional')
+        if (!(mode in ['functional', 'crash', 'verify'])) throw new GradleException('Unknown provenance mode')
+        neoForge.runs.named('clientSable') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.sableProvenanceSmoke', 'true'
+            systemProperty 'academy.sableProvenanceMode', mode
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

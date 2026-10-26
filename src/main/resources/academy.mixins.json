@@ -18,6 +18,8 @@
     "common.compat.MixinSableRestorationIsolation",
     "common.compat.MixinSableRestorationPhysics",
     "common.compat.MixinSableJointTracking",
+    "common.compat.MixinSableProvenanceSplit",
+    "common.compat.MixinSableProvenanceRemoval",
     "common.MixinCommonHooksDamageComposition",
     "common.ItemCooldownsAccess",
     "common.CooldownInstanceAccess",

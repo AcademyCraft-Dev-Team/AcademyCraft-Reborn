@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "base_commit": "a6da5d18",
+  "runtime": "JetBrains Runtime 25",
+  "sable_runtime": "suite",
+  "tests": [
+    {
+      "task": "test",
+      "tests": 3262,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "sableCompatTest",
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "editorTest",
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "build_logs": [
+    "build/provenance-final-dev-build2.log",
+    "build/provenance-final-release-build.log"
+  ],
+  "client_runs": [
+    {
+      "report": "run/native-sublevel-direct-smoke-provenance-final-d/sable-provenance-functional-result.json",
+      "log": "build/provenance-client-final-d.log",
+      "expected_exit": 0,
+      "result": {
+        "cases": [
+          "marked_split_inherits_exact_policy_owner_root",
+          "nested_split_keeps_root_and_direct_parent",
+          "duplicate_notification_idempotent",
+          "unmarked_split_stays_unmarked",
+          "unmarked_delete_no_provenance_intent",
+          "permanent_delete_waits_for_durable_retirement",
+          "retirement_keeps_descendant_lineage",
+          "replacement_survives_previous_plot_retirement",
+          "fragment_permanent_delete_retires_only_itself",
+          "unload_preserves_fragment_mark",
+          "heat_map_auto_split_inherits_creation",
+          "zero_mass_child_removal_retires_mark",
+          "last_cell_assembly_inherits_before_parent_is_retired",
+          "unsaved_fragment_allocates_source_checkpoint_and_auto_restores"
+        ],
+        "mode": "functional",
+        "failure": "",
+        "ticks": 182,
+        "passed": true
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-provenance-final-crash/sable-provenance-crash-result.json",
+      "log": "build/provenance-final-crash.log",
+      "expected_exit": 86,
+      "result": {
+        "passed": true,
+        "ticks": 14,
+        "failure": "",
+        "mode": "crash",
+        "cases": [
+          "marked_split_inherits_exact_policy_owner_root",
+          "nested_split_keeps_root_and_direct_parent",
+          "duplicate_notification_idempotent",
+          "unmarked_split_stays_unmarked",
+          "unmarked_delete_no_provenance_intent",
+          "permanent_delete_waits_for_durable_retirement"
+        ]
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-provenance-final-crash/sable-provenance-verify-result.json",
+      "log": "build/provenance-final-recover.log",
+      "expected_exit": 0,
+      "result": {
+        "mode": "verify",
+        "failure": "",
+        "ticks": 19,
+        "passed": true,
+        "cases": [
+          "crash_after_backend_remove_replays_exact_retirement",
+          "saved_nested_fragment_survives_restart_without_parent"
+        ]
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-provenance-rest-native/structure-restoration-functional-result.json",
+      "log": "build/provenance-rest-native.log",
+      "expected_exit": 0,
+      "result": {
+        "passed": true,
+        "mode": "functional",
+        "backend": "academy:sublevel",
+        "cases": [
+          {
+            "marked": false,
+            "waited_ticks": 180,
+            "still_physical": true,
+            "case": "unmarked_retained",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": 1.4308686912517815E-07,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "case": "lease_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": 1.4308686912517142E-07,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "case": "occupied_target_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": 37.03001933062447,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "case": "tilted_yaw_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": 1.4308686912517142E-07,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "offline_owner_uuid": "c67ec4c3-abec-46e5-983d-41745382ff30",
+            "offline_owner_events": 1,
+            "offline_attribution_created_by_trusted_fixture_api": true,
+            "case": "offline_owner_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": 1.4308686912517142E-07,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "cancelled_protection_events": 1,
+            "retry_after_listener_allowed": true,
+            "case": "protection_cancel_then_retry",
+            "passed": true
+          }
+        ],
+        "failure": "",
+        "server_ticks": 2084,
+        "automatic_restoration_requested_by_fixture": false,
+        "tilt_pose_is_fixture_setup_only": true,
+        "generic_capture_policy_fixture": true,
+        "real_default_skill_and_vm_provenance": "validated by separate default/VM fixtures"
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-provenance-rest-sable/structure-restoration-functional-result.json",
+      "log": "build/provenance-rest-sable.log",
+      "expected_exit": 0,
+      "result": {
+        "passed": true,
+        "mode": "functional",
+        "backend": "academy:sable",
+        "cases": [
+          {
+            "waited_ticks": 180,
+            "marked": false,
+            "still_physical": true,
+            "case": "unmarked_retained",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": -0.0017870722715670343,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "case": "lease_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": -0.0012565693446099317,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "case": "occupied_target_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": 37.088198415132695,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "case": "tilted_yaw_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": -0.0012565693446099317,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "offline_owner_uuid": "d24f6ca2-c062-42f6-ab38-de09dd2f5711",
+            "offline_owner_events": 1,
+            "offline_attribution_created_by_trusted_fixture_api": true,
+            "case": "offline_owner_then_rest",
+            "passed": true
+          },
+          {
+            "automatic_scheduler": true,
+            "placement_count": 1,
+            "settled_yaw_degrees": -0.0012565693446099317,
+            "server_body_removed": true,
+            "client_body_and_collision_removed": true,
+            "host_blocks_synced": true,
+            "backend_capacity_released": true,
+            "retention_ticks": 180,
+            "cancelled_protection_events": 1,
+            "retry_after_listener_allowed": true,
+            "case": "protection_cancel_then_retry",
+            "passed": true
+          }
+        ],
+        "failure": "",
+        "server_ticks": 2084,
+        "automatic_restoration_requested_by_fixture": false,
+        "tilt_pose_is_fixture_setup_only": true,
+        "generic_capture_policy_fixture": true,
+        "real_default_skill_and_vm_provenance": "validated by separate default/VM fixtures"
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32270292,
+      "sha256": "F482863569B4DACA75CC18FD6B6E1BC4255800A43AB556E66807DF0AE6E18D73"
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24799191,
+      "sha256": "86F13EA01FB982F74535EB2D23B14D23D9428879C46D76BE4D4FC9D1BB288C97"
+    }
+  ],
+  "original_rust_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "validation_boundary": [
+    "Automated real-client fixtures, not human keyboard or multiplayer acceptance.",
+    "Crash mode intentionally halts with exit 86. Other runs must save and exit normally.",
+    "Report task totals separately: specialized JVM tasks can execute overlapping tests.",
+    "Sable parent/child content saving remains backend-owned, not an atomic Academy split transfer.",
+    "Physical power loss, exhaustive storage faults, long-running performance, S4 and native contact stress remain unverified."
+  ]
+}

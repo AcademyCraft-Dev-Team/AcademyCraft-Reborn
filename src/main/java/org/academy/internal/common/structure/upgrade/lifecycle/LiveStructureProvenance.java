@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Server-scoped provenance service. Only the owning capture transaction may commit metadata. */
+/** Server-scoped provenance service. Captures and observed backend splits own creation metadata. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class LiveStructureProvenance implements StructureProvenance {
     public static final LiveStructureProvenance INSTANCE = new LiveStructureProvenance();
@@ -66,6 +66,30 @@ public final class LiveStructureProvenance implements StructureProvenance {
             AcademyCraft.LOGGER.error("Structure creation metadata could not be committed: {}", reference, failure);
             return false;
         }
+    }
+
+    /** A backend-observed split is a creation fact, not another content transfer or a launch reward. */
+    public static boolean commitFragment(MinecraftServer server, StructureRef child, StructureRef parent, long time) {
+        requireThread(server);
+        if (child.id().equals(parent.id()) || !child.backend().equals(parent.backend())
+                || !child.dimension().equals(parent.dimension())) return false;
+        var source = metadata(server, parent).orElse(null);
+        if (source == null) return false;
+        var existing = metadata(server, child).orElse(null);
+        // Repeated backend notifications must not change the operation or timestamp.
+        if (existing != null) return existing.source() == CreationKind.SKILL_FRAGMENT
+                && existing.parent().equals(Optional.of(StructureProvenanceLedger.stable(parent)))
+                && existing.rootLineageId().equals(source.rootLineageId())
+                && existing.ownerId().equals(source.ownerId()) && existing.skillId().equals(source.skillId())
+                && existing.sourceGridRotation().equals(source.sourceGridRotation())
+                && existing.restorePolicy().equals(source.restorePolicy());
+        return commitCapture(server, child, fragment(parent, source, UUID.randomUUID(), time));
+    }
+
+    static Metadata fragment(StructureRef parent, Metadata source, UUID operation, long time) {
+        return new Metadata(CreationKind.SKILL_FRAGMENT, operation, source.rootLineageId(),
+                Optional.of(StructureProvenanceLedger.stable(parent)), source.ownerId(), source.skillId(),
+                source.sourceGridRotation(), source.restorePolicy(), time);
     }
 
     /** Exact-creation compare/remove for the transaction that has durably restored or destroyed the body. */

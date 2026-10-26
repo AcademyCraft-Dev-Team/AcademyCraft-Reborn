@@ -133,6 +133,24 @@ class StructureProvenanceLedgerTest {
     }
 
     @Test
+    void successiveSplitsKeepRootOwnerPolicyAndGridButHaveDistinctCreationAndDirectParent() throws IOException {
+        var root = reference(3); var child = reference(4); var original = metadata();
+        var first = LiveStructureProvenance.fragment(root, original, UUID.randomUUID(), 60);
+        var second = LiveStructureProvenance.fragment(child, first, UUID.randomUUID(), 70);
+        assertEquals(StructureProvenance.CreationKind.SKILL_FRAGMENT, second.source());
+        assertEquals(Optional.of(StructureProvenanceLedger.stable(child)), second.parent());
+        assertEquals(original.rootLineageId(), second.rootLineageId());
+        assertEquals(original.ownerId(), second.ownerId());
+        assertEquals(original.skillId(), second.skillId());
+        assertEquals(original.restorePolicy(), second.restorePolicy());
+        assertEquals(original.sourceGridRotation(), second.sourceGridRotation());
+        assertNotEquals(first.creationOperationId(), second.creationOperationId());
+        var ledger = new StructureProvenanceLedger(directory);
+        ledger.commit(child, first);
+        assertEquals(first, new StructureProvenanceLedger(directory).metadata(child).orElseThrow());
+    }
+
+    @Test
     void malformedFieldOrUnknownMetadataVersionCannotDefaultToTrustedValues() {
         var encoded = StructureProvenanceCodec.encode(metadata());
         encoded.putInt("version", 2);
