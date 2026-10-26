@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) throw new GradleException('Isolated launch fixture required')
+        def mode = providers.gradleProperty('academyLaunchMode').getOrElse('functional')
+        if (!(mode in ['functional', 'crash', 'verify'])) throw new GradleException('Invalid launch fixture mode')
+        neoForge.runs.named(providers.gradleProperty('academyLaunchRun').getOrElse('clientDev')) {
+            gameDirectory.set(directory)
+            systemProperty 'academy.structureLaunchSmoke', 'true'
+            systemProperty 'academy.structureLaunchMode', mode
+            programArguments.addAll('--quickPlaySingleplayer', 'test', '--width', '1280', '--height', '720')
+        }
+    }
+}

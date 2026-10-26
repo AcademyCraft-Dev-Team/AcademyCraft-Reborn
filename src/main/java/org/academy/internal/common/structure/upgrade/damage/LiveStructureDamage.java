@@ -21,7 +21,6 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.structure.*;
 import org.academy.api.common.structure.upgrade.*;
 import org.academy.api.common.util.LevelUtil;
-import org.academy.api.server.ability.AbilityEffectPolicy;
 import org.academy.internal.common.structure.StructureBackendRouter;
 import org.academy.internal.common.structure.space.NativeStructureBreakDrops;
 import org.academy.internal.common.structure.transaction.StructureCellPayload;
@@ -34,14 +33,13 @@ import java.util.*;
  * Bounded sphere batches and synchronous beam paths share protected mutation and output scopes.
  * Each sphere READY batch is consumed once; status prepares the next slice on a later tick.
  * Beam paths return their final obstruction distance immediately and never schedule a replay.
- * Only active server players are authorized in this first release.
- * Impact-ledger and non-player policies remain explicitly unsupported.
+ * Active players and durably issued launches share cell protection and mutation.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public final class LiveStructureDamage implements StructureDamage {
     public static final LiveStructureDamage INSTANCE = new LiveStructureDamage();
     private static final Map<MinecraftServer, LinkedHashMap<UUID, Operation>> SERVERS = new IdentityHashMap<>();
-    private static final Map<ServerPlayer, PathBudget> PATH_BUDGETS = new IdentityHashMap<>();
+    private static final Map<DamageAuthorization.BudgetOwner, PathBudget> PATH_BUDGETS = new HashMap<>();
     // Vanilla shapes such as fences extend outside their owning unit cell. This margin is
     // only broad phase; the exact shape still uses the skill's unmodified radius.
     private static final double PATH_SHAPE_MARGIN = 1;
@@ -65,7 +63,7 @@ public final class LiveStructureDamage implements StructureDamage {
     private StructurePathDamage.Result path(Authority authority, StructurePathDamage.Request path,
                                            StructureCutDamage.@Nullable Request cut) {
         var context = context(authority);
-        if (context == null) return pathFailure(StructureOperation.Status.UNSUPPORTED, "damage_requires_active_player");
+        if (context == null) return pathFailure(StructureOperation.Status.DENIED, "damage_authority_unavailable");
         requireThread(context.host());
         if (!available(context) || !path.simulate() && !allowed(context)) {
             return pathFailure(StructureOperation.Status.DENIED, "damage_actor_unavailable");
@@ -78,14 +76,14 @@ public final class LiveStructureDamage implements StructureDamage {
                 return pathFailure(StructureOperation.Status.DENIED, "damage_requires_host_coordinates");
             }
         }
-        var actor = (ServerPlayer) context.actor();
-        var budget = PATH_BUDGETS.computeIfAbsent(actor, ignored -> new PathBudget());
-        budget.refresh(host.getGameTime());
+        var budget = PATH_BUDGETS.computeIfAbsent(context.budgetOwner(), ignored -> new PathBudget());
+        budget.refresh(host.getServer().getTickCount());
         var op = new Operation(context, new Request(UUID.randomUUID(), path.start(), 0, 0,
                 32768, 1024, path.drops()), List.of());
         op.path = path;
         op.cut = cut;
         op.cutRegion = cut == null ? null : new DamageCutRegion(cut);
+        if (!path.simulate() && !context.claim(op.id)) return pathFailure(StructureOperation.Status.DENIED, "damage_launch_already_claimed_or_unavailable");
         int scans = op.scansLeft = Math.min(32768, budget.scans);
         int changes = op.changesLeft = Math.min(1024, budget.changes);
         var touched = new LinkedHashSet<DamageDomain>();
@@ -202,7 +200,7 @@ public final class LiveStructureDamage implements StructureDamage {
 
     @Override public StructureOperation.Result<Batch> query(Authority authority, Request request) {
         var context = context(authority);
-        if (context == null) return StructureOperation.unsupported("damage_requires_active_player");
+        if (context == null) return failure(StructureOperation.Status.DENIED, "damage_authority_unavailable");
         requireThread(context.host());
         if (!allowed(context)) return failure(StructureOperation.Status.DENIED, "damage_actor_unavailable");
         if (Math.abs(request.center().x) > 30_000_000 || Math.abs(request.center().z) > 30_000_000
@@ -223,6 +221,7 @@ public final class LiveStructureDamage implements StructureDamage {
         } catch (RuntimeException unavailable) {
             return failure(StructureOperation.Status.BLOCKED, "damage_coverage_unavailable");
         }
+        if (!context.claim(request.effectId())) return failure(StructureOperation.Status.DENIED, "damage_launch_already_claimed_or_unavailable");
         registry.put(request.effectId(), operation);
         prepare(operation);
         return new StructureOperation.Result<>(!operation.active() ? StructureOperation.Status.BLOCKED
@@ -347,7 +346,7 @@ public final class LiveStructureDamage implements StructureDamage {
     private static void mutate(Operation op, Observation target, Map<DamageDomain, Long> revisions) {
         var level = target.level(op);
         var position = target.position();
-        var actor = (ServerPlayer) op.context.actor();
+        var actor = op.context.actor();
         NativeStructureBreakDrops.Scope drops = null;
         if (target.domain != null) {
             var handle = target.domain.handle();
@@ -363,13 +362,13 @@ public final class LiveStructureDamage implements StructureDamage {
             boolean changed;
             if (target.payload.state().getDestroySpeed(level, position) < 0 || target.payload.state().isAir()
                     || op.path != null && op.path.includeFluids() && target.payload.state().getBlock() instanceof LiquidBlock) {
-                changed = admit(op, target, position, target.payload.state()) && target.current(op, revisions)
-                        && clearFluid(level, actor, position, target.payload.state());
+                changed = admit(op, target, position, target.payload.state()) && target.current(op, revisions) && allowed(op.context)
+                        && clearFluid(level, actor instanceof ServerPlayer player ? player : null, position, target.payload.state());
                 if (changed) op.broken++;
             } else {
-                changed = LevelUtil.destroyBlockForAbility(level, position,
+                changed = LevelUtil.destroyBlockForAuthorizedAbility(level, position,
                         op.request.drops() == DropPolicy.EXISTING_SKILL_RULES, actor,
-                        new LevelUtil.BreakGuard(() -> target.current(op, revisions), (pos, state) -> admit(op, target, pos, state),
+                        new LevelUtil.BreakGuard(() -> target.current(op, revisions) && allowed(op.context), (pos, state) -> admit(op, target, pos, state),
                         pos -> scanNeighbor(op, target, pos),
                         () -> allowed(op.context) && (target.domain == null
                                 || target.domain.current() && target.pose.equals(target.domain.handle().pose())),
@@ -408,13 +407,12 @@ public final class LiveStructureDamage implements StructureDamage {
         op.changesLeft--;
         var world = target.domain == null ? position : BlockPos.containing(target.pose.localToWorldPoint(Vec3.atCenterOf(local)));
         var host = op.context.host();
-        var actor = (ServerPlayer) op.context.actor();
-        return loaded(host, world) && host.getWorldBorder().isWithinBounds(world) && host.mayInteract(actor, world)
-                && LevelUtil.canAbilityBreak(host, world, state, actor) && allowed(op.context)
-                && host.mayInteract(actor, world);
+        return loaded(host, world) && host.getWorldBorder().isWithinBounds(world)
+                && op.context.mayBreak(world, state, target.domain == null ? Optional.empty()
+                : Optional.of(new SpaceBlockRef(target.domain.handle().reference(), local)));
     }
 
-    private static boolean clearFluid(ServerLevel level, ServerPlayer actor, BlockPos pos, BlockState state) {
+    private static boolean clearFluid(ServerLevel level, @Nullable ServerPlayer actor, BlockPos pos, BlockState state) {
         if (state.getFluidState().isEmpty()) return false;
         if (state.getBlock() instanceof BucketPickup pickup && !pickup.pickupBlock(actor, level, pos, state).isEmpty()) return true;
         if (state.hasProperty(BlockStateProperties.WATERLOGGED) && state.getValue(BlockStateProperties.WATERLOGGED)) {
@@ -423,16 +421,14 @@ public final class LiveStructureDamage implements StructureDamage {
         return state.getBlock() instanceof LiquidBlock && level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
     }
 
-    private static StructureOperation.@Nullable ActorContext context(Authority authority) {
-        return authority instanceof ActiveActor active && active.context().actor() instanceof ServerPlayer ? active.context() : null;
+    private static @Nullable DamageAuthorization context(Authority authority) {
+        return DamageAuthorization.resolve(authority);
     }
-    private static boolean allowed(StructureOperation.ActorContext context) {
-        return available(context) && AbilityEffectPolicy.blockDestruction(context.host()) != AbilityEffectPolicy.Decision.DENY;
+    private static boolean allowed(DamageAuthorization context) {
+        return context.allowed();
     }
-    private static boolean available(StructureOperation.ActorContext context) {
-        var actor = (ServerPlayer) context.actor(); var host = context.host();
-        return actor.level() == host && actor.isAlive() && !actor.isRemoved() && !actor.hasDisconnected()
-                && host.getServer().getLevel(host.dimension()) == host;
+    private static boolean available(DamageAuthorization context) {
+        return context.available();
     }
     private static @Nullable Operation lookup(Authority authority, UUID id) {
         var context = context(authority);
@@ -440,7 +436,7 @@ public final class LiveStructureDamage implements StructureDamage {
         requireThread(context.host());
         var registry = SERVERS.get(context.host().getServer());
         var op = registry == null ? null : registry.get(id);
-        return op != null && op.context.host() == context.host() && op.context.actor() == context.actor() ? op : null;
+        return op != null && op.context.same(context) ? op : null;
     }
     private static StructureOperation.Result<Progress> progress(Operation op) {
         return new StructureOperation.Result<>(op.phase == Phase.READY ? StructureOperation.Status.READY
@@ -460,8 +456,8 @@ public final class LiveStructureDamage implements StructureDamage {
     }
 
     @SubscribeEvent public static void tick(ServerTickEvent.Post event) {
-        PATH_BUDGETS.keySet().removeIf(player -> player.level().getServer() == event.getServer()
-                && (player.hasDisconnected() || player.isRemoved()));
+        PATH_BUDGETS.entrySet().removeIf(entry -> entry.getKey().server() == event.getServer()
+                && event.getServer().getTickCount() - entry.getValue().tick > 200);
         var registry = SERVERS.get(event.getServer());
         if (registry == null || mutating) return;
         registry.values().removeIf(op -> op.context.host().getGameTime() - (op.active() ? op.started : op.lastSlice) > (op.active() ? 1200 : 200));
@@ -471,7 +467,7 @@ public final class LiveStructureDamage implements StructureDamage {
     }
     @SubscribeEvent public static void stopped(ServerStoppedEvent event) {
         SERVERS.remove(event.getServer());
-        PATH_BUDGETS.keySet().removeIf(player -> player.level().getServer() == event.getServer());
+        PATH_BUDGETS.keySet().removeIf(owner -> owner.server() == event.getServer());
     }
 
     private record PathCursor(@Nullable DamageDomain domain, DamagePathRegion.Cursor cells) {}
@@ -490,7 +486,7 @@ public final class LiveStructureDamage implements StructureDamage {
     private record Cursor(@Nullable DamageDomain domain, Iterator<BlockPos> cells) {}
     private static final class Operation {
         final UUID id;
-        final StructureOperation.ActorContext context;
+        final DamageAuthorization context;
         final Request request;
         StructurePathDamage.@Nullable Request path;
         StructureCutDamage.@Nullable Request cut;
@@ -506,7 +502,7 @@ public final class LiveStructureDamage implements StructureDamage {
         Phase phase = Phase.QUERYING;
         @Nullable Batch batch;
         List<Observation> prepared = List.of();
-        Operation(StructureOperation.ActorContext context, Request request, List<DamageDomain> domains) {
+        Operation(DamageAuthorization context, Request request, List<DamageDomain> domains) {
             this.context = context; this.request = request; this.id = request.effectId(); started = context.host().getGameTime();
             // Structures go first so a large terrain sphere cannot starve moving targets.
             for (var domain : domains) {

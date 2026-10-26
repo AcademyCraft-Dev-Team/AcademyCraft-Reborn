@@ -31,7 +31,8 @@ public interface StructureDamage {
      * Query actual content selection shapes, including plants with empty collision shapes.
      * The live sphere service returns bounded slices: apply READY once, then poll status for
      * later slices until COMPLETED. maxScans/maxChanges are shared per-operation tick budgets.
-     * Active players are supported; launched/non-player authorization remains unsupported.
+     * Active players and server-issued launches are supported. Non-player launches require an
+     * explicit registered policy; unknown, expired, revoked or already claimed launches are denied.
      */
     StructureOperation.Result<Batch> query(Authority authority, Request request);
 

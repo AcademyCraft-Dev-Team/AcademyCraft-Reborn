@@ -1,0 +1,1665 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "base_commit": "0b38b01e",
+  "runtime": "JetBrains Runtime 25",
+  "sable_runtime": "suite",
+  "tests": [
+    {
+      "task": "test",
+      "tests": 3275,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "sableCompatTest",
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "task": "editorTest",
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "build_logs": [
+    "build/launch-final-dev-build.log",
+    "build/launch-final-release-build.log"
+  ],
+  "client_runs": [
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-authority-native-final/structure-launch-functional-result.json",
+      "log": "build/launch-authority-native-final.log",
+      "expected_exit": 0,
+      "result": {
+        "ticks": 531,
+        "failure": "",
+        "mode": "functional",
+        "cases": [
+          {
+            "case": "player_sphere",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "npc_sphere",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "npc_path",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "npc_cut",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "unknown_policy",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "forged_identity",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "expired",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "revoked_before_query",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "revoked_after_query",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "cancel_consumes",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "event_cancel",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "event_revoke",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "player_protection_cancel",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "npc_removed",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "explicit_absent_policy",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "source_binding",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "source_creation_changed",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "path_simulation",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "policy_gate_changed",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "player_setting_changed",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "cell_policy_changes_in_event",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "policy_exception",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          },
+          {
+            "case": "policy_reentry",
+            "loot_events": 1,
+            "backend": "academy:sublevel",
+            "protection_events": 1,
+            "passed": true
+          },
+          {
+            "case": "policy_changes_during_admission",
+            "loot_events": 0,
+            "backend": "academy:sublevel",
+            "protection_events": 0,
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-authority-sable-final/structure-launch-functional-result.json",
+      "log": "build/launch-authority-sable-final.log",
+      "expected_exit": 0,
+      "result": {
+        "cases": [
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "player_sphere",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "npc_sphere",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "npc_path",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "npc_cut",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "unknown_policy",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "forged_identity",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "expired",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "revoked_before_query",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "revoked_after_query",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "cancel_consumes",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "event_cancel",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "event_revoke",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "player_protection_cancel",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "npc_removed",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "explicit_absent_policy",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "source_binding",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "source_creation_changed",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "path_simulation",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "policy_gate_changed",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "player_setting_changed",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "cell_policy_changes_in_event",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "policy_exception",
+            "passed": true,
+            "protection_events": 0
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 1,
+            "case": "policy_reentry",
+            "passed": true,
+            "protection_events": 1
+          },
+          {
+            "backend": "academy:sable",
+            "loot_events": 0,
+            "case": "policy_changes_during_admission",
+            "passed": true,
+            "protection_events": 0
+          }
+        ],
+        "mode": "functional",
+        "failure": "",
+        "ticks": 531,
+        "passed": true
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-authority-restart-final/structure-launch-crash-result.json",
+      "log": "build/launch-authority-crash-final.log",
+      "expected_exit": 86,
+      "result": {
+        "cases": [
+          {
+            "case": "durable_claim_and_revoke_before_halt",
+            "passed": true
+          }
+        ],
+        "mode": "crash",
+        "failure": "",
+        "ticks": 25,
+        "passed": true
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-authority-restart-final/structure-launch-verify-result.json",
+      "log": "build/launch-authority-recover-final.log",
+      "expected_exit": 0,
+      "result": {
+        "mode": "verify",
+        "failure": "",
+        "ticks": 25,
+        "passed": true,
+        "cases": [
+          {
+            "case": "restart_denies_used",
+            "passed": true
+          },
+          {
+            "case": "restart_denies_revoked",
+            "passed": true
+          },
+          {
+            "case": "restart_denies_version",
+            "passed": true
+          },
+          {
+            "case": "restart_restores_unclaimed_authority",
+            "passed": true
+          }
+        ]
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-final-regression-sphere-native/structure-damage-result.json",
+      "log": "build/launch-final-regression-sphere-native.log",
+      "expected_exit": 0,
+      "result": {
+        "passed": true,
+        "ticks": 606,
+        "cases": [
+          {
+            "loot_events": 2,
+            "break_events": 2,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "iron_drop"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 2,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "iron_no_drop"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "hollow"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "slab_gap"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "plant"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "chest"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "break_cancel"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "replace_during_break"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "loot_cancel"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "loot_modify_xp"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "forged_and_replay"
+          },
+          {
+            "loot_events": 2,
+            "break_events": 2,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "bounded"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "stale_payload"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "precision"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "ordinary"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "rotated_slab_gap"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "rotated_chest"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "stale_pose"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "host_and_structure"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "structure_click"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "locked_payload"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel",
+            "passed": true,
+            "case": "stale_lock"
+          }
+        ],
+        "failure": ""
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-final-regression-path-native/structure-path-damage-result.json",
+      "log": "build/launch-final-regression-path-native.log",
+      "expected_exit": 0,
+      "result": {
+        "cases": [
+          {
+            "passed": true,
+            "case": "iron",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "no_drops",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "simulate",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "hollow",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "slab_gap",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "rotated_slab_gap",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "rotated_chest",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "tier_blocker",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "world_blocker",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "mixed_cells",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "cancel",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "replace",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "loot_xp",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "reentry",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "locked",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "silk",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "fortune",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "smelt",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "plasma",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "zero_length",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "scan_budget",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "outbound_blocker",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "return_blocker",
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "change_budget",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "fluid_silent",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "program_mining",
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "supported_plant",
+            "loot_events": 2,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          },
+          {
+            "passed": true,
+            "case": "overhanging_fence",
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sublevel"
+          }
+        ],
+        "failure": "",
+        "passed": true,
+        "ticks": 763
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-final-regression-cut-native/structure-cut-damage-result.json",
+      "log": "build/launch-final-regression-cut-native.log",
+      "expected_exit": 0,
+      "result": {
+        "failure": "",
+        "cases": [
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "instant"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "half_cobweb"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "half_stone"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "full_stone"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "full_iron"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "full_bedrock"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "fire"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 0,
+            "case": "cancel_fire"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "rotated_stone"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "rotated_partial_gap"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "rotated_partial_hit"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "hollow"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 0,
+            "case": "cancel"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 0,
+            "case": "replace"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "loot"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "reentry"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "locked"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "simulate"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 0,
+            "case": "no_drops"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "mixed_width"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "chest_preserved"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "shared_cast"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "program_vertical"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 1,
+            "loot_events": 1,
+            "case": "program_horizontal"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "disabled"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 2,
+            "loot_events": 0,
+            "case": "change_budget"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "entity_blocked"
+          },
+          {
+            "passed": true,
+            "backend": "academy:sublevel",
+            "break_events": 0,
+            "loot_events": 0,
+            "case": "entity_clear"
+          }
+        ],
+        "ticks": 756,
+        "passed": true
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-final-regression-sphere-sable/structure-damage-result.json",
+      "log": "build/launch-final-regression-sphere-sable.log",
+      "expected_exit": 0,
+      "result": {
+        "ticks": 606,
+        "cases": [
+          {
+            "loot_events": 2,
+            "break_events": 2,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "iron_drop"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 2,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "iron_no_drop"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "hollow"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "slab_gap"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "plant"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "chest"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "break_cancel"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "replace_during_break"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "loot_cancel"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "loot_modify_xp"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "forged_and_replay"
+          },
+          {
+            "loot_events": 2,
+            "break_events": 2,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "bounded"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "stale_payload"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "precision"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "ordinary"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "rotated_slab_gap"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "rotated_chest"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "stale_pose"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "host_and_structure"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "structure_click"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "locked_payload"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "stale_lock"
+          }
+        ],
+        "failure": "",
+        "passed": true
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-final-regression-path-sable/structure-path-damage-result.json",
+      "log": "build/launch-final-regression-path-sable.log",
+      "expected_exit": 0,
+      "result": {
+        "passed": true,
+        "ticks": 763,
+        "cases": [
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "iron"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "no_drops"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "simulate"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "hollow"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "slab_gap"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "rotated_slab_gap"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "rotated_chest"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "tier_blocker"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "world_blocker"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "mixed_cells"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "cancel"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "replace"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "loot_xp"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "reentry"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "locked"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "silk"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "fortune"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "smelt"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "plasma"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "zero_length"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "scan_budget"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "outbound_blocker"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 0,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "return_blocker"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "change_budget"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "fluid_silent"
+          },
+          {
+            "loot_events": 0,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "program_mining"
+          },
+          {
+            "loot_events": 2,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "supported_plant"
+          },
+          {
+            "loot_events": 1,
+            "break_events": 1,
+            "backend": "academy:sable",
+            "passed": true,
+            "case": "overhanging_fence"
+          }
+        ],
+        "failure": ""
+      }
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-launch-final-regression-cut-sable/structure-cut-damage-result.json",
+      "log": "build/launch-final-regression-cut-sable.log",
+      "expected_exit": 0,
+      "result": {
+        "passed": true,
+        "failure": "",
+        "cases": [
+          {
+            "case": "instant",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "half_cobweb",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "half_stone",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "full_stone",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "full_iron",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "full_bedrock",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "fire",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "cancel_fire",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 0
+          },
+          {
+            "case": "rotated_stone",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "rotated_partial_gap",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "rotated_partial_hit",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "hollow",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "cancel",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 0
+          },
+          {
+            "case": "replace",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 0
+          },
+          {
+            "case": "loot",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "reentry",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "locked",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "simulate",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "no_drops",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 0
+          },
+          {
+            "case": "mixed_width",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "chest_preserved",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "shared_cast",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "program_vertical",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "program_horizontal",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 1,
+            "loot_events": 1
+          },
+          {
+            "case": "disabled",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "change_budget",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 2,
+            "loot_events": 0
+          },
+          {
+            "case": "entity_blocked",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          },
+          {
+            "case": "entity_clear",
+            "passed": true,
+            "backend": "academy:sable",
+            "break_events": 0,
+            "loot_events": 0
+          }
+        ],
+        "ticks": 756
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32315856,
+      "sha256": "3CB47FD7ECB5856F7F07719158F3E4BC6863E272D76D14F0301ABEAC47345C1F"
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24844755,
+      "sha256": "146C6B61FE035AD15C8DEAF6B6C1ABB247C8C2CEF385B7D2A952FEBA0E72ABC8"
+    }
+  ],
+  "production_sources": [
+    {
+      "path": "src/main/java/org/academy/api/common/structure/upgrade/StructureDamage.java",
+      "sha256": "64FA0254F054E670AA7706B72B261DC69F9DC01BD385C9551862C60653074558"
+    },
+    {
+      "path": "src/main/java/org/academy/api/common/structure/upgrade/StructureLaunchBreakEvent.java",
+      "sha256": "106507C5B91F6989E6E892983183ED38D8DEF2D20B849284049B9954EAE07D19"
+    },
+    {
+      "path": "src/main/java/org/academy/api/common/structure/upgrade/StructureLaunches.java",
+      "sha256": "766D2B4EC6FE29605A8938530676BB8E18C4F28AD1DC5A1D5AA3E6BDCA1EF7DB"
+    },
+    {
+      "path": "src/main/java/org/academy/api/common/util/LevelUtil.java",
+      "sha256": "987141FD758E6438CE809FCFA3B59D0B657C52E6084E973402350D951B247231"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/structure/upgrade/damage/DamageAuthorization.java",
+      "sha256": "6017B3FF4E74FD8CEB12076F8C554F2793187CF36E2151A7AC01988879FF06B2"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/structure/upgrade/damage/LiveStructureDamage.java",
+      "sha256": "D069CC5F56F63B8DB4F5F56D29DCE3D25C458B4B4B3048C6E2A612D2A284DBAF"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/structure/upgrade/launch/LiveStructureLaunches.java",
+      "sha256": "BA8B72DCA31A350A55BA128A9292B2DD4A28F4D2169E70974B7905A5280BCF05"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/structure/upgrade/launch/StructureLaunchLedger.java",
+      "sha256": "5307BE6EE97AF6CC69E491AA9716CE669B7D7828B63060B542467073BCC5A86B"
+    }
+  ],
+  "packaging_verified": true,
+  "baseline_world_files_verified": 148,
+  "original_rust_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "validation_boundary": [
+    "Real-client automated fixtures, not human keyboard or multiplayer acceptance.",
+    "One launch admits one destructive operation. Restart does not replay or resume admitted effects.",
+    "Non-player/offline policies in these fixtures are explicitly registered test adapters, not blanket claim-mod compatibility.",
+    "Crash preparation intentionally halts 86; other final runs save and exit normally.",
+    "Task counts can overlap and same-revision up-to-date/cache results are reused.",
+    "Cross-file atomic world/loot transactions, exhaustive I/O combinations, expiration-record collection, S4 and native contact stress remain pending."
+  ]
+}

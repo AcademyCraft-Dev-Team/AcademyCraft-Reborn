@@ -228,6 +228,13 @@ public class LevelUtil {
     public static boolean destroyBlockForAbility(Level level, BlockPos pos, boolean dropBlock,
             @Nullable ServerPlayer breaker, BreakGuard guard, @Nullable BlockDropHandler loot,
             boolean silentNeighbors) {
+        return destroyBlockForAuthorizedAbility(level, pos, dropBlock, breaker, guard, loot, silentNeighbors);
+    }
+
+    /** Caller must authorize every cell; a missing entity never grants permission. Keeps real loot attribution. */
+    public static boolean destroyBlockForAuthorizedAbility(Level level, BlockPos pos, boolean dropBlock,
+            @Nullable Entity source, BreakGuard guard, @Nullable BlockDropHandler loot, boolean silentNeighbors) {
+        var breaker = source instanceof ServerPlayer player ? player : null;
         var state = level.getBlockState(pos);
         if (state.isAir() || !guard.stillCurrent.getAsBoolean()
                 || !guard.admission.test(pos, state) || !guard.stillCurrent.getAsBoolean()) return false;
@@ -236,7 +243,7 @@ public class LevelUtil {
                 var blockEntity = state.hasBlockEntity() ? level.getBlockEntity(pos) : null;
                 boolean handled = loot != null && breaker != null && level instanceof ServerLevel server
                         && loot.drop(server, pos, state, blockEntity, breaker);
-                if (!handled) Block.dropResources(state, level, pos, blockEntity, breaker, ItemStack.EMPTY);
+                if (!handled) Block.dropResources(state, level, pos, blockEntity, source, ItemStack.EMPTY);
             }
             if (!guard.stillCurrent.getAsBoolean()) {
                 // Loot callbacks may already have effects. Never overwrite the replacement or
@@ -244,7 +251,7 @@ public class LevelUtil {
                 throw new IllegalStateException("Ability target changed during loot callbacks");
             }
             if (silentNeighbors) {
-                removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), breaker, dropBlock,
+                removeBlockAndUnsupportedNeighbors(level, pos, state, Blocks.AIR.defaultBlockState(), source, dropBlock,
                         guard.admission, guard.scanNeighbor, guard.spaceCurrent, guard.removed);
             } else if (level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_NEIGHBORS)) {
                 guard.removed.accept(pos);
@@ -496,10 +503,11 @@ public class LevelUtil {
     }
 
     private static void removeBlockAndUnsupportedNeighbors(Level level, BlockPos pos, BlockState state,
-            BlockState air, @Nullable ServerPlayer breaker, boolean dropNeighbors,
+            BlockState air, @Nullable Entity source, boolean dropNeighbors,
             java.util.function.BiPredicate<BlockPos, BlockState> admission,
             java.util.function.Predicate<BlockPos> scanNeighbor, java.util.function.BooleanSupplier spaceCurrent,
             java.util.function.Consumer<BlockPos> onRemoved) {
+        var breaker = source instanceof ServerPlayer player ? player : null;
         var removedBlocks = new ArrayList<RemovedBlock>();
         var pending = new ArrayDeque<BlockPos>();
         var visited = new LongOpenHashSet();
@@ -521,7 +529,7 @@ public class LevelUtil {
             if (!admission.test(candidate, candidateState)
                     || !spaceCurrent.getAsBoolean() || level.getBlockState(candidate) != candidateState || level.getBlockEntity(candidate) != candidateEntity) continue;
             if (dropNeighbors || breaker != null && SpatialStorageService.hasEnabledUnit(breaker)) {
-                Block.dropResources(candidateState, level, candidate, level.getBlockEntity(candidate), breaker, ItemStack.EMPTY);
+                Block.dropResources(candidateState, level, candidate, level.getBlockEntity(candidate), source, ItemStack.EMPTY);
             }
             if (!spaceCurrent.getAsBoolean() || level.getBlockState(candidate) != candidateState || level.getBlockEntity(candidate) != candidateEntity) {
                 throw new IllegalStateException("Ability neighbour changed during loot callbacks");
