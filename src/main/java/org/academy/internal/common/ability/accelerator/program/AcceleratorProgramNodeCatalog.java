@@ -76,6 +76,15 @@ public final class AcceleratorProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramNodePurity.ACTION,
                 capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
         put(result, AcceleratorProgramNodeIds.STRUCTURE_MOVE, moveStructureType());
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_ROTATE_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.groupRotateType(
+                        capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_RESET_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.groupResetType(
+                        capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_SPIN_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.groupSpinType(
+                        capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));
         put(result, AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
                 org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetType(
                         capabilityScope(AcceleratorProgramCapabilities.STRUCTURE)));

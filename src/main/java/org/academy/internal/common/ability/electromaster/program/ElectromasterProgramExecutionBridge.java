@@ -247,6 +247,12 @@ public final class ElectromasterProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_ROTATE_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::rotate);
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_RESET_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::reset);
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_SPIN_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::spin);
         put(result, ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
                 org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::reset);
         put(result, ElectromasterProgramNodeIds.STRUCTURE_SPIN,

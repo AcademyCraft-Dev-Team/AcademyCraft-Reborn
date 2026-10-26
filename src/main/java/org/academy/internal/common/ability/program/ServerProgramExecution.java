@@ -78,6 +78,12 @@ public final class ServerProgramExecution {
         } catch (RuntimeException exception) {
             AcademyCraft.LOGGER.warn("Failed to release program orientation commands", exception);
         }
+        try {
+            frame.environment(org.academy.api.common.ability.program.ProgramStructureGroupRuntime.class)
+                    .ifPresent(org.academy.api.common.ability.program.ProgramStructureGroupRuntime::closeStructureGroups);
+        } catch (RuntimeException exception) {
+            AcademyCraft.LOGGER.warn("Failed to release program structure groups", exception);
+        }
     }
 
     private static Result rejected(ProgramVmResult vmResult) {

@@ -27,6 +27,23 @@ public final class ProgramStructureOrientationNodes {
         return new OrientationNodeType<>(SpinConfiguration.CODEC, schema(true), scope);
     }
 
+    public static ProgramNodeType<Boolean> groupRotateType(ProgramNodeScope scope) {
+        return new OrientationNodeType<>(com.mojang.serialization.MapCodec.unit(false).codec(), groupSchema("pose", ProgramValueTypes.STRUCTURE_POSE), scope);
+    }
+    public static ProgramNodeType<ResetConfiguration> groupResetType(ProgramNodeScope scope) {
+        return new OrientationNodeType<>(ResetConfiguration.CODEC, groupSchema(null, null), scope);
+    }
+    public static ProgramNodeType<SpinConfiguration> groupSpinType(ProgramNodeScope scope) {
+        return new OrientationNodeType<>(SpinConfiguration.CODEC, groupSchema("axis", ProgramValueTypes.DIRECTION), scope);
+    }
+    private static ProgramNodeSchema groupSchema(String parameter, ProgramValueType type) {
+        var inputs = new java.util.ArrayList<>(List.of(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
+                ProgramPortDefinition.requiredInput("structures", ProgramValueTypes.STRUCTURE_SET)));
+        if (parameter != null) inputs.add(ProgramPortDefinition.requiredInput(parameter, type));
+        return new ProgramNodeSchema(inputs, List.of(ProgramPortDefinition.output("result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)));
+    }
+
     public static JsonObject resetDefaults() {
         var result = new JsonObject();
         result.addProperty("reset_mode", "world_up_keep_yaw");

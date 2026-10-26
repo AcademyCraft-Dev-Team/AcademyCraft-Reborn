@@ -81,6 +81,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private final UUID runtimeToken = UUID.randomUUID();
     private final SubLevelProgramControl subLevelControls;
     private final ProgramOrientationControl orientationControls;
+    private final org.academy.internal.common.ability.program.ServerStructureGroupControl groupControls;
     private @Nullable StructureRef pendingExtraction;
     private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
     private boolean pendingForceMagnetize;
@@ -101,6 +102,11 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         targets = new ServerProgramTargetResolver(player, MAX_QUERY_RANGE, MAX_QUERY_RESULTS);
         subLevelControls = new SubLevelProgramControl(player, runtimeToken, MAX_ACTION_RANGE);
         orientationControls = new ProgramOrientationControl(player, MAX_ACTION_RANGE, this::validateOrientationControl);
+        groupControls = new org.academy.internal.common.ability.program.ServerStructureGroupControl(player, MAX_ACTION_RANGE, Skills.MAGNET_MANIPULATION.get(),
+                (STRUCTURE_CONTROL_COST + STRUCTURE_MOVE_COST) * costMultiplier,
+                () -> requireCasterReady(Skills.MAGNET_MANIPULATION.get()), reference -> SubLevelStructureRefs.isSubLevel(reference.reference())
+                        ? (subLevelControls.hasMagneticParticipation(reference) ? null : "no_magnetic_participation")
+                        : org.academy.internal.common.ability.program.ServerStructureGroupControl.magneticRejection(player, reference));
     }
 
     @Override
@@ -406,6 +412,18 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         return orientationControls.status(control, operationId);
     }
+
+    @Override public Operation rotateStructures(java.util.List<ProgramStructureReference> structures, ProgramStructurePose pose) {
+        return groupControls.rotateStructures(structures, pose);
+    }
+    @Override public Operation resetStructures(java.util.List<ProgramStructureReference> structures, ResetRequest request) {
+        return groupControls.resetStructures(structures, request);
+    }
+    @Override public Operation spinStructures(java.util.List<ProgramStructureReference> structures, SpinRequest request) {
+        return groupControls.spinStructures(structures, request);
+    }
+    @Override public Operation structureGroupStatus(UUID receipt) { return groupControls.structureGroupStatus(receipt); }
+    @Override public void closeStructureGroups() { groupControls.closeStructureGroups(); }
 
     @Override
     public void closeOrientationCommands() {

@@ -25,7 +25,8 @@ import java.util.Optional;
  * from server state; programs only select a bounded intent tier.</p>
  */
 public interface AcceleratorProgramRuntime extends ProgramTargetResolver,
-        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime {
+        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime,
+        org.academy.api.common.ability.program.ProgramStructureGroupRuntime {
     Object caster();
 
     Optional<Object> lookTarget();

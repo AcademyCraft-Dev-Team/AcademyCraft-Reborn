@@ -235,6 +235,12 @@ public final class AeromanipProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, AeromanipProgramNodeIds.STRUCTURE_ROTATE_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::rotate);
+        put(result, AeromanipProgramNodeIds.STRUCTURE_RESET_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::reset);
+        put(result, AeromanipProgramNodeIds.STRUCTURE_SPIN_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::spin);
         put(result, AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION,
                 org.academy.internal.common.ability.program.ProgramStructureOrientationExecutors::reset);
         put(result, AeromanipProgramNodeIds.STRUCTURE_SPIN,

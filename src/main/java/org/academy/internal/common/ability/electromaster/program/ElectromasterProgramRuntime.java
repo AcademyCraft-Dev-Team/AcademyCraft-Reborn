@@ -21,7 +21,8 @@ import java.util.OptionalDouble;
  * Restricted server-owned environment exposed to Electromaster programs.
  */
 public interface ElectromasterProgramRuntime extends ProgramTargetResolver,
-        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime {
+        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime,
+        org.academy.api.common.ability.program.ProgramStructureGroupRuntime {
     Object caster();
 
     Optional<Object> lookTarget();

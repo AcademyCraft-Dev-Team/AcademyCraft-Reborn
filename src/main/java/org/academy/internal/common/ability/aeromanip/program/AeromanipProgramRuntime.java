@@ -20,7 +20,8 @@ import java.util.Optional;
  * Restricted server-owned environment exposed to Aeromanip programs.
  */
 public interface AeromanipProgramRuntime extends ProgramTargetResolver,
-        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime {
+        org.academy.api.common.ability.program.ProgramStructureOrientationRuntime,
+        org.academy.api.common.ability.program.ProgramStructureGroupRuntime {
     Object caster();
 
     Optional<Object> lookTarget();

@@ -126,12 +126,12 @@ public final class ProgramConfigurationOptions {
             );
         }
         var id = entry.id();
-        var orientationReset = id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION)
-                || id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION)
-                || id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION);
-        var orientationSpin = id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN)
-                || id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN)
-                || id.equals(AeromanipProgramNodeIds.STRUCTURE_SPIN);
+        var orientationReset = (id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_GROUP))
+                || (id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_GROUP))
+                || (id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_GROUP));
+        var orientationSpin = (id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN) || id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN_GROUP))
+                || (id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN) || id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN_GROUP))
+                || (id.equals(AeromanipProgramNodeIds.STRUCTURE_SPIN) || id.equals(AeromanipProgramNodeIds.STRUCTURE_SPIN_GROUP));
         if (orientationReset && field.equals("reset_mode")) {
             return stringOptions("screen.academy.program.configuration.reset_mode.",
                     "capture_baseline", "world_up_keep_yaw", "nearest_grid_yaw");

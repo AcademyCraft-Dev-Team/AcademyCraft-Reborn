@@ -1,0 +1,535 @@
+{
+  "base_commit": "5d099411",
+  "date": "2026-10-26",
+  "feature": "precision_structure_group_orientation",
+  "commit_status": "user_authorized_this_commit",
+  "tests": {
+    "test": {
+      "tests": 3307,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "clients": [
+    {
+      "name": "native-r1",
+      "kind": "group_orientation",
+      "backend": "academy:sublevel",
+      "report": "run/native-sublevel-direct-smoke-groups-native-r1/structure-group-result.json",
+      "report_sha256": "5F4A4250760588073A5B0BC024458013BA43C337BEC12B30889F68A88F0EE3CF",
+      "result": {
+        "actual_node_vm": true,
+        "failure": "",
+        "passed": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          }
+        ],
+        "linear_gravity_support_only": true,
+        "actual_save_execute_packets": false
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-groups-native-r1.log",
+        "sha256": "660D987377D5D0427DC761213D49A7378201622D0DC701120E44CAC390909728",
+        "result": "BUILD SUCCESSFUL in 36s"
+      },
+      "screenshot": {
+        "path": "run/native-sublevel-direct-smoke-groups-native-r1/screenshots/structure-groups-editor.png",
+        "sha256": "950C4D4FB17178423667405DA3EF9A28DA503B660A594D1D684B464A96EC7020",
+        "visually_reviewed": true
+      }
+    },
+    {
+      "name": "suite-r1",
+      "kind": "group_orientation",
+      "backend": "academy:sable",
+      "report": "run/native-sublevel-direct-smoke-groups-suite-r1/structure-group-result.json",
+      "report_sha256": "613543AB055C944DACE118ACEDCC5A745CA043486702A0F80E7AE22BE228A750",
+      "result": {
+        "actual_node_vm": true,
+        "actual_save_execute_packets": false,
+        "linear_gravity_support_only": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          }
+        ],
+        "passed": true,
+        "failure": ""
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-groups-suite-r1.log",
+        "sha256": "1666E86236F3DA05338E6A2CFAEAF78832220B7C9F4F8B4358D7BE83FC6EE506",
+        "result": "BUILD SUCCESSFUL in 38s"
+      },
+      "screenshot": {
+        "path": "run/native-sublevel-direct-smoke-groups-suite-r1/screenshots/structure-groups-editor.png",
+        "sha256": "8B8093FF07F364D62AD6C70132EA7339EF1F20619C19F1F76BE176B4A136E81B",
+        "visually_reviewed": true
+      }
+    },
+    {
+      "name": "regression-native-r1",
+      "kind": "single_control_and_filters_regression",
+      "backend": "academy:sublevel",
+      "report": "run/native-sublevel-direct-smoke-groups-regression-native-r1/structure-program-orientation-result.json",
+      "report_sha256": "3AB435AE1841D26BD4B26CE64EB2249CE1FA9E354E41739FABC578F91A1DD004",
+      "result": {
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.9787865395054496,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 23,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.9798103654334795,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 16,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.9798103654334795,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 16,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "actual_node_vm": true,
+        "linear_gravity_support_only": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-groups-regression-native-r1.log",
+        "sha256": "45C841D4362AEC333C71AD844DA1996308E265AEE193EF5089102100BA4F0899",
+        "result": "BUILD SUCCESSFUL in 1m 4s"
+      }
+    },
+    {
+      "name": "regression-suite-r1",
+      "kind": "single_control_and_filters_regression",
+      "backend": "academy:sable",
+      "report": "run/native-sublevel-direct-smoke-groups-regression-suite-r1/structure-program-orientation-result.json",
+      "report_sha256": "9524135EC34B6031DC822C30C928B3C96020192FCB5415E259E575780B5B47BB",
+      "result": {
+        "linear_gravity_support_only": true,
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.976470947265625,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 22,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "actual_node_vm": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-groups-regression-suite-r1.log",
+        "sha256": "ECC4F7E6CA82F0CDA3BAD2CA471BD46C278F3D8BD139697EA127613FEBA6FFB1",
+        "result": "BUILD SUCCESSFUL in 1m 13s"
+      }
+    }
+  ],
+  "builds": {
+    "dev": {
+      "path": "build/structure-groups-dev-build.log",
+      "sha256": "62A361E76D1660DFF989E527226232FFD103E85F64AC174699B5BB2AD10FE515",
+      "result": "BUILD SUCCESSFUL in 25s"
+    },
+    "release": {
+      "path": "build/structure-groups-release-build.log",
+      "sha256": "64B1AA6B5A87202415DAE24A685BD1753E5D8320B790293B87C896031F85049D",
+      "result": "BUILD SUCCESSFUL in 39s"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32370806,
+      "sha256": "ECDDCAA48158AAF25B7CC376521D6A0F85EE900F080E4A4F1E26A0E59D7599AF",
+      "group_api_and_implementation_present": true,
+      "new_test_fixtures_absent": true
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24899705,
+      "sha256": "1D9E5D756F3B01993FF3E0AB8AF02A21763B2D45F2EA8151C06A95B38C09F178",
+      "group_api_and_implementation_present": true,
+      "new_test_fixtures_absent": true
+    }
+  ],
+  "test_log": {
+    "path": "build/structure-groups-tests-final.log",
+    "sha256": "6F63627362B5110C1C173B7E445340F28377828BEB3CE0167539FDC20F4B62E6",
+    "result": "BUILD SUCCESSFUL in 12s"
+  },
+  "source_world": {
+    "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke",
+    "files": 148,
+    "all_four_snapshot_hashes_match_current": true,
+    "user_world_used": false
+  },
+  "excluded_preexisting_change": {
+    "path": "native/academy_physics/src/lib.rs",
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+    "not_modified_or_staged": true
+  },
+  "change_files": [
+    "docs/structure_group_orientation_2026_10_26.zh-CN.md",
+    "docs/structure_skill_migration_handoff.zh-CN.md",
+    "src/gametest/java/org/academy/internal/client/validation/StructureGroupEditorSmoke.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/StructureGroupSmoke.java",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureGroupControl.java",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureGroupRuntime.java",
+    "src/main/java/org/academy/internal/client/ability/program/ProgramConfigurationOptions.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramDefinition.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramExecutionBridge.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeCatalog.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeIds.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/ServerAcceleratorProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramDefinition.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramExecutionBridge.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeCatalog.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeIds.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/ServerAeromanipProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramDefinition.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramExecutionBridge.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeCatalog.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeIds.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ServerElectromasterProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureGroupExecutors.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureOrientationNodes.java",
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramExecution.java",
+    "src/main/java/org/academy/internal/common/ability/program/ServerStructureGroupControl.java",
+    "src/main/resources/assets/academy/lang/en_us.json",
+    "src/main/resources/assets/academy/lang/zh_cn.json",
+    "src/test/java/org/academy/api/common/ability/program/ProgramStructureGroupControlTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureGroupNodesTest.java",
+    "validation/native_structure/structure_group_validation_2026_10_26.json",
+    "validation/native_structure/structure_groups.init.gradle"
+  ],
+  "source_sha256": {
+    "src/gametest/java/org/academy/internal/client/validation/StructureGroupEditorSmoke.java": "D66275C612D7DF07093D5523B96B07CFEE8626619622F340F2BFAF4F7A76C67E",
+    "src/gametest/java/org/academy/internal/common/ability/program/StructureGroupSmoke.java": "97849A7B5DE56BD985EF5DCFF9ADDFD933757C1A4FCC43577FE4F6CAEE48450A",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureGroupControl.java": "D451DD1BEDC6AD022516528B4E451A0F8E6DA6BFCC6A459ADAD2FFABD0555520",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureGroupRuntime.java": "70954453B563FA4F80748CAC82DF130864BCE70C8EA37AB62A5A130FF31A3D0D",
+    "src/main/java/org/academy/internal/client/ability/program/ProgramConfigurationOptions.java": "CCEA8B8E6F8202523BFBAE777C4C335FFBC8E2FCF23B30001F82D95C35B61F7D",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramDefinition.java": "5C051095713A02877A0FB1999ECC52FF243143664537D0151286B711A770CE53",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramExecutionBridge.java": "ED464EF11B144D3C8626E59FC0B6DD8C5681DDF2ED23F7CFD545CF79F33A3194",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeCatalog.java": "DB2A2E1454FC165F4931062E0A64A278F4BED1AF7AA711F24444857CA2D56084",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeIds.java": "407BDE5DF18F66B40EAE8998E40205EA547A7E42BF2E89CDC099BDC156C11B09",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramRuntime.java": "CA40B3F2CE8DD8BDB322974F77E865A3C456BCFF0AE89022F6A05E91CBF297B9",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/ServerAcceleratorProgramRuntime.java": "CE74595D5D168691B31922682D6EE8C0F2FD6806B32F881B52B2F2078C40BAF7",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramDefinition.java": "56CE77F82D6C2AA0082D6B685DBDCCAD0B6C8704CA393AAF98A41CD16C4F8604",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramExecutionBridge.java": "957D2641C04A44684F0ED54D80C06A87DC944C5BAF0AF6B35A3714DFD2B42483",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeCatalog.java": "8EF2AFF1950377CE2100D3C78F2EB727009950EB2B5C4230B832726DFE8046E0",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeIds.java": "3EC4D43CC8EB579118EB9A2CAF842111B77721F731E886CEDFE152302721BE32",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramRuntime.java": "84E8A41E65118DE2C048270A560017776F768C20F07BB31000E00B39F16579B1",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/ServerAeromanipProgramRuntime.java": "1668F4CCF87E599C5AB3AEDDA385C966895FC68725B4E934A31005C74398EB5F",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramDefinition.java": "D0C055F85A7FBBC4AA120C054C6F121DBC4211DA00D7C6E4039548A51E4C4551",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramExecutionBridge.java": "17FA808FEABA4648E944337499EE028D2BC6A03A86DA695F789C9BC07B26BC2B",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeCatalog.java": "A644A64AF0D75DF9AC0888E803484B12525675669DCB7B0E329C4CC5E83837AE",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeIds.java": "78599553D1D3C898108CE3144F6085179003E90DDD8142224B610F51C30BA579",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramRuntime.java": "AA6834B4D25A4AAC2002579569A285EBA3603076856932546B6EBCB0052CB699",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ServerElectromasterProgramRuntime.java": "30562544BA308A9A4CFECBFF442F97C394E89E31EED6B4A436F7A4DA9C626BEF",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureGroupExecutors.java": "B811CF49C94D9327557195C89D675EC146F6CD2CD502DC27CAB508F52597FBDD",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureOrientationNodes.java": "21EE6850FD5EBD47D5C0D1EA84C152831734E27C119DFD9BE69E63AE89EB60BE",
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramExecution.java": "8623FCC163A3ED9FB914D3709E942B473EB8D2113445440766FB829D9A36C83C",
+    "src/main/java/org/academy/internal/common/ability/program/ServerStructureGroupControl.java": "CD0A06C2CECD2BD4ECEC9946FA0B54F8B0D80FC7730696EE075A8C15E85174D2",
+    "src/main/resources/assets/academy/lang/en_us.json": "5A59FD444476BDF0D57CEAEA503772BD9E21E7BE4B7C243B3BE2F6496CF8A502",
+    "src/main/resources/assets/academy/lang/zh_cn.json": "7522B8F3BE4D69B7799F561AECAB39C1828DB592B5CECB4872C99FB1BB3D8C4F",
+    "src/test/java/org/academy/api/common/ability/program/ProgramStructureGroupControlTest.java": "FD2EBE725E96EAC988B2F577DF50B6F0B86E20FADA6011C1BE3A0ED0853AF8C6",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureGroupNodesTest.java": "98B5A07F6ACBAD90C60C8F5EE34B7C93BB1349ACB3AA6022192018DB543529EE",
+    "validation/native_structure/structure_groups.init.gradle": "6EB516BB1A4324BEB62AF3F6DAED38CFDFE2B7A530358AE17518B580BCD888AA"
+  },
+  "documentation_sha256": {
+    "docs/structure_group_orientation_2026_10_26.zh-CN.md": "ED57B6BBAB1E2874356ABC02B5EBF20B57E2AA993BC05ED553F20551A436B013",
+    "docs/structure_skill_migration_handoff.zh-CN.md": "8535B13B4A2A8E78AA578D3923344FA2B2AFA318F32143D4B598124DFAA29AE1"
+  },
+  "limits": {
+    "members_per_group_and_actor": 8,
+    "group_members_per_server": 256,
+    "raw_input_members": 128,
+    "angular_speed_rad_per_second": 2,
+    "torque_per_member": 1000,
+    "shape_budget_per_member": 16384,
+    "sable_magnetic_summary_cells": 4096
+  },
+  "prior_attempts": [
+    "Initial targeted test compilation used a nonexistent directive constant; corrected to CONTINUE before passing targeted/full checks."
+  ],
+  "pending": [
+    "Multi-structure translation: migrate player-keyed Sable skill sessions to scoped per-structure handles first.",
+    "Human graph editing, actual save/execute packets, multiplayer and target modpack handling.",
+    "Eight-body irregular contact stress; live group fixtures exercised two bodies with linear gravity support only.",
+    "Satellite/orbital authorization, S4, long-term ledger GC, full I/O fault matrix and native contact stress red tests."
+  ]
+}

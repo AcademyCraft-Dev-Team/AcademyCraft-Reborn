@@ -56,9 +56,9 @@ public final class AcceleratorProgramDefinition {
                 configuration.addProperty("duration_seconds", 1.0f);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
-            if (id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION)) {
+            if ((id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(AcceleratorProgramNodeIds.STRUCTURE_RESET_GROUP))) {
                 configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetDefaults();
-            } else if (id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN)) {
+            } else if ((id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN) || id.equals(AcceleratorProgramNodeIds.STRUCTURE_SPIN_GROUP))) {
                 configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.spinDefaults();
             }
             editor.add(
