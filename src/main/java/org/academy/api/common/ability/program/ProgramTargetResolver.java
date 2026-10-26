@@ -28,6 +28,16 @@ public interface ProgramTargetResolver {
         return Optional.empty();
     }
 
+    /** Nearest-first, bounded whole structures. Selection does not acquire a control lease. */
+    default List<ProgramStructureReference> structuresAround(ProgramWorldPosition center, double radius) {
+        return List.of();
+    }
+
+    /** Fresh distance to collision geometry; unloaded, stale and out-of-range targets are absent. */
+    default OptionalDouble structureDistanceTo(ProgramStructureReference reference, ProgramWorldPosition point) {
+        return OptionalDouble.empty();
+    }
+
     /** Solver units: blocks/second and radians/second. Never activates an unloaded structure. */
     default Optional<org.academy.api.common.structure.StructureDynamics.State> structureMotion(
             ProgramStructureReference reference) {

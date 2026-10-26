@@ -601,6 +601,23 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         )));
         put(result, CommonProgramNodeIds.LOOK_STRUCTURE, queryType(outputSchema(
                 "structure", ProgramValueTypes.STRUCTURE_REFERENCE)));
+        for (var id : List.of(CommonProgramNodeIds.STRUCTURES_AROUND, CommonProgramNodeIds.NEAREST_STRUCTURE)) {
+            put(result, id, queryType(new ProgramNodeSchema(
+                    List.of(ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION),
+                            ProgramPortDefinition.requiredInput("radius", ProgramValueTypes.FLOAT)),
+                    List.of(id.equals(CommonProgramNodeIds.STRUCTURES_AROUND)
+                            ? ProgramPortDefinition.output("structures", ProgramValueTypes.STRUCTURE_SET)
+                            : ProgramPortDefinition.output("structure", ProgramValueTypes.STRUCTURE_REFERENCE)))));
+        }
+        put(result, CommonProgramNodeIds.NEAREST_STRUCTURE_TO_POSITION, queryType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("position", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.requiredInput("structures", ProgramValueTypes.STRUCTURE_SET)),
+                List.of(ProgramPortDefinition.output("structure", ProgramValueTypes.STRUCTURE_REFERENCE)))));
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_DISTANCE, queryType(new ProgramNodeSchema(
+                List.of(ProgramPortDefinition.requiredInput("center", ProgramValueTypes.WORLD_POSITION),
+                        ProgramPortDefinition.requiredInput("radius", ProgramValueTypes.FLOAT),
+                        ProgramPortDefinition.requiredInput("structures", ProgramValueTypes.STRUCTURE_SET)),
+                List.of(ProgramPortDefinition.output("structures", ProgramValueTypes.STRUCTURE_SET)))));
         put(result, CommonProgramNodeIds.STRUCTURE_MOTION, queryType(new ProgramNodeSchema(
                 List.of(ProgramPortDefinition.requiredInput("structure", ProgramValueTypes.STRUCTURE_REFERENCE)),
                 List.of(
@@ -1063,6 +1080,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                 ProgramValueTypes.ENTITY_REFERENCE,
                 ProgramValueTypes.LIVING_ENTITY_REFERENCE,
                 ProgramValueTypes.STRUCTURE_REFERENCE,
+                ProgramValueTypes.STRUCTURE_SET,
                 ProgramValueTypes.STRUCTURE_ANCHOR,
                 ProgramValueTypes.STRUCTURE_POSE,
                 ProgramValueTypes.DIRECTION_SET,
@@ -1077,6 +1095,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
 
     public enum CollectionDomain {
         ENTITY("entity", ProgramValueTypes.ENTITY_REFERENCE, ProgramValueTypes.ENTITY_SET),
+        STRUCTURE("structure", ProgramValueTypes.STRUCTURE_REFERENCE, ProgramValueTypes.STRUCTURE_SET),
         WORLD_POSITION(
                 "world_position",
                 ProgramValueTypes.WORLD_POSITION,
@@ -1727,6 +1746,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         WORLD_POSITION("world_position", ProgramValueTypes.WORLD_POSITION),
         BLOCK_POSITION("block_position", ProgramValueTypes.BLOCK_POSITION),
         ENTITY("entity", ProgramValueTypes.ENTITY_REFERENCE),
+        STRUCTURE("structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+        STRUCTURE_LIST("structure_list", ProgramValueTypes.STRUCTURE_SET),
         DIRECTION_LIST("direction_list", ProgramValueTypes.DIRECTION_SET),
         WORLD_POSITION_LIST("world_position_list", ProgramValueTypes.WORLD_POSITION_SET),
         BLOCK_POSITION_LIST("block_position_list", ProgramValueTypes.BLOCK_POSITION_SET),

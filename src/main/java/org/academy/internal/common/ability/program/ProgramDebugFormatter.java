@@ -34,6 +34,10 @@ public final class ProgramDebugFormatter {
     }
 
     public static String formatValue(Object value) {
+        if (value instanceof org.academy.api.common.ability.program.ProgramStructureReference structure) {
+            return structure.reference().backend() + " [" + structure.reference().id()
+                    + ", " + structure.reference().dimension() + ", runtime=" + structure.runtimeId() + "]";
+        }
         if (value instanceof Entity entity) {
             return entity.getDisplayName().getString()
                     + " [" + BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())

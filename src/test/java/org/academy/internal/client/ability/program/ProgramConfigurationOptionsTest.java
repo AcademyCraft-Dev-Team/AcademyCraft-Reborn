@@ -86,7 +86,7 @@ class ProgramConfigurationOptionsTest {
                 ProgramConfigurationOptions.options(
                         catalog.entry(CommonProgramNodeIds.DEBUG_OUTPUT),
                         "audience", new JsonPrimitive("self"))));
-        assertEquals(17, ProgramConfigurationOptions.options(
+        assertEquals(19, ProgramConfigurationOptions.options(
                 catalog.entry(CommonProgramNodeIds.DEBUG_OUTPUT),
                 "value_type", new JsonPrimitive("entity")).size());
     }
@@ -136,12 +136,12 @@ class ProgramConfigurationOptionsTest {
                 ))
         );
 
-        assertEquals(20, ProgramConfigurationOptions.options(
+        assertEquals(21, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.VARIABLE_GET),
                 "type",
                 new JsonPrimitive("academy:program_type/boolean")
         ).size());
-        assertEquals(20, ProgramConfigurationOptions.options(
+        assertEquals(21, ProgramConfigurationOptions.options(
                 mentalout.entry(CommonProgramNodeIds.SELECT_VALUE),
                 "type",
                 new JsonPrimitive("academy:program_type/boolean")

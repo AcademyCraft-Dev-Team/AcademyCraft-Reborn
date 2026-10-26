@@ -268,6 +268,7 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         }
         if (entry.group() == Group.COLLECTION) {
             if (path.contains("/collection/entity/")) return -1000;
+            if (path.contains("/collection/structure/")) return -900;
             if (path.contains("/collection/block_position/")) return -700;
             if (path.contains("/collection/world_position/")) return -600;
             if (path.contains("/collection/direction/")) return -500;

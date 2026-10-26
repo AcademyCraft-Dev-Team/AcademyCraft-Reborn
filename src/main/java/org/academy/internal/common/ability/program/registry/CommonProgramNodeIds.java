@@ -110,6 +110,10 @@ public final class CommonProgramNodeIds {
     public static final Identifier ENTITY_MOVEMENT_DIRECTION = id("query/entity_movement_direction");
     public static final Identifier ENTITY_MOTION = id("query/entity_motion");
     public static final Identifier LOOK_STRUCTURE = id("query/look_structure");
+    public static final Identifier STRUCTURES_AROUND = id("query/structures_around");
+    public static final Identifier NEAREST_STRUCTURE = id("query/nearest_structure");
+    public static final Identifier NEAREST_STRUCTURE_TO_POSITION = id("collection/structure/nearest_to_position");
+    public static final Identifier FILTER_STRUCTURE_DISTANCE = id("filter/structure/distance");
     public static final Identifier STRUCTURE_MOTION = id("query/structure_motion");
     public static final Identifier ENTITY_HEIGHT = id("query/entity_height");
     public static final Identifier ENTITY_DATA = id("query/entity_data");
@@ -166,7 +170,7 @@ public final class CommonProgramNodeIds {
 
     public static Identifier collection(String domain, String operation) {
         if (!switch (domain) {
-            case "entity", "world_position", "block_position", "direction" -> true;
+            case "entity", "structure", "world_position", "block_position", "direction" -> true;
             default -> false;
         }) {
             throw new IllegalArgumentException("Unknown collection domain " + domain);

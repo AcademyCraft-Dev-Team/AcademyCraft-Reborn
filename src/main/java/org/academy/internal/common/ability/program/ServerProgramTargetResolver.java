@@ -120,6 +120,33 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
     }
 
     @Override
+    public List<ProgramStructureReference> structuresAround(ProgramWorldPosition center, double radius) {
+        var point = requireLocalPosition(center);
+        var boundedRadius = requireRange(radius);
+        if (!player.isAlive() || player.isRemoved()) return List.of();
+        return StructureQueries.nearby(level(), point, boundedRadius).stream()
+                .filter(hit -> StructureQueries.proximity(level(), hit.reference(), player.position())
+                        .filter(actorDistance -> actorDistance.runtimeId().equals(hit.runtimeId())
+                                && actorDistance.distance() <= maximumRange).isPresent())
+                .limit(maximumResults)
+                .map(hit -> new ProgramStructureReference(hit.reference(), hit.runtimeId())).toList();
+    }
+
+    @Override
+    public OptionalDouble structureDistanceTo(ProgramStructureReference reference, ProgramWorldPosition point) {
+        var origin = requireLocalPosition(point);
+        if (!player.isAlive() || player.isRemoved()
+                || !reference.reference().dimension().equals(point.dimension())) return OptionalDouble.empty();
+        var proximity = StructureQueries.proximity(level(), reference.reference(), origin)
+                .filter(hit -> hit.runtimeId().equals(reference.runtimeId()));
+        if (proximity.isEmpty() || StructureQueries.proximity(level(), reference.reference(), player.position())
+                .filter(hit -> hit.runtimeId().equals(reference.runtimeId()) && hit.distance() <= maximumRange).isEmpty()) {
+            return OptionalDouble.empty();
+        }
+        return OptionalDouble.of(proximity.get().distance());
+    }
+
+    @Override
     public Optional<ProgramVector> motionOf(Object entityReference) {
         if (!(entityReference instanceof Entity entity) || !sameQueryableEntity(entity)) {
             return Optional.empty();

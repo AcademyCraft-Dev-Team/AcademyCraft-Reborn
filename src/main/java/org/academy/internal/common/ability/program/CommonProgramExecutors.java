@@ -768,6 +768,40 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                 resolver(context).lookStructureTarget()
                         .map(target -> data("structure", ProgramValueTypes.STRUCTURE_REFERENCE, target))
                         .orElseGet(CommonProgramExecutors::emptyData));
+        for (var id : List.of(CommonProgramNodeIds.STRUCTURES_AROUND, CommonProgramNodeIds.NEAREST_STRUCTURE)) {
+            put(result, id, (context, _, inputs) -> {
+                var radius = nonNegative(floatValue(inputs, "radius"), "radius");
+                var structures = resolver(context).structuresAround(worldPosition(inputs, "center"), radius);
+                if (id.equals(CommonProgramNodeIds.STRUCTURES_AROUND)) {
+                    return data("structures", ProgramValueTypes.STRUCTURE_SET, canonical(structures));
+                }
+                return structures.isEmpty() ? emptyData()
+                        : data("structure", ProgramValueTypes.STRUCTURE_REFERENCE, structures.getFirst());
+            });
+        }
+        put(result, CommonProgramNodeIds.NEAREST_STRUCTURE_TO_POSITION, (context, _, inputs) -> {
+            var point = worldPosition(inputs, "position");
+            ProgramStructureReference nearest = null;
+            double distance = Double.POSITIVE_INFINITY;
+            for (var raw : collection(inputs, "structures", CommonProgramNodeCatalog.CollectionDomain.STRUCTURE)) {
+                var target = (ProgramStructureReference) raw;
+                var observed = resolver(context).structureDistanceTo(target, point);
+                if (observed.isPresent() && observed.getAsDouble() < distance) {
+                    distance = observed.getAsDouble(); nearest = target;
+                }
+            }
+            return nearest == null ? emptyData() : data("structure", ProgramValueTypes.STRUCTURE_REFERENCE, nearest);
+        });
+        put(result, CommonProgramNodeIds.FILTER_STRUCTURE_DISTANCE, (context, _, inputs) -> {
+            var point = worldPosition(inputs, "center");
+            var radius = nonNegative(floatValue(inputs, "radius"), "radius");
+            var targets = collection(inputs, "structures", CommonProgramNodeCatalog.CollectionDomain.STRUCTURE).stream()
+                    .filter(raw -> {
+                        var distance = resolver(context).structureDistanceTo((ProgramStructureReference) raw, point);
+                        return distance.isPresent() && distance.getAsDouble() <= radius;
+                    }).toList();
+            return data("structures", ProgramValueTypes.STRUCTURE_SET, targets);
+        });
         put(result, CommonProgramNodeIds.STRUCTURE_MOTION, (context, _, inputs) -> {
             var target = (ProgramStructureReference) raw(inputs, "structure", ProgramValueTypes.STRUCTURE_REFERENCE);
             return resolver(context).structureMotion(target).map(motion -> {
@@ -1709,6 +1743,7 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
     ) {
         var valid = switch (domain) {
             case ENTITY -> true;
+            case STRUCTURE -> value instanceof ProgramStructureReference;
             case WORLD_POSITION -> value instanceof ProgramWorldPosition;
             case BLOCK_POSITION -> value instanceof ProgramBlockPosition;
             case DIRECTION -> value instanceof ProgramDirection;

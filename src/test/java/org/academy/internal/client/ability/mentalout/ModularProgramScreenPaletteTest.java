@@ -13,6 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModularProgramScreenPaletteTest {
+    @org.junit.jupiter.api.Test
+    void minimizedWindowCoordinatesDoNotCrashTheEditor() {
+        assertEquals(-1, ModularProgramScreen.renderMouseCoordinate(Double.NaN));
+        assertEquals(-1, ModularProgramScreen.renderMouseCoordinate(Double.POSITIVE_INFINITY));
+        assertEquals(-1, ModularProgramScreen.renderMouseCoordinate(Double.NEGATIVE_INFINITY));
+        assertEquals(13, ModularProgramScreen.renderMouseCoordinate(12.7));
+    }
     @Test
     void everyAbilityCategoryUsesItsOwnRequestedAccent() {
         var categories = List.of(

@@ -40,6 +40,7 @@ public final class ProgramConfigurationOptions {
             "block_position",
             "entity_reference",
             "structure_reference",
+            "structure_set",
             "living_entity_reference",
             "direction_set",
             "world_position_set",
@@ -190,7 +191,7 @@ public final class ProgramConfigurationOptions {
                         "boolean", "integer", "big_integer", "float", "text", "tag", "identifier",
                         "duration", "vector", "direction", "world_position", "block_position",
                         "entity", "direction_list", "world_position_list",
-                        "block_position_list", "entity_list");
+                        "block_position_list", "entity_list", "structure", "structure_list");
             }
         }
         if (id.equals(CommonProgramNodeIds.SORT_POINTS_BY_DISTANCE)) {

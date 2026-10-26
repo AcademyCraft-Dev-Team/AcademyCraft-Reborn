@@ -47,6 +47,7 @@ import java.util.*;
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class StructureProgramOrientationSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureProgramOrientationSmoke");
+    private static final boolean SELECTION = Boolean.getBoolean("academy.structureSelectionSmoke");
     private static final int SPIN_TICKS = 250;
     private static final int ARENA_READY_TIMEOUT_TICKS = 200;
     private static final double ANGLE_TOLERANCE = 0.02;
@@ -69,6 +70,8 @@ public final class StructureProgramOrientationSmoke {
     private static Identifier category;
     private static BlockPos seed;
     private static StructureRef reference;
+    private static UUID selectionCapture;
+    private static StructureRef selectionNeighbor;
     private static ProgramStructureControl control;
     private static ProgramStructureOrientationRuntime runtime;
     private static ServerProgramScheduler.SessionKey key;
@@ -183,6 +186,21 @@ public final class StructureProgramOrientationSmoke {
                         + " yaw=" + player.getYRot() + " expected_yaw=" + setup.yaw());
         arenaStableTicks = !teleportPending && clientReady && serverAligned ? arenaStableTicks + 1 : 0;
         if (arenaStableTicks < 2) return;
+        if (SELECTION && selectionNeighbor == null) {
+            if (selectionCapture == null) {
+                var neighbor = seed.offset(4, 1, 0);
+                check(player.level().setBlock(neighbor.below(), Blocks.STONE.defaultBlockState(), 3), "neighbor support failed");
+                check(player.level().setBlock(neighbor, Blocks.IRON_BLOCK.defaultBlockState(), 3), "neighbor placement failed");
+                var capture = StructureTransactions.capture(player.level(),
+                        new StructureCaptureRequest(List.of(neighbor), 1, 1, StructureCaptureRequest.ALLOW, true));
+                check(capture.succeeded() || capture.pending(), "neighbor capture failed: " + capture);
+                selectionCapture = capture.transactionId();
+            }
+            var capture = StructureTransactions.poll(server, selectionCapture).orElseThrow();
+            if (capture.pending()) return;
+            check(capture.succeeded(), "neighbor capture failed: " + capture);
+            selectionNeighbor = capture.structure().orElseThrow();
+        }
         awaitingArena = false;
         AcademyCraft.LOGGER.info("STRUCTURE_PROGRAM_ORIENTATION_ARENA_READY category={} wait_ticks={} teleport_ack=true client_seed_loaded=true yaw={}",
                 category, arenaWaitTicks, player.getYRot());
@@ -259,6 +277,7 @@ public final class StructureProgramOrientationSmoke {
                     default -> "high_speed_jet";
                 }));
                 var state = motion();
+                if (SELECTION) verifySelection((ProgramStructureReference) step.outputs().get("structure").value(), state);
                 actualExtractionRise = StructurePayloadFixtureSupport.ENABLED
                         ? state.pose().worldOrigin().y - seed.getY()
                         : state.pose().localToWorldPoint(state.localCenterOfMass()).y - Vec3.atCenterOf(seed).y;
@@ -277,6 +296,7 @@ public final class StructureProgramOrientationSmoke {
             }
             if (id.equals(action("control")) && step.outputs().containsKey("control")) {
                 control = (ProgramStructureControl) step.outputs().get("control").value();
+                if (SELECTION) check(reference.equals(control.reference()), "selection controlled another structure");
                 hoverCenter = motion().pose().localToWorldPoint(motion().localCenterOfMass());
             }
             if (step.directive() == ProgramNodeStep.Directive.CONTINUE && step.outputs().containsKey("result")) {
@@ -334,11 +354,14 @@ public final class StructureProgramOrientationSmoke {
         check(settlementFailure == null, "VM settlement failed: " + settlementFailure);
         check(termination.kind() == ProgramSessionScheduler.TerminationKind.COMPLETED,
                 "VM terminated: " + termination + " completed=" + COMPLETED);
-        check(COMPLETED.equals(List.of(2, 3, 4, 8, 9, 10)), "node completion order changed: " + COMPLETED);
+        check(COMPLETED.equals(SELECTION ? List.of(2, 3, 4, 8, 9, 10, 30, 31) : List.of(2, 3, 4, 8, 9, 10)),
+                "node completion order changed: " + COMPLETED);
         check(control != null && !StructureDirectControl.occupied(reference, control.structureRuntimeId()), "release retained control");
         if (StructurePayloadFixtureSupport.ENABLED) StructurePayloadFixtureSupport.verify(player, reference, BlockPos.ZERO);
         var row = new LinkedHashMap<String, Object>();
         row.put("payload_checked", StructurePayloadFixtureSupport.ENABLED);
+        row.put("selection_nodes_and_foreach_control", SELECTION);
+        row.put("multiple_structure_query_and_removal", SELECTION);
         row.put("category", category.toString()); row.put("backend", reference.backend().toString());
         row.put("extraction_gameplay_enabled", StructureCaptureExtractions.enabled());
         row.put("skill_provenance_verified", true);
@@ -372,7 +395,7 @@ public final class StructureProgramOrientationSmoke {
         var reset = new JsonObject(); reset.addProperty("reset_mode", "world_up_keep_yaw"); reset.addProperty("timeout_seconds", 5.0);
         var spin = new JsonObject(); spin.addProperty("frame", "world"); spin.addProperty("angular_speed", -0.8);
         spin.addProperty("duration_seconds", SPIN_TICKS / 20.0); spin.addProperty("finish_mode", "brake");
-        return new ProgramGraph(List.of(
+        var graph = new ProgramGraph(List.of(
                 node(definition, 0, BaseAbilityProgramDefinition.entryId(category), new JsonObject()),
                 node(definition, 1, CommonProgramNodeIds.BLOCK_POSITION_CONSTANT, position),
                 node(definition, 2, action("extract"), extract), node(definition, 3, action("control"), new JsonObject()),
@@ -390,6 +413,66 @@ public final class StructureProgramOrientationSmoke {
                 edge(4, "flow", 8, "flow"), edge(3, "control", 8, "control"),
                 edge(8, "flow", 9, "flow"), edge(3, "control", 9, "control"), edge(11, "direction", 9, "axis"),
                 edge(9, "flow", 10, "flow"), edge(3, "control", 10, "control")));
+        return SELECTION ? selectionGraph(definition, graph) : graph;
+    }
+
+    private static ProgramGraph selectionGraph(AbilityProgramDefinition definition, ProgramGraph original) {
+        var nodes = new ArrayList<>(original.nodes());
+        var edges = new ArrayList<>(original.edges());
+        edges.removeIf(edge -> edge.from().nodeId() == 2 && edge.to().nodeId() == 3);
+        var point = new JsonObject(); point.addProperty("dimension", player.level().dimension().identifier().toString());
+        point.addProperty("x", seed.getX() + .5); point.addProperty("y", seed.getY() + 1.5); point.addProperty("z", seed.getZ() + .5);
+        var radius = new JsonObject(); radius.addProperty("value", 8.0);
+        var set = new JsonObject(); set.addProperty("name", "selected_structures"); set.addProperty("type", ProgramValueTypes.STRUCTURE_SET.id().toString());
+        nodes.add(node(definition, 20, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, point));
+        nodes.add(node(definition, 21, CommonProgramNodeIds.FLOAT_CONSTANT, radius));
+        nodes.add(node(definition, 22, CommonProgramNodeIds.STRUCTURES_AROUND, new JsonObject()));
+        nodes.add(node(definition, 23, CommonProgramNodeIds.VARIABLE_SET, set));
+        nodes.add(node(definition, 24, CommonProgramNodeIds.VARIABLE_GET, set));
+        nodes.add(node(definition, 25, CommonProgramNodeIds.FILTER_STRUCTURE_DISTANCE, new JsonObject()));
+        nodes.add(node(definition, 26, CommonProgramNodeIds.NEAREST_STRUCTURE_TO_POSITION, new JsonObject()));
+        nodes.add(node(definition, 27, CommonProgramNodeIds.NEAREST_STRUCTURE, new JsonObject()));
+        nodes.add(node(definition, 29, CommonProgramNodeCatalog.CollectionDomain.STRUCTURE.id("foreach"), new JsonObject()));
+        nodes.add(node(definition, 30, action("control"), new JsonObject()));
+        nodes.add(node(definition, 31, action("release"), new JsonObject()));
+        edges.addAll(List.of(edge(2, "flow", 23, "flow"), edge(20, "position", 22, "center"), edge(21, "value", 22, "radius"),
+                edge(22, "structures", 23, "value"), edge(23, "flow", 3, "flow"),
+                edge(24, "value", 25, "structures"), edge(20, "position", 25, "center"), edge(21, "value", 25, "radius"),
+                edge(25, "structures", 26, "structures"), edge(20, "position", 26, "position"),
+                edge(20, "position", 27, "center"), edge(21, "value", 27, "radius"),
+                edge(categoryIndex == 0 ? 27 : 26, "structure", 3, "structure"),
+                edge(10, "flow", 29, "flow"), edge(24, "value", 29, "values"), edge(29, "body", 30, "flow"),
+                edge(29, "value", 30, "structure"), edge(30, "flow", 31, "flow"), edge(30, "control", 31, "control")));
+        return new ProgramGraph(nodes, edges);
+    }
+
+    private static void verifySelection(ProgramStructureReference target, StructureDynamics.State motion) {
+        var resolver = (ProgramTargetResolver) runtime;
+        var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+        var point = new ProgramWorldPosition(target.reference().dimension(), center.x, center.y, center.z);
+        var before = StructureDirectControl.occupied(target.reference(), target.runtimeId());
+        check(resolver.structuresAround(point, .01).equals(List.of(target)), "near point did not return one whole body");
+        var neighbors = resolver.structuresAround(point, 8);
+        check(neighbors.size() == 2 && neighbors.getFirst().equals(target)
+                && neighbors.get(1).reference().equals(selectionNeighbor), "multiple structures were not nearest-first: " + neighbors);
+        check(new ServerProgramTargetResolver(player, 32, 1).structuresAround(point, 8).equals(List.of(target)),
+                "result limit discarded the nearest structure");
+        var removedNeighbor = neighbors.get(1);
+        check(StructureTransactions.discard(player.level().getServer(), selectionNeighbor), "neighbor discard failed");
+        check(resolver.structureDistanceTo(removedNeighbor, point).isEmpty(), "removed body remained selectable");
+        selectionNeighbor = null;
+        check(resolver.structureDistanceTo(target, point).orElseThrow() <= 1E-5, "COM inside cube has nonzero distance");
+        var stale = new ProgramStructureReference(target.reference(), UUID.randomUUID());
+        check(resolver.structureDistanceTo(stale, point).isEmpty(), "stale activation selected");
+        var foreign = new ProgramStructureReference(new StructureRef(target.reference().id(), Identifier.parse("minecraft:the_nether"),
+                target.reference().backend(), target.reference().generation()), target.runtimeId());
+        check(resolver.structureDistanceTo(foreign, point).isEmpty(), "foreign dimension selected");
+        check(resolver.structuresAround(new ProgramWorldPosition(point.dimension(), center.x, center.y + 10, center.z), 0).isEmpty(), "empty point selected body");
+        check(before == StructureDirectControl.occupied(target.reference(), target.runtimeId()), "query changed control occupancy");
+        for (double radius : new double[] {-1, Double.NaN, AbilityProgramDefinitions.require(category).spatialLimits().queryRange() + 1}) {
+            try { resolver.structuresAround(point, radius); throw new IllegalStateException("invalid radius accepted: " + radius); }
+            catch (IllegalArgumentException expected) { /* bounded server query */ }
+        }
     }
 
     private static Identifier action(String action) { return AcademyCraft.academy("program/" + category.getPath() + "/action/structure/" + action); }
@@ -405,6 +488,11 @@ public final class StructureProgramOrientationSmoke {
     }
 
     private static void cleanupBody() {
+        if (selectionNeighbor != null) {
+            check(StructureTransactions.discard(player.level().getServer(), selectionNeighbor), "neighbor cleanup failed");
+        }
+        selectionNeighbor = null; selectionCapture = null;
+        if (SELECTION && seed != null) player.level().setBlock(seed.offset(4, 0, 0), Blocks.AIR.defaultBlockState(), 3);
         if (runtime != null) runtime.closeOrientationCommands();
         if (reference != null) check(StructurePayloadFixtureSupport.ENABLED ? StructurePayloadFixtureSupport.cleanup(player, reference)
                 : StructureTransactions.discard(player.level().getServer(), reference), "body cleanup failed");
@@ -441,7 +529,15 @@ public final class StructureProgramOrientationSmoke {
     public static void clientTick(ClientTickEvent.Post event) {
         if (!ENABLED || closing) return;
         var client = Minecraft.getInstance();
-        if (finished || failed) { closing = true; client.stop(); return; }
+        if (finished || failed) {
+            if (SELECTION && !failed) {
+                try { if (!StructureSelectionEditorSmoke.tick(client)) return; }
+                catch (RuntimeException error) {
+                    failed = true; write(false, error.toString()); AcademyCraft.LOGGER.error("STRUCTURE_SELECTION_EDITOR_FAILED", error);
+                }
+            }
+            closing = true; client.stop(); return;
+        }
         if (client.player == null || client.level == null || client.getConnection() == null) return;
         var directory = client.gameDirectory.toPath().toAbsolutePath().normalize();
         if (!directory.getFileName().toString().startsWith("native-sublevel-direct-smoke")) {

@@ -15,6 +15,21 @@ public final class StructureQueries {
     }
 
     /**
+     * Loaded native and Sable structures within a host-world sphere, ordered by distance to
+     * their rotated collision geometry, then stable identity. Radius is in [0, 256]. Does not
+     * require line of sight, acquire leases, or load chunks. Incomplete/unsupported coverage
+     * throws instead of presenting a partial list as the nearest result. At most 256 candidates.
+     */
+    public static java.util.List<StructureProximity> nearby(ServerLevel host, Vec3 center, double radius) {
+        return org.academy.internal.common.structure.space.LoadedStructureProximity.nearby(host, center, radius);
+    }
+
+    /** Fresh loaded collision-geometry distance; callers must also check their saved runtime ID. */
+    public static Optional<StructureProximity> proximity(ServerLevel host, StructureRef reference, Vec3 point) {
+        return org.academy.internal.common.structure.space.LoadedStructureProximity.proximity(host, reference, point);
+    }
+
+    /**
      * Finds the nearest visible block selection shape on a host-world segment, ignoring
      * fluids. Host blocks and nearer structures occlude later hits. Unloaded host data is
      * rejected conservatively; targeting never loads chunks or structures.

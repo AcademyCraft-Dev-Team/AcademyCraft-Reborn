@@ -299,8 +299,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             syncLayout()
             val minecraft = Minecraft.getInstance()
             val window = minecraft.window
-            val mouseX = (minecraft.mouseHandler.getScaledXPos(window)).roundToInt()
-            val mouseY = (minecraft.mouseHandler.getScaledYPos(window)).roundToInt()
+            val mouseX = renderMouseCoordinate(minecraft.mouseHandler.getScaledXPos(window))
+            val mouseY = renderMouseCoordinate(minecraft.mouseHandler.getScaledYPos(window))
             val graphics = ProgramUiGraphics(context)
             renderStructure(graphics)
             renderTopBar(graphics, mouseX, mouseY)
@@ -319,8 +319,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             super.renderInternal(context)
             val minecraft = Minecraft.getInstance()
             val window = minecraft.window
-            val mouseX = (minecraft.mouseHandler.getScaledXPos(window)).roundToInt()
-            val mouseY = (minecraft.mouseHandler.getScaledYPos(window)).roundToInt()
+            val mouseX = renderMouseCoordinate(minecraft.mouseHandler.getScaledXPos(window))
+            val mouseY = renderMouseCoordinate(minecraft.mouseHandler.getScaledYPos(window))
             renderTooltip(ProgramUiGraphics(context), mouseX, mouseY)
         }
     }
@@ -2749,6 +2749,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             if (type == ProgramValueTypes.FLOAT) return 0xFF5DD6C5.toInt()
             if (type == ProgramValueTypes.IDENTIFIER) return 0xFF8FB9D2.toInt()
             if (type == ProgramValueTypes.DURATION) return 0xFF78B7D5.toInt()
+            if (type == ProgramValueTypes.STRUCTURE_REFERENCE) return 0xFFE1BA75.toInt()
+            if (type == ProgramValueTypes.STRUCTURE_SET) return 0xFFB08F53.toInt()
             if (type == ProgramValueTypes.ENTITY_REFERENCE
                 || type == ProgramValueTypes.LIVING_ENTITY_REFERENCE
             ) return 0xFFB6D8F2.toInt()
@@ -2765,6 +2767,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             if (type == ProgramValueTypes.ACTION_RESULT) return 0xFF9AACE0.toInt()
             return 0xFF8298AA.toInt()
         }
+
+        /** Minimized windows can expose NaN scaled cursor coordinates during a render. */
+        @JvmStatic
+        fun renderMouseCoordinate(value: Double): Int = if (value.isFinite()) value.roundToInt() else -1
 
         @JvmStatic
         fun categoryAccent(category: Identifier): Int = when (category.path) {

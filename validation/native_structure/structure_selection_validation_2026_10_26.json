@@ -1,0 +1,299 @@
+{
+  "base_commit": "47e20a09",
+  "date": "2026-10-26",
+  "feature": "precision_structure_selection",
+  "commit_status": "user_authorized_this_commit",
+  "tests": {
+    "test": {
+      "tests": 3286,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "clients": [
+    {
+      "name": "native-r5",
+      "backend": "academy:sublevel",
+      "passed": true,
+      "normal_exit": true,
+      "report": "run\\native-sublevel-direct-smoke-selection-native-r5\\structure-program-orientation-result.json",
+      "report_sha256": "39723619A616E1B387A19A8299D708F0ABFCBD632019A50A3853387D7A350DFF",
+      "log": "build\\structure-selection-native-r5.log",
+      "cases": [
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "category": "academy:accelerator",
+          "backend": "academy:sublevel",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 2.9787865395054496,
+          "expected_extraction_rise": 3.0,
+          "wait_ticks": 23,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "category": "academy:electromaster",
+          "backend": "academy:sublevel",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.9798103654334795,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 16,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "category": "academy:aeromanip",
+          "backend": "academy:sublevel",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.9798103654334795,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 16,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.008963616482166271,
+          "reset_up_error": 0.0056321283938495165,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.800000000000001,
+          "linear_gravity_support_only": true,
+          "passed": true
+        }
+      ],
+      "screenshot": "run\\native-sublevel-direct-smoke-selection-native-r5\\screenshots\\structure-selection-editor.png",
+      "screenshot_sha256": "5DCCCB7F3AC209801D3FBE016290485073C953EE773BE6AD49E31CC801A077BD"
+    },
+    {
+      "name": "suite-r1",
+      "backend": "academy:sable",
+      "passed": true,
+      "normal_exit": true,
+      "report": "run\\native-sublevel-direct-smoke-selection-suite-r1\\structure-program-orientation-result.json",
+      "report_sha256": "0E3AB050CD971E45C4C7BBD510D80242ACB79A315DB8881150EBDD47C65E7866",
+      "log": "build\\structure-selection-suite-r1.log",
+      "cases": [
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "category": "academy:accelerator",
+          "backend": "academy:sable",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 2.976470947265625,
+          "expected_extraction_rise": 3.0,
+          "wait_ticks": 22,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "category": "academy:electromaster",
+          "backend": "academy:sable",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.978240966796875,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 15,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "linear_gravity_support_only": true,
+          "passed": true
+        },
+        {
+          "payload_checked": false,
+          "selection_nodes_and_foreach_control": true,
+          "multiple_structure_query_and_removal": true,
+          "category": "academy:aeromanip",
+          "backend": "academy:sable",
+          "extraction_gameplay_enabled": true,
+          "skill_provenance_verified": true,
+          "actual_extraction_rise": 0.978240966796875,
+          "expected_extraction_rise": 1.0,
+          "wait_ticks": 15,
+          "node_completion_order": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            10,
+            30,
+            31
+          ],
+          "rotate_angle_error": 0.004942210411014886,
+          "reset_up_error": 0.005499236285455482,
+          "spin_requested_ticks": 250,
+          "spin_samples_after_200": 44,
+          "late_spin_speed": 0.7982046008110046,
+          "linear_gravity_support_only": true,
+          "passed": true
+        }
+      ],
+      "screenshot": "run\\native-sublevel-direct-smoke-selection-suite-r1\\screenshots\\structure-selection-editor.png",
+      "screenshot_sha256": "3B3180F373D8106CF715ED4592360335F497CDB8C0DE213614F91289CF5243CE"
+    }
+  ],
+  "builds": {
+    "dev": {
+      "passed": true,
+      "log": "build\\structure-selection-build-dev.log"
+    },
+    "release": {
+      "passed": true,
+      "log": "build\\structure-selection-build-release.log"
+    }
+  },
+  "artifacts": {
+    "dev": {
+      "path": "build\\libs\\academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32325363,
+      "sha256": "9DECC5F46F191F27DB184E744636E862C12B91C4DAF11541E0DCFB77A701DDE9",
+      "new_classes_present": true,
+      "validation_and_external_sable_classes_absent": true
+    },
+    "release": {
+      "path": "build\\libs\\academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24854262,
+      "sha256": "1EA42BA127F84EA4E5BBCF5AF890665712EF20C9A06F1ACF4AA944A4A09C04E5",
+      "new_classes_present": true,
+      "validation_and_external_sable_classes_absent": true
+    }
+  },
+  "source_sha256": {
+    "src/main/java/org/academy/api/common/ability/program/ForwardingProgramTargetResolver.java": "7087586219C4C5F71B8ADD5FD81D2FF312DFD3192B0D7301034DEF5D59887631",
+    "src/main/java/org/academy/api/common/ability/program/ProgramTargetResolver.java": "DA3FEF8463E5C9835ED9B70BE0963A22F2B44F3F07880DB6DD05B1294BEDA85E",
+    "src/main/java/org/academy/api/common/ability/program/ProgramValueTypes.java": "23B5293C9B99E518348F38630967616DC66CD3BB2BDA7C80A5F06B312703DB28",
+    "src/main/java/org/academy/api/common/structure/StructureProximity.java": "64009C414F06318C49AE5F88E7AE94457BEBDA4A811320699520F3107ABFE366",
+    "src/main/java/org/academy/api/common/structure/StructureQueries.java": "052217A99F20822B2CE813AC890640FE3948ED2A0B19DC766044E4C87D7630B0",
+    "src/main/java/org/academy/internal/client/ability/program/ProgramConfigurationOptions.java": "AEE4E9FED13056B917D539F783DAA5F346F797888ACA645435CA593685E6DB5B",
+    "src/main/java/org/academy/internal/common/ability/program/CommonProgramExecutors.java": "F048F5BBFBD0ED6299377514AEF92BE4E19A5C6B7567DD696AF7917758764A1A",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramDebugFormatter.java": "9A4D1DE3B524993BB599FD37699CC6EE8B976F3F9E1097AAA0507E4A23127DF1",
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramTargetResolver.java": "3A33B19AF7A5DFAE21F4D4764164C08E4A78BE6E6E9656030B63A44EFEF083B9",
+    "src/main/java/org/academy/internal/common/ability/program/editor/ProgramEditorNodeCatalog.java": "41CFC3A8F981C2ED844D703E807E8ADAE15A4A5CE195C2D9F65FFF951E00EEA0",
+    "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeCatalog.java": "98C382BA685D74014B412B22A01C81F93F9D6A3785B61A60171D57D508BDEFC8",
+    "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeIds.java": "8BD8DD807016DA92CEEE2069E7EC5A37F60F9CA8B8B64D7E8DCD9210FD786648",
+    "src/main/java/org/academy/internal/common/structure/space/LoadedStructureProximity.java": "840B7156AB067CAE46F62D1D6A5E275729800723DE6E9B2D1F4134B6264C1D1F",
+    "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt": "F3F9AF430702156C0ADB61DB7955AF689232D9B014CD86CE2326821DF537EF27",
+    "src/main/resources/assets/academy/lang/en_us.json": "FC0D0F5052380CB768CA2E9DCAF1D73F50FF92A89B8C36A8626D3879D0CA1EE5",
+    "src/main/resources/assets/academy/lang/zh_cn.json": "DE4CF36FDFC74337BB1A2B48721B751851C02FB7708975B33F1B489AD9793D1A"
+  },
+  "test_log": "build/structure-selection-tests-final.log",
+  "baseline": {
+    "path": "run\\native-sublevel-direct-smoke\\saves\\Native SubLevel Direct Smoke",
+    "files_verified": 148,
+    "unchanged": true
+  },
+  "unrelated_rust_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "validation_notes": [
+    "Suite r1 and native r5 use identical final production sources. The later editor-only fixture refinement supplies a fully connected example and Chinese locale; it does not change gameplay.",
+    "Native r4 also passed all 3 categories and normal exit; native r5 supersedes its editor screenshot.",
+    "Actual production node executors and category runtimes; no actual save/execute GUI packets and no original user save manual acceptance.",
+    "Candidate-overflow and unsupported-geometry branches are conservative; no dense-load performance acceptance is claimed."
+  ],
+  "failed_attempts": [
+    {
+      "name": "native-r1",
+      "reason": "Fixture used radius 33 as an invalid value for every category; electromaster actually permits 48. AssertionError stopped the server."
+    },
+    {
+      "name": "native-r2",
+      "reason": "Unsupported neighbor fixture arrangement: freely falling comparison body left radius during extraction. Added static support."
+    },
+    {
+      "name": "native-r3",
+      "reason": "All three VM cases passed, then minimized editor cursor NaN crashed rendering. Fixed production rendering and added a regression test."
+    }
+  ]
+}
