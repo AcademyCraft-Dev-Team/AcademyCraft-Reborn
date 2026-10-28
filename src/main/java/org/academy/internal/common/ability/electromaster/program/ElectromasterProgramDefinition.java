@@ -67,7 +67,9 @@ public final class ElectromasterProgramDefinition {
                 configuration.addProperty("target_type", "entity");
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
-            if ((id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_GROUP))) {
+            if (id.equals(ElectromasterProgramNodeIds.STRUCTURE_MOVE_GROUP)) {
+                configuration = org.academy.internal.common.ability.program.ProgramStructureMovementNodes.defaults();
+            } else if ((id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(ElectromasterProgramNodeIds.STRUCTURE_RESET_GROUP))) {
                 configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetDefaults();
             } else if ((id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN) || id.equals(ElectromasterProgramNodeIds.STRUCTURE_SPIN_GROUP))) {
                 configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.spinDefaults();

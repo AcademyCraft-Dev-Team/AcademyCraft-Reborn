@@ -67,7 +67,9 @@ public final class AeromanipProgramDefinition {
                 configuration.addProperty("restore_when_settled", true);
             }
             var suffix = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
-            if ((id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_GROUP))) {
+            if (id.equals(AeromanipProgramNodeIds.STRUCTURE_MOVE_GROUP)) {
+                configuration = org.academy.internal.common.ability.program.ProgramStructureMovementNodes.defaults();
+            } else if ((id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_ORIENTATION) || id.equals(AeromanipProgramNodeIds.STRUCTURE_RESET_GROUP))) {
                 configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.resetDefaults();
             } else if ((id.equals(AeromanipProgramNodeIds.STRUCTURE_SPIN) || id.equals(AeromanipProgramNodeIds.STRUCTURE_SPIN_GROUP))) {
                 configuration = org.academy.internal.common.ability.program.ProgramStructureOrientationNodes.spinDefaults();

@@ -97,7 +97,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
         orientationControls = new ProgramOrientationControl(player, MAX_ACTION_RANGE, this::validateOrientationControl);
         groupControls = new org.academy.internal.common.ability.program.ServerStructureGroupControl(player, MAX_ACTION_RANGE, Skills.HIGH_SPEED_JET.get(),
                 (STRUCTURE_CONTROL_COST + STRUCTURE_MOVE_COST) * costMultiplier,
-                () -> requireCasterReady(Skills.HIGH_SPEED_JET.get()), reference -> org.academy.internal.common.ability.program.ServerStructureGroupControl.jetRejection(player, reference));
+                () -> requireCasterReady(Skills.HIGH_SPEED_JET.get()), reference -> org.academy.internal.common.ability.program.ServerStructureGroupControl.jetRejection(player, reference), reference -> org.academy.internal.common.ability.program.ServerStructureGroupMovement.Profile.jet());
     }
 
     @Override
@@ -481,6 +481,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         return orientationControls.status(control, operationId);
+    }
+
+    @Override public Operation moveStructures(java.util.List<ProgramStructureReference> structures, org.academy.api.common.ability.program.ProgramStructureMoveRequest request) {
+        return groupControls.moveStructures(structures, request);
     }
 
     @Override public Operation rotateStructures(java.util.List<ProgramStructureReference> structures, ProgramStructurePose pose) {

@@ -11,6 +11,12 @@ import static org.academy.api.common.ability.program.ProgramStructureOrientation
 public final class ProgramStructureGroupExecutors {
     private ProgramStructureGroupExecutors() {}
 
+    public static ProgramNodeStep move(ProgramVmContext context, ProgramStructureMovementNodes.Configuration config, ProgramInputView inputs) {
+        var runtime = runtime(context);
+        return run(context, runtime, () -> runtime.moveStructures(targets(inputs), config.request(
+                (ProgramVector) inputs.requireCompatible("displacement", ProgramValueTypes.VECTOR).value())));
+    }
+
     public static ProgramNodeStep rotate(ProgramVmContext context, Object configuration, ProgramInputView inputs) {
         var runtime = runtime(context);
         return run(context, runtime, () -> runtime.rotateStructures(targets(inputs),

@@ -51,7 +51,7 @@ public final class StructureGroupEditorSmoke {
                 @Override public boolean showStarter() { return false; }
             }));
         }
-        if (ticks == 30) Screenshot.grab(client.gameDirectory, "structure-groups-editor.png", client.gameRenderer.mainRenderTarget(), 1, message -> {
+        if (ticks == (Boolean.getBoolean("academy.structureGroupMoveSmoke") ? 140 : 30)) Screenshot.grab(client.gameDirectory, "structure-groups-editor.png", client.gameRenderer.mainRenderTarget(), 1, message -> {
             try {
                 var file = client.gameDirectory.toPath().resolve("screenshots/structure-groups-editor.png");
                 if (!Files.isRegularFile(file) || Files.size(file) == 0) throw new IllegalStateException(message.getString());

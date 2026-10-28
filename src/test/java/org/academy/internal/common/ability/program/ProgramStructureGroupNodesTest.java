@@ -20,7 +20,7 @@ class ProgramStructureGroupNodesTest {
             Identifier.parse("minecraft:overworld"), Identifier.parse("academy:test"), 1), UUID.randomUUID());
 
     @Test void eachRegisteredActionSnapshotsOnceAndPollsWithoutReacquiringOrRetargeting() {
-        for (var category : CATEGORIES) for (var action : List.of("rotate_group", "reset_group", "spin_group")) {
+        for (var category : CATEGORIES) for (var action : List.of("rotate_group", "reset_group", "spin_group", "move_group")) {
             var runtime = new Runtime();
             var definition = AbilityProgramDefinitions.require(Identifier.parse("academy:" + category));
             var id = action(category, action);
@@ -83,6 +83,7 @@ class ProgramStructureGroupNodesTest {
 
     private static ProgramInputView inputs(List<ProgramStructureReference> targets) {
         return new ProgramInputView(Map.of("structures", List.of(new ProgramValue<>(ProgramValueTypes.STRUCTURE_SET, targets)),
+                "displacement", List.of(new ProgramValue<>(ProgramValueTypes.VECTOR, new ProgramVector(1, 2, 3))),
                 "axis", List.of(new ProgramValue<>(ProgramValueTypes.DIRECTION, new ProgramDirection(0, 1, 0))),
                 "pose", List.of(new ProgramValue<>(ProgramValueTypes.STRUCTURE_POSE, new ProgramStructurePose(new ProgramDirection(0, 1, 0), 0.5)))));
     }
@@ -100,6 +101,9 @@ class ProgramStructureGroupNodesTest {
             return targets.isEmpty() && emptyCompletes ? Operation.completed("empty") : Operation.pending(receipt, "pending");
         }
         @Override public Operation rotateStructures(List<ProgramStructureReference> targets, ProgramStructurePose pose) { return start(targets); }
+        @Override public Operation moveStructures(List<ProgramStructureReference> targets, ProgramStructureMoveRequest request) {
+            assertEquals(new ProgramVector(1, 2, 3), request.displacement()); return start(targets);
+        }
         @Override public Operation resetStructures(List<ProgramStructureReference> targets, ResetRequest request) { return start(targets); }
         @Override public Operation spinStructures(List<ProgramStructureReference> targets, SpinRequest request) { return start(targets); }
         @Override public Operation structureGroupStatus(UUID receipt) {

@@ -106,7 +106,9 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
                 (STRUCTURE_CONTROL_COST + STRUCTURE_MOVE_COST) * costMultiplier,
                 () -> requireCasterReady(Skills.MAGNET_MANIPULATION.get()), reference -> SubLevelStructureRefs.isSubLevel(reference.reference())
                         ? (subLevelControls.hasMagneticParticipation(reference) ? null : "no_magnetic_participation")
-                        : org.academy.internal.common.ability.program.ServerStructureGroupControl.magneticRejection(player, reference));
+                        : org.academy.internal.common.ability.program.ServerStructureGroupControl.magneticRejection(player, reference), reference -> org.academy.internal.common.ability.program.ServerStructureGroupMovement.Profile.magnetic(
+                        SubLevelStructureRefs.isSubLevel(reference.reference()) ? subLevelControls.magneticParticipationFactor(reference)
+                                : org.academy.internal.common.ability.program.ServerStructureGroupMovement.magneticParticipation(player, reference)));
     }
 
     @Override
@@ -411,6 +413,10 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
         return orientationControls.status(control, operationId);
+    }
+
+    @Override public Operation moveStructures(java.util.List<ProgramStructureReference> structures, org.academy.api.common.ability.program.ProgramStructureMoveRequest request) {
+        return groupControls.moveStructures(structures, request);
     }
 
     @Override public Operation rotateStructures(java.util.List<ProgramStructureReference> structures, ProgramStructurePose pose) {

@@ -100,7 +100,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
         orientationControls = new ProgramOrientationControl(player, MAX_ACTION_RANGE, this::validateOrientationControl);
         groupControls = new org.academy.internal.common.ability.program.ServerStructureGroupControl(player, MAX_ACTION_RANGE, Skills.KINETIC_THROW.get(),
                 (STRUCTURE_CONTROL_COST + STRUCTURE_MOVE_COST) * costMultiplier,
-                () -> requireCasterReady(Skills.KINETIC_THROW.get()), reference -> null);
+                () -> requireCasterReady(Skills.KINETIC_THROW.get()), reference -> null, reference -> org.academy.internal.common.ability.program.ServerStructureGroupMovement.Profile.kinetic(subLevelControls.kineticTier(reference.reference())));
     }
 
     @Override
@@ -545,6 +545,10 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
         requireCasterReady(Skills.KINETIC_THROW.get());
         return orientationControls.status(control, operationId);
+    }
+
+    @Override public Operation moveStructures(java.util.List<ProgramStructureReference> structures, org.academy.api.common.ability.program.ProgramStructureMoveRequest request) {
+        return groupControls.moveStructures(structures, request);
     }
 
     @Override public Operation rotateStructures(java.util.List<ProgramStructureReference> structures, ProgramStructurePose pose) {

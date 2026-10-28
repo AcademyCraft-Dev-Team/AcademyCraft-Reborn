@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Group smoke requires an isolated native-sublevel-direct-smoke directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyStructureGroupRun').getOrElse('clientDev')) {
+            gameDirectory.set(directory)
+            systemProperty 'academy.structureGroupSmoke', 'true'
+            systemProperty 'academy.structureGroupMoveSmoke', 'true'
+            programArguments.addAll('--width','1280','--height','720','--quickPlaySingleplayer','test')
+        }
+    }
+}

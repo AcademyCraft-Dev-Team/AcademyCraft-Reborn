@@ -247,6 +247,8 @@ public final class ElectromasterProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, ElectromasterProgramNodeIds.STRUCTURE_MOVE_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::move);
         put(result, ElectromasterProgramNodeIds.STRUCTURE_ROTATE_GROUP,
                 org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::rotate);
         put(result, ElectromasterProgramNodeIds.STRUCTURE_RESET_GROUP,

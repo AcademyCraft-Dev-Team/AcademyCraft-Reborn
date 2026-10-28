@@ -32,13 +32,15 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
     private final float costPerMember;
     private final Runnable requireReady;
     private final Function<ProgramStructureReference, @Nullable String> eligibility;
+    private final Function<ProgramStructureReference, ServerStructureGroupMovement.Profile> movementProfile;
     private @Nullable ProgramStructureGroupControl group;
     private @Nullable ServerLevel host;
     private @Nullable Operation lastResult;
     private long deadline;
 
     public ServerStructureGroupControl(ServerPlayer player, double maximumRange, Skill skill, float costPerMember,
-                                       Runnable requireReady, Function<ProgramStructureReference, @Nullable String> eligibility) {
+                                       Runnable requireReady, Function<ProgramStructureReference, @Nullable String> eligibility,
+                                       Function<ProgramStructureReference, ServerStructureGroupMovement.Profile> movementProfile) {
         this.player = Objects.requireNonNull(player);
         this.maximumRange = maximumRange;
         this.skill = Objects.requireNonNull(skill);
@@ -48,6 +50,12 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
         this.costPerMember = costPerMember;
         this.requireReady = Objects.requireNonNull(requireReady);
         this.eligibility = Objects.requireNonNull(eligibility);
+        this.movementProfile = Objects.requireNonNull(movementProfile);
+    }
+
+    @Override public Operation moveStructures(List<ProgramStructureReference> structures, ProgramStructureMoveRequest request) {
+        Objects.requireNonNull(request, "request");
+        return start(structures, request.durationTicks(), null, request);
     }
 
     @Override public Operation rotateStructures(List<ProgramStructureReference> structures, ProgramStructurePose pose) {
@@ -71,6 +79,11 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
     }
 
     private Operation start(List<ProgramStructureReference> supplied, StructureOrientation.Limits limits, Command command) {
+        return start(supplied, limits.timeoutTicks(), command, null);
+    }
+
+    private Operation start(List<ProgramStructureReference> supplied, int timeoutTicks, @Nullable Command command,
+                            @Nullable ProgramStructureMoveRequest movement) {
         requireThread(); requireReady.run();
         final List<ProgramStructureReference> targets;
         try { targets = ProgramStructureGroupControl.canonical(supplied); }
@@ -86,8 +99,8 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
         if (actorMembers + targets.size() > ProgramStructureGroupControl.MAX_MEMBERS) return Operation.rejected("actor_group_budget");
         if (serverMembers + targets.size() > MAX_SERVER_MEMBERS) return Operation.rejected("server_group_budget");
         host = player.level();
-        deadline = host.getGameTime() + limits.timeoutTicks() + 2L;
-        var backend = new Backend(host, limits, command);
+        deadline = host.getGameTime() + timeoutTicks + 2L;
+        var backend = new Backend(host, command, movement);
         group = new ProgramStructureGroupControl(targets, backend);
         // Reserve the whole group before invoking callbacks or charging resources.
         ACTIVE.add(this);
@@ -176,10 +189,12 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
     }
     private final class Backend implements ProgramStructureGroupControl.Backend {
         private final ServerLevel level;
-        private final Command command;
+        private final @Nullable Command command;
+        private final @Nullable ProgramStructureMoveRequest movement;
+        private final Map<ProgramStructureGroupControl.Member, ServerStructureGroupMovement> moves = new HashMap<>();
         private final Map<ProgramStructureGroupControl.Member, StructureOperation.Context> contexts = new HashMap<>();
-        private Backend(ServerLevel level, StructureOrientation.Limits limits, Command command) {
-            this.level = level; this.command = command;
+        private Backend(ServerLevel level, @Nullable Command command, @Nullable ProgramStructureMoveRequest movement) {
+            this.level = level; this.command = command; this.movement = movement;
         }
         @Override public @Nullable String rejection(ProgramStructureGroupControl.Member member, boolean acquired) {
             if (player.level() != level || player.hasDisconnected() || !player.isAlive() || player.isRemoved() || player.isSpectator()) {
@@ -202,6 +217,11 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
             if (context == null || !context.runtimeId().equals(target.runtimeId())) return "orientation_context_unavailable";
             var previous = contexts.putIfAbsent(member, context);
             if (previous != null && previous.expectedContentRevision() != context.expectedContentRevision()) return "structure_content_changed";
+            if (movement != null) {
+                var move = moves.computeIfAbsent(member, key -> new ServerStructureGroupMovement(player, level, key,
+                        movement, maximumRange, () -> movementProfile.apply(key.target())));
+                return move.rejection();
+            }
             return null;
         }
         @Override public boolean acquire(ProgramStructureGroupControl.Member member) {
@@ -211,15 +231,21 @@ public final class ServerStructureGroupControl implements ProgramStructureGroupR
         }
         @Override public Operation start(ProgramStructureGroupControl.Member member) {
             var rejection = rejection(member, true);
-            return rejection != null ? Operation.rejected(rejection)
-                    : ProgramOrientationControl.operation(command.start(contexts.get(member), member.controlId()));
+            if (rejection != null) return Operation.rejected(rejection);
+            return movement != null ? moves.get(member).start()
+                    : ProgramOrientationControl.operation(Objects.requireNonNull(command).start(contexts.get(member), member.controlId()));
         }
         @Override public Operation status(ProgramStructureGroupControl.Member member, UUID receipt) {
+            if (movement != null) return moves.get(member).poll(receipt);
             return ProgramOrientationControl.operation(StructureOrientations.service().status(contexts.get(member),
                     new StructureOrientation.StatusRequest(member.controlId(), receipt)));
         }
         @Override public void release(ProgramStructureGroupControl.Member member) {
-            try { StructureOrientations.cancel(level, member.target().reference(), member.controlId()); }
+            try {
+                var move = moves.remove(member);
+                if (move != null) move.close();
+                StructureOrientations.cancel(level, member.target().reference(), member.controlId());
+            }
             finally { StructureDirectControl.release(member.target().reference(), member.controlId()); }
         }
     }

@@ -1,0 +1,745 @@
+{
+  "base_commit": "8b9cc8e1",
+  "date": "2026-10-28",
+  "feature": "precision_structure_group_movement",
+  "commit_status": "user_approved_for_containing_commit",
+  "tests": {
+    "test": {
+      "tests": 3310,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "clients": [
+    {
+      "name": "native-r2",
+      "kind": "group_movement",
+      "backend": "academy:sublevel",
+      "report": "run/native-sublevel-direct-smoke-group-move-native-r2/structure-group-move-result.json",
+      "report_sha256": "55CEAC745F5985DDE1502C6EE735894E57422D39B39B74E7F90E3DE38D4B3163",
+      "result": {
+        "movement_without_assistance": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8
+            ],
+            "simultaneous_move_samples": 12,
+            "graph_cp_paid": 21.428558,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true,
+            "measured_displacements": [
+              [
+                -8.985087788460078e-06,
+                0.03756471375845649,
+                2.675820317206785
+              ],
+              [
+                -9.03047589417838e-06,
+                0.037565242294817835,
+                2.675798537887772
+              ]
+            ],
+            "movement_successor_nozzle_state_preserved": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8
+            ],
+            "simultaneous_move_samples": 12,
+            "graph_cp_paid": 21.428558,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true,
+            "measured_displacements": [
+              [
+                -1.1489637472550385e-06,
+                -0.35364472228712884,
+                2.481090595610908
+              ],
+              [
+                -1.156597363660694e-06,
+                -0.35364463018436254,
+                2.481090985402389
+              ]
+            ],
+            "movement_successor_nozzle_state_preserved": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8
+            ],
+            "simultaneous_move_samples": 8,
+            "graph_cp_paid": 21.428558,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true,
+            "measured_displacements": [
+              [
+                0.00012244187178112043,
+                -0.025320733033709075,
+                4.789783100055956
+              ],
+              [
+                0.00012325550778768957,
+                -0.02531392925925502,
+                4.789653988878754
+              ]
+            ],
+            "movement_successor_nozzle_state_preserved": true
+          }
+        ],
+        "passed": true,
+        "actual_save_execute_packets": false,
+        "failure": "",
+        "linear_gravity_support_only": false,
+        "actual_node_vm": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-group-movement-native-r2.log",
+        "sha256": "A0849C560A652798084B95D272541AE3B214B12E1448CB420DD1E4A501117F57",
+        "result": "BUILD SUCCESSFUL in 39s"
+      },
+      "screenshot": {
+        "path": "run/native-sublevel-direct-smoke-group-move-native-r2/screenshots/structure-groups-editor.png",
+        "sha256": "FCC067BD6AD9E446CF66520519A46FEF262C3F04F5BEE47D5D3F5952F43A270F",
+        "visually_reviewed": true,
+        "new_node_visible_and_graph_valid": true,
+        "whole_editor_visual_acceptance": false,
+        "issue": "At 140 ticks the existing zero-float and vector-construction nodes omit backgrounds/text; ports remain. Cause not diagnosed."
+      }
+    },
+    {
+      "name": "suite-r1",
+      "kind": "group_movement",
+      "backend": "academy:sable",
+      "report": "run/native-sublevel-direct-smoke-group-move-suite-r1/structure-group-move-result.json",
+      "report_sha256": "E368A3B4993F9F3514DA89D1285C10AFF2ECC1F3F3EF9FB98BFDF2F6CC70D789",
+      "result": {
+        "actual_save_execute_packets": false,
+        "failure": "",
+        "linear_gravity_support_only": false,
+        "actual_node_vm": true,
+        "movement_without_assistance": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8
+            ],
+            "simultaneous_move_samples": 12,
+            "graph_cp_paid": 21.428558,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true,
+            "measured_displacements": [
+              [
+                0.0,
+                0.00164794921875,
+                2.9414520263671875
+              ],
+              [
+                0.0,
+                0.0018310546875,
+                2.9417266845703125
+              ]
+            ],
+            "movement_successor_nozzle_state_preserved": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8
+            ],
+            "simultaneous_move_samples": 12,
+            "graph_cp_paid": 21.428558,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true,
+            "measured_displacements": [
+              [
+                0.0,
+                -0.434326171875,
+                2.5279541015625
+              ],
+              [
+                0.0,
+                -0.43408203125,
+                2.528228759765625
+              ]
+            ],
+            "movement_successor_nozzle_state_preserved": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8
+            ],
+            "simultaneous_move_samples": 8,
+            "graph_cp_paid": 21.428558,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true,
+            "measured_displacements": [
+              [
+                0.0,
+                0.124359130859375,
+                1.82647705078125
+              ],
+              [
+                0.0,
+                0.13330078125,
+                1.788848876953125
+              ]
+            ],
+            "movement_successor_nozzle_state_preserved": true
+          }
+        ],
+        "passed": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-group-movement-suite-r1.log",
+        "sha256": "1F7E0879A0B61A56FB4DB1DDD2F6B52FA492B08BBFC34D1F5FBA24EBFC327A22",
+        "result": "BUILD SUCCESSFUL in 54s"
+      },
+      "screenshot": {
+        "path": "run/native-sublevel-direct-smoke-group-move-suite-r1/screenshots/structure-groups-editor.png",
+        "sha256": "EA282022759156B5ACFCBBB05A420F58F1DB47043ED5157626A0C57DD810647A",
+        "visually_reviewed": true,
+        "new_node_visible_and_graph_valid": true,
+        "whole_editor_visual_acceptance": false,
+        "issue": "At 140 ticks the existing zero-float and vector-construction nodes omit backgrounds/text; ports remain. Cause not diagnosed."
+      }
+    },
+    {
+      "name": "orientation-native-r1",
+      "kind": "group_orientation_regression",
+      "backend": "academy:sublevel",
+      "report": "run/native-sublevel-direct-smoke-group-move-orientation-native-r1/structure-group-result.json",
+      "report_sha256": "B1DBA0284ABA4A12A2EB7656FD2974A77E61E52F208881717C7CAC4326CB3C0E",
+      "result": {
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          }
+        ],
+        "movement_without_assistance": false,
+        "actual_node_vm": true,
+        "linear_gravity_support_only": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-group-movement-orientation-native-r1.log",
+        "sha256": "973E7B72F703FCB53A82B0182B4449B798D1B6EF804465ED2AAF3D0ED8DE61F7",
+        "result": "BUILD SUCCESSFUL in 45s"
+      }
+    },
+    {
+      "name": "orientation-suite-r1",
+      "kind": "group_orientation_regression",
+      "backend": "academy:sable",
+      "report": "run/native-sublevel-direct-smoke-group-move-orientation-suite-r1/structure-group-result.json",
+      "report_sha256": "C887845D869D4672C7AB14DDF96885C20BBF52AB355732FCA20CEF5ECD5ADA7B",
+      "result": {
+        "linear_gravity_support_only": true,
+        "actual_node_vm": true,
+        "movement_without_assistance": false,
+        "cases": [
+          {
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          },
+          {
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "passed": true,
+            "members": 2,
+            "node_completion_order": [
+              8,
+              9,
+              10
+            ],
+            "simultaneous_spin_samples": 29,
+            "graph_cp_paid": 64.285675,
+            "preflight_cp_occupied_epoch_budget_checks": true,
+            "cancellation_successor_and_deletion_cleanup": true
+          }
+        ],
+        "passed": true,
+        "actual_save_execute_packets": false,
+        "failure": ""
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-group-movement-orientation-suite-r1.log",
+        "sha256": "DEED868805A775CC523CB89063A08D7A7EBD8243EF8CA771EE65B50506C214EB",
+        "result": "BUILD SUCCESSFUL in 48s"
+      }
+    },
+    {
+      "name": "single-native-r1",
+      "kind": "single_control_and_filters_regression",
+      "backend": "academy:sublevel",
+      "report": "run/native-sublevel-direct-smoke-group-move-single-native-r1/structure-program-orientation-result.json",
+      "report_sha256": "3AB435AE1841D26BD4B26CE64EB2249CE1FA9E354E41739FABC578F91A1DD004",
+      "result": {
+        "failure": "",
+        "actual_save_execute_packets": false,
+        "passed": true,
+        "extraction_gameplay_enabled": true,
+        "cases": [
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:accelerator",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.9787865395054496,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 23,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:electromaster",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.9798103654334795,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 16,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:aeromanip",
+            "backend": "academy:sublevel",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.9798103654334795,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 16,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.008963616482166271,
+            "reset_up_error": 0.0056321283938495165,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.800000000000001,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "actual_node_vm": true,
+        "linear_gravity_support_only": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-group-movement-single-native-r1.log",
+        "sha256": "63F938C4C01867394CAB3CBF94376DCA7A810DDB4BF85F65E07F30AA18BCD629",
+        "result": "BUILD SUCCESSFUL in 1m 13s"
+      }
+    },
+    {
+      "name": "single-suite-r1",
+      "kind": "single_control_and_filters_regression",
+      "backend": "academy:sable",
+      "report": "run/native-sublevel-direct-smoke-group-move-single-suite-r1/structure-program-orientation-result.json",
+      "report_sha256": "034C730C4906AB6F5A6921356C2DC5687058954D856E22C25715984399E24939",
+      "result": {
+        "actual_node_vm": true,
+        "cases": [
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:accelerator",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 2.976470947265625,
+            "expected_extraction_rise": 3.0,
+            "wait_ticks": 22,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:electromaster",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          },
+          {
+            "payload_checked": false,
+            "selection_nodes_and_foreach_control": true,
+            "multiple_structure_query_and_removal": true,
+            "content_source_validity_filters": true,
+            "category": "academy:aeromanip",
+            "backend": "academy:sable",
+            "extraction_gameplay_enabled": true,
+            "skill_provenance_verified": true,
+            "actual_extraction_rise": 0.978240966796875,
+            "expected_extraction_rise": 1.0,
+            "wait_ticks": 15,
+            "node_completion_order": [
+              2,
+              3,
+              4,
+              8,
+              9,
+              10,
+              30,
+              31
+            ],
+            "rotate_angle_error": 0.004942210411014886,
+            "reset_up_error": 0.005499236285455482,
+            "spin_requested_ticks": 250,
+            "spin_samples_after_200": 44,
+            "late_spin_speed": 0.7982046008110046,
+            "linear_gravity_support_only": true,
+            "passed": true
+          }
+        ],
+        "extraction_gameplay_enabled": true,
+        "passed": true,
+        "actual_save_execute_packets": false,
+        "failure": "",
+        "linear_gravity_support_only": true
+      },
+      "normal_exit": true,
+      "log": {
+        "path": "build/structure-group-movement-single-suite-r1.log",
+        "sha256": "74B494E7091361B996AC548AE288FEB1CC718A861F82D3E4193410639176D7D4",
+        "result": "BUILD SUCCESSFUL in 1m 22s"
+      }
+    }
+  ],
+  "builds": {
+    "dev": {
+      "path": "build/structure-group-movement-dev-build.log",
+      "sha256": "DE876ADEC3B21C1B0AE36380DA3EF2D0EABB1A8F57CE0D0360BEEAF53FA0273E",
+      "result": "BUILD SUCCESSFUL in 54s"
+    },
+    "release": {
+      "path": "build/structure-group-movement-release-build.log",
+      "sha256": "2BAB5EF9F26347D683DB77CFC2059C1FFC89DC2FC6AC1219A4C9D8F7C3A4FF46",
+      "result": "BUILD SUCCESSFUL in 1m 29s"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32389728,
+      "sha256": "794A8D503653678305D79623132F0211F744D0E3DAC8FBED1ADBD81098CE26CA",
+      "movement_api_and_implementation_present": true,
+      "test_fixtures_absent": true
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 24918627,
+      "sha256": "B22D2306414139E548A528DF0641D63CD7604C6E32B04456019524776517833B",
+      "movement_api_and_implementation_present": true,
+      "test_fixtures_absent": true
+    }
+  ],
+  "test_log": {
+    "path": "build/structure-group-movement-tests-final.log",
+    "sha256": "319C00B00DD7F4964D775FE2602F3FC0422D3F89DC2B1D7ABB9AFE6FBA59447E",
+    "result": "BUILD SUCCESSFUL in 28s"
+  },
+  "source_world": {
+    "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke",
+    "files": 148,
+    "all_seven_snapshot_hashes_match_current": true,
+    "user_world_used": false
+  },
+  "excluded_preexisting_change": {
+    "path": "native/academy_physics/src/lib.rs",
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+    "not_modified_or_staged": true
+  },
+  "change_files": [
+    "docs/structure_group_movement_2026_10_28.zh-CN.md",
+    "docs/structure_skill_migration_handoff.zh-CN.md",
+    "src/gametest/java/org/academy/internal/client/validation/StructureGroupEditorSmoke.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/StructureGroupSmoke.java",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureGroupRuntime.java",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureMoveRequest.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramDefinition.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramExecutionBridge.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeCatalog.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeIds.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/ServerAcceleratorProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramDefinition.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramExecutionBridge.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeCatalog.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeIds.java",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/ServerAeromanipProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramDefinition.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramExecutionBridge.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeCatalog.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeIds.java",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ServerElectromasterProgramRuntime.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureGroupExecutors.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureMovementNodes.java",
+    "src/main/java/org/academy/internal/common/ability/program/ServerStructureGroupControl.java",
+    "src/main/java/org/academy/internal/common/ability/program/ServerStructureGroupMovement.java",
+    "src/main/java/org/academy/internal/common/ability/program/SubLevelProgramControl.java",
+    "src/main/resources/assets/academy/lang/en_us.json",
+    "src/main/resources/assets/academy/lang/zh_cn.json",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureGroupNodesTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureMovementTest.java",
+    "validation/native_structure/structure_group_movement.init.gradle",
+    "validation/native_structure/structure_group_movement_validation_2026_10_28.json"
+  ],
+  "source_sha256": {
+    "src/gametest/java/org/academy/internal/client/validation/StructureGroupEditorSmoke.java": "F8F35016C15EBB37959CCDC03CA7D002070E9B9E6B2E6F052F5A644E079D182A",
+    "src/gametest/java/org/academy/internal/common/ability/program/StructureGroupSmoke.java": "250ADF32F8E783521772F814EE41065C18897B688D5AB504CF408F87D12CA659",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureGroupRuntime.java": "F0F1EF8D5CE174F90711524F1F08A08CFBA7C98A3E36B41D50E3B906D856E481",
+    "src/main/java/org/academy/api/common/ability/program/ProgramStructureMoveRequest.java": "557FC092942340A1FEB462DE41DDAA413E6622C08C735F01F3750AA11F600F94",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramDefinition.java": "AA1F0FC8B7F51FD63716395C2B31B8FAB0F91FE7B1E3654482497BDD128CD833",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramExecutionBridge.java": "B6CF2373EE47622475DE30AD8AD7586B9149BD4E6E68EA3C259A163746937FA1",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeCatalog.java": "F1FAF73208BF09CFC673BB7DB973FE45EEC5234130CD646865FAD67898EA4A24",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramNodeIds.java": "9943577D32FB4EA9FF5FC8CA35560E3B5026879E6D58CC471DB7798371739E81",
+    "src/main/java/org/academy/internal/common/ability/accelerator/program/ServerAcceleratorProgramRuntime.java": "B074B11729A338A709F083C51D1DC869D3739646F0790ACA8FB096619142F060",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramDefinition.java": "CC2AE7C1A26E803FA53CBBD63274DBD0962468C95AA8A71F2616634C54ED73E3",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramExecutionBridge.java": "0989A7983C51C3C0CCCC300B520393655A6E7187A4CE7DDB0E2EF49A3CAF59BC",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeCatalog.java": "4C5A5935D88E1A6F7089FEF6AF01FA15D33FEBC49F5BC28F88450FDDCC95328E",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/AeromanipProgramNodeIds.java": "512C8B27A8D98201E9ADA5CD7CC6C66E717D90A4CA99AEA2A9093FA40638ED97",
+    "src/main/java/org/academy/internal/common/ability/aeromanip/program/ServerAeromanipProgramRuntime.java": "970026F09DD6D8F2CE8A5931B4624DDFCF8094B1080637ACA5E230E41D60ED8C",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramDefinition.java": "6E7D9C5DCDA9C9C0160721831FB3C3D38182DBA8077C29CE29E64140CA7C2943",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramExecutionBridge.java": "0369B0483DB1F8EAE2768B4EEDC831480796EBC1D380A5CC29FAC69929A433AD",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeCatalog.java": "EB5671D8815263B6E4E7F6C0F5673D6883565AC2381FA5E2AFD82D76EFA45C3D",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ElectromasterProgramNodeIds.java": "B981721CD03E9583B01C5C525F08DE421C7E5EBB5F48635747BA97B208F0C078",
+    "src/main/java/org/academy/internal/common/ability/electromaster/program/ServerElectromasterProgramRuntime.java": "1AAF5CB55B0DC2548D4B74C4837B40E4EAE83E91BA288DFE693860517F84D40A",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureGroupExecutors.java": "47FC813AC9151CE14BD2026EBED95680BE089A310072BB15CBE1A25592EF4EE5",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStructureMovementNodes.java": "BEC85A4E56AE4CE2C585EB43A049EB43AC648C86EF7A9444452A5F020BBAA9B0",
+    "src/main/java/org/academy/internal/common/ability/program/ServerStructureGroupControl.java": "6433AC7FB98311575F77E3D7C54447B036DEF0EA6E21F3DA5BB731642CB33451",
+    "src/main/java/org/academy/internal/common/ability/program/ServerStructureGroupMovement.java": "69CD63D9CA3BD43C146D1AA8FD9E8B332E53A9CFAEB3210C0F08D0AFF715E9BE",
+    "src/main/java/org/academy/internal/common/ability/program/SubLevelProgramControl.java": "4D35AD4868E3FBB86B86D8F98AEC9109FD7AAEAD1EDD12C348F29CF387F406E9",
+    "src/main/resources/assets/academy/lang/en_us.json": "2D643355B2F4A82FF681755DA1D5464C47615709D89EE34AC38C7ED1723CFD76",
+    "src/main/resources/assets/academy/lang/zh_cn.json": "D49891704822E6F8F7406DEF3DB5D8F2BF422FF17CF4EA3B72E7A85A0F3977F8",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureGroupNodesTest.java": "A1FEAAE9EE629D2F4C937033E8C7760F88EB7B2683983735B631B79A993DB9C9",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStructureMovementTest.java": "690CD432CAE11441D08D478CFEA33D66792FBFF6D965987B47A71B5C620CD1DC",
+    "validation/native_structure/structure_group_movement.init.gradle": "A032D243D1E617AE28ED972FD5F3B2410B1E8FD01F79F807C622FB60383752A9"
+  },
+  "documentation_sha256": {
+    "docs/structure_group_movement_2026_10_28.zh-CN.md": "E2A715547D1AC74A6D3981E8FA4BE19E091D414D4C7DF7436472135E3BBAB346",
+    "docs/structure_skill_migration_handoff.zh-CN.md": "4AAB3E609FB9A6E2CEDAF06FF102138CCA6B77031571161D7D061FA50CCEF570"
+  },
+  "limits": {
+    "members_per_group_and_actor": 8,
+    "group_members_per_server": 256,
+    "force_per_member": 1250,
+    "group_translation_force_per_actor": 10000,
+    "maximum_displacement": 64,
+    "duration_ticks": [
+      2,
+      200
+    ],
+    "nozzles_per_member": 64
+  },
+  "prior_attempts": [
+    "Initial sandboxed Gradle attempts could not connect to the local daemon or write its cache; approved unsandboxed --no-daemon execution succeeded.",
+    "Initial game fixture referenced a nonexistent VECTOR_CONSTANT; replaced by actual float constants and VECTOR_CONSTRUCT before passing tests.",
+    "Native r1 passed; native r2 adds measured displacement, successor nozzle checks, port translation and delayed screenshots."
+  ],
+  "pending": [
+    "Editor long-display omission of two existing data node backgrounds/text: reproduced, not root-caused or fixed.",
+    "Human graph editing, actual save/execute packets, multiplayer, eight-body irregular contact stress and target modpack handling.",
+    "Persistent group handles, explicit per-body anchors and concurrent translation/rotation if requested.",
+    "Satellite/orbital authorization, S4, long-term ledger GC, full I/O fault matrix and native contact stress red tests."
+  ],
+  "commit_subject": "新增精密结构群组平移与有限力预算"
+}

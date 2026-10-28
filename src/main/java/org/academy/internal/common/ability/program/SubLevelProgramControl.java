@@ -175,6 +175,13 @@ public final class SubLevelProgramControl {
         kineticTiers.put(reference, tier);
     }
 
+    public int kineticTier(StructureRef reference) { return kineticTiers.getOrDefault(reference, 0); }
+
+    public double magneticParticipationFactor(ProgramStructureReference structure) {
+        return player.level().getGameTime() < magnetization.getOrDefault(structure.reference(), 0L)
+                ? 1.0 : magneticParticipation(structure.reference());
+    }
+
     public void recordMagneticCapture(StructureRef reference, boolean forceMagnetize) {
         if (forceMagnetize) magnetization.put(reference,
                 player.level().getGameTime() + MagneticStructureService.MAGNETIZATION_TICKS);

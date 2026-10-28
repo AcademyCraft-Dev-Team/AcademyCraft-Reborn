@@ -271,6 +271,8 @@ public final class AcceleratorProgramExecutionBridge {
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
                         false,
                         false));
+        put(result, AcceleratorProgramNodeIds.STRUCTURE_MOVE_GROUP,
+                org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::move);
         put(result, AcceleratorProgramNodeIds.STRUCTURE_ROTATE_GROUP,
                 org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::rotate);
         put(result, AcceleratorProgramNodeIds.STRUCTURE_RESET_GROUP,

@@ -41,6 +41,7 @@ import static org.academy.api.common.ability.program.ProgramStructureOrientation
 /** Real category runtimes, scheduler, two live bodies and observation-only node wrappers. */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class StructureGroupSmoke {
+    private static final boolean TRANSLATION = Boolean.getBoolean("academy.structureGroupMoveSmoke");
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureGroupSmoke");
     private static final List<Map<String, Object>> RESULTS = new ArrayList<>();
     private static final List<ProgramStructureReference> TARGETS = new ArrayList<>();
@@ -80,7 +81,7 @@ public final class StructureGroupSmoke {
             player.setNoGravity(true); player.setDeltaMovement(Vec3.ZERO); player.resetFallDistance();
             check(++age < 700, "group fixture timeout: " + category);
             if (!startedGraph) { awaitCaptures(); return; }
-            supportGravity();
+            if (!TRANSLATION) supportGravity();
             if (termination != null) finishCategory();
         } catch (Throwable failure) { fail(failure); }
     }
@@ -141,6 +142,7 @@ public final class StructureGroupSmoke {
             }
         }
         preflightMatrix();
+        if (TRANSLATION) movementPreflight();
         for (int offset : List.of(0, 4)) player.level().setBlock(seed.offset(offset, -1, 0), Blocks.AIR.defaultBlockState(), 3);
         startGraph(); startedGraph = true;
     }
@@ -184,14 +186,61 @@ public final class StructureGroupSmoke {
         runtime = newRuntime();
     }
 
+    private static ProgramStructureMoveRequest moveRequest() {
+        return new ProgramStructureMoveRequest(new ProgramVector(0, 0, 3), 20);
+    }
+    private static void movementPreflight() {
+        float before = cp();
+        var invalid = new ProgramStructureMoveRequest(new ProgramVector(0, 64, 0), 20);
+        check(runtime.moveStructures(TARGETS, invalid).result().status() == ProgramStructureOperationResult.Status.REJECTED,
+                "out-of-world group targets accepted");
+        check(cp() == before && !occupied(), "invalid target charged or leaked");
+        var pending = runtime.moveStructures(TARGETS, moveRequest());
+        check(pending.result().status() == ProgramStructureOperationResult.Status.PENDING, "movement cancellation setup failed");
+        var last = TARGETS.get(1); var successor = UUID.randomUUID();
+        check(StructureDirectControl.acquire(player.level(), last.reference(), player, successor) == StructureDirectControl.Status.ACTIVE, "movement successor setup failed");
+        if (!NOZZLES.isEmpty()) NOZZLES.getLast().activate(77);
+        check(runtime.structureGroupStatus(pending.operationId()).result().status() == ProgramStructureOperationResult.Status.REJECTED, "lost movement lease ignored");
+        check(StructureDirectControl.matches(last.reference(), player.getUUID(), successor, last.runtimeId()), "movement removed successor");
+        if (!NOZZLES.isEmpty()) {
+            check(NOZZLES.getFirst().activeTicks() == 0 && NOZZLES.getLast().activeTicks() == 77, "movement overwrote successor nozzle state");
+            NOZZLES.getLast().restoreActiveTicks(0);
+        }
+        StructureDirectControl.release(last.reference(), successor);
+        pending = runtime.moveStructures(TARGETS, moveRequest());
+        check(pending.result().status() == ProgramStructureOperationResult.Status.PENDING, "movement program cancellation setup failed");
+        ServerProgramExecution.closeOrientationCommands(new ProgramExecutionFrame(new ProgramActionTransaction(), runtime));
+        check(!occupied(), "movement cancellation leaked leases");
+        check(NOZZLES.stream().allMatch(nozzle -> nozzle.activeTicks() == 0), "movement cancellation leaked nozzle activation");
+        runtime = newRuntime();
+    }
+    private static ProgramGraph movementGraph() {
+        var center = CENTERS.get(TARGETS.getFirst().reference()); var point = new JsonObject();
+        point.addProperty("dimension", player.level().dimension().identifier().toString());
+        point.addProperty("x", center.x); point.addProperty("y", center.y); point.addProperty("z", center.z);
+        var radius = new JsonObject(); radius.addProperty("value", 8);
+        var variable = new JsonObject(); variable.addProperty("name", "group_targets"); variable.addProperty("type", ProgramValueTypes.STRUCTURE_SET.id().toString());
+        var zero = new JsonObject(); zero.addProperty("value", 0);
+        var offset = new JsonObject(); offset.addProperty("value", 3);
+        return new ProgramGraph(List.of(node(0, BaseAbilityProgramDefinition.entryId(category), new JsonObject()),
+                node(1, CommonProgramNodeIds.WORLD_POSITION_CONSTANT, point), node(2, CommonProgramNodeIds.FLOAT_CONSTANT, radius),
+                node(3, CommonProgramNodeIds.STRUCTURES_AROUND, new JsonObject()), node(4, CommonProgramNodeIds.VARIABLE_SET, variable),
+                node(5, CommonProgramNodeIds.VARIABLE_GET, variable), node(6, CommonProgramNodeIds.VECTOR_CONSTRUCT, new JsonObject()),
+                node(7, CommonProgramNodeIds.FLOAT_CONSTANT, zero), node(9, CommonProgramNodeIds.FLOAT_CONSTANT, offset),
+                node(8, action("move_group"), ProgramStructureMovementNodes.defaults())),
+                List.of(edge(0,"flow",4,"flow"),edge(1,"position",3,"center"),edge(2,"value",3,"radius"),edge(3,"structures",4,"value"),
+                        edge(4,"flow",8,"flow"),edge(5,"value",8,"structures"),edge(6,"vector",8,"displacement"),
+                        edge(7,"value",6,"x"),edge(7,"value",6,"y"),edge(9,"value",6,"z")));
+    }
+
     private static void startGraph() {
         var definition = AbilityProgramDefinitions.require(category); var graph = graph();
         var compiled = definition.compile(graph, Set.of(skill.getKey()));
         check(compiled.valid(), "group graph invalid: " + compiled.diagnostics());
         var layout = new HashMap<Integer, ProgramEditorLayout.NodePosition>();
-        int[] order = {0,1,2,3,4,5,6,7,11,8,9,10};
+        int[] order = TRANSLATION ? new int[]{0,1,2,3,4,5,7,9,6,8} : new int[]{0,1,2,3,4,5,6,7,11,8,9,10};
         for (int i = 0; i < order.length; i++) layout.put(order[i], new ProgramEditorLayout.NodePosition(i / 3 * 150, i % 3 * 90));
-        editorProgram = new AbilityProgram(1, UUID.randomUUID(), "群组姿态控制", category, graph, new ProgramEditorLayout(layout));
+        editorProgram = new AbilityProgram(1, UUID.randomUUID(), (TRANSLATION ? "群组平移控制" : "群组姿态控制"), category, graph, new ProgramEditorLayout(layout));
         var transaction = ProgramActionTransaction.sequential(); frame = new ProgramExecutionFrame(transaction, runtime, null, player.level()::getGameTime);
         key = new ServerProgramScheduler.SessionKey(player.getUUID(), category, UUID.randomUUID(), 0);
         check(ServerProgramScheduler.start(player.level().getServer(), key, compiled.program(),
@@ -209,6 +258,9 @@ public final class StructureGroupSmoke {
             boolean groupAction = id.getPath().endsWith("_group");
             boolean first = groupAction && !STARTED.containsKey(context.nodeId());
             long now = player.level().getGameTime(); if (groupAction) STARTED.putIfAbsent(context.nodeId(), now);
+            if (TRANSLATION && groupAction && !first && now - STARTED.get(context.nodeId()) > 5 && now - STARTED.get(context.nodeId()) < 18) {
+                if (TARGETS.stream().allMatch(target -> motion(target).pose().localToWorldPoint(motion(target).localCenterOfMass()).z - CENTERS.get(target.reference()).z > .1)) spinSamples++;
+            }
             if (context.nodeId() == 10 && !first && now - STARTED.get(10) > 15 && now - STARTED.get(10) < 45) {
                 check(TARGETS.stream().allMatch(target -> motion(target).angularVelocity().z < -.25), "group members did not spin concurrently"); spinSamples++;
             }
@@ -224,6 +276,11 @@ public final class StructureGroupSmoke {
                 check(now > STARTED.get(context.nodeId()), "group completed without physics steps");
                 for (var target : TARGETS) {
                     var motion = motion(target);
+                    if (TRANSLATION) {
+                        check(now - STARTED.get(context.nodeId()) >= 20, "translation force window ended early");
+                        check(motion.pose().localToWorldPoint(motion.localCenterOfMass()).z - CENTERS.get(target.reference()).z > .1, "member did not translate");
+                        continue;
+                    }
                     if (context.nodeId() == 8) check(angleError(motion.pose(), ROTATION) < .025, "member rotation did not reach target");
                     if (context.nodeId() == 9) check(motion.pose().localToWorldDirection(new Vec3(0,1,0)).distanceTo(new Vec3(0,1,0)) < .025, "member reset failed");
                     check(motion.angularVelocity().length() < .03, "group completed without braking");
@@ -246,6 +303,7 @@ public final class StructureGroupSmoke {
     }
 
     private static ProgramGraph graph() {
+        if (TRANSLATION) return movementGraph();
         var center = CENTERS.get(TARGETS.getFirst().reference()); var point = new JsonObject(); point.addProperty("dimension", player.level().dimension().identifier().toString());
         point.addProperty("x", center.x); point.addProperty("y", center.y); point.addProperty("z", center.z);
         var radius = new JsonObject(); radius.addProperty("value", 8);
@@ -266,16 +324,23 @@ public final class StructureGroupSmoke {
 
     private static void finishCategory() {
         check(settlementFailure == null && termination.kind() == ProgramSessionScheduler.TerminationKind.COMPLETED, "group VM failed: " + termination + " " + settlementFailure);
-        check(COMPLETED.equals(List.of(8,9,10)) && spinSamples >= 10, "missing concurrent group progress: " + COMPLETED + " samples=" + spinSamples);
+        check(COMPLETED.equals(TRANSLATION ? List.of(8) : List.of(8,9,10)) && spinSamples >= (TRANSLATION ? 5 : 10), "missing concurrent group progress: " + COMPLETED + " samples=" + spinSamples);
         check(!occupied(), "completion leaked a lease");
+        var displacements = TARGETS.stream().map(target -> {
+            var state = motion(target);
+            var delta = state.pose().localToWorldPoint(state.localCenterOfMass()).subtract(CENTERS.get(target.reference()));
+            return List.of(delta.x, delta.y, delta.z);
+        }).toList();
+        if (TRANSLATION) check(NOZZLES.stream().allMatch(nozzle -> nozzle.activeTicks() == 0), "completed movement leaked nozzle activation");
         // Deletion during an active group must stop all remaining members without recreating anything.
-        runtime = newRuntime(); var deletion = runtime.spinStructures(TARGETS, spinRequest());
+        runtime = newRuntime(); var deletion = TRANSLATION ? runtime.moveStructures(TARGETS, moveRequest()) : runtime.spinStructures(TARGETS, spinRequest());
         check(deletion.result().status() == ProgramStructureOperationResult.Status.PENDING, "deletion setup rejected");
         check(StructureTransactions.discard(player.level().getServer(), TARGETS.get(1).reference()), "deletion fixture failed");
         check(runtime.structureGroupStatus(deletion.operationId()).result().status() == ProgramStructureOperationResult.Status.REJECTED && !occupied(), "deleted member retained group");
         var row = new LinkedHashMap<String,Object>(); row.put("category", category.toString()); row.put("backend", TARGETS.getFirst().reference().backend().toString());
-        row.put("passed", true); row.put("members", 2); row.put("node_completion_order", List.copyOf(COMPLETED)); row.put("simultaneous_spin_samples", spinSamples); row.put("graph_cp_paid", charged);
+        row.put("passed", true); row.put("members", 2); row.put("node_completion_order", List.copyOf(COMPLETED)); row.put(TRANSLATION ? "simultaneous_move_samples" : "simultaneous_spin_samples", spinSamples); row.put("graph_cp_paid", charged);
         row.put("preflight_cp_occupied_epoch_budget_checks", true); row.put("cancellation_successor_and_deletion_cleanup", true); RESULTS.add(row);
+        if (TRANSLATION) { row.put("measured_displacements", displacements); row.put("movement_successor_nozzle_state_preserved", true); }
         AcademyCraft.LOGGER.info("STRUCTURE_GROUP_CASE_PASSED {}", row);
         cleanup();
         if (++categoryIndex == 3) { restore(); finished = true; write(true, ""); }
@@ -296,7 +361,7 @@ public final class StructureGroupSmoke {
     }
     private static void restore() { player.connection.teleport(oldPosition.x,oldPosition.y,oldPosition.z,0,0); player.setNoGravity(oldGravity); player.setGameMode(oldMode); }
     private static void write(boolean passed, String failure) {
-        try { Files.writeString(output,new GsonBuilder().setPrettyPrinting().create().toJson(Map.of("passed",passed,"failure",failure,"cases",RESULTS,"actual_node_vm",true,"actual_save_execute_packets",false,"linear_gravity_support_only",true))); }
+        try { Files.writeString(output,new GsonBuilder().setPrettyPrinting().create().toJson(Map.of("passed",passed,"failure",failure,"cases",RESULTS,"actual_node_vm",true,"actual_save_execute_packets",false,"linear_gravity_support_only",!TRANSLATION,"movement_without_assistance",TRANSLATION))); }
         catch (Exception error) { AcademyCraft.LOGGER.error("Could not write group report",error); }
     }
     private static void fail(Throwable error) {
@@ -315,7 +380,7 @@ public final class StructureGroupSmoke {
         if (client.player==null || client.level==null) return;
         var directory=client.gameDirectory.toPath().toAbsolutePath().normalize();
         if (!directory.getFileName().toString().startsWith("native-sublevel-direct-smoke")) { fail(new IllegalStateException("Group fixture requires isolated run directory")); return; }
-        output=directory.resolve("structure-group-result.json");
+        output=directory.resolve(TRANSLATION ? "structure-group-move-result.json" : "structure-group-result.json");
         client.player.setNoGravity(true); client.player.setDeltaMovement(Vec3.ZERO); client.player.resetFallDistance();
         if (!ready) org.lwjgl.glfw.GLFW.glfwIconifyWindow(client.getWindow().handle()); ready=true;
     }
