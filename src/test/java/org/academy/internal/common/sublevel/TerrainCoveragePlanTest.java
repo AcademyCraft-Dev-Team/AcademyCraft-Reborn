@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -254,5 +255,65 @@ class TerrainCoveragePlanTest {
         assertEquals(0, SubLevelRuntime.terrainDistanceBand(new AABB(-300, 60, -5, 3, 70, 5), player));
         assertEquals(Integer.MAX_VALUE, SubLevelRuntime.terrainDistanceBand(
                 new AABB(1, 65, 1, 2, 66, 2), List.of()));
+    }
+
+    @Test
+    void newControlledBodyCanDisplaceOneOfSixtyFourCachedIdleTerrainRequests() {
+        var demands = new ArrayList<SubLevelRuntime.TerrainDemand>();
+        for (int index = 0; index < 64; index++) {
+            demands.add(terrainDemand(index, 0, 2, true));
+        }
+        var controlled = terrainDemand(64, 0, 0, false);
+        demands.add(controlled);
+        demands.sort(SubLevelRuntime.TERRAIN_DEMAND_ORDER);
+        assertEquals(controlled, demands.getFirst());
+        var admission = new TerrainColliderCache.AdmissionBudget(64, 28_000);
+        int admittedIdle = 0;
+        for (var demand : demands) {
+            var required = TerrainColliderCache.planRequiredCoverage(List.of(demand.bounds()), -64, 320).required();
+            if (!admission.fitsComplete(required, key -> 1)) continue;
+            admission.reserve(required);
+            if (demand != controlled) admittedIdle++;
+        }
+        var controlledSection = TerrainColliderCache.planRequiredCoverage(List.of(controlled.bounds()), -64, 320).required().getFirst();
+        assertTrue(admission.required().contains(controlledSection));
+        assertEquals(64, admission.required().size());
+        assertEquals(63, admittedIdle, "Only the displaced idle request pauses; limits and complete-group admission remain intact");
+    }
+
+    @Test
+    void distanceActivityAndCoverageOrderKeepLocalControlResponsiveWithoutCacheChurn() {
+        var idleCovered = terrainDemand(0, 0, 2, true);
+        var moving = terrainDemand(1, 0, 1, false);
+        var controlledUncovered = terrainDemand(2, 0, 0, false);
+        var controlledCovered = terrainDemand(3, 0, 0, true);
+        var farControlled = terrainDemand(4, 2, 0, true);
+        var demands = new ArrayList<>(List.of(idleCovered, farControlled, moving, controlledUncovered, controlledCovered));
+        demands.sort(SubLevelRuntime.TERRAIN_DEMAND_ORDER);
+        assertEquals(List.of(controlledCovered, controlledUncovered, moving, idleCovered, farControlled), demands);
+    }
+
+    @Test
+    void sleepingOrStationaryBodiesDoNotGainMovingPriorityFromGravity() {
+        var rest = new SubLevelPhysicsUniverse.Motion(new PhysicsPose(PhysicsVector.ZERO, PhysicsQuaternion.IDENTITY),
+                PhysicsVector.ZERO, PhysicsVector.ZERO, PhysicsVector.ZERO, 1, false);
+        var moving = new SubLevelPhysicsUniverse.Motion(rest.pose(), new PhysicsVector(2, 0, 0),
+                PhysicsVector.ZERO, PhysicsVector.ZERO, 1, false);
+        var sleeping = new SubLevelPhysicsUniverse.Motion(rest.pose(), moving.linearVelocity(),
+                PhysicsVector.ZERO, PhysicsVector.ZERO, 1, true);
+        var rotating = new SubLevelPhysicsUniverse.Motion(rest.pose(), PhysicsVector.ZERO,
+                new PhysicsVector(0, 1, 0), PhysicsVector.ZERO, 1, false);
+        assertEquals(0, SubLevelRuntime.terrainActivityPriority(true, sleeping));
+        assertEquals(1, SubLevelRuntime.terrainActivityPriority(false, moving));
+        assertEquals(1, SubLevelRuntime.terrainActivityPriority(false, rotating));
+        assertEquals(2, SubLevelRuntime.terrainActivityPriority(false, rest));
+        assertEquals(2, SubLevelRuntime.terrainActivityPriority(false, sleeping));
+        assertEquals(2, SubLevelRuntime.terrainActivityPriority(false, null));
+    }
+
+    private static SubLevelRuntime.TerrainDemand terrainDemand(int index, int distanceBand, int activity, boolean covered) {
+        int x = index / 8, y = index % 8 + 4;
+        return new SubLevelRuntime.TerrainDemand(new SubLevelId(new UUID(0, index + 1)),
+                new AABB(x * 16 + 2, y * 16 + 2, 2, x * 16 + 3, y * 16 + 3, 3), distanceBand, activity, covered);
     }
 }

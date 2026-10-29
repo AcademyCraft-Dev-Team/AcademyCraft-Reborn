@@ -4,9 +4,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.AcademyCraft;
+import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureProjectileFlight;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSimulationBudget;
+import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.internal.common.structure.physics.PhysicsBox;
 import org.academy.internal.common.structure.physics.PhysicsPose;
 import org.academy.internal.common.structure.upgrade.control.LiveStructureOrientation;
@@ -776,14 +779,22 @@ public final class SubLevelRuntime {
                 // rotation envelope now even when the currently observed omega is still zero.
                 swept = angularTerrainBounds(managed.subLevel.localBounds(), motion, duration);
             }
-            swept = LiveStructureExtraction.terrainBounds(host, budgetReference(managed.subLevel), swept, duration);
+            var reference = budgetReference(managed.subLevel);
+            swept = LiveStructureExtraction.terrainBounds(host, reference, swept, duration);
+            boolean controlled = LiveStructureExtraction.controls(host, reference)
+                    || LiveStructureOrientation.controls(host, reference)
+                    || StructureCaptureExtractions.tracked(reference)
+                    || StructureProjectileFlight.active(host.getServer(), reference)
+                    || SubLevelActivationRegistry.find(managed.subLevel.id())
+                    .map(activation -> StructureDirectControl.occupied(reference, activation.runtimeId())).orElse(false);
             demands.add(new TerrainDemand(managed.subLevel.id(), swept,
-                    terrainDistanceBand(swept, players), terrain == null || terrain.covers(swept)));
+                    terrainDistanceBand(swept, players), terrainActivityPriority(controlled, motion),
+                    terrain == null || terrain.covers(swept)));
         }
-        // Nearby requests may displace far sleeping coverage. Within the same 32-block band,
-        // retain existing complete coverage first to avoid sub-block movement churning the cache.
-        demands.sort(java.util.Comparator.comparingInt(TerrainDemand::distanceBand)
-                .thenComparing(demand -> !demand.covered()));
+        // Nearby requests may displace far sleeping coverage. Inside a distance band a newly
+        // controlled/launching body must precede cached idle bodies; otherwise the latter can
+        // reserve every slot forever. Coverage remains the tie-breaker within each activity.
+        demands.sort(TERRAIN_DEMAND_ORDER);
         var bounds = new LinkedHashMap<SubLevelId, AABB>();
         for (var demand : demands) bounds.put(demand.id(), demand.bounds());
         // The empty space between unrelated structures is not a terrain interest area.
@@ -802,7 +813,23 @@ public final class SubLevelRuntime {
         return !Double.isFinite(distance) ? Integer.MAX_VALUE : (int) Math.min(Integer.MAX_VALUE, distance / 32);
     }
 
-    private record TerrainDemand(SubLevelId id, AABB bounds, int distanceBand, boolean covered) {}
+    static final java.util.Comparator<TerrainDemand> TERRAIN_DEMAND_ORDER =
+            java.util.Comparator.comparingInt(TerrainDemand::distanceBand)
+                    .thenComparingInt(TerrainDemand::activityPriority)
+                    .thenComparing(demand -> !demand.covered());
+
+    static int terrainActivityPriority(boolean controlled, SubLevelPhysicsUniverse.Motion motion) {
+        if (controlled) return 0;
+        if (motion == null || motion.sleeping()) return 2;
+        var linear = motion.linearVelocity();
+        var angular = motion.angularVelocity();
+        double speedSquared = linear.x() * linear.x() + linear.y() * linear.y() + linear.z() * linear.z();
+        double angularSquared = angular.x() * angular.x() + angular.y() * angular.y() + angular.z() * angular.z();
+        // Gravity exists even at rest. Only observed movement grants this second priority.
+        return speedSquared > 1E-8 || angularSquared > 1E-8 ? 1 : 2;
+    }
+
+    record TerrainDemand(SubLevelId id, AABB bounds, int distanceBand, int activityPriority, boolean covered) {}
 
     static AABB sweptTerrainBounds(AABB current, AABB localBounds, SubLevelPhysicsUniverse.Motion motion, double duration) {
         var linear = motion.linearVelocity();

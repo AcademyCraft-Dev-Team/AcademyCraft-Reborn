@@ -11,6 +11,8 @@ allprojects {
             gameDirectory.set(smokeDirectory)
             systemProperty 'academy.structurePayloadRoutes', providers.gradleProperty('academyStructurePayloadRoutes').getOrElse('false')
             systemProperty 'academy.structureProgramOrientationSmoke', 'true'
+            systemProperty 'academy.structurePreparationVmSmoke', providers.gradleProperty('academyStructurePreparationVmSmoke')
+                    .getOrElse('false')
             if (providers.gradleProperty('academyStructureExtractionGameplay').isPresent()) {
                 systemProperty 'academy.structureExtractionGameplay',
                         providers.gradleProperty('academyStructureExtractionGameplay').get()

@@ -13,6 +13,31 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ProgramStructureCaptureMonitorTest {
     @Test
+    void preparationWithoutAReferenceRetainsItsOperationUntilTheRealCaptureCompletes() {
+        var operation = UUID.randomUUID();
+        var reference = reference();
+        var monitor = new ProgramStructureCaptureMonitor();
+        monitor.track(Optional.of(operation));
+        for (int tick = 0; tick < 3; tick++) {
+            assertTrue(monitor.pollFailure(id -> {
+                assertEquals(operation, id);
+                var preparing = StructureCaptureResult.preparing(id, "extraction_preparing:terrain_pending");
+                assertTrue(preparing.structure().isEmpty());
+                return Optional.of(preparing);
+            }).isEmpty());
+        }
+        assertTrue(monitor.pollFailure(id -> {
+            assertEquals(operation, id);
+            return Optional.of(StructureCaptureResult.pending(id, reference, "await_activation"));
+        }).isEmpty());
+        assertTrue(monitor.pollFailure(id -> {
+            assertEquals(operation, id);
+            return Optional.of(StructureCaptureResult.success(id, reference, 127));
+        }).isEmpty());
+        assertTrue(monitor.pollFailure(_ -> fail("completed preparation must stop polling")).isEmpty());
+    }
+
+    @Test
     void delayedCaptureFailureSurvivesTheSkillsSessionRemovalAndKeepsItsTransactionIdentity() {
         var transaction = UUID.randomUUID();
         var reference = reference();

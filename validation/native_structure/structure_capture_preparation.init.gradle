@@ -1,0 +1,16 @@
+// Real soft-cell/drop, scheduled update, cancellation and timeout regression in an isolated save.
+allprojects {
+    afterEvaluate {
+        def smokeDirectory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-capture-preparation')).canonicalFile
+        if (!smokeDirectory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !smokeDirectory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Preparation smoke requires isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyStructureCapturePreparationRun').getOrElse('clientDev')) {
+            gameDirectory.set(smokeDirectory)
+            systemProperty 'academy.structureCapturePreparationSmoke', 'true'
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

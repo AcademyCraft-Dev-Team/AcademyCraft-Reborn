@@ -1,0 +1,24 @@
+// The H skill's real Misaka C2S protocol, with independent 200-server-tick hold and launch cases.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-kinetic-h')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('H protocol smoke requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyKineticHRun').getOrElse('clientDev')) {
+            gameDirectory.set(directory)
+            systemProperty 'academy.kineticHProtocolSmoke', 'true'
+            systemProperty 'academy.kineticHSpeedMilestone', providers.gradleProperty('academyKineticHSpeedMilestone')
+                    .getOrElse('false')
+            systemProperty 'academy.kineticHTier', providers.gradleProperty('academyKineticHTier').getOrElse('-1')
+            systemProperty 'academy.kineticHSurface', providers.gradleProperty('academyKineticHSurface').getOrElse('all')
+            systemProperty 'academy.kineticHMode', providers.gradleProperty('academyKineticHMode').getOrElse('all')
+            if (providers.gradleProperty('academyNativePhysicsTrace').isPresent()) {
+                systemProperty 'academy.nativePhysics.trace', providers.gradleProperty('academyNativePhysicsTrace').get()
+            }
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

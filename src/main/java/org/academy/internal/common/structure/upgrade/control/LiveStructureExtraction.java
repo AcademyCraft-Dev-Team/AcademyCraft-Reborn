@@ -388,7 +388,7 @@ public final class LiveStructureExtraction implements StructureExtraction {
                 ? StructureOperation.Status.READY : StructureOperation.Status.DENIED;
     }
 
-    private static ExtractionPlanBuilder.Outcome plan(ServerLevel host, Limits limits, double liftHeight,
+    static ExtractionPlanBuilder.Outcome plan(ServerLevel host, Limits limits, double liftHeight,
                                                       int hoverTicks, ExtractionPlanBuilder.Geometry geometry,
                                                       List<BlockPos> excluded, List<AABB> localBoxes,
                                                       StructurePose pose, double retreat,

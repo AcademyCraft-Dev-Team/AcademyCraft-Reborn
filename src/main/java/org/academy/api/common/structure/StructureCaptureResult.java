@@ -8,8 +8,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Result of a structure capture transaction. PENDING means the staged commit is still in
- * flight; poll by transaction id. Rejections name the first problem position and an explicit
+ * Result of a structure capture transaction. PENDING means preparation or the staged commit is
+ * still in flight; preparation has no structure reference until a real target is reserved.
+ * Capture-to-extraction callers poll through StructureCaptureExtractions. Rejections name the first problem position and an explicit
  * detail reason. RECOVERY_REQUIRED retains persistent journal evidence instead of turning an
  * unknown outcome into a missing structure.
  */
@@ -41,6 +42,11 @@ public record StructureCaptureResult(
     public static StructureCaptureResult pending(UUID transactionId, StructureRef structure, String detail) {
         return new StructureCaptureResult(transactionId, Status.PENDING, Optional.of(structure),
                 Optional.empty(), 0, detail);
+    }
+
+    /** Bounded preparation has not allocated or published a structure. */
+    public static StructureCaptureResult preparing(UUID operationId, String detail) {
+        return new StructureCaptureResult(operationId, Status.PENDING, Optional.empty(), Optional.empty(), 0, detail);
     }
 
     public static StructureCaptureResult success(UUID transactionId, StructureRef structure, int affectedBlocks) {

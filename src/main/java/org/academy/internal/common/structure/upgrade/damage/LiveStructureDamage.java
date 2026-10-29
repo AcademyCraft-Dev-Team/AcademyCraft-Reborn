@@ -124,6 +124,8 @@ public final class LiveStructureDamage implements StructureDamage {
         var op = new Operation(context, new Request(UUID.randomUUID(), path.start(), 0, 0,
                 32768, 1024, path.drops()), List.of());
         op.path = path;
+        op.sweep = path.sweep().map(value -> new org.academy.internal.common.structure.PreparedStructureImpactSweep(
+                value.localBoxes(), value.previous(), value.current())).orElse(null);
         op.cut = cut;
         op.cutRegion = cut == null ? null : new DamageCutRegion(cut);
         if (!sourceCurrent(op)) return pathFailure(StructureOperation.Status.STALE, "damage_sweep_source_changed");
@@ -586,6 +588,8 @@ public final class LiveStructureDamage implements StructureDamage {
         long familyQuietUntil;
         int cursor, scansLeft, changesLeft, broken, rejected, deferred;
         int sweepTestsLeft = 2_000_000;
+        org.academy.internal.common.structure.@Nullable PreparedStructureImpactSweep sweep;
+        final Map<AABB, Boolean> sweepIntersections = new HashMap<>();
         boolean limitReached;
         Phase phase = Phase.QUERYING;
         @Nullable Batch batch;
@@ -630,6 +634,17 @@ public final class LiveStructureDamage implements StructureDamage {
         }
         boolean finishedScan() { return cursor >= cursors.size() && retry.isEmpty(); }
         Receipt receipt() { return new Receipt(broken, rejected, deferred); }
+        boolean sweepIntersects(AABB box) {
+            var cached = sweepIntersections.get(box);
+            if (cached != null) return cached;
+            var result = Objects.requireNonNull(sweep).test(box, sweepTestsLeft);
+            sweepTestsLeft -= result.tests();
+            if (!result.complete()) throw new IllegalStateException("damage_sweep_shape_budget");
+            // Geometry, source witness and payload are still validated on every application.
+            // Identical world collision boxes need no repeat of their immutable path test.
+            if (sweepIntersections.size() < 65_536) sweepIntersections.put(box, result.intersects());
+            return result.intersects();
+        }
     }
 
     private record Observation(@Nullable DamageDomain domain, BlockPos local, StructurePose pose,
@@ -717,12 +732,8 @@ public final class LiveStructureDamage implements StructureDamage {
             double result = Double.POSITIVE_INFINITY;
             for (var box : shape.toAabbs()) {
                 if (path.sweep().isPresent()) {
-                    var sweep = path.sweep().orElseThrow();
-                    if ((op.sweepTestsLeft -= sweep.localBoxes().size() * 129) < 0) {
-                        throw new IllegalStateException("damage_sweep_shape_budget");
-                    }
                     var worldBox = org.academy.internal.common.structure.NativeStructureCollisionBoxes.transformBox(box.move(local), pose);
-                    if (!StructureImpactSweep.intersects(sweep.localBoxes(), sweep.previous(), sweep.current(), worldBox)) continue;
+                    if (!op.sweepIntersects(worldBox)) continue;
                 }
                 result = Math.min(result, DamagePathRegion.entry(start, end, box.inflate(path.radius())));
             }

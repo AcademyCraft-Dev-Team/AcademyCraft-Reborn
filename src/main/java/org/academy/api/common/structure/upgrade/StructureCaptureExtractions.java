@@ -12,6 +12,8 @@ import org.academy.api.common.structure.StructureCaptureResult;
 import org.academy.api.common.structure.StructureDirectControl;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureTransactions;
+import org.academy.internal.common.structure.upgrade.control.CapturePreparationPolicy;
+import org.academy.internal.common.structure.upgrade.control.CaptureSoftClearance;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,8 +22,9 @@ import java.util.UUID;
 
 /**
  * Shared, bounded capture-to-extraction lifecycle for skills, action nodes and non-player actors.
- * Explicit soft-cell breaking precedes the preview; the preview then precedes every solid
- * source transfer, and its exact prepared request is passed to the transaction journal.
+ * A read-only admission/path check precedes explicit soft-cell breaking. Transient source ticks
+ * and unavailable terrain wait against one bounded deadline; no synthetic structure is exposed.
+ * The final preview precedes every solid source transfer, and its exact prepared request is passed to the transaction journal.
  * Once committed, failed or cancelled motion retains the structure and releases only our token.
  */
 @EventBusSubscriber(modid = AcademyCraft.MOD_ID)
@@ -31,6 +34,7 @@ public final class StructureCaptureExtractions {
     private static final int CAPTURE_TIMEOUT_TICKS = 400;
     private static final int MAX_SESSIONS = 128;
     private static final Map<StructureRef, Session> SESSIONS = new HashMap<>();
+    private static final Map<UUID, Preparation> PREPARATIONS = new HashMap<>();
 
     private StructureCaptureExtractions() {}
 
@@ -57,32 +61,135 @@ public final class StructureCaptureExtractions {
     public static StructureCaptureResult capture(ServerLevel host, Entity actor, StructureCaptureRequest capture,
                                                   double liftHeight, int hoverTicks) {
         requireThread(host);
-        if (SESSIONS.size() >= MAX_SESSIONS) return rejected("extraction_session_budget");
+        if (SESSIONS.size() + PREPARATIONS.values().stream().filter(value -> value.result == null).count() >= MAX_SESSIONS
+                || PREPARATIONS.size() >= MAX_SESSIONS * 2) return rejected("extraction_session_budget");
+        if (actor != null && PREPARATIONS.values().stream().anyMatch(value -> value.host == host && value.actor.getUUID().equals(actor.getUUID())
+                && (value.result == null || value.result.pending()))) return rejected("extraction_preparation_already_pending");
         // Validate caller bounds before the explicit clearance action can mutate soft cells.
         var control = UUID.randomUUID();
         var request = new StructureExtraction.CaptureRequest(control, capture, liftHeight,
                 EXTRACTION_TIMEOUT_TICKS, hoverTicks, limits());
-        var prepared = StructureCaptureClearance.prepareSelection(host, actor, capture);
-        if (prepared.value().isEmpty()) return rejected(prepared.detail());
-        capture = prepared.value().orElseThrow();
+        var preparation = new Preparation(host, actor, request);
+        PREPARATIONS.put(preparation.id, preparation);
+        boolean completed = false;
+        boolean waiting = false;
+        try {
+            var result = prepare(preparation);
+            waiting = result.pending() && result.structure().isEmpty() && !preparation.cancelled;
+            if (waiting) preparation.facade = true;
+            completed = true;
+            return result;
+        } finally {
+            if (!completed) preparation.cancelled = true;
+            if (!waiting) PREPARATIONS.remove(preparation.id, preparation);
+        }
+    }
+
+    /** Preparation publishes no synthetic reference. Its operation id remains stable through commit. */
+    public static Optional<StructureCaptureResult> poll(ServerLevel host, Entity actor, UUID operationId) {
+        requireThread(host);
+        var preparation = PREPARATIONS.get(operationId);
+        if (preparation == null) return StructureTransactions.poll(host.getServer(), operationId);
+        if (!preparation.owned(host, actor)) return Optional.empty();
+        if (preparation.result == null) {
+            try { return Optional.of(prepare(preparation)); }
+            catch (RuntimeException | LinkageError failure) {
+                preparation.cancelled = true;
+                PREPARATIONS.remove(operationId, preparation);
+                throw failure;
+            }
+        }
+        if (preparation.result.pending()) {
+            preparation.finish(StructureTransactions.poll(host.getServer(), preparation.result.transactionId())
+                    .orElseGet(() -> rejected("capture_transaction_evicted")));
+        }
+        return Optional.of(preparation.display(preparation.result));
+    }
+
+    /** Cancels only this actor's preparation/control; a durable content transaction keeps its recovery owner. */
+    public static boolean cancel(ServerLevel host, Entity actor, UUID operationId) {
+        requireThread(host);
+        var preparation = PREPARATIONS.get(operationId);
+        if (preparation == null || !preparation.owned(host, actor)) return false;
+        preparation.cancelled = true;
+        if (preparation.result != null) preparation.result.structure().ifPresent(ref -> release(preparation.actor, ref));
+        if (preparation.result == null || !preparation.result.pending()) PREPARATIONS.remove(operationId, preparation);
+        return true;
+    }
+
+    private static StructureCaptureResult prepare(Preparation preparation) {
+        var host = preparation.host;
+        var actor = preparation.actor;
+        if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
+        if (actor == null || !actor.isAlive() || actor.isRemoved() || actor.level() != host
+                || actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected()) {
+            return preparation.finish(rejected("capture_actor_unavailable"));
+        }
+        long now = host.getGameTime();
+        if (CapturePreparationPolicy.expired(preparation.startedAt, now)) {
+            return preparation.finish(StructureCaptureResult.failure(preparation.id, StructureCaptureResult.Status.TIMEOUT,
+                    "extraction_preparation_timeout:" + preparation.detail));
+        }
+        if (!CapturePreparationPolicy.mayAttempt(preparation.lastAttempt, now)) return preparation.waiting(preparation.detail);
+        preparation.lastAttempt = now;
+        var capture = preparation.request.capture();
+        CaptureSoftClearance.Selection selection = preparation.selection;
+        if (selection == null) {
+            var inspected = CaptureSoftClearance.inspectSelection(host, actor, capture);
+            if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
+            if (inspected.value().isEmpty()) return preparation.observation(inspected.status(), inspected.detail());
+            selection = inspected.value().orElseThrow();
+            capture = selection.request();
+        } else {
+            if (!selection.current(host)) return preparation.finish(rejected("capture_source_changed_during_preparation"));
+            capture = selection.request();
+        }
         var backend = org.academy.internal.common.structure.StructureBackendRouter
                 .captureTarget(host, capture.physical()).orElse(null);
-        if (backend == null) return rejected("extraction_backend_unavailable");
+        if (backend == null) return preparation.finish(rejected("extraction_backend_unavailable"));
         double mass = backend.estimateMass(host, capture.positions());
+        if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
         if (Double.isFinite(mass) && mass > StructureExtraction.Limits.MAX_FORCE / 40) {
-            return rejected("extraction_force_budget_exceeded");
+            return preparation.finish(rejected("extraction_force_budget_exceeded"));
         }
-        request = new StructureExtraction.CaptureRequest(control, capture, liftHeight,
-                EXTRACTION_TIMEOUT_TICKS, hoverTicks, limits(mass));
+        var permission = capture.permission();
+        var guarded = new StructureCaptureRequest(capture.positions(), capture.maximumBlocks(), capture.maximumSpan(),
+                (level, pos) -> !preparation.cancelled && preparation.actorValid()
+                        && permission.test(level, pos) && !preparation.cancelled && preparation.actorValid(),
+                capture.physical(), capture.skillCreation());
+        var request = new StructureExtraction.CaptureRequest(preparation.request.controlId(), guarded,
+                preparation.request.liftHeight(), EXTRACTION_TIMEOUT_TICKS, preparation.request.hoverTicks(), limits(mass));
+        if (preparation.selection == null) {
+            // Preflight excludes selected vegetation without spending either break budget.
+            // A large source must not consume the separate 48-cell route-clearance budget.
+            var path = CaptureSoftClearance.inspectPath(host, selection, request);
+            if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
+            if (path.status() == StructureOperation.Status.BLOCKED && !preparation.sweepCleared
+                    && CaptureSoftClearance.clearSelectionObstacles(host, actor, selection, request.liftHeight(), preparation::active) > 0) {
+                preparation.sweepCleared = true;
+                path = CaptureSoftClearance.inspectPath(host, selection, request);
+            }
+            if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
+            if (path.status() != StructureOperation.Status.READY) return preparation.observation(path.status(), path.detail());
+            var cleared = CaptureSoftClearance.applySelection(host, actor, selection, preparation::active);
+            if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
+            if (cleared.value().isEmpty()) return preparation.observation(cleared.status(), cleared.detail());
+            preparation.selection = selection;
+        }
         var preview = StructureExtractions.service().planCapture(new StructureOperation.ActorContext(host, actor), request);
-        if (preview.status() == StructureOperation.Status.BLOCKED
-                && StructureCaptureClearance.clearSoftObstacles(host, actor, capture, liftHeight) > 0) {
-            preview = StructureExtractions.service().planCapture(new StructureOperation.ActorContext(host, actor), request);
-        }
+        if (!preparation.active()) return preparation.finish(rejected("extraction_preparation_cancelled"));
         if (preview.status() != StructureOperation.Status.READY || preview.value().isEmpty()) {
-            return rejected("extraction_preview:" + preview.status() + ":" + preview.detail());
+            return preparation.observation(preview.status(), preview.detail());
         }
-        var result = StructureTransactions.capture(host, capture);
+        // The coordinator watches request identity, so preview and commit must share this exact object.
+        var result = StructureTransactions.capture(host, request.capture());
+        if (preparation.cancelled) {
+            return preparation.finish(new StructureCaptureResult(result.transactionId(), StructureCaptureResult.Status.REJECTED,
+                    result.structure(), result.problemPosition(), 0, "extraction_preparation_cancelled"));
+        }
+        if (!result.pending() && !result.succeeded() && "scheduled_tick_pending".equals(result.detail())) {
+            return preparation.waiting("capture_source_scheduled_tick_pending");
+        }
         if ((result.pending() || result.succeeded()) && result.structure().isPresent()) {
             var reference = result.structure().orElseThrow();
             SESSIONS.put(reference, new Session(host, actor, preview.value().orElseThrow(), result));
@@ -90,7 +197,7 @@ public final class StructureCaptureExtractions {
             // block into its support. The source-grid path was just verified in this call.
             if (result.succeeded()) advance(host, actor, reference);
         }
-        return result;
+        return preparation.finish(result);
     }
 
     public static boolean tracked(StructureRef reference) { return SESSIONS.containsKey(reference); }
@@ -237,6 +344,33 @@ public final class StructureCaptureExtractions {
 
     @SubscribeEvent
     public static void tick(ServerTickEvent.Post event) {
+        for (var entry : Map.copyOf(PREPARATIONS).entrySet()) {
+            var preparation = entry.getValue();
+            if (preparation.host.getServer() != event.getServer()) continue;
+            long now = preparation.host.getGameTime();
+            if (!preparation.actor.isAlive() || preparation.actor.isRemoved() || preparation.actor.level() != preparation.host
+                    || preparation.actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected()) {
+                preparation.cancelled = true;
+            }
+            if (preparation.result != null && preparation.result.pending()) {
+                var current = StructureTransactions.poll(event.getServer(), preparation.result.transactionId()).orElse(null);
+                if (current != null && !current.pending()) preparation.finish(current);
+            }
+            if (preparation.cancelled) {
+                if (preparation.result != null && preparation.result.pending()) {
+                    preparation.result = StructureTransactions.poll(event.getServer(), preparation.result.transactionId()).orElse(null);
+                }
+                if (preparation.result != null) preparation.result.structure().ifPresent(ref -> release(preparation.actor, ref));
+                if (preparation.result == null || !preparation.result.pending()) PREPARATIONS.remove(entry.getKey(), preparation);
+            } else if (preparation.result == null && (CapturePreparationPolicy.expired(preparation.startedAt, now)
+                    || !preparation.actor.isAlive() || preparation.actor.isRemoved() || preparation.actor.level() != preparation.host)) {
+                preparation.finish(StructureCaptureResult.failure(preparation.id, StructureCaptureResult.Status.TIMEOUT,
+                        "extraction_preparation_timeout:" + preparation.detail));
+            } else if (preparation.result != null && !preparation.result.pending()
+                    && now - preparation.finishedAt >= CAPTURE_TIMEOUT_TICKS) {
+                PREPARATIONS.remove(entry.getKey(), preparation);
+            }
+        }
         for (var entry : Map.copyOf(SESSIONS).entrySet()) {
             var session = entry.getValue();
             if (session.host.getServer() != event.getServer()) continue;
@@ -249,10 +383,64 @@ public final class StructureCaptureExtractions {
     @SubscribeEvent
     public static void stopped(ServerStoppedEvent event) {
         SESSIONS.entrySet().removeIf(entry -> entry.getValue().host.getServer() == event.getServer());
+        PREPARATIONS.entrySet().removeIf(entry -> entry.getValue().host.getServer() == event.getServer());
     }
 
     private static void requireThread(ServerLevel host) {
         if (!host.getServer().isSameThread()) throw new IllegalStateException("Extraction requires owning server thread");
+    }
+
+    private static final class Preparation {
+        final UUID id = UUID.randomUUID();
+        final ServerLevel host;
+        final Entity actor;
+        final StructureExtraction.CaptureRequest request;
+        final long startedAt;
+        long lastAttempt = Long.MIN_VALUE;
+        long finishedAt;
+        String detail = "capture_selection_pending";
+        CaptureSoftClearance.Selection selection;
+        StructureCaptureResult result;
+        boolean sweepCleared;
+        boolean cancelled;
+        boolean facade;
+
+        Preparation(ServerLevel host, Entity actor, StructureExtraction.CaptureRequest request) {
+            this.host = host; this.actor = actor; this.request = request; this.startedAt = host.getGameTime();
+        }
+
+        boolean owned(ServerLevel host, Entity actor) {
+            return actor != null && this.host == host && this.actor.getUUID().equals(actor.getUUID())
+                    && actor.level().getServer() == host.getServer();
+        }
+
+        boolean actorValid() {
+            return actor != null && actor.isAlive() && !actor.isRemoved() && actor.level() == host
+                    && !(actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected());
+        }
+
+        boolean active() { return !cancelled && actorValid() && PREPARATIONS.get(id) == this; }
+
+        StructureCaptureResult waiting(String detail) {
+            this.detail = detail;
+            return StructureCaptureResult.preparing(id, "extraction_preparing:" + detail);
+        }
+
+        StructureCaptureResult observation(StructureOperation.Status status, String detail) {
+            return CapturePreparationPolicy.retryable(status, detail) ? waiting(detail)
+                    : finish(rejected("extraction_preview:" + status + ":" + detail));
+        }
+
+        StructureCaptureResult finish(StructureCaptureResult result) {
+            this.result = result;
+            if (!result.pending()) this.finishedAt = host.getGameTime();
+            return facade ? display(result) : result;
+        }
+
+        StructureCaptureResult display(StructureCaptureResult result) {
+            return new StructureCaptureResult(id, result.status(), result.structure(), result.problemPosition(),
+                    result.affectedBlocks(), result.detail());
+        }
     }
 
     private static final class Session {

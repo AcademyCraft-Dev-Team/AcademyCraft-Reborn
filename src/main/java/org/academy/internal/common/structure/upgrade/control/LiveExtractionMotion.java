@@ -205,7 +205,7 @@ final class LiveExtractionMotion {
                 if (CaptureSoftClearance.traceEnabled()) AcademyCraft.LOGGER.info(
                         "EXTRACTION_PRE_TERRAIN_END tick={} operation={} destroyed={}", tick, entry.id, destroyed);
                 if (destroyed > 0) {
-                    entry.hoverSince = -1; entry.hoverTicks = 0;
+                    entry.hoverClock.observe(tick, false);
                     entry.result = result(entry, StructureOperation.Status.TERRAIN_PENDING,
                             StructureExtraction.Phase.PREPARING, "extraction_soft_obstacles_prepared");
                 }
@@ -249,7 +249,7 @@ final class LiveExtractionMotion {
                     entry.id, body.reference(), body.motion().localCenterOfMass(), body.localBoxes());
         }
         if (!body.terrainReady()) {
-            entry.hoverSince = -1; entry.hoverTicks = 0;
+            entry.hoverClock.observe(entry.context.host().getServer().getTickCount(), false);
             entry.result = result(entry, StructureOperation.Status.TERRAIN_PENDING, StructureExtraction.Phase.PREPARING,
                     "extraction_terrain_pending");
             return;
@@ -266,11 +266,6 @@ final class LiveExtractionMotion {
         boolean arrived = entry.waypoint == path.size() - 1 && step.stable() && angular.angleError() <= .01
                 && body.motion().angularVelocity().length() <= .05;
         long now = entry.context.host().getGameTime();
-        if (arrived) {
-            if (entry.arrivedAt < 0) entry.arrivedAt = now;
-            if (entry.hoverSince < 0) entry.hoverSince = now;
-            entry.hoverTicks = (int) Math.min(entry.plan.request().hoverTicks(), now - entry.hoverSince);
-        } else { entry.hoverSince = -1; entry.hoverTicks = 0; }
         // The next velocity, not the old standing velocity, defines queried terrain coverage.
         var projected = new OrientationBackendAccess.Body(body.reference(), body.runtimeId(), body.contentRevision(),
                 body.poseRevision(), new OrientationController.State(body.motion().pose(), body.motion().localCenterOfMass(),
@@ -291,15 +286,14 @@ final class LiveExtractionMotion {
                 if (CaptureSoftClearance.clearMotion(entry.context.host(), entry.context.actor(), body, nextPose) > 0) {
                     // Break callbacks may change both world and authority. Do not apply this
                     // command or reuse the old collision snapshot after any successful write.
-                    entry.hoverSince = -1; entry.hoverTicks = 0;
+                    entry.hoverClock.observe(entry.context.host().getServer().getTickCount(), false);
                     entry.result = result(entry, StructureOperation.Status.TERRAIN_PENDING,
                             StructureExtraction.Phase.PREPARING, "extraction_soft_obstacles_changed");
                     return;
                 }
             }
             if (clearance == OrientationSweep.Status.TERRAIN_PENDING) {
-                entry.hoverSince = -1;
-                entry.hoverTicks = 0;
+                entry.hoverClock.observe(entry.context.host().getServer().getTickCount(), false);
                 entry.result = result(entry, StructureOperation.Status.TERRAIN_PENDING, StructureExtraction.Phase.PREPARING,
                         "extraction_terrain_pending");
                 return;
@@ -318,7 +312,11 @@ final class LiveExtractionMotion {
                 "EXTRACTION_SUBSTEP_APPLIED tick={} sequence={} operation={} velocity={} angular={} displacement={} force={} torque={}",
                 entry.context.host().getServer().getTickCount(), sequence, entry.id, step.velocity(), angular.nextAngularVelocity(),
                 step.displacement(), step.force(), angular.maximumAppliedTorque());
-        if (arrived && entry.hoverTicks >= entry.plan.request().hoverTicks()) {
+        // Only admitted motion counts. Receipt polls and solver substeps cannot accelerate
+        // the clock, and terrain waits or a disturbed pose preserve the remaining hold time.
+        int hoverTicks = entry.hoverClock.observe(entry.context.host().getServer().getTickCount(), arrived);
+        if (arrived && entry.arrivedAt < 0) entry.arrivedAt = now;
+        if (arrived && hoverTicks >= entry.plan.request().hoverTicks()) {
             finish(registry, entry, StructureOperation.Status.COMPLETED, StructureExtraction.Phase.RELEASED, "extraction_hover_completed");
             return;
         }
@@ -433,7 +431,7 @@ final class LiveExtractionMotion {
     private static StructureOperation.Result<StructureExtraction.Snapshot> result(Entry entry, StructureOperation.Status status,
                                                                                  StructureExtraction.Phase phase, String detail) {
         return new StructureOperation.Result<>(status, detail, Optional.of(entry.id), Optional.of(
-                new StructureExtraction.Snapshot(entry.id, entry.control(), phase, entry.rise, entry.hoverTicks,
+                new StructureExtraction.Snapshot(entry.id, entry.control(), phase, entry.rise, entry.hoverClock.elapsedTicks(),
                         Math.max(0, entry.context.host().getGameTime() - entry.createdTick), Optional.empty())));
     }
 
@@ -471,9 +469,8 @@ final class LiveExtractionMotion {
         final StructureOrientation.Limits angularLimits;
         StructureOperation.Result<StructureExtraction.Snapshot> result;
         int waypoint = 1;
-        long hoverSince = -1;
+        final ExtractionHoverClock hoverClock;
         long arrivedAt = -1;
-        int hoverTicks;
         double rise;
         int finishedAt = -1;
         int lastSoftClearTick = -1;
@@ -482,6 +479,7 @@ final class LiveExtractionMotion {
         Entry(StructureOperation.Context context, StructureExtraction.Plan plan, OrientationBackendAccess access,
               OrientationBackendAccess.Body initial) {
             this.context = context; this.plan = plan; this.access = access;
+            hoverClock = new ExtractionHoverClock(plan.request().hoverTicks());
             createdTick = context.host().getGameTime();
             sourceCenter = plan.request().sourcePose().localToWorldPoint(plan.request().localCenterOfMass());
             // A NEW_CAPTURE baseline was authenticated by binding; existing plans required

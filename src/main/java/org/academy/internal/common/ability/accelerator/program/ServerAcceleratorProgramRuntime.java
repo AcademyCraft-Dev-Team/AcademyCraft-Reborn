@@ -78,6 +78,9 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     private final ProgramOrientationControl orientationControls;
     private final org.academy.internal.common.ability.program.ServerStructureGroupControl groupControls;
     private @Nullable StructureRef pendingExtraction;
+    private @Nullable UUID pendingExtractionTransaction;
+    private @Nullable ServerLevel pendingExtractionHost;
+    private StructureCaptureExtractions.@Nullable Handle pendingExtractionHandle;
     private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
     private int pendingExtractionTier;
     private long extractionDeadline;
@@ -407,7 +410,7 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int tier, int budget) {
         requireCasterReady(Skills.KINETIC_THROW.get());
-        if (pendingExtraction == null) {
+        if (pendingExtraction == null && pendingExtractionTransaction == null) {
             var seed = requireStructureHost(host);
             var result = StructureProgramActions.execute(player, Skills.KINETIC_THROW.get(),
                 STRUCTURE_EXTRACT_COST * costMultiplier,
@@ -420,26 +423,36 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             }
             pendingExtraction = VectorStructureService.diagnostic(player)
                     .map(state -> state.reference()).orElse(null);
-            captureMonitor.track(VectorStructureService.pendingProgramCapture(player));
+            pendingExtractionTransaction = VectorStructureService.pendingProgramCapture(player).orElse(null);
+            pendingExtractionHost = (ServerLevel) player.level();
+            captureMonitor.track(Optional.ofNullable(pendingExtractionTransaction));
             pendingExtractionTier = tier;
             extractionDeadline = player.level().getGameTime() + (StructureCaptureExtractions.enabled() ? 800 : 400);
-            if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
+            if (pendingExtraction == null && pendingExtractionTransaction == null) {
+                return StructureOperation.rejected("capture_session_unavailable");
+            }
         }
-        var captureFailure = captureMonitor.pollFailure(id -> StructureTransactions.poll(player.level().getServer(), id));
+        if (pendingExtractionHost != player.level()) {
+            clearPendingExtraction();
+            return StructureOperation.rejected("capture_host_changed");
+        }
+        var captureFailure = captureMonitor.pollFailure(id -> StructureCaptureExtractions.poll(pendingExtractionHost, player, id));
         if (captureFailure.isPresent()) {
-            StructureCaptureExtractions.release(player, pendingExtraction);
-            pendingExtraction = null;
+            clearPendingExtraction();
             return StructureOperation.result(captureFailure.get());
         }
-        var reference = pendingExtraction;
         var state = VectorStructureService.diagnostic(player).orElse(null);
-        if (state == null || !state.reference().equals(reference)
-                || player.level().getGameTime() > extractionDeadline) {
-            StructureCaptureExtractions.release(player, pendingExtraction);
-            pendingExtraction = null;
+        if (state == null || player.level().getGameTime() > extractionDeadline
+                || pendingExtraction != null && !pendingExtraction.equals(state.reference())) {
+            clearPendingExtraction();
             return StructureOperation.rejected("capture_session_ended");
         }
-        if (state.stage() == VectorStructureService.Stage.CAPTURING
+        if (pendingExtraction == null) pendingExtraction = state.reference();
+        var reference = pendingExtraction;
+        if (reference != null && pendingExtractionHandle == null) {
+            pendingExtractionHandle = StructureCaptureExtractions.owned(player, reference).orElse(null);
+        }
+        if (reference == null || state.stage() == VectorStructureService.Stage.CAPTURING
                 || state.stage() == VectorStructureService.Stage.AWAITING_PHYSICS
                 || org.academy.api.common.structure.StructureDynamics.motion(
                         (ServerLevel) player.level(), reference).isEmpty()) {
@@ -450,10 +463,13 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
             return StructureOperation.result(extraction);
         }
         if (extraction.status() != ProgramStructureOperationResult.Status.COMPLETED) {
-            pendingExtraction = null;
+            clearPendingExtraction();
             return StructureOperation.result(extraction);
         }
         pendingExtraction = null;
+        pendingExtractionTransaction = null;
+        pendingExtractionHost = null;
+        pendingExtractionHandle = null;
         if (SubLevelStructureRefs.isSubLevel(reference)) {
             subLevelControls.recordKineticCapture(reference, pendingExtractionTier);
         }
@@ -593,8 +609,20 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     @Override
     public void closeOrientationCommands() {
         orientationControls.close();
-        if (pendingExtraction != null) StructureCaptureExtractions.release(player, pendingExtraction);
+        clearPendingExtraction();
+    }
+
+    private void clearPendingExtraction() {
+        if (pendingExtractionTransaction != null && pendingExtractionHost != null) {
+            VectorStructureService.cancelProgramCapture(player, pendingExtractionTransaction);
+            StructureCaptureExtractions.cancel(pendingExtractionHost, player, pendingExtractionTransaction);
+        }
+        if (pendingExtractionHandle != null) StructureCaptureExtractions.release(pendingExtractionHandle);
         pendingExtraction = null;
+        pendingExtractionTransaction = null;
+        pendingExtractionHost = null;
+        pendingExtractionHandle = null;
+        captureMonitor.track(Optional.empty());
     }
 
     @Override

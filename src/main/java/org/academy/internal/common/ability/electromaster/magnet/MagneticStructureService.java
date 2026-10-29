@@ -116,7 +116,7 @@ public final class MagneticStructureService {
             return Optional.empty();
         }
         var seed = positions.getFirst().immutable();
-        var admission = admit(player, seed);
+        var admission = admitForCapture(player, seed, false);
         if (admission != null) {
             reject(player, admission);
             return Optional.empty();
@@ -138,10 +138,6 @@ public final class MagneticStructureService {
         if (reference != null) cropped = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
                 .sourcePositions(player, reference).orElse(cropped);
         if (result.pending()) {
-            if (reference == null) {
-                reject(player, "pending_without_reference");
-                return Optional.empty();
-            }
             return Optional.of(new Session(reference, result.transactionId(), cropped, level.getGameTime()).trackExtraction(player));
         }
         if (!result.succeeded()) {
@@ -198,6 +194,16 @@ public final class MagneticStructureService {
      * (destruction policy, chunk, permission, block entity, indestructible) still applies.
      */
     static @Nullable String admit(ServerPlayer player, BlockPos pos, boolean allowNonMagnetic) {
+        return admit(player, pos, allowNonMagnetic, false);
+    }
+
+    private static @Nullable String admitForCapture(ServerPlayer player, BlockPos pos, boolean allowNonMagnetic) {
+        return admit(player, pos, allowNonMagnetic,
+                org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled());
+    }
+
+    private static @Nullable String admit(ServerPlayer player, BlockPos pos, boolean allowNonMagnetic,
+                                          boolean preparationEnabled) {
         var level = player.level();
         if (AbilityEffectPolicy.blockDestruction(level) == AbilityEffectPolicy.Decision.DENY) {
             return "destruction_denied";
@@ -211,10 +217,16 @@ public final class MagneticStructureService {
         var state = level.getBlockState(pos);
         if (state.isAir()) return "empty_cell";
         if (!MagneticTargets.isMagnetic(state) && !allowNonMagnetic) return "not_magnetic";
-        var payloadProblem = org.academy.internal.common.structure.transaction.StructureCellPayload.rejection(level, pos, state, level.getBlockEntity(pos));
+        var payloadProblem = capturePayloadProblem(org.academy.internal.common.structure.transaction.StructureCellPayload
+                .rejection(level, pos, state, level.getBlockEntity(pos)), preparationEnabled);
         if (payloadProblem != null) return payloadProblem;
         if (state.getDestroySpeed(level, pos) < 0.0f) return "indestructible";
         return null;
+    }
+
+    /** Only a capture with the shared preparation owner can wait for ordinary source ticks. */
+    static @Nullable String capturePayloadProblem(@Nullable String detail, boolean preparationEnabled) {
+        return preparationEnabled && "scheduled_tick_pending".equals(detail) ? null : detail;
     }
 
     /**
@@ -225,11 +237,16 @@ public final class MagneticStructureService {
      */
     public static List<BlockPos> magneticSelection(ServerPlayer player, BlockPos seed, int budget,
                                             boolean forceMagnetize) {
+        return magneticSelection(player, seed, budget, forceMagnetize, false);
+    }
+
+    private static List<BlockPos> magneticSelection(ServerPlayer player, BlockPos seed, int budget,
+                                                    boolean forceMagnetize, boolean preparationEnabled) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(seed, "seed");
         if (budget < 1) return List.of();
         var immutableSeed = seed.immutable();
-        if (admit(player, immutableSeed, forceMagnetize) != null) return List.of();
+        if (admit(player, immutableSeed, forceMagnetize, preparationEnabled) != null) return List.of();
         var kept = new ArrayList<BlockPos>(Math.min(budget, 64));
         var seen = new HashSet<BlockPos>();
         var queue = new ArrayDeque<BlockPos>();
@@ -242,7 +259,7 @@ public final class MagneticStructureService {
                 if (kept.size() >= budget) break;
                 var next = current.relative(direction).immutable();
                 if (!seen.add(next)) continue;
-                if (admit(player, next, forceMagnetize) != null) continue;
+                if (admit(player, next, forceMagnetize, preparationEnabled) != null) continue;
                 kept.add(next);
                 queue.addLast(next);
             }
@@ -398,11 +415,12 @@ public final class MagneticStructureService {
         var backendProblem = StructurePhysics.physicalBackendProblem(level.getServer());
         if (backendProblem.isPresent()) return ProgramResult.rejected(backendProblem.get());
         var immutableSeed = seed.immutable();
-        var admission = admit(player, immutableSeed, forceMagnetize);
+        var admission = admitForCapture(player, immutableSeed, forceMagnetize);
         if (admission != null) return ProgramResult.rejected(admission);
         var limit = cellBudget(level);
         if (budget > 0) limit = Math.min(limit, budget);
-        var selection = magneticSelection(player, immutableSeed, limit, forceMagnetize);
+        var selection = magneticSelection(player, immutableSeed, limit, forceMagnetize,
+                org.academy.api.common.structure.upgrade.StructureCaptureExtractions.enabled());
         if (selection.isEmpty()) return ProgramResult.rejected("selection_empty");
         var magneticCells = countMagnetic(level, selection);
         var request = new StructureCaptureRequest(
@@ -416,7 +434,6 @@ public final class MagneticStructureService {
         if (reference != null) selection = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
                 .sourcePositions(player, reference).orElse(selection);
         if (result.pending()) {
-            if (reference == null) return ProgramResult.rejected("pending_without_reference");
             var pendingSession = new Session(reference, result.transactionId(), selection, level.getGameTime()).trackExtraction(player);
             pendingSession.report = false;
             pendingSession.program = true;
@@ -445,7 +462,7 @@ public final class MagneticStructureService {
         Objects.requireNonNull(runtimeId, "runtimeId");
         var playerId = player.getUUID();
         var existing = PROGRAM_CONTROLS.get(playerId);
-        if (existing != null && existing.session.reference().equals(reference)) {
+        if (existing != null && reference.equals(existing.session.reference())) {
             if (sable(reference) || SubLevelStructureRefs.isSubLevel(reference)) {
                 return controlSableExisting(player, existing, runtimeId);
             }
@@ -455,7 +472,7 @@ public final class MagneticStructureService {
             return ProgramResult.completed("control_active", reference);
         }
         for (var entry : PROGRAM_CONTROLS.entrySet()) {
-            if (!entry.getKey().equals(playerId) && entry.getValue().session.reference().equals(reference)) {
+            if (!entry.getKey().equals(playerId) && reference.equals(entry.getValue().session.reference())) {
                 return ProgramResult.rejected("structure_controlled");
             }
         }
@@ -709,7 +726,7 @@ public final class MagneticStructureService {
     public static ProgramResult programRelease(ServerPlayer player, StructureRef reference, UUID controlId) {
         requireThread(player);
         var control = PROGRAM_CONTROLS.get(player.getUUID());
-        if (control == null || !control.session.reference().equals(reference)
+        if (control == null || !reference.equals(control.session.reference())
                 || !control.session.controllerId().equals(controlId)) {
             return ProgramResult.completed("release_noop", null);
         }
@@ -727,6 +744,15 @@ public final class MagneticStructureService {
     /** Capture identity for program retries; independent of the backend's structure identity. */
     public static Optional<UUID> pendingProgramCapture(ServerPlayer player) {
         return programSession(player).map(session -> session.transactionId);
+    }
+
+    /** Stops this exact program preparation without affecting a successor or another actor. */
+    public static void cancelProgramCapture(ServerPlayer player, UUID operationId) {
+        requireThread(player);
+        var control = PROGRAM_CONTROLS.get(player.getUUID());
+        if (control != null && operationId.equals(control.session.captureOperationId)) {
+            releaseProgram(player.getUUID(), "program_capture_cancelled");
+        }
     }
 
     /** Silent lifecycle cleanup; the captured structure, inertia and physics region are retained. */
@@ -837,7 +863,7 @@ public final class MagneticStructureService {
         Objects.requireNonNull(reference, "reference");
         Objects.requireNonNull(controlId, "controlId");
         var control = PROGRAM_CONTROLS.get(player.getUUID());
-        if (control == null || !control.session.reference().equals(reference)
+        if (control == null || !reference.equals(control.session.reference())
                 || !control.session.controllerId().equals(controlId)) {
             return null;
         }
@@ -903,7 +929,8 @@ public final class MagneticStructureService {
 
         private double participation(long gameTime) {
             if (magnetizeExpiresAt != 0L && gameTime <= magnetizeExpiresAt) return 1.0;
-            return MagneticStructureControl.magneticParticipation(magneticCells, totalCells);
+            return MagneticStructureControl.magneticParticipation(magneticCells,
+                    session.positions.isEmpty() ? totalCells : session.blockCount());
         }
     }
 
@@ -963,11 +990,14 @@ public final class MagneticStructureService {
      * a terminal tick releases the lease and keeps the structure and its region active.
      */
     public static final class Session implements AutoCloseable {
-        private final StructureRef reference;
-        private final List<BlockPos> positions;
+        private @Nullable StructureRef reference;
+        private List<BlockPos> positions;
         private final UUID controllerId = UUID.randomUUID();
         private final long startedAt;
         private @Nullable UUID transactionId;
+        private @Nullable UUID captureOperationId;
+        private @Nullable ServerLevel captureHost;
+        private @Nullable ServerPlayer captureActor;
         private @Nullable StructurePhysicsRegion region;
         private @Nullable StructurePhysicsLease lease;
         private org.academy.api.common.structure.upgrade.StructureCaptureExtractions.@Nullable Handle extractionHandle;
@@ -980,7 +1010,7 @@ public final class MagneticStructureService {
         private double participation = 1.0;
         private @Nullable BlockPos forcePoint;
 
-        private Session(StructureRef reference, @Nullable UUID transactionId,
+        private Session(@Nullable StructureRef reference, @Nullable UUID transactionId,
                         List<BlockPos> positions, long startedAt) {
             this.reference = reference;
             this.transactionId = transactionId;
@@ -990,9 +1020,22 @@ public final class MagneticStructureService {
 
         /** Existing hit/adoption sessions never own another capture's extraction lifecycle. */
         private Session trackExtraction(ServerPlayer actor) {
-            extractionHandle = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
-                    .owned(actor, reference).orElse(null);
+            captureActor = actor;
+            captureHost = (ServerLevel) actor.level();
+            captureOperationId = transactionId;
+            if (reference != null) observeCapture(actor, reference);
             return this;
+        }
+
+        private void observeCapture(ServerPlayer actor, StructureRef observed) {
+            if (reference != null && !reference.equals(observed)) {
+                throw new IllegalStateException("Magnetic preparation changed its structure identity");
+            }
+            reference = observed;
+            positions = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .sourcePositions(actor, observed).map(List::copyOf).orElse(positions);
+            if (extractionHandle == null) extractionHandle = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .owned(actor, observed).orElse(null);
         }
 
         private Session(StructureRef reference, List<BlockPos> positions, long startedAt,
@@ -1009,7 +1052,7 @@ public final class MagneticStructureService {
             return stage;
         }
 
-        public StructureRef reference() {
+        public @Nullable StructureRef reference() {
             return reference;
         }
 
@@ -1051,18 +1094,25 @@ public final class MagneticStructureService {
         public boolean tick(ServerPlayer player, Vec3 destination, Vec3 fallback, double maxSpeedPerTick,
                             double stopDistance, double range, int milestone) {
             if (closed) return false;
+            if (captureHost != null && (captureHost != player.level() || captureActor != player
+                    || !player.isAlive() || player.hasDisconnected())) {
+                close();
+                return false;
+            }
             if (transactionId != null) {
                 if (!(player.level() instanceof ServerLevel level)) {
                     close();
                     return false;
                 }
-                var result = StructureTransactions.poll(level.getServer(), transactionId);
+                var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                        .poll(captureHost == null ? level : captureHost, player, transactionId);
                 if (result.isEmpty()) {
                     fail(player, "transaction_evicted");
                     close();
                     return false;
                 }
                 var current = result.get();
+                current.structure().ifPresent(observed -> observeCapture(player, observed));
                 if (current.pending()) {
                     if (level.getGameTime() - startedAt > CAPTURE_TIMEOUT_TICKS) {
                         AcademyCraft.LOGGER.warn(
@@ -1077,6 +1127,11 @@ public final class MagneticStructureService {
                 transactionId = null;
                 if (!current.succeeded()) {
                     fail(player, current.status() + ":" + current.detail());
+                    close();
+                    return false;
+                }
+                if (reference == null) {
+                    fail(player, "committed_without_reference");
                     close();
                     return false;
                 }
@@ -1386,6 +1441,10 @@ public final class MagneticStructureService {
         public void close() {
             if (closed) return;
             closed = true;
+            if (captureHost != null && captureActor != null && captureOperationId != null) {
+                org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                        .cancel(captureHost, captureActor, captureOperationId);
+            }
             if (extractionHandle != null) {
                 org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(extractionHandle);
                 extractionHandle = null;

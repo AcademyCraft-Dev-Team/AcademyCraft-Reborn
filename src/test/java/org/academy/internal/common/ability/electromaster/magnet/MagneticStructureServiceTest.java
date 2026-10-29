@@ -16,6 +16,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MagneticStructureServiceTest {
     @Test
+    void onlyCapturePreparationCanDeferTheExactScheduledTickRejection() {
+        assertNull(MagneticStructureService.capturePayloadProblem("scheduled_tick_pending", true));
+        assertEquals("scheduled_tick_pending",
+                MagneticStructureService.capturePayloadProblem("scheduled_tick_pending", false));
+        for (var problem : List.of("block_entity_not_supported", "block_entity_missing_or_invalid",
+                "container_in_use", "fluid_not_supported", "unbreakable", "scheduled_tick_pending:other")) {
+            assertEquals(problem, MagneticStructureService.capturePayloadProblem(problem, true));
+            assertEquals(problem, MagneticStructureService.capturePayloadProblem(problem, false));
+        }
+        assertNull(MagneticStructureService.capturePayloadProblem(null, true));
+        assertNull(MagneticStructureService.capturePayloadProblem(null, false));
+    }
+
+    @Test
     void budgetCropKeepsTheSeedAndIsDeterministic() {
         var seed = new BlockPos(0, 64, 0);
         var positions = List.of(

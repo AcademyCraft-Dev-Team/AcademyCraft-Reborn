@@ -10,11 +10,14 @@ public final class StructureCaptureClearance {
     private StructureCaptureClearance() {}
 
     /**
-     * Explicit capture action, shared by skills and nodes. Soft non-full source cells (snow
-     * layers, grass, crops) are broken through normal permission/break/drop events, up to the
-     * request's 256-cell bound; admitted solid cells, including grass blocks and leaves, retain their state.
+     * Explicit capture action, shared by skills and nodes. Eligible soft non-full source cells
+     * (snow layers, grass, flowers) are broken through normal permission/break/drop events, up
+     * to the request's 256-cell bound. Protected plants such as crops, other backend-admitted
+     * cells, and cells the actor cannot clear retain their state and transfer with the source.
      * The returned request, including its creation metadata, must be used for both preview and
      * capture. A denied break never authorizes silently omitting its cell from the structure.
+     * Pending source ticks return TERRAIN_PENDING before any soft cell is destroyed; the
+     * capture-to-extraction lifecycle retries after vanilla executes those ticks.
      */
     public static StructureOperation.Result<StructureCaptureRequest> prepareSelection(
             ServerLevel host, Entity actor, StructureCaptureRequest capture) {

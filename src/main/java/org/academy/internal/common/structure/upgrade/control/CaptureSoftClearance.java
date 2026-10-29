@@ -30,10 +30,22 @@ public final class CaptureSoftClearance {
     /** Read all admission/permission gates before spending a bounded soft-cell destruction budget. */
     public static StructureOperation.Result<StructureCaptureRequest> prepareSelection(
             ServerLevel host, Entity actor, StructureCaptureRequest capture) {
+        var inspected = inspectSelection(host, actor, capture);
+        if (inspected.value().isEmpty()) return new StructureOperation.Result<>(inspected.status(), inspected.detail(),
+                Optional.empty(), Optional.empty());
+        return applySelection(host, actor, inspected.value().orElseThrow());
+    }
+
+    /** Read-only admission before a capture can spend its soft-break budget. */
+    public static StructureOperation.Result<Selection> inspectSelection(
+            ServerLevel host, Entity actor, StructureCaptureRequest capture) {
         if (!host.getServer().isSameThread()) throw new IllegalStateException("Clearance requires server thread");
-        if (actor == null || actor.level() != host || !actor.isAlive() || actor.isRemoved()) {
+        if (actor == null || actor.level() != host || !actor.isAlive() || actor.isRemoved()
+                || actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected()) {
             return rejected("capture_actor_unavailable");
         }
+        if (actor instanceof net.minecraft.server.level.ServerPlayer player
+                && (player.isSpectator() || !player.getAbilities().mayBuild)) return rejected("capture_actor_cannot_build");
         if (!capture.physical() || host.getServer().getLevel(host.dimension()) != host
                 || org.academy.internal.common.structure.space.NativeStructureDimensions.isStorageLevel(host.dimension())) {
             return rejected("capture_host_or_mode_unavailable");
@@ -45,7 +57,9 @@ public final class CaptureSoftClearance {
         var origin = LevelCaptureSource.origin(capture.positions());
         var retained = new ArrayList<BlockPos>();
         var soft = new ArrayList<StructureTerrainBreakPolicy.Candidate>();
+        var images = new java.util.LinkedHashMap<BlockPos, org.academy.api.common.structure.StructureBlockData>();
         boolean solid = false;
+        boolean pendingTick = false;
         for (var position : capture.positions()) {
             if (position.getX() - origin.getX() >= capture.maximumSpan()
                     || position.getY() - origin.getY() >= capture.maximumSpan()
@@ -64,29 +78,98 @@ public final class CaptureSoftClearance {
                     && SubLevelTerrainBreaker.canClearObstacle(host, actor, position);
             if (clearable) {
                 soft.add(new StructureTerrainBreakPolicy.Candidate(position, state));
+            } else if ("scheduled_tick_pending".equals(rejection)) {
+                // Run normal vanilla ticks in the owning world before taking its image. Never
+                // transfer or silently drop a pending falling-block/redstone/shape update.
+                pendingTick = true;
+                retained.add(position);
+                solid |= !state.getCollisionShape(host, position).isEmpty() && backend.canSeed(host, position, state);
             } else if (rejection != null) {
                 return rejected(rejection);
             } else {
                 retained.add(position);
                 solid |= !state.getCollisionShape(host, position).isEmpty() && backend.canSeed(host, position, state);
             }
+            if (!clearable) images.put(position, org.academy.internal.common.structure.transaction.StructureCellPayload.read(host, position));
         }
         if (!org.academy.internal.common.structure.transaction.StructureCellPayload.completePairs(host, retained)) return rejected("incomplete_double_chest");
         if (!solid) return rejected("capture_no_seedable_content");
-        if (!soft.isEmpty()) {
-            SubLevelTerrainBreakPolicy.applyCandidates(host, actor, soft,
+        if (pendingTick) return new StructureOperation.Result<>(StructureOperation.Status.TERRAIN_PENDING,
+                "capture_source_scheduled_tick_pending", Optional.empty(), Optional.empty());
+        var prepared = retained.equals(capture.positions()) ? capture : new StructureCaptureRequest(retained,
+                capture.maximumBlocks(), capture.maximumSpan(), capture.permission(), capture.physical(), capture.skillCreation());
+        return new StructureOperation.Result<>(StructureOperation.Status.READY, "capture_selection_inspected",
+                Optional.empty(), Optional.of(new Selection(prepared, soft, images)));
+    }
+
+    public record Selection(StructureCaptureRequest request, List<StructureTerrainBreakPolicy.Candidate> soft,
+                            java.util.Map<BlockPos, org.academy.api.common.structure.StructureBlockData> images) {
+        public Selection { soft = List.copyOf(soft); images = java.util.Map.copyOf(images); }
+
+        /** A break listener may mutate neighbouring source cells; never capture that replacement. */
+        public boolean current(ServerLevel host) {
+            return images.entrySet().stream().allMatch(entry -> host.getChunkSource()
+                    .getChunkNow(entry.getKey().getX() >> 4, entry.getKey().getZ() >> 4) != null
+                    && org.academy.internal.common.structure.transaction.StructureCellPayload.read(host, entry.getKey()).equals(entry.getValue()));
+        }
+    }
+
+    /** No registry entry or mutation: examine the route with only the exact admitted soft cells excluded. */
+    public static StructureOperation.Result<Void> inspectPath(ServerLevel host, Selection selection,
+                                                              StructureExtraction.CaptureRequest request) {
+        LevelCaptureSource.Snapshot source;
+        try { source = LevelCaptureSource.read(host, request.capture()).orElse(null); }
+        catch (LevelCaptureSource.Rejected rejected) {
+            return new StructureOperation.Result<>(rejected.status, rejected.detail, Optional.empty(), Optional.empty());
+        }
+        if (source == null) return new StructureOperation.Result<>(StructureOperation.Status.TERRAIN_PENDING,
+                "capture_source_chunk_unloaded", Optional.empty(), Optional.empty());
+        if (!source.hasCollisionGeometry()) return rejected("capture_source_has_no_collision_geometry");
+        var baseline = StructurePose.identity(net.minecraft.world.phys.Vec3.atLowerCornerOf(source.source().origin()));
+        var geometry = new ExtractionPlanBuilder.Geometry(baseline, baseline, source.localCenterOfMass(), source.localBoxes(), 0, 0);
+        var excluded = new ArrayList<>(request.capture().positions());
+        selection.soft().forEach(cell -> excluded.add(cell.position()));
+        var outcome = LiveStructureExtraction.plan(host, request.limits(), request.liftHeight(), request.hoverTicks(),
+                geometry, excluded, source.localBoxes(), baseline, request.limits().maxRetreatDistance(), null);
+        return new StructureOperation.Result<>(outcome.status(), outcome.detail(), Optional.empty(), Optional.empty());
+    }
+
+    /** Selected plants have their separate 256-cell budget; the 48-cell sweep clears only other obstacles. */
+    public static int clearSelectionObstacles(ServerLevel host, Entity actor, Selection selection, double height) {
+        return clearSelectionObstacles(host, actor, selection, height, () -> true);
+    }
+
+    public static int clearSelectionObstacles(ServerLevel host, Entity actor, Selection selection, double height,
+                                               java.util.function.BooleanSupplier active) {
+        return clear(host, actor, selection.request(), height, selection.soft().stream().map(StructureTerrainBreakPolicy.Candidate::position).toList(), active);
+    }
+
+    public static StructureOperation.Result<StructureCaptureRequest> applySelection(
+            ServerLevel host, Entity actor, Selection selection) {
+        return applySelection(host, actor, selection, () -> true);
+    }
+
+    public static StructureOperation.Result<StructureCaptureRequest> applySelection(
+            ServerLevel host, Entity actor, Selection selection, java.util.function.BooleanSupplier active) {
+        if (!host.getServer().isSameThread()) throw new IllegalStateException("Clearance requires server thread");
+        if (!active.getAsBoolean()) return rejected("extraction_preparation_cancelled");
+        if (actor == null || actor.level() != host || !actor.isAlive() || actor.isRemoved()
+                || actor instanceof net.minecraft.server.level.ServerPlayer player && player.hasDisconnected()) return rejected("capture_actor_unavailable");
+        if (!selection.current(host)) return rejected("capture_source_changed_during_soft_clearance");
+        if (!selection.soft().isEmpty()) {
+            SubLevelTerrainBreakPolicy.applyCandidates(host, actor, selection.soft(),
                     !(actor instanceof Player player) || !player.hasInfiniteMaterials(),
-                    new StructureTerrainBreakPolicy.Limits(256, 4096, 256), false);
+                    new StructureTerrainBreakPolicy.Limits(256, 4096, 256), false, active);
+            if (!active.getAsBoolean()) return rejected("extraction_preparation_cancelled");
             // A neighbour update may already have broken a tall plant's other half. Count it
             // as cleared only when the actual world is air, never when a listener substituted it.
-            if (soft.stream().anyMatch(cell -> !host.getBlockState(cell.position()).isAir())) {
+            if (selection.soft().stream().anyMatch(cell -> !host.getBlockState(cell.position()).isAir())) {
                 return rejected("capture_soft_clearance_denied_or_changed");
             }
         }
-        var prepared = retained.equals(capture.positions()) ? capture : new StructureCaptureRequest(retained,
-                capture.maximumBlocks(), capture.maximumSpan(), capture.permission(), capture.physical(), capture.skillCreation());
+        if (!selection.current(host)) return rejected("capture_source_changed_during_soft_clearance");
         return new StructureOperation.Result<>(StructureOperation.Status.READY, "capture_selection_prepared",
-                Optional.empty(), Optional.of(prepared));
+                Optional.empty(), Optional.of(selection.request()));
     }
 
     static boolean canClearRejected(String rejection) {
@@ -94,7 +177,7 @@ public final class CaptureSoftClearance {
                 || "scheduled_tick_pending".equals(rejection);
     }
 
-    private static StructureOperation.Result<StructureCaptureRequest> rejected(String detail) {
+    private static <T> StructureOperation.Result<T> rejected(String detail) {
         return new StructureOperation.Result<>(StructureOperation.Status.DENIED, detail, Optional.empty(), Optional.empty());
     }
 
@@ -127,10 +210,17 @@ public final class CaptureSoftClearance {
     }
 
     public static int clear(ServerLevel host, Entity actor, StructureCaptureRequest capture, double height) {
+        return clear(host, actor, capture, height, List.of(), () -> true);
+    }
+
+    private static int clear(ServerLevel host, Entity actor, StructureCaptureRequest capture, double height,
+                             List<BlockPos> additionalExcluded, java.util.function.BooleanSupplier active) {
         if (!host.getServer().isSameThread()) throw new IllegalStateException("Clearance requires server thread");
+        if (!active.getAsBoolean()) return 0;
         if (actor == null || actor.level() != host || !actor.isAlive() || actor.isRemoved()
                 || !Double.isFinite(height) || height <= 0 || height > StructureExtraction.MAX_LIFT_HEIGHT) return 0;
         var excluded = new HashSet<>(capture.positions());
+        excluded.addAll(additionalExcluded);
         LevelCaptureSource.Snapshot source;
         try { source = LevelCaptureSource.read(host, capture).orElse(null); }
         catch (LevelCaptureSource.Rejected rejected) { return 0; }
@@ -164,7 +254,7 @@ public final class CaptureSoftClearance {
         if (!view.current()) return 0;
         return SubLevelTerrainBreakPolicy.applyCandidates(host, actor, candidates,
                 !(actor instanceof Player player) || !player.hasInfiniteMaterials(),
-                new StructureTerrainBreakPolicy.Limits(4096, 65_536, 48), false).destroyed().size();
+                new StructureTerrainBreakPolicy.Limits(4096, 65_536, 48), false, active).destroyed().size();
     }
 
     static boolean intersects(List<AABB> boxes, AABB cell) {

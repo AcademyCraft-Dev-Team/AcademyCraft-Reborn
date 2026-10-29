@@ -118,7 +118,7 @@ public final class VectorStructureService {
     }
 
     /** Public stage observation for integrations and validation; it cannot drive the service. */
-    public record Diagnostic(Stage stage, StructureRef reference, int blockCount, boolean lifted,
+    public record Diagnostic(Stage stage, @Nullable StructureRef reference, int blockCount, boolean lifted,
                              boolean controlActive, boolean flying, boolean sable, int impacts) {
     }
 
@@ -148,6 +148,16 @@ public final class VectorStructureService {
         requireThread(player);
         var capture = CAPTURES.get(player.getUUID());
         return capture == null || !capture.program ? Optional.empty() : Optional.of(capture.transactionId);
+    }
+
+    /** Cancels only this runtime's still-pending program capture, never its successor. */
+    public static boolean cancelProgramCapture(ServerPlayer player, UUID transactionId) {
+        requireThread(player);
+        var capture = CAPTURES.get(player.getUUID());
+        if (capture == null || !capture.program || !capture.transactionId.equals(transactionId)) return false;
+        if (!CAPTURES.remove(player.getUUID(), capture)) return false;
+        cancelCapture(player, capture);
+        return true;
     }
 
     /** The current structure session for this player, if any. It is a view, not a lease. */
@@ -288,7 +298,7 @@ public final class VectorStructureService {
             }
         }
         for (var other : CAPTURES.values()) {
-            if (other.reference.equals(reference)) return ProgramResult.rejected("structure_capturing");
+            if (reference.equals(other.reference)) return ProgramResult.rejected("structure_capturing");
         }
         if (!(player.level() instanceof ServerLevel level)) {
             return ProgramResult.rejected("host_unavailable");
@@ -596,6 +606,7 @@ public final class VectorStructureService {
         traceLiftProbeCommand("press", player, null);
         requireThread(player);
         if (!(player.level() instanceof ServerLevel level)) return PressResult.rejected("host_unavailable");
+        if (CAPTURES.containsKey(player.getUUID())) return new PressResult(PressStatus.PREPARING, "capture_preparing");
         var look = player.getLookAngle();
         if (look.lengthSqr() <= 1.0e-8) return PressResult.rejected("invalid_look");
         var held = SESSIONS.get(player.getUUID());
@@ -822,10 +833,6 @@ public final class VectorStructureService {
                     StructureCaptureExtractions.sourcePositions(player, reference).orElse(plan.positions()));
         }
         if (result.pending()) {
-            if (reference == null) {
-                return StructureCaptureResult.failure(result.transactionId(),
-                        StructureCaptureResult.Status.RECOVERY_REQUIRED, "pending_without_reference");
-            }
             CAPTURES.put(player.getUUID(), new CaptureState(reference, level.dimension(), plan.tier(),
                     plan.positions(), result.transactionId(), level.getGameTime(), sableMode(level), report, program));
             return result;
@@ -990,7 +997,7 @@ public final class VectorStructureService {
         if (player == null) return;
         var playerId = player.getUUID();
         var capture = CAPTURES.remove(playerId);
-        if (capture != null) StructureCaptureExtractions.release(player, capture.reference);
+        if (capture != null) cancelCapture(player, capture);
         terminate(playerId);
     }
 
@@ -1120,7 +1127,10 @@ public final class VectorStructureService {
         held.liftStartY = plan.sourceWorldCenterOfMass().y;
         held.liftTarget = plan.targetWorldCenterOfMass();
         held.controlTarget = held.liftTarget;
-        held.expiresAt = level.getGameTime() + StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS;
+        // The shared driver counts only stable, simulated hover ticks. This deadline is
+        // solely a lifecycle bound, including lift and temporary terrain waits.
+        held.expiresAt = level.getGameTime() + 2L * StructureCaptureExtractions.EXTRACTION_TIMEOUT_TICKS
+                + KineticThrow.HOVER_TICKS + 40;
         SESSIONS.put(player.getUUID(), held);
         tickPlannedLift(player, held);
         playKineticCue(level, plan.sourceWorldCenterOfMass());
@@ -1274,34 +1284,47 @@ public final class VectorStructureService {
                 || !capture.dimension.equals(player.level().dimension())
                 || !player.isAlive() || player.hasDisconnected()) {
             CAPTURES.remove(playerId);
-            StructureCaptureExtractions.release(player, capture.reference);
+            cancelCapture(player, capture);
             return;
         }
-        var result = StructureTransactions.poll(level.getServer(), capture.transactionId);
+        var result = StructureCaptureExtractions.poll(level, player, capture.transactionId);
         if (result.isEmpty()) {
             CAPTURES.remove(playerId);
-            StructureCaptureExtractions.release(player, capture.reference);
+            cancelCapture(player, capture);
             rejectCapture(player, "transaction_evicted", capture.report);
             return;
         }
         var current = result.get();
+        var reference = current.structure().orElse(capture.reference);
+        if (reference != null && !reference.equals(capture.reference)) {
+            capture = new CaptureState(reference, capture.dimension, capture.tier,
+                    StructureCaptureExtractions.sourcePositions(player, reference).orElse(capture.positions),
+                    capture.transactionId, capture.startedAt, capture.sable, capture.report, capture.program);
+            CAPTURES.put(playerId, capture);
+        }
         if (current.pending()) {
             if (level.getGameTime() - capture.startedAt > CAPTURE_TIMEOUT_TICKS) {
                 CAPTURES.remove(playerId);
-                StructureCaptureExtractions.release(player, capture.reference);
+                cancelCapture(player, capture);
                 AcademyCraft.LOGGER.warn("Kinetic Throw capture {} exceeded its tracking window; structure retained",
                         capture.transactionId);
             }
             return;
         }
         CAPTURES.remove(playerId);
-        if (current.succeeded()) {
-            beginLift(player, current.structure().orElse(capture.reference), capture.tier,
+        if (current.succeeded() && reference != null) {
+            beginLift(player, reference, capture.tier,
                     capture.positions, capture.report, capture.program);
         } else {
-            StructureCaptureExtractions.release(player, capture.reference);
+            cancelCapture(player, capture);
             rejectCapture(player, current.status() + ":" + current.detail(), capture.report);
         }
+    }
+
+    private static void cancelCapture(ServerPlayer player, CaptureState capture) {
+        var host = player.level().getServer().getLevel(capture.dimension);
+        if (host != null) StructureCaptureExtractions.cancel(host, player, capture.transactionId);
+        if (capture.reference != null) StructureCaptureExtractions.release(player, capture.reference);
     }
 
     private static void tickAwaitingPhysics(ServerPlayer player, Session held) {
@@ -1485,7 +1508,6 @@ public final class VectorStructureService {
         if (motion != null) held.velocity = motion.linearVelocity();
         if (!held.lifted && StructureCaptureExtractions.arrived(result)) {
             held.lifted = true;
-            held.expiresAt = hoverDeadline(level.getGameTime());
         }
     }
 
@@ -2149,7 +2171,7 @@ public final class VectorStructureService {
     }
 
     private record CaptureState(
-            StructureRef reference,
+            @Nullable StructureRef reference,
             ResourceKey<Level> dimension,
             int tier,
             List<BlockPos> positions,

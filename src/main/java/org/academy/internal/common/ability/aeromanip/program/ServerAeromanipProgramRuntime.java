@@ -23,7 +23,6 @@ import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.internal.common.ability.program.ProgramStructureExtraction;
 import org.academy.api.common.structure.StructureSpaces;
-import org.academy.api.common.structure.StructureTransactions;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeTier;
@@ -78,6 +77,9 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     private final ProgramOrientationControl orientationControls;
     private final org.academy.internal.common.ability.program.ServerStructureGroupControl groupControls;
     private @Nullable StructureRef pendingExtraction;
+    private @Nullable UUID pendingCaptureOperation;
+    private @Nullable ServerLevel extractionHost;
+    private StructureCaptureExtractions.@Nullable Handle pendingExtractionHandle;
     private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
     private long extractionDeadline;
     private final Map<UUID, ProgramStructureControl> issuedControls = new HashMap<>();
@@ -338,7 +340,7 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public StructureOperation extractStructure(ProgramBlockPosition host, int radius, int budget) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
-        if (pendingExtraction == null) {
+        if (pendingExtraction == null && pendingCaptureOperation == null) {
             var seed = requireLaunchSeed(host);
             var result = StructureProgramActions.execute(player, Skills.HIGH_SPEED_JET.get(),
                 STRUCTURE_EXTRACT_COST * costMultiplier,
@@ -351,24 +353,37 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             }
             pendingExtraction = HighSpeedJetStructureService.diagnostic(player)
                     .map(state -> state.reference()).orElse(null);
-            captureMonitor.track(HighSpeedJetStructureService.pendingProgramCapture(player));
+            pendingCaptureOperation = HighSpeedJetStructureService.pendingProgramCapture(player).orElse(null);
+            captureMonitor.track(Optional.ofNullable(pendingCaptureOperation));
+            extractionHost = (ServerLevel) player.level();
             extractionDeadline = player.level().getGameTime() + (StructureCaptureExtractions.enabled() ? 800 : 400);
-            if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
+            if (pendingExtraction == null && pendingCaptureOperation == null) {
+                clearPendingExtraction(true);
+                return StructureOperation.rejected("capture_session_unavailable");
+            }
         }
-        var captureFailure = captureMonitor.pollFailure(id -> StructureTransactions.poll(player.level().getServer(), id));
+        if (extractionHost != player.level()) {
+            clearPendingExtraction(true);
+            return StructureOperation.rejected("capture_host_changed");
+        }
+        var captureFailure = captureMonitor.pollFailure(id -> StructureCaptureExtractions.poll(extractionHost, player, id));
         if (captureFailure.isPresent()) {
-            StructureCaptureExtractions.release(player, pendingExtraction);
-            pendingExtraction = null;
+            clearPendingExtraction(true);
             return StructureOperation.result(captureFailure.get());
         }
-        var reference = pendingExtraction;
         var state = HighSpeedJetStructureService.diagnostic(player).orElse(null);
-        if (state == null || !state.reference().equals(reference)
+        if (state == null || pendingExtraction != null && !pendingExtraction.equals(state.reference())
                 || player.level().getGameTime() > extractionDeadline) {
-            StructureCaptureExtractions.release(player, pendingExtraction);
-            pendingExtraction = null;
+            clearPendingExtraction(true);
             return StructureOperation.rejected("capture_session_ended");
         }
+        if (state.reference() == null) {
+            return StructureOperation.result(ProgramStructureOperationResult.pending("capture_preparing"));
+        }
+        pendingExtraction = state.reference();
+        if (pendingExtractionHandle == null) pendingExtractionHandle = StructureCaptureExtractions
+                .owned(player, pendingExtraction).orElse(null);
+        var reference = pendingExtraction;
         if (state.stage() == HighSpeedJetStructureService.Stage.CAPTURING
                 || org.academy.api.common.structure.StructureDynamics.motion(
                         (ServerLevel) player.level(), reference).isEmpty()) {
@@ -379,10 +394,10 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
             return StructureOperation.result(extraction);
         }
         if (extraction.status() != ProgramStructureOperationResult.Status.COMPLETED) {
-            pendingExtraction = null;
+            clearPendingExtraction(true);
             return StructureOperation.result(extraction);
         }
-        pendingExtraction = null;
+        clearPendingExtraction(false);
         return StructureOperation.structure(programReference(reference),
                 ProgramStructureOperationResult.completed("committed", reference));
     }
@@ -530,8 +545,22 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     @Override
     public void closeOrientationCommands() {
         orientationControls.close();
-        if (pendingExtraction != null) StructureCaptureExtractions.release(player, pendingExtraction);
+        clearPendingExtraction(true);
+    }
+
+    private void clearPendingExtraction(boolean cancel) {
+        if (cancel) {
+            if (pendingCaptureOperation != null) {
+                HighSpeedJetStructureService.cancelProgramCapture(player, pendingCaptureOperation);
+                if (extractionHost != null) StructureCaptureExtractions.cancel(extractionHost, player, pendingCaptureOperation);
+            }
+            if (pendingExtractionHandle != null) StructureCaptureExtractions.release(pendingExtractionHandle);
+        }
         pendingExtraction = null;
+        pendingCaptureOperation = null;
+        extractionHost = null;
+        pendingExtractionHandle = null;
+        captureMonitor.track(Optional.empty());
     }
 
     @Override

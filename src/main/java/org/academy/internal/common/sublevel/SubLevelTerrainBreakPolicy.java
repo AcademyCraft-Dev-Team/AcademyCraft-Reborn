@@ -134,6 +134,13 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
     /** Explicit skill clearance uses the same permissions, events and drops as moving bodies. */
     public static BreakResult applyCandidates(ServerLevel host, Entity actor, List<Candidate> candidates,
                                               boolean dropItems, Limits limits, boolean budgetExhausted) {
+        return applyCandidates(host, actor, candidates, dropItems, limits, budgetExhausted, () -> true);
+    }
+
+    /** Capture preparation can be withdrawn synchronously by a protection/event callback. */
+    public static BreakResult applyCandidates(ServerLevel host, Entity actor, List<Candidate> candidates,
+                                              boolean dropItems, Limits limits, boolean budgetExhausted,
+                                              java.util.function.BooleanSupplier active) {
         requireHost(host);
         var checked = requireLimits(limits);
         if (!SubLevelTerrainBreaker.actorAllowed(host, actor)) return new BreakResult(List.of(), List.of(), false);
@@ -141,6 +148,7 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
         var rejected = new ArrayList<BlockPos>();
         int visited = 0;
         for (var candidate : candidates) {
+            if (!active.getAsBoolean()) break;
             if (++visited > checked.visitedCells()) { budgetExhausted = true; break; }
             if (destroyed.size() >= checked.destroyedBlocks()) {
                 rejected.add(candidate.position());
@@ -167,9 +175,9 @@ public final class SubLevelTerrainBreakPolicy implements StructureTerrainBreakPo
                 }
             }
             // A protection listener may replace the cell or revoke the actor's permission.
-            if (!host.getBlockState(position).equals(state)
+            if (!active.getAsBoolean() || !host.getBlockState(position).equals(state)
                     || !SubLevelTerrainBreaker.actorAllowed(host, actor)
-                    || !mayBreak(host, actor, position)) {
+                    || !mayBreak(host, actor, position) || !active.getAsBoolean()) {
                 rejected.add(position);
                 continue;
             }

@@ -31,7 +31,6 @@ import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.upgrade.StructureCaptureExtractions;
 import org.academy.internal.common.ability.program.ProgramStructureExtraction;
 import org.academy.api.common.structure.StructureSpaces;
-import org.academy.api.common.structure.StructureTransactions;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.internal.common.ability.Skills;
@@ -84,6 +83,9 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     private final ProgramOrientationControl orientationControls;
     private final org.academy.internal.common.ability.program.ServerStructureGroupControl groupControls;
     private @Nullable StructureRef pendingExtraction;
+    private @Nullable UUID pendingCaptureOperation;
+    private @Nullable ServerLevel extractionHost;
+    private StructureCaptureExtractions.@Nullable Handle pendingExtractionHandle;
     private final ProgramStructureCaptureMonitor captureMonitor = new ProgramStructureCaptureMonitor();
     private boolean pendingForceMagnetize;
     private long extractionDeadline;
@@ -275,7 +277,7 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     public StructureOperation extractStructure(ProgramBlockPosition host, int budget,
                                                boolean forceMagnetize) {
         requireCasterReady(Skills.MAGNET_MANIPULATION.get());
-        if (pendingExtraction == null) {
+        if (pendingExtraction == null && pendingCaptureOperation == null) {
             var seed = requireStructureHost(host);
             var result = StructureProgramActions.execute(player, Skills.MAGNET_MANIPULATION.get(),
                 (STRUCTURE_EXTRACT_COST + (forceMagnetize ? FORCED_MAGNETIZATION_COST : 0)) * costMultiplier,
@@ -288,25 +290,38 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             }
             pendingExtraction = MagneticStructureService.programSession(player)
                     .map(state -> state.reference()).orElse(null);
-            captureMonitor.track(MagneticStructureService.pendingProgramCapture(player));
+            pendingCaptureOperation = MagneticStructureService.pendingProgramCapture(player).orElse(null);
+            captureMonitor.track(Optional.ofNullable(pendingCaptureOperation));
+            extractionHost = (ServerLevel) player.level();
             pendingForceMagnetize = forceMagnetize;
             extractionDeadline = player.level().getGameTime() + (StructureCaptureExtractions.enabled() ? 800 : 400);
-            if (pendingExtraction == null) return StructureOperation.rejected("capture_session_unavailable");
+            if (pendingExtraction == null && pendingCaptureOperation == null) {
+                clearPendingExtraction(true);
+                return StructureOperation.rejected("capture_session_unavailable");
+            }
         }
-        var captureFailure = captureMonitor.pollFailure(id -> StructureTransactions.poll(player.level().getServer(), id));
+        if (extractionHost != player.level()) {
+            clearPendingExtraction(true);
+            return StructureOperation.rejected("capture_host_changed");
+        }
+        var captureFailure = captureMonitor.pollFailure(id -> StructureCaptureExtractions.poll(extractionHost, player, id));
         if (captureFailure.isPresent()) {
-            StructureCaptureExtractions.release(player, pendingExtraction);
-            pendingExtraction = null;
+            clearPendingExtraction(true);
             return StructureOperation.result(captureFailure.get());
         }
-        var reference = pendingExtraction;
         var state = MagneticStructureService.programSession(player).orElse(null);
-        if (state == null || !state.reference().equals(reference)
+        if (state == null || pendingExtraction != null && !pendingExtraction.equals(state.reference())
                 || player.level().getGameTime() > extractionDeadline) {
-            StructureCaptureExtractions.release(player, pendingExtraction);
-            pendingExtraction = null;
+            clearPendingExtraction(true);
             return StructureOperation.rejected("capture_session_ended");
         }
+        if (state.reference() == null) {
+            return StructureOperation.result(ProgramStructureOperationResult.pending("capture_preparing"));
+        }
+        pendingExtraction = state.reference();
+        if (pendingExtractionHandle == null) pendingExtractionHandle = StructureCaptureExtractions
+                .owned(player, pendingExtraction).orElse(null);
+        var reference = pendingExtraction;
         if (state.stage() == MagneticStructureService.Stage.CAPTURING
                 || state.stage() == MagneticStructureService.Stage.AWAITING_PHYSICS
                 || org.academy.api.common.structure.StructureDynamics.motion(
@@ -318,10 +333,10 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
             return StructureOperation.result(extraction);
         }
         if (extraction.status() != ProgramStructureOperationResult.Status.COMPLETED) {
-            pendingExtraction = null;
+            clearPendingExtraction(true);
             return StructureOperation.result(extraction);
         }
-        pendingExtraction = null;
+        clearPendingExtraction(false);
         if (SubLevelStructureRefs.isSubLevel(reference)) {
             subLevelControls.recordMagneticCapture(reference, pendingForceMagnetize);
         }
@@ -462,8 +477,22 @@ public final class ServerElectromasterProgramRuntime implements ElectromasterPro
     @Override
     public void closeOrientationCommands() {
         orientationControls.close();
-        if (pendingExtraction != null) StructureCaptureExtractions.release(player, pendingExtraction);
+        clearPendingExtraction(true);
+    }
+
+    private void clearPendingExtraction(boolean cancel) {
+        if (cancel) {
+            if (pendingCaptureOperation != null) {
+                MagneticStructureService.cancelProgramCapture(player, pendingCaptureOperation);
+                if (extractionHost != null) StructureCaptureExtractions.cancel(extractionHost, player, pendingCaptureOperation);
+            }
+            if (pendingExtractionHandle != null) StructureCaptureExtractions.release(pendingExtractionHandle);
+        }
         pendingExtraction = null;
+        pendingCaptureOperation = null;
+        extractionHost = null;
+        pendingExtractionHandle = null;
+        captureMonitor.track(Optional.empty());
     }
 
     @Override

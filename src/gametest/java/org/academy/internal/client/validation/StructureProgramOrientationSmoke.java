@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.ticks.ScheduledTick;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -50,6 +51,8 @@ public final class StructureProgramOrientationSmoke {
     private static final boolean SELECTION = Boolean.getBoolean("academy.structureSelectionSmoke");
     private static final boolean MOVEMENT = Boolean.getBoolean("academy.structureSingleMovementSmoke");
     private static final boolean FILTERS = Boolean.getBoolean("academy.structureFilterSmoke");
+    private static final boolean PREPARATION_VM = Boolean.getBoolean("academy.structurePreparationVmSmoke");
+    private static final int PREPARATION_DELAY_TICKS = 12;
     private static final int SPIN_TICKS = 250;
     private static final int ARENA_READY_TIMEOUT_TICKS = 200;
     private static final double ANGLE_TOLERANCE = 0.02;
@@ -85,6 +88,10 @@ public final class StructureProgramOrientationSmoke {
     private static double actualExtractionRise, expectedExtractionRise;
     private static long extractionWaitTicks, capturePublishedAt;
     private static int spinSamplesAfter200;
+    private static UUID preparationOperation;
+    private static StructureRef preparationReference;
+    private static int noRefPendingSamples, lastNoRefServerTick, extractionCpDebitCount;
+    private static double extractionInitialCpDebit, maximumResumedExtractionCpDelta;
 
     private StructureProgramOrientationSmoke() {}
 
@@ -117,6 +124,10 @@ public final class StructureProgramOrientationSmoke {
     }
 
     private static void prepare(MinecraftServer server) {
+        if (PREPARATION_VM) {
+            check(StructureCaptureExtractions.enabled(), "preparation VM regression requires shared extraction gameplay");
+            check(!StructurePayloadFixtureSupport.ENABLED, "preparation VM regression requires an ordinary iron source");
+        }
         var system = AbilitySystemServer.getSystem(player);
         var ability = switch (categoryIndex) {
             case 0 -> AbilityCategories.ACCELERATOR.get();
@@ -167,6 +178,9 @@ public final class StructureProgramOrientationSmoke {
         runtime = null; key = null; transaction = null;
         rotationError = resetError = Double.NaN; lateSpinSpeed = 0; spinSamplesAfter200 = 0; age = 0;
         actualExtractionRise = Double.NaN; extractionWaitTicks = -1; capturePublishedAt = -1;
+        preparationOperation = null; preparationReference = null;
+        noRefPendingSamples = extractionCpDebitCount = 0; lastNoRefServerTick = -1;
+        extractionInitialCpDebit = maximumResumedExtractionCpDelta = 0;
         arenaWaitTicks = arenaStableTicks = 0;
         awaitingArena = true;
         arenaSetup = new ArenaSetup(++arenaGeneration, position, seed, aimYaw, aimPitch);
@@ -211,6 +225,14 @@ public final class StructureProgramOrientationSmoke {
         awaitingArena = false;
         AcademyCraft.LOGGER.info("STRUCTURE_PROGRAM_ORIENTATION_ARENA_READY category={} wait_ticks={} teleport_ack=true client_seed_loaded=true yaw={}",
                 category, arenaWaitTicks, player.getYRot());
+        if (PREPARATION_VM) {
+            // Ordinary scheduled block ticks drain naturally. The fixture neither removes
+            // them nor calls the extraction facade on behalf of the real category runtime.
+            player.level().getBlockTicks().schedule(new ScheduledTick<>(Blocks.IRON_BLOCK, seed,
+                    player.level().getGameTime() + PREPARATION_DELAY_TICKS, 0));
+            check(player.level().getBlockTicks().hasScheduledTick(seed, Blocks.IRON_BLOCK),
+                    "preparation VM source tick was not scheduled");
+        }
         startGraph(server);
     }
 
@@ -277,6 +299,10 @@ public final class StructureProgramOrientationSmoke {
             if (id.equals(action("extract"))) observePublishedCapture(now);
             var cpBefore = AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID());
             var step = actual.execute(context, configuration, inputs);
+            if (PREPARATION_VM && id.equals(action("extract"))) {
+                observePreparation(first, step, cpBefore
+                        - AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID()));
+            }
             if (id.equals(action("move")) && !first) check(Math.abs(cpBefore
                     - AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID())) < .001,
                     "single movement charged again while waiting");
@@ -294,6 +320,16 @@ public final class StructureProgramOrientationSmoke {
                         ? state.pose().worldOrigin().y - seed.getY()
                         : state.pose().localToWorldPoint(state.localCenterOfMass()).y - Vec3.atCenterOf(seed).y;
                 extractionWaitTicks = now - STARTED.get(context.nodeId());
+                if (PREPARATION_VM) {
+                    check(noRefPendingSamples >= 2 && preparationOperation != null,
+                            "real extract did not resume the same no-reference preparation across ticks");
+                    check(reference.equals(preparationReference), "extract output changed its prepared structure identity");
+                    check(extractionCpDebitCount <= 1 && maximumResumedExtractionCpDelta < .001,
+                            "extraction preparation charged again while waiting");
+                    AcademyCraft.LOGGER.info("STRUCTURE_PROGRAM_PREPARATION_HANDOFF category={} operation={} no_ref_samples={} initial_cp_debit={} cp_debit_count={} resumed_cp_delta={}",
+                            category, preparationOperation, noRefPendingSamples, extractionInitialCpDebit,
+                            extractionCpDebitCount, maximumResumedExtractionCpDelta);
+                }
                 if (StructureCaptureExtractions.enabled()) {
                     check(Math.abs(actualExtractionRise - expectedExtractionRise) <= 0.1,
                             "extract handed off before reaching source-relative target: rise=" + actualExtractionRise
@@ -349,6 +385,48 @@ public final class StructureProgramOrientationSmoke {
         check(center.distanceTo(hoverCenter) < 1.0, "linear support could not isolate angular test");
     }
 
+    /** Read-only observation around the actual registered extract executor and real runtime. */
+    private static void observePreparation(boolean first, ProgramNodeStep step, double cpDebit) {
+        var pending = switch (categoryIndex) {
+            case 0 -> VectorStructureService.pendingProgramCapture(player);
+            case 1 -> MagneticStructureService.pendingProgramCapture(player);
+            default -> HighSpeedJetStructureService.pendingProgramCapture(player);
+        };
+        var observed = switch (categoryIndex) {
+            case 0 -> VectorStructureService.diagnostic(player).map(state -> state.reference());
+            case 1 -> MagneticStructureService.programSession(player).map(state -> state.reference());
+            default -> HighSpeedJetStructureService.diagnostic(player).map(state -> state.reference());
+        };
+        if (cpDebit > .001) extractionCpDebitCount++;
+        if (first) {
+            extractionInitialCpDebit = cpDebit;
+            check(step.directive() == ProgramNodeStep.Directive.RETRY && pending.isPresent() && observed.isEmpty(),
+                    "first real extract did not return no-reference PENDING: directive=" + step.directive()
+                            + " operation=" + pending + " reference=" + observed);
+        } else {
+            maximumResumedExtractionCpDelta = Math.max(maximumResumedExtractionCpDelta, Math.abs(cpDebit));
+            check(Math.abs(cpDebit) < .001, "real extract charged/refunded CP on a preparation continuation: " + cpDebit);
+        }
+        pending.ifPresent(operation -> {
+            if (preparationOperation == null) preparationOperation = operation;
+            check(preparationOperation.equals(operation), "preparation continuation created another capture operation");
+        });
+        if (observed.isEmpty()) {
+            check(step.directive() == ProgramNodeStep.Directive.RETRY && pending.isPresent(),
+                    "no-reference preparation lost its operation or published downstream flow");
+            int serverTick = player.level().getServer().getTickCount();
+            if (lastNoRefServerTick != serverTick) {
+                noRefPendingSamples++;
+                lastNoRefServerTick = serverTick;
+                AcademyCraft.LOGGER.info("STRUCTURE_PROGRAM_PREPARATION_PENDING category={} operation={} samples={} server_tick={}",
+                        category, preparationOperation, noRefPendingSamples, serverTick);
+            }
+        } else {
+            if (preparationReference == null) preparationReference = observed.orElseThrow();
+            check(preparationReference.equals(observed.orElseThrow()), "prepared capture changed its real structure identity");
+        }
+    }
+
     /** Observe publication without acquiring authority or helping the extraction move. */
     private static void observePublishedCapture(long now) {
         if (capturePublishedAt >= 0) return;
@@ -385,6 +463,13 @@ public final class StructureProgramOrientationSmoke {
         row.put("skill_provenance_verified", true);
         row.put("actual_extraction_rise", actualExtractionRise); row.put("expected_extraction_rise", expectedExtractionRise);
         row.put("wait_ticks", extractionWaitTicks);
+        row.put("preparation_vm", PREPARATION_VM);
+        row.put("no_ref_pending_samples", noRefPendingSamples);
+        row.put("preparation_operation", preparationOperation == null ? "" : preparationOperation.toString());
+        row.put("prepared_reference", preparationReference == null ? "" : preparationReference.toString());
+        row.put("extraction_initial_cp_debit", extractionInitialCpDebit);
+        row.put("extraction_cp_debit_count", extractionCpDebitCount);
+        row.put("extraction_max_resumed_cp_delta", maximumResumedExtractionCpDelta);
         row.put("node_completion_order", List.copyOf(COMPLETED)); row.put("rotate_angle_error", rotationError);
         row.put("reset_up_error", resetError); row.put("spin_requested_ticks", SPIN_TICKS);
         row.put("spin_samples_after_200", spinSamplesAfter200); row.put("late_spin_speed", lateSpinSpeed);
@@ -556,7 +641,10 @@ public final class StructureProgramOrientationSmoke {
             Files.writeString(output, new GsonBuilder().setPrettyPrinting().create().toJson(
                     Map.of("passed", passed, "cases", RESULTS, "failure", detail, "actual_node_vm", true,
                             "actual_save_execute_packets", false, "linear_gravity_support_only", true,
-                            "extraction_gameplay_enabled", StructureCaptureExtractions.enabled())));
+                            "extraction_gameplay_enabled", StructureCaptureExtractions.enabled(),
+                            "preparation_vm", PREPARATION_VM,
+                            "current_no_ref_pending_samples", noRefPendingSamples,
+                            "current_preparation_operation", preparationOperation == null ? "" : preparationOperation.toString())));
         } catch (Exception error) { AcademyCraft.LOGGER.error("Could not save program orientation report", error); }
     }
     private static void fail(Throwable error) {

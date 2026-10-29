@@ -154,7 +154,7 @@ public final class KineticStructureFlight {
             var area = StructureImpactSweep.sweptBounds(body.localBoxes(), pose, pose, localCenter);
             var obstacle = org.academy.internal.common.structure.upgrade.damage.DamageContactWitness
                     .resolve(host, actor, flight.obstacle, area).orElse(null);
-            if (obstacle == null) { stop(access, host, flight.source); flight.finished = true; return; }
+            if (obstacle == null) { flight.finished = true; return; }
             boolean slowed = flight.obstacleVelocity.lengthSqr() > 1E-8
                     && body.linearVelocity().dot(flight.obstacleVelocity.normalize()) < flight.obstacleVelocity.length() * 0.9;
             boolean contact = slowed && body.contentRevision() == flight.obstacleContent && obstacle.stream().anyMatch(box ->
@@ -170,15 +170,17 @@ public final class KineticStructureFlight {
         }
         var entityBounds = StructureImpactSweep.sweptBounds(body.localBoxes(), flight.previousPose, testedPose, localCenter);
         var candidates = livingCandidates(host, entityBounds);
-        if (candidates.size() > MAX_ENTITY_CANDIDATES) { stop(access, host, flight.source); flight.finished = true; return; }
+        if (candidates.size() > MAX_ENTITY_CANDIDATES) { flight.finished = true; return; }
+        var entitySweep = new org.academy.internal.common.structure.PreparedStructureImpactSweep(
+                body.localBoxes(), flight.previousPose, testedPose);
         for (var entity : candidates) {
-            if ((budget.shapeTests -= body.localBoxes().size() * 129) < 0) {
-                stop(access, host, flight.source); flight.finished = true; return;
-            }
             var living = entity;
             if (living == actor || !living.isAlive() || living.isSpectator()
-                    || TeamRelations.areAllied(actor, living) || PvpSetting.shouldPrevent(actor, living)
-                    || !StructureImpactSweep.intersects(body.localBoxes(), flight.previousPose, testedPose, living.getBoundingBox())) continue;
+                    || TeamRelations.areAllied(actor, living) || PvpSetting.shouldPrevent(actor, living)) continue;
+            var tested = entitySweep.test(living.getBoundingBox(), budget.shapeTests);
+            budget.shapeTests -= tested.tests();
+            if (!tested.complete()) { flight.finished = true; return; }
+            if (!tested.intersects()) continue;
             var skill = Skills.KINETIC_THROW.get();
             if (living.hurtServer(host, SkillDamageSource.of(actor, skill), KineticThrow.structureDamage(flight.cells))) {
                 skill.onHurt(actor, living, KineticThrow.structureDamage(flight.cells));
@@ -220,8 +222,12 @@ public final class KineticStructureFlight {
                 host.getGameTime(), flight.source.id(), flight.travelled, center, body.linearVelocity(), body.terrainReady(),
                 result.distance(), result.detail(), result.receipt());
         if (result.status() != StructureOperation.Status.COMPLETED || result.receipt().rejected() > 0 || result.receipt().deferred() > 0) {
-            // Missing coverage, protection and exhausted budgets are not an authorized impact.
-            stop(access, host, flight.source); flight.finished = true; return;
+            // Missing coverage, protection and exhausted budgets withdraw the enhancement.
+            // The ordinary solver retains momentum and physical collision; an observer
+            // failure must not silently undo the player's successful H launch.
+            AcademyCraft.LOGGER.info("Kinetic penetration released for {}: {} status={} receipt={}",
+                    flight.source, result.detail(), result.status(), result.receipt());
+            flight.finished = true; return;
         }
         // An unbreakable obstruction remains a physical collision. Its permissions are checked
         // independently by the subsequent explosion; no block is made passable by this observer.

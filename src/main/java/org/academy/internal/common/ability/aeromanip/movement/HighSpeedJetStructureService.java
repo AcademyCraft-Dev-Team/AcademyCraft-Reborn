@@ -112,7 +112,7 @@ public final class HighSpeedJetStructureService {
 
     public record Diagnostic(
             Stage stage,
-            StructureRef reference,
+            @Nullable StructureRef reference,
             int blockCount,
             boolean controlActive,
             boolean sable,
@@ -126,7 +126,7 @@ public final class HighSpeedJetStructureService {
         var capture = CAPTURES.get(player.getUUID());
         if (capture != null) {
             return Optional.of(new Diagnostic(Stage.CAPTURING, capture.reference,
-                    capture.positions.size(), false, sable(capture.reference), 0.0, 0));
+                    capture.positions.size(), false, capture.reference != null && sable(capture.reference), 0.0, 0));
         }
         var direct = SUB_LEVEL_SESSIONS.get(player.getUUID());
         if (direct != null) {
@@ -147,6 +147,18 @@ public final class HighSpeedJetStructureService {
         requireThread(player);
         var capture = CAPTURES.get(player.getUUID());
         return capture == null || !capture.program ? Optional.empty() : Optional.of(capture.transactionId);
+    }
+
+    /** Cancels only the program attempt represented by this operation id, including preparation. */
+    public static void cancelProgramCapture(ServerPlayer player, UUID operationId) {
+        requireThread(player);
+        var capture = CAPTURES.get(player.getUUID());
+        if (capture != null && capture.program && capture.transactionId.equals(operationId)
+                && CAPTURES.remove(player.getUUID(), capture)) releaseCapture(capture);
+        var session = SESSIONS.get(player.getUUID());
+        if (session != null && session.program && operationId.equals(session.captureOperationId)) {
+            stopSession(player.getUUID(), session.launchId, "program_capture_cancelled");
+        }
     }
 
     /** Explicit program outcome codes; callers branch on status/detail, never on log text. */
@@ -223,7 +235,7 @@ public final class HighSpeedJetStructureService {
         var playerId = player.getUUID();
         var abandoned = CAPTURES.remove(playerId);
         if (abandoned != null) {
-            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, abandoned.reference);
+            releaseCapture(abandoned);
             AcademyCraft.LOGGER.info(
                     "High-Speed Jet capture {} was abandoned for a newer program extract",
                     abandoned.transactionId);
@@ -246,9 +258,8 @@ public final class HighSpeedJetStructureService {
         }
         if (result.pending()) {
             var reference = result.structure().orElse(null);
-            if (reference == null) return ProgramResult.rejected("pending_without_reference");
             CAPTURES.put(playerId, new CaptureState(reference, result.transactionId(),
-                    level.dimension(), level.getGameTime(), request, List.copyOf(nozzles),
+                    level, player, level.getGameTime(), request, List.copyOf(nozzles),
                     plan.targetNozzle, plan.launchDirection, List.copyOf(positions), 1.0f, true));
             return ProgramResult.pending(result.status() + ":" + result.detail());
         }
@@ -257,7 +268,7 @@ public final class HighSpeedJetStructureService {
         }
         var reference = result.structure().orElse(null);
         if (reference == null) return ProgramResult.rejected("committed_without_reference");
-        if (!beginProgramSession(player, reference, request, nozzles, plan.targetNozzle,
+        if (!beginProgramSession(player, result.transactionId(), reference, request, nozzles, plan.targetNozzle,
                 plan.launchDirection, positions, level)) {
             return ProgramResult.rejected("session_start_failed");
         }
@@ -292,7 +303,7 @@ public final class HighSpeedJetStructureService {
             }
         }
         for (var other : CAPTURES.values()) {
-            if (other.reference.equals(reference)) return ProgramResult.rejected("structure_capturing");
+            if (reference.equals(other.reference)) return ProgramResult.rejected("structure_capturing");
         }
         if (held != null) {
             // A skill session thrusts with its own fixed direction and window; a program taking it
@@ -638,7 +649,7 @@ public final class HighSpeedJetStructureService {
         // first ends the previous tracking while retaining its already captured structure.
         var abandoned = CAPTURES.remove(playerId);
         if (abandoned != null) {
-            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, abandoned.reference);
+            releaseCapture(abandoned);
             AcademyCraft.LOGGER.info("High-Speed Jet capture {} was abandoned for a newer launch",
                     abandoned.transactionId);
         }
@@ -678,8 +689,7 @@ public final class HighSpeedJetStructureService {
         if (result.pending() || result.succeeded() && result.structure()
                 .map(org.academy.api.common.structure.upgrade.StructureCaptureExtractions::tracked).orElse(false)) {
             var reference = result.structure().orElse(null);
-            if (reference == null) return Optional.empty();
-            CAPTURES.put(playerId, new CaptureState(reference, result.transactionId(), level.dimension(),
+            CAPTURES.put(playerId, new CaptureState(reference, result.transactionId(), level, player,
                     level.getGameTime(), request, List.copyOf(nozzles), plan.targetNozzle,
                     plan.launchDirection, List.copyOf(positions), costMultiplier, false));
             return Optional.of(new LaunchHandle(player, result.transactionId()));
@@ -1091,7 +1101,7 @@ public final class HighSpeedJetStructureService {
         if (directSession != null) stopSubLevelSession(playerId, directSession, "clear");
         var capture = CAPTURES.remove(playerId);
         if (capture != null) {
-            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, capture.reference);
+            releaseCapture(capture);
             AcademyCraft.LOGGER.info("High-Speed Jet capture {} tracking cleared at a player lifecycle boundary",
                     capture.transactionId);
         }
@@ -1126,6 +1136,14 @@ public final class HighSpeedJetStructureService {
                 AcademyCraft.LOGGER.warn("High-Speed Jet shutdown cleanup failed for {}", playerId, failure);
             }
         }
+        for (var capture : List.copyOf(CAPTURES.values())) {
+            try {
+                releaseCapture(capture);
+            } catch (RuntimeException failure) {
+                AcademyCraft.LOGGER.warn("High-Speed Jet preparation shutdown cleanup failed for {}",
+                        capture.transactionId, failure);
+            }
+        }
         CAPTURES.clear();
         SESSIONS.clear();
     }
@@ -1142,24 +1160,26 @@ public final class HighSpeedJetStructureService {
         var capture = CAPTURES.get(playerId);
         if (capture == null) return;
         if (!(player.level() instanceof ServerLevel level)
-                || !capture.dimension.equals(player.level().dimension())
+                || capture.host != player.level()
                 || !player.isAlive() || player.hasDisconnected()) {
             CAPTURES.remove(playerId);
-            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, capture.reference);
+            releaseCapture(capture);
             return;
         }
-        var result = StructureTransactions.poll(level.getServer(), capture.transactionId);
+        var result = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                .poll(capture.host, capture.actor, capture.transactionId);
         if (result.isEmpty()) {
             CAPTURES.remove(playerId);
-            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, capture.reference);
+            releaseCapture(capture);
             reject(player, "transaction_evicted");
             return;
         }
         var current = result.get();
+        current.structure().ifPresent(reference -> capture.observe(player, reference));
         if (current.pending()) {
             if (level.getGameTime() - capture.startedAt > CAPTURE_TIMEOUT_TICKS) {
                 CAPTURES.remove(playerId);
-                org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, capture.reference);
+                releaseCapture(capture);
                 AcademyCraft.LOGGER.warn(
                         "High-Speed Jet capture {} exceeded its tracking window; structure retained",
                         capture.transactionId);
@@ -1169,11 +1189,17 @@ public final class HighSpeedJetStructureService {
         }
         if (!current.succeeded()) {
             CAPTURES.remove(playerId);
-            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(player, capture.reference);
+            releaseCapture(capture);
             reject(player, current.status() + ":" + current.detail());
             return;
         }
         var reference = current.structure().orElse(capture.reference);
+        if (reference == null) {
+            CAPTURES.remove(playerId);
+            releaseCapture(capture);
+            reject(player, "committed_without_reference");
+            return;
+        }
         if (!capture.program && org.academy.api.common.structure.upgrade.StructureCaptureExtractions.tracked(reference)) {
             var extraction = org.academy.internal.common.ability.program.ProgramStructureExtraction.poll(player, reference);
             if (extraction.status() == org.academy.api.common.ability.program.ProgramStructureOperationResult.Status.PENDING) return;
@@ -1185,7 +1211,7 @@ public final class HighSpeedJetStructureService {
         }
         CAPTURES.remove(playerId);
         if (capture.program) {
-            if (!beginProgramSession(player, reference, capture.request, capture.nozzles,
+            if (!beginProgramSession(player, capture.transactionId, reference, capture.request, capture.nozzles,
                     capture.targetNozzle, capture.launchDirection, capture.positions,
                     (ServerLevel) player.level())) {
                 AcademyCraft.LOGGER.warn(
@@ -1208,6 +1234,7 @@ public final class HighSpeedJetStructureService {
      */
     private static boolean beginProgramSession(
             ServerPlayer player,
+            UUID captureOperationId,
             StructureRef reference,
             LaunchRequest request,
             List<NozzleMount> nozzles,
@@ -1221,6 +1248,7 @@ public final class HighSpeedJetStructureService {
             var sableSession = Session.programSable(reference, level.dimension(),
                     request, List.copyOf(nozzles), targetNozzle, launchDirection, positions.size());
             sableSession.positions = List.copyOf(positions);
+            sableSession.captureOperationId = captureOperationId;
             SESSIONS.put(player.getUUID(), sableSession);
             AcademyCraft.LOGGER.info(
                     "High-Speed Jet program capture {} waits for program control", reference);
@@ -1271,6 +1299,7 @@ public final class HighSpeedJetStructureService {
                 request, previousTicks, List.copyOf(nozzles), targetNozzle, launchDirection,
                 positions.size(), region);
         nativeSession.positions = List.copyOf(positions);
+        nativeSession.captureOperationId = captureOperationId;
         SESSIONS.put(player.getUUID(), nativeSession);
         AcademyCraft.LOGGER.info(
                 "High-Speed Jet program session started for {} with {} blocks",
@@ -1936,23 +1965,34 @@ public final class HighSpeedJetStructureService {
     ) {
     }
 
+    private static void releaseCapture(CaptureState capture) {
+        org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                .cancel(capture.host, capture.actor, capture.transactionId);
+        if (capture.extractionHandle != null) {
+            org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(capture.extractionHandle);
+        }
+    }
+
     private static final class CaptureState {
-        private final StructureRef reference;
+        private @Nullable StructureRef reference;
         private final UUID transactionId;
-        private final ResourceKey<Level> dimension;
+        private final ServerLevel host;
+        private final ServerPlayer actor;
+        private org.academy.api.common.structure.upgrade.StructureCaptureExtractions.@Nullable Handle extractionHandle;
         private final long startedAt;
         private final LaunchRequest request;
         private final List<NozzleMount> nozzles;
         private final HighSpeedJetNozzle targetNozzle;
         private final Vec3 launchDirection;
-        private final List<BlockPos> positions;
+        private List<BlockPos> positions;
         private final float costMultiplier;
         private final boolean program;
 
         private CaptureState(
-                StructureRef reference,
+                @Nullable StructureRef reference,
                 UUID transactionId,
-                ResourceKey<Level> dimension,
+                ServerLevel host,
+                ServerPlayer actor,
                 long startedAt,
                 LaunchRequest request,
                 List<NozzleMount> nozzles,
@@ -1964,15 +2004,32 @@ public final class HighSpeedJetStructureService {
         ) {
             this.reference = reference;
             this.transactionId = transactionId;
-            this.dimension = dimension;
+            this.host = host;
+            this.actor = actor;
             this.startedAt = startedAt;
             this.request = request;
-            this.nozzles = nozzles;
+            this.nozzles = new ArrayList<>(nozzles);
             this.targetNozzle = targetNozzle;
             this.launchDirection = launchDirection;
             this.positions = positions;
             this.costMultiplier = costMultiplier;
             this.program = program;
+            if (reference != null) observe(actor, reference);
+        }
+
+        private void observe(ServerPlayer player, StructureRef observed) {
+            if (reference != null && !reference.equals(observed)) {
+                throw new IllegalStateException("High-Speed Jet preparation changed its structure identity");
+            }
+            reference = observed;
+            var prepared = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .sourcePositions(player, observed).orElse(positions);
+            if (!prepared.equals(positions)) {
+                rebaseMounts(nozzles, minimumCorner(positions), minimumCorner(prepared));
+                positions = List.copyOf(prepared);
+            }
+            if (extractionHandle == null) extractionHandle = org.academy.api.common.structure.upgrade.StructureCaptureExtractions
+                    .owned(player, observed).orElse(null);
         }
     }
 
@@ -1987,16 +2044,11 @@ public final class HighSpeedJetStructureService {
     public static final class LaunchHandle implements AutoCloseable {
         private final UUID playerId;
         private final UUID launchId;
-        private final org.academy.api.common.structure.upgrade.StructureCaptureExtractions.@Nullable Handle extractionHandle;
         private boolean closed;
 
         private LaunchHandle(ServerPlayer player, UUID launchId) {
             this.playerId = player.getUUID();
             this.launchId = launchId;
-            var capture = CAPTURES.get(playerId);
-            this.extractionHandle = capture != null && capture.transactionId.equals(launchId)
-                    ? org.academy.api.common.structure.upgrade.StructureCaptureExtractions.owned(player, capture.reference).orElse(null)
-                    : null;
         }
 
         public UUID launchId() {
@@ -2010,7 +2062,7 @@ public final class HighSpeedJetStructureService {
             var capture = CAPTURES.get(playerId);
             if (capture != null && capture.transactionId.equals(launchId)) {
                 CAPTURES.remove(playerId);
-                if (extractionHandle != null) org.academy.api.common.structure.upgrade.StructureCaptureExtractions.release(extractionHandle);
+                releaseCapture(capture);
             }
             var direct = SUB_LEVEL_SESSIONS.get(playerId);
             if (direct != null && direct.launchId().equals(launchId)) {
@@ -2037,6 +2089,7 @@ public final class HighSpeedJetStructureService {
     }
 
     public static final class Session {
+        private @Nullable UUID captureOperationId;
         private final UUID launchId;
         private final StructureRef reference;
         private final ResourceKey<Level> dimension;
