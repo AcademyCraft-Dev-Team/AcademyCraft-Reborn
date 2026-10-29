@@ -95,6 +95,21 @@ public final class SubLevelProgramControl {
         return null;
     }
 
+    public ProgramStructureOperationResult stopMovement(ProgramStructureControl control) {
+        if (!StructureDirectControl.matches(control.reference(), player.getUUID(), control.controlId(), control.structureRuntimeId())) {
+            return rejected("control_lease_lost");
+        }
+        var force = FORCE_MOVES.get(control.reference());
+        if (force != null && force.control().equals(control)) FORCE_MOVES.remove(control.reference());
+        var jet = JET_MOVES.get(control.reference());
+        if (jet != null && jet.control().equals(control)) {
+            JET_MOVES.remove(control.reference());
+            if (mayRestoreNozzles(control)) jet.restoreNozzles();
+        }
+        org.academy.internal.common.sublevel.SubLevelDirectControl.cancel(control.reference(), control.controlId());
+        return completed("movement_window_completed", control);
+    }
+
     public ProgramStructureOperationResult release(ProgramStructureControl control) {
         withdrawLease(control);
         stopJet(control);
@@ -357,7 +372,9 @@ public final class SubLevelProgramControl {
             var move = jetIterator.next();
             if (!move.tick()) {
                 boolean restore = move.owner().mayRestoreNozzles(move.control());
-                move.owner().withdrawLease(move.control());
+                if (move.owner().player.level().getGameTime() < move.expiresAt()) {
+                    move.owner().withdrawLease(move.control());
+                }
                 if (restore) move.restoreNozzles();
                 jetIterator.remove();
             }
@@ -366,7 +383,9 @@ public final class SubLevelProgramControl {
         while (forceIterator.hasNext()) {
             var move = forceIterator.next();
             if (!move.tick()) {
-                move.owner().withdrawLease(move.control());
+                if (move.owner().player.level().getGameTime() < move.expiresAt()) {
+                    move.owner().withdrawLease(move.control());
+                }
                 forceIterator.remove();
             }
         }

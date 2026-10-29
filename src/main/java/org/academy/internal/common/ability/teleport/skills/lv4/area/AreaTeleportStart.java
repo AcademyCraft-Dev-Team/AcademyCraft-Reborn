@@ -28,6 +28,10 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.teleport.area.AreaTeleportState;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportStructures;
+import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureTeleports;
+import org.academy.internal.common.structure.upgrade.control.TranslationSweep;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.mixin.common.LevelTicksAccessor;
 import org.misaka.api.common.network.ThreadType;
@@ -155,11 +159,22 @@ public final class AreaTeleportStart {
             return !event.isCanceled();
         }
 
-        static boolean move(ServerLevel level, ServerPlayer player,
+        public static boolean move(ServerLevel level, ServerPlayer player,
                             AreaTeleportState.Region source, AreaTeleportState.Region destination,
                             AreaTeleportState.Transform transform,
                             boolean swap,
                             boolean fallProtection) {
+            final List<StructureTeleports.Request> structures;
+            final List<StructureTeleports.Request> originalStructures;
+            try {
+                var forward = new ArrayList<StructureTeleports.Request>();
+                var original = new ArrayList<StructureTeleports.Request>();
+                collectStructures(level, source, destination, transform, forward, original);
+                if (swap) collectStructures(level, destination, source, transform.inverse(), forward, original);
+                if (forward.size() > 8) return false;
+                structures = List.copyOf(forward);
+                originalStructures = List.copyOf(original);
+            } catch (IllegalArgumentException unavailable) { return false; }
             var sourceCells = capture(level, source);
             var destinationCells = capture(level, destination);
             var sourceBlockTicks = captureScheduledTicks(level.getBlockTicks(), source);
@@ -169,6 +184,7 @@ public final class AreaTeleportStart {
             var sourceEntities = freezeEntities(level, source, player);
             var destinationEntities = swap ? freezeEntities(level, destination, player) : List.<FrozenEntity>of();
             var committed = false;
+            var structuresMoved = false;
             try {
                 if (swap) write(level, source, transformCells(
                         destinationCells, destination, source, transform.inverse()));
@@ -185,6 +201,12 @@ public final class AreaTeleportStart {
                                         frozen.position, destination, source, transform.inverse()),
                                 transformYaw(frozen.yRot, transform.inverse()));
                     }
+                }
+                if (!structures.isEmpty()) {
+                    if (StructureTeleports.teleportBatch(level, player, structures) != StructureTeleports.Result.TELEPORTED) {
+                        throw new IllegalStateException("Physical structures rejected area teleport");
+                    }
+                    structuresMoved = true;
                 }
                 reconnectRiding(sourceEntities);
                 reconnectRiding(destinationEntities);
@@ -205,6 +227,10 @@ public final class AreaTeleportStart {
                 write(level, source, sourceCells);
                 sourceEntities.forEach(FrozenEntity::restorePosition);
                 destinationEntities.forEach(FrozenEntity::restorePosition);
+                if (structuresMoved && StructureTeleports.teleportBatch(level, player, originalStructures)
+                        != StructureTeleports.Result.TELEPORTED) {
+                    LOGGER.error("Area teleport could not safely restore physical structure positions");
+                }
                 reconnectRiding(sourceEntities);
                 reconnectRiding(destinationEntities);
                 restoreScheduledTicks(level.getBlockTicks(), source, destination,
@@ -220,6 +246,38 @@ public final class AreaTeleportStart {
                     sourceEntities.forEach(FrozenEntity::restorePosition);
                     destinationEntities.forEach(FrozenEntity::restorePosition);
                 }
+            }
+        }
+
+        private static void collectStructures(ServerLevel level, AreaTeleportState.Region source,
+                                              AreaTeleportState.Region destination, AreaTeleportState.Transform transform,
+                                              List<StructureTeleports.Request> moves,
+                                              List<StructureTeleports.Request> originals) {
+            for (var body : TeleportStructures.intersecting(level, source.box())) {
+                var bounds = body.localBoxes().stream()
+                        .map(box -> TranslationSweep.Box.of(box, body.motion().pose()).bounds())
+                        .reduce(net.minecraft.world.phys.AABB::minmax).orElseThrow();
+                if (!bounds.intersects(source.box())) continue;
+                if (bounds.minX < source.box().minX || bounds.maxX > source.box().maxX
+                        || bounds.minY < source.box().minY || bounds.maxY > source.box().maxY
+                        || bounds.minZ < source.box().minZ || bounds.maxZ > source.box().maxZ) {
+                    throw new IllegalArgumentException("Area teleport cannot split a selected physical structure");
+                }
+                if (transform == AreaTeleportState.Transform.MIRROR_X || transform == AreaTeleportState.Transform.MIRROR_Z) {
+                    throw new IllegalArgumentException("A rigid physical structure cannot be mirrored without rewriting contents");
+                }
+                var center = body.motion().pose().localToWorldPoint(body.motion().localCenterOfMass());
+                double angle = switch (transform) {
+                    case ROTATE_90 -> -Math.PI / 2;
+                    case ROTATE_180 -> Math.PI;
+                    case ROTATE_270 -> Math.PI / 2;
+                    default -> 0;
+                };
+                var rotation = new StructurePose(Vec3.ZERO, new org.joml.Quaterniond().rotationY(angle)
+                        .mul(body.motion().pose().rotation()));
+                moves.add(new StructureTeleports.Request(body.reference(), body.runtimeId(),
+                        transformPosition(center, source, destination, transform), rotation));
+                originals.add(new StructureTeleports.Request(body.reference(), body.runtimeId(), center, body.motion().pose()));
             }
         }
 

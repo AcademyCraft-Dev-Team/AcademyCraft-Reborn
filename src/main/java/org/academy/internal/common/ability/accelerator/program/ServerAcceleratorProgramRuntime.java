@@ -491,6 +491,28 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     }
 
     @Override
+    public void closeStructureControls() {
+        for (var control : java.util.List.copyOf(issuedControls.values())) releaseStructure(control);
+        issuedControls.clear();
+    }
+
+    @Override
+    public ProgramStructureOperationResult finishStructureMovement(ProgramStructureControl control) {
+        var status = structureControlStatus(control);
+        if (status.status() != ProgramStructureOperationResult.Status.COMPLETED) return status;
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) return subLevelControls.stopMovement(control);
+        return operationResult(VectorStructureService.programStopMove(player, control.reference(), control.controlId()));
+    }
+
+    @Override
+    public ProgramStructureOperationResult structureControlStatus(ProgramStructureControl control) {
+        requireCasterReady(Skills.KINETIC_THROW.get());
+        var rejection = validateControl(control);
+        return rejection == null ? org.academy.internal.common.ability.program.ProgramStructureControlChecks.inspect(player, control, MAX_ACTION_RANGE)
+                : ProgramStructureOperationResult.rejected(rejection);
+    }
+
+    @Override
     public StructureOperation moveStructure(ProgramStructureControl control,
                                             @Nullable ProgramWorldPosition target,
                                             @Nullable ProgramStructureAnchor anchor,
@@ -545,6 +567,11 @@ public final class ServerAcceleratorProgramRuntime implements AcceleratorProgram
     public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
         requireCasterReady(Skills.KINETIC_THROW.get());
         return orientationControls.status(control, operationId);
+    }
+
+    @Override public java.util.Optional<ProgramVector> defaultStructureDisplacement() {
+        var look = player.getLookAngle().scale(3);
+        return java.util.Optional.of(new ProgramVector(look.x, look.y, look.z));
     }
 
     @Override public Operation moveStructures(java.util.List<ProgramStructureReference> structures, org.academy.api.common.ability.program.ProgramStructureMoveRequest request) {

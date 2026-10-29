@@ -42,7 +42,7 @@ class ProgramStructureOrientationNodesTest {
                 assertNotNull(definition.executors().find(nodeId));
                 assertEquals(ProgramValueTypes.STRUCTURE_CONTROL,
                         node.resolvedSchema(decoded).input("control").orElseThrow().type());
-                assertEquals(List.of("result", "flow"), node.resolvedSchema(decoded).outputs().stream()
+                assertEquals(List.of("control", "result", "flow"), node.resolvedSchema(decoded).outputs().stream()
                         .map(ProgramPortDefinition::name).toList());
             }
         }
@@ -112,6 +112,7 @@ class ProgramStructureOrientationNodesTest {
                         executor.execute(context, configuration, inputs(CONTROL)).directive());
                 var done = executor.execute(context, configuration, inputs(CONTROL));
                 assertEquals(ProgramNodeStep.Directive.CONTINUE, done.directive());
+                assertEquals(CONTROL, done.outputs().get("control").value());
                 assertEquals(ProgramStructureOperationResult.Status.COMPLETED,
                         ((ProgramStructureOperationResult) done.outputs().get("result").value()).status());
                 assertEquals(1, runtime.submissions);

@@ -383,6 +383,18 @@ public final class HighSpeedJetStructureService {
      * input must resolve to an actual captured support cell, and every rejection keeps the
      * structure and its inertia. Sable applies the same bounded command at its physics step.
      */
+    /** Ends paid translation without releasing the program's exact standing control. */
+    public static ProgramResult programStopMove(ServerPlayer player, StructureRef reference, UUID controlId) {
+        requireThread(player);
+        var held = controlledSession(player, reference, controlId);
+        if (held == null) return ProgramResult.rejected("no_matching_control");
+        held.programMove = false;
+        held.engaged = false;
+        held.remainingTicks = PROGRAM_SESSION_TICKS;
+        if (held.targetNozzle != null && !held.targetNozzle.isRemoved()) held.targetNozzle.activate(0);
+        return ProgramResult.completed("movement_window_completed", reference);
+    }
+
     public static ProgramResult programMove(
             ServerPlayer player,
             StructureRef reference,
@@ -897,6 +909,10 @@ public final class HighSpeedJetStructureService {
             if (angularControl) {
                 // The finite angular receipt retains the lease, never extra nozzle thrust.
                 session.engaged = false;
+            } else if (session.program && session.programMove && session.controlled) {
+                session.programMove = false;
+                session.engaged = false;
+                session.remainingTicks = PROGRAM_SESSION_TICKS;
             } else {
                 stopSession(playerId, session.launchId, "duration_elapsed");
                 return;

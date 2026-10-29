@@ -69,12 +69,17 @@ final class ChunkRegionSwap {
      */
     static Result apply(ServerLevel level, LevelChunk chunkA, LevelChunk chunkB,
                         ChunkLeapRegion regionA, ChunkLeapRegion regionB, boolean movePlayers) {
+        return apply(level, chunkA, chunkB, regionA, regionB, movePlayers, null);
+    }
+
+    static Result apply(ServerLevel level, LevelChunk chunkA, LevelChunk chunkB,
+                        ChunkLeapRegion regionA, ChunkLeapRegion regionB, boolean movePlayers, ServerPlayer actor) {
         if (chunkA == chunkB) return new Result(0, List.of(), CompletableFuture.completedFuture(null));
         var deltaAtoB = new BlockPos(
                 (regionB.minChunkX() - regionA.minChunkX()) << 4, 0,
                 (regionB.minChunkZ() - regionA.minChunkZ()) << 4);
         return run(level, chunkA, level, chunkB, deltaAtoB, ChunkVerticalBand.full(level), movePlayers,
-                ChunkRegionSwap::swapSectionArrays);
+                ChunkRegionSwap::swapSectionArrays, actor);
     }
 
     /**
@@ -87,13 +92,19 @@ final class ChunkRegionSwap {
     static Result applyAcrossLevels(ServerLevel levelA, LevelChunk chunkA,
                                     ServerLevel levelB, LevelChunk chunkB,
                                     ChunkLeapRegion regionA, ChunkLeapRegion regionB, boolean movePlayers) {
+        return applyAcrossLevels(levelA, chunkA, levelB, chunkB, regionA, regionB, movePlayers, null);
+    }
+
+    static Result applyAcrossLevels(ServerLevel levelA, LevelChunk chunkA,
+                                    ServerLevel levelB, LevelChunk chunkB,
+                                    ChunkLeapRegion regionA, ChunkLeapRegion regionB, boolean movePlayers, ServerPlayer actor) {
         var band = ChunkVerticalBand.overlap(levelA, levelB);
         if (band.isEmpty()) return new Result(0, List.of(), CompletableFuture.completedFuture(null));
         var deltaAtoB = new BlockPos(
                 (regionB.minChunkX() - regionA.minChunkX()) << 4, 0,
                 (regionB.minChunkZ() - regionA.minChunkZ()) << 4);
         return run(levelA, chunkA, levelB, chunkB, deltaAtoB, band, movePlayers,
-                ChunkRegionSwap::exchangeSectionBytes);
+                ChunkRegionSwap::exchangeSectionBytes, actor);
     }
 
     // ---------------------------------------------------------------- shared pipeline
@@ -108,9 +119,12 @@ final class ChunkRegionSwap {
      */
     private static Result run(ServerLevel levelA, LevelChunk chunkA, ServerLevel levelB, LevelChunk chunkB,
                               BlockPos deltaAtoB, ChunkVerticalBand band, boolean movePlayers,
-                              SectionExchange exchange) {
+                              SectionExchange exchange, ServerPlayer actor) {
         var deltaBtoA = deltaAtoB.multiply(-1);
         var sameLevel = levelA == levelB;
+        var structures = ChunkStructureSwap.plan(levelA, chunkA.getPos(), levelB, chunkB.getPos(), band,
+                net.minecraft.world.phys.Vec3.atLowerCornerOf(deltaAtoB));
+        var structureTerrain = ChunkStructureSwap.captureTerrain(levelA, structures);
 
         // 1. Capture block entities that will actually move (those inside the exchanged band).
         var blockEntitiesA = snapshotBlockEntities(chunkA, levelA, band);
@@ -134,6 +148,15 @@ final class ChunkRegionSwap {
         // 5. Rebuild block entities where their blocks now sit.
         restoreBlockEntities(chunkB, levelB, blockEntitiesA, deltaAtoB, band);
         restoreBlockEntities(chunkA, levelA, blockEntitiesB, deltaBtoA, band);
+
+        try { ChunkStructureSwap.move(levelA, actor, structures, structureTerrain); }
+        catch (RuntimeException refused) {
+            chunkA.clearAllBlockEntities(); chunkB.clearAllBlockEntities();
+            exchange.exchange(levelA, chunkA, levelB, chunkB, band);
+            restoreBlockEntities(chunkA, levelA, blockEntitiesA, BlockPos.ZERO, band);
+            restoreBlockEntities(chunkB, levelB, blockEntitiesB, BlockPos.ZERO, band);
+            throw refused;
+        }
 
         // 6. Reset and rebuild lighting through the vanilla asynchronous pipeline. Direct section exchange
         //    bypasses the per-block notifications that normally keep the light engine's empty-section state

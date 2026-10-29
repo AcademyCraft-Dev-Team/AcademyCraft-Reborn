@@ -47,6 +47,49 @@ public final class LiveStructureDamage implements StructureDamage {
 
     private LiveStructureDamage() {}
 
+    /** Trusted backend split fact: selection continuity only; never creates provenance or grants break rights. */
+    public static void fragmentCreated(ServerLevel host, StructureRef parent, StructureRef child) {
+        requireThread(host);
+        if (parent.id().equals(child.id()) || !parent.backend().equals(child.backend())
+                || !parent.dimension().equals(child.dimension()) || !host.dimension().identifier().equals(parent.dimension())) return;
+        var operations = SERVERS.get(host.getServer());
+        if (operations == null) return;
+        for (var operation : operations.values()) {
+            if (!operation.active() || operation.context.host() != host || !operation.request.targets().descendants()
+                    || !operation.targetFamily.contains(Operation.stable(parent))) continue;
+            if (operation.targetFamily.size() >= 512) { operation.limitReached = true; continue; }
+            operation.targetFamily.add(Operation.stable(child));
+            operation.familyQuietUntil = Math.max(operation.familyQuietUntil, host.getGameTime()+3);
+        }
+    }
+
+    /** Bounded diagnostics for the original source's current/recent source-only operation. */
+    public static int sourceDescendantWitnesses(ServerLevel host, StructureRef source) {
+        requireThread(host);
+        var operations = SERVERS.get(host.getServer());
+        if (operations == null) return 0;
+        int maximum = 0;
+        for (var operation : operations.values()) {
+            if (operation.context.host() == host && operation.request.targets().descendants()
+                    && operation.request.targets().only().map(value -> Operation.stable(value).equals(Operation.stable(source))).orElse(false))
+                maximum = Math.max(maximum, operation.targetFamily.size()-1);
+        }
+        return maximum;
+    }
+
+    public static Set<StructureRef> sourceFamilyWitnesses(ServerLevel host, StructureRef source) {
+        requireThread(host);
+        var operations = SERVERS.get(host.getServer());
+        if (operations == null) return Set.of();
+        var result = new HashSet<StructureRef>();
+        for (var operation : operations.values()) {
+            if (operation.context.host() == host && operation.request.targets().descendants()
+                    && operation.request.targets().only().map(value -> Operation.stable(value).equals(Operation.stable(source))).orElse(false))
+                result.addAll(operation.targetFamily);
+        }
+        return Set.copyOf(result);
+    }
+
     @Override public StructurePathDamage.Result path(Authority authority, StructurePathDamage.Request path) {
         return path(authority, path, null);
     }
@@ -83,11 +126,13 @@ public final class LiveStructureDamage implements StructureDamage {
         op.path = path;
         op.cut = cut;
         op.cutRegion = cut == null ? null : new DamageCutRegion(cut);
+        if (!sourceCurrent(op)) return pathFailure(StructureOperation.Status.STALE, "damage_sweep_source_changed");
         if (!path.simulate() && !context.claim(op.id)) return pathFailure(StructureOperation.Status.DENIED, "damage_launch_already_claimed_or_unavailable");
         int scans = op.scansLeft = Math.min(32768, budget.scans);
         int changes = op.changesLeft = Math.min(1024, budget.changes);
         var touched = new LinkedHashSet<DamageDomain>();
         double limit = 1;
+        Cell obstruction = null;
         String detail = "damage_path_complete";
         var status = StructureOperation.Status.COMPLETED;
         mutating = true;
@@ -96,14 +141,19 @@ public final class LiveStructureDamage implements StructureDamage {
             var domains = StructureBackendRouter.damageDomains(host,
                     DamagePathRegion.bounds(path.start(), path.end(), path.radius() + PATH_SHAPE_MARGIN), 256);
             for (var domain : domains) {
+                if (!path.targets().includes(domain.handle().reference())) continue;
                 var pose = domain.handle().pose();
                 addPathCursor(cursors, domain, pose.worldToLocalPoint(path.start()), pose.worldToLocalPoint(path.end()),
                         path.radius(), domain.localBounds());
             }
-            addPathCursor(cursors, null, path.start(), path.end(), path.radius(),
+            if (path.targets().host()) addPathCursor(cursors, null, path.start(), path.end(), path.radius(),
                     new AABB(-30_000_000, host.getMinY(), -30_000_000, 30_000_000, host.getMaxY(), 30_000_000));
             var selected = new ArrayList<PathTarget>();
             while (!cursors.isEmpty() && cursors.peek().cells.frontier() < limit) {
+                if (!sourceCurrent(op)) {
+                    limit = Math.min(limit, cursors.peek().cells.frontier());
+                    detail = "damage_sweep_source_changed"; status = StructureOperation.Status.STALE; break;
+                }
                 if (op.scansLeft <= 0) {
                     limit = Math.min(limit, cursors.peek().cells.frontier());
                     detail = "damage_path_scan_budget"; status = StructureOperation.Status.BLOCKED; break;
@@ -129,7 +179,7 @@ public final class LiveStructureDamage implements StructureDamage {
                     double entry = target.pathEntry(op);
                     boolean fluid = path.includeFluids() && target.payload.state().getBlock() instanceof LiquidBlock;
                     if (!fluid && !LevelUtil.canBreakBlock(target.payload.state(), new DamageShapeView(level, domain), position, path.miningLevel())) {
-                        if (path.canBlock()) limit = Math.min(limit, entry);
+                        if (path.canBlock() && entry < limit) { limit = entry; obstruction = target.cell(); }
                     } else selected.add(new PathTarget(target, entry));
                 } catch (RuntimeException unavailable) {
                     op.deferred++; limit = Math.min(limit, cell.entry());
@@ -155,6 +205,7 @@ public final class LiveStructureDamage implements StructureDamage {
                     if (!allowed(context) || !target.current(op, revisions)) {
                         op.rejected++; limit = selection.entry; detail = "damage_path_stale"; status = StructureOperation.Status.STALE; break;
                     }
+                    int rejectionsBefore = op.rejected;
                     try {
                         if (target.domain == null) mutate(op, target, revisions);
                         else {
@@ -166,6 +217,10 @@ public final class LiveStructureDamage implements StructureDamage {
                                 && !StructureCellPayload.read(target.level(op), target.position()).equals(target.payload)) {
                             target.domain.changed(); revisions.put(target.domain, target.domain.contentRevision());
                         }
+                    }
+                    if (op.rejected > rejectionsBefore) {
+                        limit = selection.entry; detail = "damage_path_break_rejected";
+                        status = StructureOperation.Status.DENIED; break;
                     }
                 }
             }
@@ -185,7 +240,7 @@ public final class LiveStructureDamage implements StructureDamage {
                 mutating = false;
             }
         }
-        return new StructurePathDamage.Result(status, detail, limit * path.start().distanceTo(path.end()), op.receipt());
+        return new StructurePathDamage.Result(status, detail, limit * path.start().distanceTo(path.end()), op.receipt(), Optional.ofNullable(obstruction));
     }
 
     private static void addPathCursor(PriorityQueue<PathCursor> cursors, @Nullable DamageDomain domain,
@@ -250,8 +305,10 @@ public final class LiveStructureDamage implements StructureDamage {
             for (var target : operation.prepared) {
                 if (target.domain != null) revisions.putIfAbsent(target.domain, target.revision);
             }
-            for (var target : operation.prepared) {
-                if (!allowed(operation.context) || !target.current(operation, revisions)) { operation.rejected++; continue; }
+            for (var original : operation.prepared) {
+                if (!allowed(operation.context)) { operation.rejected++; continue; }
+                var target = freshUnmutatedSource(operation, original, revisions);
+                if (target == null) { operation.rejected++; continue; }
                 if (operation.changesLeft <= 0) { operation.retry.addLast(new Candidate(target.domain, target.local)); continue; }
                 try {
                     if (target.domain == null) mutate(operation, target, revisions);
@@ -267,7 +324,9 @@ public final class LiveStructureDamage implements StructureDamage {
                     }
                 }
             }
-            operation.phase = operation.limitReached ? Phase.CANCELLED : operation.finishedScan() ? Phase.COMPLETED : Phase.QUERYING;
+            if (operation.request.targets().descendants()) operation.familyQuietUntil = now + 3;
+            operation.phase = operation.limitReached ? Phase.CANCELLED : operation.finishedScan()
+                    && !operation.request.targets().descendants() ? Phase.COMPLETED : Phase.QUERYING;
         } catch (RuntimeException failure) {
             operation.phase = Phase.RECOVERY_REQUIRED;
             AcademyCraft.LOGGER.error("Structure damage {} stopped after callback failure; never replay this effect", operation.id, failure);
@@ -283,6 +342,16 @@ public final class LiveStructureDamage implements StructureDamage {
         return new StructureOperation.Result<>(operation.active() ? StructureOperation.Status.RUNNING
                 : operation.phase == Phase.COMPLETED ? StructureOperation.Status.COMPLETED : StructureOperation.Status.BLOCKED,
                 "damage_" + operation.phase.name().toLowerCase(Locale.ROOT), Optional.of(operation.id), Optional.of(operation.receipt()));
+    }
+
+    /** Rebase-only continuation: never retries a cell that entered admission/loot or changed its full image. */
+    private static @Nullable Observation freshUnmutatedSource(Operation operation, Observation original,
+                                                               Map<DamageDomain, Long> revisions) {
+        if (original.current(operation, revisions)) return original;
+        if (!operation.request.targets().descendants() || original.domain == null || !original.domain.current()
+                || operation.seen.contains(new Key(original.domain.handle().reference(), original.local))) return null;
+        var fresh = Observation.read(operation, original.domain, original.local);
+        return fresh != null && fresh.payload.equals(original.payload) && fresh.current(operation, revisions) ? fresh : null;
     }
 
     @Override public StructureOperation.Result<Progress> status(Authority authority, UUID operationId) {
@@ -311,6 +380,7 @@ public final class LiveStructureDamage implements StructureDamage {
             // identities in this fixed world region; stable cell keys still prevent repeat breaks.
             for (var domain : StructureBackendRouter.damageDomains(operation.context.host(),
                     DamageRegion.bounds(operation.request.center(), operation.request.radius()), 256)) {
+                if (!operation.accepts(domain)) continue;
                 var key = new Activation(domain.handle().reference(), domain.handle().runtimeId());
                 if (operation.activations.contains(key)) continue;
                 if (operation.activations.size() >= 512) throw new IllegalStateException("damage_activation_budget");
@@ -339,6 +409,15 @@ public final class LiveStructureDamage implements StructureDamage {
             } catch (RuntimeException unavailable) { operation.deferred++; }
         }
         operation.prepared = List.copyOf(result);
+        if (result.isEmpty() && operation.finishedScan() && operation.request.targets().descendants()) {
+            if (operation.targetFamily.stream().anyMatch(reference -> org.academy.internal.common.sublevel.SubLevelFractures
+                    .topologyPending(operation.context.host(), reference))) {
+                operation.familyQuietUntil = now+3;
+                return;
+            }
+            if (now >= operation.familyQuietUntil) operation.phase = Phase.COMPLETED;
+            return;
+        }
         operation.batch = new Batch(UUID.randomUUID(), operation.request, result.stream().map(Observation::cell).toList());
         operation.phase = Phase.READY;
     }
@@ -370,7 +449,7 @@ public final class LiveStructureDamage implements StructureDamage {
                         op.request.drops() == DropPolicy.EXISTING_SKILL_RULES, actor,
                         new LevelUtil.BreakGuard(() -> target.current(op, revisions) && allowed(op.context), (pos, state) -> admit(op, target, pos, state),
                         pos -> scanNeighbor(op, target, pos),
-                        () -> allowed(op.context) && (target.domain == null
+                        () -> allowed(op.context) && sourceCurrent(op) && (target.domain == null
                                 || target.domain.current() && target.pose.equals(target.domain.handle().pose())),
                         pos -> {
                             op.broken++;
@@ -396,7 +475,7 @@ public final class LiveStructureDamage implements StructureDamage {
     }
 
     private static boolean admit(Operation op, Observation target, BlockPos position, BlockState state) {
-        if (!allowed(op.context) || op.changesLeft <= 0) return false;
+        if (!allowed(op.context) || !sourceCurrent(op) || op.changesLeft <= 0) return false;
         if (org.academy.internal.common.structure.transaction.PayloadIsolation.locked(target.level(op), position)) return false;
         var local = target.domain == null ? position : position.subtract(target.domain.origin());
         if (target.domain != null && (!target.domain.current() || !target.pose.equals(target.domain.handle().pose())
@@ -429,6 +508,11 @@ public final class LiveStructureDamage implements StructureDamage {
     }
     private static boolean available(DamageAuthorization context) {
         return context.available();
+    }
+
+    private static boolean sourceCurrent(Operation operation) {
+        return operation.path == null || operation.path.sweep().flatMap(StructurePathDamage.Sweep::source)
+                .map(value -> value.current(operation.context.host())).orElse(true);
     }
     private static @Nullable Operation lookup(Authority authority, UUID id) {
         var context = context(authority);
@@ -493,24 +577,48 @@ public final class LiveStructureDamage implements StructureDamage {
         @Nullable DamageCutRegion cutRegion;
         final List<Cursor> cursors = new ArrayList<>();
         final Set<Activation> activations = new HashSet<>();
+        final Set<StructureRef> targetFamily = new HashSet<>();
+        final Set<StructureRef> initialSources = new HashSet<>();
         final Set<Key> seen = new HashSet<>();
         final ArrayDeque<Candidate> retry = new ArrayDeque<>();
         final long started;
         long lastSlice = Long.MIN_VALUE, lastApplied = Long.MIN_VALUE, budgetTick = Long.MIN_VALUE;
+        long familyQuietUntil;
         int cursor, scansLeft, changesLeft, broken, rejected, deferred;
+        int sweepTestsLeft = 2_000_000;
         boolean limitReached;
         Phase phase = Phase.QUERYING;
         @Nullable Batch batch;
         List<Observation> prepared = List.of();
         Operation(DamageAuthorization context, Request request, List<DamageDomain> domains) {
             this.context = context; this.request = request; this.id = request.effectId(); started = context.host().getGameTime();
+            request.targets().only().ifPresent(value -> targetFamily.add(stable(value)));
+            for (var domain : domains) initialSources.add(stable(domain.handle().reference()));
             // Structures go first so a large terrain sphere cannot starve moving targets.
             for (var domain : domains) {
+                if (!accepts(domain)) continue;
                 activations.add(new Activation(domain.handle().reference(), domain.handle().runtimeId()));
                 cursors.add(cursor(domain));
             }
-            cursors.add(new Cursor(null, DamageRegion.cells(request.center(), request.radius(),
+            if (request.targets().host()) cursors.add(new Cursor(null, DamageRegion.cells(request.center(), request.radius(),
                     new AABB(-30_000_000, context.host().getMinY(), -30_000_000, 30_000_000, context.host().getMaxY(), 30_000_000))));
+        }
+        boolean accepts(DamageDomain domain) {
+            var reference = domain.handle().reference();
+            if (request.targets().includes(reference) || targetFamily.contains(stable(reference))) return true;
+            // Already separate bodies are independent targets. Only children created during
+            // this operation may extend its source ownership selection.
+            if (!request.targets().descendants() || initialSources.contains(stable(reference))) return false;
+            var metadata = org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance
+                    .metadata(context.host().getServer(), reference).orElse(null);
+            if (metadata != null && metadata.createdGameTime() >= started
+                    && metadata.parent().map(value -> targetFamily.contains(stable(value))).orElse(false)) {
+                targetFamily.add(stable(reference)); return true;
+            }
+            return false;
+        }
+        private static StructureRef stable(StructureRef value) {
+            return new StructureRef(value.id(), value.dimension(), value.backend(), 0);
         }
         boolean active() { return phase == Phase.QUERYING || phase == Phase.READY || phase == Phase.APPLYING; }
         Cursor cursor(DamageDomain domain) {
@@ -564,6 +672,7 @@ public final class LiveStructureDamage implements StructureDamage {
             return observed;
         }
         boolean current(Operation op, Map<DamageDomain, Long> revisions) {
+            if (!sourceCurrent(op)) return false;
             if (domain != null && (!domain.current() || domain.contentRevision() != revisions.getOrDefault(domain, revision)
                     || !pose.equals(domain.handle().pose()))) return false;
             var level = level(op); var position = position();
@@ -606,7 +715,17 @@ public final class LiveStructureDamage implements StructureDamage {
                 return DamagePathRegion.entry(start, end, new AABB(0, 0, 0, 1, 1, 1).inflate(path.radius()));
             }
             double result = Double.POSITIVE_INFINITY;
-            for (var box : shape.toAabbs()) result = Math.min(result, DamagePathRegion.entry(start, end, box.inflate(path.radius())));
+            for (var box : shape.toAabbs()) {
+                if (path.sweep().isPresent()) {
+                    var sweep = path.sweep().orElseThrow();
+                    if ((op.sweepTestsLeft -= sweep.localBoxes().size() * 129) < 0) {
+                        throw new IllegalStateException("damage_sweep_shape_budget");
+                    }
+                    var worldBox = org.academy.internal.common.structure.NativeStructureCollisionBoxes.transformBox(box.move(local), pose);
+                    if (!StructureImpactSweep.intersects(sweep.localBoxes(), sweep.previous(), sweep.current(), worldBox)) continue;
+                }
+                result = Math.min(result, DamagePathRegion.entry(start, end, box.inflate(path.radius())));
+            }
             return result;
         }
 

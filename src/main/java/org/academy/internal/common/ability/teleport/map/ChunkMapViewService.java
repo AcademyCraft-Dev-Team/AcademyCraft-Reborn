@@ -94,6 +94,9 @@ public final class ChunkMapViewService {
         private final Map<ChunkPos, Long> awaiting = new HashMap<>();
         private long lastEntityTick;
         private long lastStatusTick;
+        private final Map<org.academy.api.common.structure.StructureRef, Integer> structureMarkerIds = new HashMap<>();
+        private final Map<org.academy.api.common.structure.StructureRef, UUID> advertisedStructures = new HashMap<>();
+        private int nextStructureMarker = Integer.MAX_VALUE;
 
         private ViewSession(UUID player) {
             this.player = player;
@@ -118,6 +121,8 @@ public final class ChunkMapViewService {
         }
         var newPage = !region.dimension().equals(session.dimension) || packet.epoch() != session.epoch;
         if (newPage) {
+            session.structureMarkerIds.clear();
+            session.advertisedStructures.clear();
             if (session.dimension != null) {
                 // Leaving a page: drop the raster queues; ticket removal is budgeted on tick.
                 ChunkTicketLeaseManager.cancelViewLease(
@@ -332,8 +337,41 @@ public final class ChunkMapViewService {
             markers.add(new ChunkLeapPackets.Marker(entity.getId(), category,
                     BuiltInRegistries.ENTITY_TYPE.getId(entity.getType()), pos.getX(), pos.getZ(), playerId));
         }
+        session.advertisedStructures.clear();
+        var markerIds = new HashSet<>(markers.stream().map(ChunkLeapPackets.Marker::entityId).toList());
+        try {
+            for (var access : org.academy.internal.common.structure.StructureBackendRouter.orientationBackends(level)) {
+                var nearby = access.nearby(level, aabb, 256);
+                for (var body : nearby.bodies()) {
+                    if (markers.size() >= ChunkLeapPackets.EntitiesPacket.MAX_MARKERS) break;
+                    var center = body.motion().pose().localToWorldPoint(body.motion().localCenterOfMass());
+                    if (!aabb.contains(center)) continue;
+                    var markerId = session.structureMarkerIds.get(body.reference());
+                    if (markerId == null || markerIds.contains(markerId)) {
+                        while (markerIds.contains(session.nextStructureMarker)) session.nextStructureMarker--;
+                        markerId = session.nextStructureMarker--;
+                        session.structureMarkerIds.put(body.reference(), markerId);
+                    }
+                    markerIds.add(markerId);
+                    session.advertisedStructures.put(body.reference(), body.runtimeId());
+                    markers.add(new ChunkLeapPackets.Marker(markerId, ChunkLeapPackets.CAT_OTHER, -1,
+                            (int) Math.floor(center.x), (int) Math.floor(center.z), null,
+                            new org.academy.api.common.ability.program.ProgramStructureReference(body.reference(), body.runtimeId())));
+                }
+            }
+        } catch (IllegalStateException unavailable) { session.advertisedStructures.clear(); }
+        session.structureMarkerIds.keySet().retainAll(session.advertisedStructures.keySet());
         MisakaNetworkServer.send(player, new ChunkLeapPackets.EntitiesPacket(
                 session.dimension.identifier().toString(), markers));
+    }
+
+    /** A marker is an observation of this player's current server-owned page, never an arbitrary UUID. */
+    public static boolean advertisedStructure(ServerPlayer player,
+            org.academy.api.common.ability.program.ProgramStructureReference target) {
+        var session = SESSIONS.get(player.getUUID());
+        return session != null && session.dimension != null
+                && session.dimension.identifier().equals(target.reference().dimension())
+                && target.runtimeId().equals(session.advertisedStructures.get(target.reference()));
     }
 
     static byte categoryOf(Entity entity) {

@@ -200,7 +200,7 @@ class ProgramConfigurationOptionsTest {
 
         var teleport = AbilityProgramDefinitions.require(
                 TeleportProgramNodeCatalog.TELEPORT).editorCatalog();
-        assertEquals(List.of("entity", "block"), values(
+        assertEquals(List.of("entity", "block", "structure"), values(
                 ProgramConfigurationOptions.options(
                         teleport.entry(TeleportProgramNodeIds.ENTITY_TELEPORT),
                         "target_type", new JsonPrimitive("entity"))));

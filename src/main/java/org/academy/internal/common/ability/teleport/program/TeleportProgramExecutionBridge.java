@@ -124,9 +124,8 @@ public final class TeleportProgramExecutionBridge {
                  TeleportProgramNodeCatalog.TargetTeleportConfiguration configuration,
                  ProgramInputView inputs) -> {
                     stage(context, runtime(context).teleportEntity(
-                            configuration.targetType() == TeleportProgramNodeCatalog.TargetType.ENTITY
-                                    ? entity(inputs, "entity")
-                                    : blockPosition(inputs, "block"),
+                            inputs.requireCompatible(configuration.targetType().port(),
+                                    configuration.targetType().valueType()).value(),
                             inputs.requireCompatible(
                                     "destination", ProgramValueTypes.CONTROL_DESTINATION).value(),
                             optionalDirection(inputs, "direction"),

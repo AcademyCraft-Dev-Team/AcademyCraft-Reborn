@@ -31,6 +31,9 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSafety;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportStructures;
+import org.academy.api.common.structure.StructureTeleports;
+import org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -156,6 +159,21 @@ public class SpatialSynergy extends Skill {
                 teleportEntity(entity, destinationLevel, safe);
                 entity.resetFallDistance();
                 processed++;
+            }
+            if (destinationLevel != owner.level() || !LiveStructureProvenance.healthy(owner.level().getServer())) return;
+            final java.util.List<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess.Body> structures;
+            try { structures = TeleportStructures.intersecting(owner.level(), owner.getBoundingBox().inflate(radius)); }
+            catch (IllegalArgumentException unavailable) { return; }
+            for (var body : structures) {
+                if (processed >= 96) break;
+                var metadata = LiveStructureProvenance.metadata(owner.level().getServer(), body.reference()).orElse(null);
+                if (metadata == null || metadata.ownerId().filter(owner.getUUID()::equals).isEmpty()) continue;
+                var center = body.motion().pose().localToWorldPoint(body.motion().localCenterOfMass());
+                if (center.distanceToSqr(origin) > radius * radius) continue;
+                var request = new StructureTeleports.Request(body.reference(), body.runtimeId(), ownerDestination.add(center.subtract(origin)), null);
+                if (StructureTeleports.check(owner.level(), owner, request) != StructureTeleports.Result.READY) continue;
+                if (!system.tryTimedOccupation(owner.getUUID(), 10.0f, skill, skill.getIterationTicks(owner))) break;
+                if (StructureTeleports.teleport(owner.level(), owner, request) == StructureTeleports.Result.TELEPORTED) processed++;
             }
         }
 

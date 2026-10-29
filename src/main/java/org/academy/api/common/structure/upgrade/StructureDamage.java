@@ -3,6 +3,7 @@ package org.academy.api.common.structure.upgrade;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.structure.SpaceBlockRef;
+import org.academy.api.common.structure.StructureRef;
 
 import java.util.List;
 import java.util.Objects;
@@ -66,12 +67,35 @@ public interface StructureDamage {
     enum DropPolicy { EXISTING_SKILL_RULES, NO_DROPS }
     enum Phase { QUERYING, READY, APPLYING, COMPLETED, CANCELLED, RECOVERY_REQUIRED }
 
+    /** Selection only, never additional authority. References match stable identity across activation epochs. */
+    record Targets(boolean host, Optional<StructureRef> only, Optional<StructureRef> excluded, boolean descendants) {
+        public static final Targets ALL = new Targets(true, Optional.empty(), Optional.empty());
+        public Targets(boolean host, Optional<StructureRef> only, Optional<StructureRef> excluded) { this(host, only, excluded, false); }
+        public Targets { Objects.requireNonNull(only); Objects.requireNonNull(excluded); }
+        public static Targets excluding(StructureRef source) { return new Targets(true, Optional.empty(), Optional.of(source)); }
+        public static Targets structure(StructureRef source) { return new Targets(false, Optional.of(source), Optional.empty()); }
+        public static Targets fragments(StructureRef source) { return new Targets(false, Optional.of(source), Optional.empty(), true); }
+        public boolean includes(StructureRef reference) {
+            return only.map(value -> same(value, reference)).orElse(true)
+                    && excluded.map(value -> !same(value, reference)).orElse(true);
+        }
+        private static boolean same(StructureRef first, StructureRef second) {
+            return first.id().equals(second.id()) && first.backend().equals(second.backend())
+                    && first.dimension().equals(second.dimension());
+        }
+    }
+
     record Request(UUID effectId, Vec3 center, double radius, double energy,
-                   int maxScans, int maxChanges, DropPolicy drops) {
+                   int maxScans, int maxChanges, DropPolicy drops, Targets targets) {
+        public Request(UUID effectId, Vec3 center, double radius, double energy,
+                       int maxScans, int maxChanges, DropPolicy drops) {
+            this(effectId, center, radius, energy, maxScans, maxChanges, drops, Targets.ALL);
+        }
         public Request {
             Objects.requireNonNull(effectId, "effectId");
             Objects.requireNonNull(center, "center");
             Objects.requireNonNull(drops, "drops");
+            Objects.requireNonNull(targets, "targets");
             if (!Double.isFinite(center.x) || !Double.isFinite(center.y) || !Double.isFinite(center.z)
                     || !Double.isFinite(radius) || radius < 0 || radius > 256
                     || !Double.isFinite(energy) || energy < 0 || energy > 1.0e12

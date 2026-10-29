@@ -21,6 +21,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TeleportProgramExecutionBridgeTest {
     @Test
+    void archivedEntityTeleportWithoutTargetTypeRetainsItsOriginalEntityPort() {
+        var oldConfiguration = new JsonObject(); oldConfiguration.addProperty("power", 1);
+        var decoded = TeleportProgramNodeCatalog.TargetTeleportConfiguration.CODEC.parse(
+                com.mojang.serialization.JsonOps.INSTANCE, oldConfiguration).getOrThrow();
+        assertEquals(TeleportProgramNodeCatalog.TargetType.ENTITY, decoded.targetType());
+        var schema = AbilityProgramDefinitions.require(TeleportProgramNodeCatalog.TELEPORT).editorCatalog()
+                .schema(TeleportProgramNodeIds.ENTITY_TELEPORT, oldConfiguration);
+        assertNotNull(schema);
+        assertEquals(org.academy.api.common.ability.program.ProgramValueTypes.ENTITY_REFERENCE,
+                schema.input("entity").orElseThrow().type());
+        assertTrue(schema.input("structure").isEmpty());
+    }
+
+    @Test
     void definitionExposesCategoryNodesAndCapabilityBounds() {
         var definition = AbilityProgramDefinitions.require(
                 TeleportProgramNodeCatalog.TELEPORT);
@@ -58,6 +72,14 @@ class TeleportProgramExecutionBridgeTest {
         assertEquals(List.of("flow", "block", "destination", "direction", "power"),
                 blockSchema.inputs().stream().map(port -> port.name()).toList());
         assertFalse(blockSchema.input("power").orElseThrow().required());
+        var structureTeleport = blockTeleport.deepCopy();
+        structureTeleport.addProperty("target_type", "structure");
+        var structureSchema = catalog.schema(TeleportProgramNodeIds.ENTITY_TELEPORT, structureTeleport);
+        assertNotNull(structureSchema);
+        assertEquals(org.academy.api.common.ability.program.ProgramValueTypes.STRUCTURE_REFERENCE,
+                structureSchema.input("structure").orElseThrow().type());
+        assertEquals(List.of("flow", "structure", "destination", "direction", "power"),
+                structureSchema.inputs().stream().map(port -> port.name()).toList());
         var safetySchema = catalog.schema(
                 TeleportProgramNodeIds.SPACE_SAFETY, new JsonObject());
         assertNotNull(safetySchema);

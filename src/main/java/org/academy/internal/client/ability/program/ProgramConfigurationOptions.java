@@ -322,7 +322,7 @@ public final class ProgramConfigurationOptions {
                 && field.equals("target_type")) {
             return stringOptions(
                     "screen.academy.program.configuration.teleport_target.",
-                    "entity", "block"
+                    "entity", "block", "structure"
             );
         }
         if (id.equals(TeleportProgramNodeIds.BLOCK_ITEM_TELEPORT)

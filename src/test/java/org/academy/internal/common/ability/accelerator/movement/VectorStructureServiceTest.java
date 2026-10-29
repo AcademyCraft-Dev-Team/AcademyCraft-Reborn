@@ -127,9 +127,9 @@ class VectorStructureServiceTest {
 
     @Test
     void directPressThrowSpeedNeverDependsOnStructureMass() {
-        assertEquals(50.0, VectorStructureService.directThrowSpeed(2.25, false), 1.0e-9);
-        assertEquals(50.0, VectorStructureService.directThrowSpeed(4_096.0, false), 1.0e-9);
-        assertEquals(60.0, VectorStructureService.directThrowSpeed(4_096.0, true), 1.0e-9);
+        assertEquals(75.0, VectorStructureService.directThrowSpeed(2.25, false), 1.0e-9);
+        assertEquals(75.0, VectorStructureService.directThrowSpeed(4_096.0, false), 1.0e-9);
+        assertEquals(90.0, VectorStructureService.directThrowSpeed(4_096.0, true), 1.0e-9);
     }
 
     @Test

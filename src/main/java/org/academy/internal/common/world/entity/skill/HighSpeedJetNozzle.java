@@ -185,6 +185,27 @@ public final class HighSpeedJetNozzle extends Entity {
                 : java.util.Optional.of(new StructureMount(structureSupport, structureSupportOffset, structureSupportFace));
     }
 
+    /** A trusted split may change the support identity, without renewing activation or ownership. */
+    public boolean rebindFragment(StructureMount expected, UUID expectedOwner, StructureRef child) {
+        return rebindFragment(expected, expectedOwner, child, expected.offset(), expected.face());
+    }
+
+    public boolean rebindFragment(StructureMount expected, UUID expectedOwner, StructureRef child,
+                                  BlockPos childOffset, Direction childFace) {
+        if (isRemoved() || !(level() instanceof ServerLevel host)
+                || childOffset == null || childFace == null
+                || !java.util.Objects.equals(expectedOwner, ownerUuid())
+                || !structureMount().filter(expected::equals).isPresent()
+                || expected.reference().id().equals(child.id())
+                || !expected.reference().backend().equals(child.backend())
+                || !expected.reference().dimension().equals(child.dimension())
+                || !org.academy.internal.common.ability.aeromanip.movement.HighSpeedJetStructureService
+                        .resolvesSupportCell(host, child, childOffset)) return false;
+        attachToStructure(expectedOwner, child, childOffset, childFace);
+        missingSupportTicks = 0;
+        return true;
+    }
+
     public int activeTicks() {
         return entityData.get(ACTIVE_TICKS);
     }

@@ -70,7 +70,8 @@ public final class ProgramStructureOrientationExecutors {
         context.removeExecutorState(key);
         if (result.status() != ProgramStructureOperationResult.Status.COMPLETED) throw failure(result);
         return ProgramNodeStep.next("flow", Map.of("result",
-                new ProgramValue<>(ProgramValueTypes.STRUCTURE_OPERATION_RESULT, result)));
+                new ProgramValue<>(ProgramValueTypes.STRUCTURE_OPERATION_RESULT, result),
+                "control", new ProgramValue<>(ProgramValueTypes.STRUCTURE_CONTROL, control)));
     }
 
     private static ProgramActionFailure failure(ProgramStructureOperationResult result) {

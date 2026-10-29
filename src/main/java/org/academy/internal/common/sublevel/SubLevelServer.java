@@ -21,7 +21,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.structure.StructureInteractionController;
 import org.academy.internal.common.network.SubLevelMiningProgressPacket;
-import org.academy.internal.common.network.SubLevelPosePacket;
+import org.academy.internal.common.network.SubLevelPoseBatchPacket;
 import org.academy.internal.common.network.SubLevelStatePacket;
 import org.academy.internal.common.structure.NativeStructureCollisionBoxes;
 import org.academy.internal.common.structure.StructureBackendRouter;
@@ -117,6 +117,7 @@ public final class SubLevelServer {
             for (var owned : owner.hosts.values()) {
                 SubLevelCaptureJournal.recover(server, owned.runtime);
                 SubLevelStaticizeJournal.recover(server, owned.runtime);
+                SubLevelFractures.recover(owned.runtime);
             }
             var runtime = owner.runtime;
             var universe = runtime.universe();
@@ -380,31 +381,42 @@ public final class SubLevelServer {
         }
         long started = System.nanoTime();
         int published = 0;
+        var poseBatches = new HashMap<net.minecraft.server.level.ServerPlayer,
+                List<SubLevelPoseBatchPacket.Entry>>();
         for (var subLevel : runtime.subLevels()) {
             if (!published(subLevel)) continue;
             published++;
-            var boxes = SEND_COLLISION_BOXES
-                    ? runtime.localCollisionBoxes(subLevel.id())
-                    : List.<AABB>of();
-            if (boxes.size() > MAX_SYNC_BOXES) {
-                boxes = boxes.subList(0, MAX_SYNC_BOXES);
-            }
-            var view = runtime.view(subLevel.id());
+            // Geometry is only materialized when a viewer actually needs a full snapshot.
+            // Pose-only updates reuse the client's immutable local cells and boxes.
+            org.academy.internal.common.structure.space.NativeStructureView view = null;
+            List<AABB> boxes = null;
             var pose = subLevel.pose();
+            var bounds = subLevel.worldBounds();
             for (var player : players) {
                 if (player.level() != host) continue;
-                if (player.position().distanceToSqr(pose.worldOrigin()) > 256.0 * 256.0) continue;
+                var known = SENT_VIEWS.get(player);
+                boolean tracked = known != null && known.containsKey(subLevel.id());
+                if (!SubLevelSnapshotVisibility.interested(player.position(), bounds, tracked)) continue;
                 var sent = SENT_VIEWS.computeIfAbsent(player, ignored -> new HashMap<>());
                 var previous = sent.get(subLevel.id());
+                if (view == null) view = runtime.view(subLevel.id());
                 boolean fullView = previous == null || previous.view() != view;
                 if (fullView) {
+                    if (boxes == null) {
+                        boxes = SEND_COLLISION_BOXES ? runtime.localCollisionBoxes(subLevel.id()) : List.of();
+                        if (boxes.size() > MAX_SYNC_BOXES) boxes = boxes.subList(0, MAX_SYNC_BOXES);
+                    }
                     SubLevelStatePacket.send(player, subLevel.id(), subLevel.plot(), pose, boxes, view, false, true);
-                    sent.put(subLevel.id(), new Sent(view, pose));
-                } else if (!previous.pose().equals(pose)) {
-                    // Local collision boxes and view cells never change with a pose, so a delta
-                    // packet is enough and the client rebuilds the oriented contact data.
-                    SubLevelPosePacket.send(player, subLevel.id(), pose);
-                    sent.put(subLevel.id(), new Sent(view, pose));
+                    if (previous != null && previous.teleportRevision() != subLevel.teleportRevision()) {
+                        poseBatches.computeIfAbsent(player, ignored -> new ArrayList<>())
+                                .add(new SubLevelPoseBatchPacket.Entry(subLevel.id(), pose, true));
+                    }
+                    sent.put(subLevel.id(), new Sent(view, pose, subLevel.teleportRevision()));
+                } else if (!previous.pose().equals(pose) || previous.teleportRevision() != subLevel.teleportRevision()) {
+                    poseBatches.computeIfAbsent(player, ignored -> new ArrayList<>())
+                            .add(new SubLevelPoseBatchPacket.Entry(subLevel.id(), pose,
+                                    previous.teleportRevision() != subLevel.teleportRevision()));
+                    sent.put(subLevel.id(), new Sent(view, pose, subLevel.teleportRevision()));
                 }
             }
         }
@@ -416,13 +428,14 @@ public final class SubLevelServer {
                 var id = iterator.next();
                 var subLevel = runtime.get(id).orElse(null);
                 if (subLevel != null && published(subLevel)
-                        && player.position().distanceToSqr(subLevel.pose().worldOrigin()) <= 256.0 * 256.0) continue;
+                        && SubLevelSnapshotVisibility.interested(player.position(), subLevel.worldBounds(), true)) continue;
                 SubLevelStatePacket.send(player, id, new PlotPos(0, 0),
                         org.academy.api.common.structure.StructurePose.identity(Vec3.ZERO), List.of(),
                         org.academy.internal.common.structure.space.NativeStructureView.EMPTY, true);
                 iterator.remove();
             }
         }
+        poseBatches.forEach(SubLevelPoseBatchPacket::send);
         runtime.recordSnapshot(System.nanoTime() - started, published);
     }
 
@@ -447,7 +460,7 @@ public final class SubLevelServer {
     }
 
     private record Sent(org.academy.internal.common.structure.space.NativeStructureView view,
-                        org.academy.api.common.structure.StructurePose pose) {
+                        org.academy.api.common.structure.StructurePose pose, long teleportRevision) {
     }
 
     /** Host mutations invalidate only the already running world's terrain cache. */

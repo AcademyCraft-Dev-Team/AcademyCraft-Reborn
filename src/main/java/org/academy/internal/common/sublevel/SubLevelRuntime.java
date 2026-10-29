@@ -290,6 +290,17 @@ public final class SubLevelRuntime {
         subLevels.put(id, new Managed(managed.subLevel, managed.lease, localBoxes, view));
         remember(managed.subLevel);
         if (!previousBounds.equals(contentBounds) && TargetedChunkDurability.save(storage.level(), managed.lease.chunks())) persist();
+        SubLevelFractures.afterEdit(this, id);
+    }
+
+    /** Only the fracture coordinator may publish a copied owner after its durable decision. */
+    void prepareFracturePublication(SubLevelId id) {
+        var managed = subLevels.get(id);
+        if (managed == null) throw new IllegalStateException("Missing fracture child");
+        universe.remove(id);
+        collision.remove(id);
+        restorationIsolation.remove(id);
+        managed.subLevel.setState(SubLevelState.ALLOCATED);
     }
 
     /** Reserve and persist the editable envelope before vanilla can write or consume an item. */
@@ -569,6 +580,27 @@ public final class SubLevelRuntime {
         return true;
     }
 
+    /** Instant whole-body relocation; content, activation identity and plot allocation are preserved. */
+    public boolean teleport(SubLevelId id, StructurePose destination, Vec3 linearVelocity, Vec3 angularVelocity) {
+        var managed = subLevels.get(Objects.requireNonNull(id, "id"));
+        if (managed == null || restorationIsolation.containsKey(id) || universe.motion(id).isEmpty()) return false;
+        if (!universe.setPose(id, physicsPose(destination))) return false;
+        if (!universe.setVelocity(id,
+                new org.academy.internal.common.structure.physics.PhysicsVector(linearVelocity.x, linearVelocity.y, linearVelocity.z),
+                new org.academy.internal.common.structure.physics.PhysicsVector(angularVelocity.x, angularVelocity.y, angularVelocity.z))) {
+            throw new IllegalStateException("Relocated body rejected velocity publication");
+        }
+        SubLevelMotionController.cancel(id);
+        managed.subLevel.teleportPose(destination);
+        managed.subLevel.setState(SubLevelState.ACTIVE);
+        collision.update(id, managed.localBoxes, destination, destination,
+                managed.subLevel.geometryRevision(), managed.subLevel.revision());
+        budget.invalidate(host, budgetReference(managed.subLevel), StructureSimulationBudget.DirtyPart.POSE);
+        terrainNeedsUpdate = true;
+        remember(managed.subLevel);
+        return true;
+    }
+
     /** Drops the body but keeps the plot lease and content for a later reactivation. */
     public boolean deactivate(SubLevelId id) {
         var managed = subLevels.get(Objects.requireNonNull(id, "id"));
@@ -600,6 +632,7 @@ public final class SubLevelRuntime {
 
     /** Steps the shared universe once and publishes each body pose back to its SubLevel. */
     public void tick(double duration, int substeps) {
+        SubLevelFractures.advance(this);
         resumeRestorationSources();
         retryEmptyMarkedCleanup();
         if (subLevels.isEmpty()) return;
@@ -832,7 +865,8 @@ public final class SubLevelRuntime {
             }
             try {
                 var reference = new StructureRef(entry.id().value(), host.dimension().identifier(), SubLevelStructureRefs.BACKEND, 0);
-                if (org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(host.getServer(), reference)) {
+                if (org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(host.getServer(), reference)
+                        || SubLevelFractures.pending(host, entry.id())) {
                     // Keep the durable source readable by recovery, but never publish two owners.
                     var isolated = new SubLevel(entry.id(), entry.plot(), entry.localBounds(), entry.pose());
                     SubLevelActivationRegistry.activation(entry.id());
@@ -890,6 +924,7 @@ public final class SubLevelRuntime {
         for (var id : List.copyOf(restorationIsolation.keySet())) {
             var reference = new StructureRef(id.value(), host.dimension().identifier(), SubLevelStructureRefs.BACKEND, 0);
             if (org.academy.internal.common.structure.upgrade.lifecycle.MarkedGridRestoration.pending(host.getServer(), reference)) continue;
+            if (SubLevelFractures.pending(host, id)) continue;
             var managed = subLevels.get(id);
             if (managed == null) { restorationIsolation.remove(id); continue; }
             var geometry = PlotGeometry.capture(storage, managed.subLevel.plot(), managed.subLevel.localBounds());

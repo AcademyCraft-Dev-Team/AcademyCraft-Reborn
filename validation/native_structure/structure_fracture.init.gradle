@@ -1,0 +1,15 @@
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory').get()).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Fracture smoke requires an isolated native-sublevel-direct-smoke copy')
+        }
+        neoForge.runs.named(providers.gradleProperty('academyStructureFractureRun').getOrElse('clientDev')) {
+            gameDirectory.set(directory)
+            systemProperty 'academy.structureFractureSmoke', 'true'
+            systemProperty 'academy.structureFractureFault', providers.gradleProperty('academyStructureFractureFault').getOrElse('')
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

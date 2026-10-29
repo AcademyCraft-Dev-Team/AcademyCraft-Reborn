@@ -26,7 +26,8 @@ import java.util.Optional;
  */
 public interface AcceleratorProgramRuntime extends ProgramTargetResolver,
         org.academy.api.common.ability.program.ProgramStructureOrientationRuntime,
-        org.academy.api.common.ability.program.ProgramStructureGroupRuntime {
+        org.academy.api.common.ability.program.ProgramStructureGroupRuntime,
+        org.academy.api.common.ability.program.ProgramStructureControlRuntime {
     Object caster();
 
     Optional<Object> lookTarget();

@@ -20,6 +20,11 @@ public final class SubLevelPoseInterpolation {
         target = pose;
     }
 
+    /** Teleports have no intermediate visible or collidable path. */
+    public void reset(StructurePose pose) {
+        previous = current = target = Objects.requireNonNull(pose, "pose");
+    }
+
     /** Called before entity movement, exactly once per client simulation tick. */
     public StructurePose advance() {
         requirePose();

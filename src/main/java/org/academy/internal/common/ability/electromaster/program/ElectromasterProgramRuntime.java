@@ -22,7 +22,8 @@ import java.util.OptionalDouble;
  */
 public interface ElectromasterProgramRuntime extends ProgramTargetResolver,
         org.academy.api.common.ability.program.ProgramStructureOrientationRuntime,
-        org.academy.api.common.ability.program.ProgramStructureGroupRuntime {
+        org.academy.api.common.ability.program.ProgramStructureGroupRuntime,
+        org.academy.api.common.ability.program.ProgramStructureControlRuntime {
     Object caster();
 
     Optional<Object> lookTarget();

@@ -34,6 +34,7 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.StructureTeleports;
 import org.academy.api.server.team.TeamRelations;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -41,6 +42,7 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSafety;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportStructures;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.ability.teleport.skills.lv4.QuickLocationTeleport;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
@@ -286,7 +288,15 @@ public final class DefensiveTeleport extends Skill {
                     .filter(Objects::nonNull)
                     .distinct()
                     .toList();
-            if (selected.isEmpty()) return;
+            final java.util.List<org.academy.internal.common.structure.upgrade.control.OrientationBackendAccess.Body> structures;
+            try { structures = TeleportStructures.intersecting(player.level(), selection).stream()
+                    .filter(body -> body.linearVelocity().lengthSqr() >= 1.0
+                            && body.linearVelocity().dot(player.position().subtract(body.motion().pose()
+                            .localToWorldPoint(body.motion().localCenterOfMass()))) > 0)
+                    .filter(body -> !friendlyStructure(player, body.reference()))
+                    .toList();
+            } catch (IllegalArgumentException unavailable) { return; }
+            if (selected.isEmpty() && structures.isEmpty()) return;
 
             skill.executeActive(player, (ctx, _) -> {
                 var index = 0;
@@ -309,6 +319,13 @@ public final class DefensiveTeleport extends Skill {
                     }
                     index++;
                 }
+                if (destinationLevel == player.level()) {
+                    for (var body : structures) {
+                        var centerOfMass = body.motion().pose().localToWorldPoint(body.motion().localCenterOfMass());
+                        StructureTeleports.teleport(player.level(), player, new StructureTeleports.Request(
+                                body.reference(), body.runtimeId(), destination.add(centerOfMass.subtract(center)), null));
+                    }
+                }
             });
         }
 
@@ -325,6 +342,16 @@ public final class DefensiveTeleport extends Skill {
                 return !target.isCreative() && !target.isSpectator();
             }
             return living instanceof Enemy || living instanceof Mob mob && mob.getTarget() == player;
+        }
+
+        private static boolean friendlyStructure(ServerPlayer player, org.academy.api.common.structure.StructureRef reference) {
+            var metadata = org.academy.internal.common.structure.upgrade.lifecycle.LiveStructureProvenance
+                    .metadata(player.level().getServer(), reference).orElse(null);
+            if (metadata == null || metadata.ownerId().isEmpty()) return false;
+            var ownerId = metadata.ownerId().orElseThrow();
+            if (ownerId.equals(player.getUUID())) return true;
+            var owner = player.level().getServer().getPlayerList().getPlayer(ownerId);
+            return owner != null && TeamRelations.areAllied(player, owner);
         }
 
         private static boolean finite(Vec3 value) {

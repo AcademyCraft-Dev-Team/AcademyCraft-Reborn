@@ -67,6 +67,28 @@ class ProgramEditorDocumentTest {
     }
 
     @Test
+    void structureDestinationLabelsMatchTheirPositionTypesAndAttitudeActionsPassControlOn() {
+        for (var category : List.of("accelerator", "electromaster", "aeromanip")) {
+            var catalog = AbilityProgramDefinitions.require(net.minecraft.resources.Identifier.parse("academy:" + category)).editorCatalog();
+            var prefix = "academy:program/" + category + "/action/structure/";
+            assertEquals("screen.academy.program.port.target_position", catalog.entry(
+                    net.minecraft.resources.Identifier.parse(prefix + "move")).portTranslationKey("target"));
+            assertEquals("screen.academy.program.port.target_block_position", catalog.entry(
+                    net.minecraft.resources.Identifier.parse(prefix + "staticize")).portTranslationKey("target"));
+            for (var action : List.of("rotate", "reset_orientation", "spin")) {
+                assertEquals(org.academy.api.common.ability.program.ProgramValueTypes.STRUCTURE_CONTROL,
+                        catalog.entry(net.minecraft.resources.Identifier.parse(prefix + action))
+                                .defaultSchema().output("control").orElseThrow().type());
+            }
+            for (var action : List.of("move_group", "rotate_group", "reset_group", "spin_group")) {
+                assertEquals(org.academy.api.common.ability.program.ProgramValueTypes.STRUCTURE_SET,
+                        catalog.entry(net.minecraft.resources.Identifier.parse(prefix + action))
+                                .defaultSchema().output("structures").orElseThrow().type());
+            }
+        }
+    }
+
+    @Test
     void buildsAValidProgramWithNamedTypedPorts() {
         var document = emptyDocument();
         document = document.addNode(PrecisionProgramNodeIds.ON_CAST, -80, 0).orElseThrow();

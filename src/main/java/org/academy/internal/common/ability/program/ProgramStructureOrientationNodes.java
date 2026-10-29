@@ -38,9 +38,11 @@ public final class ProgramStructureOrientationNodes {
     }
     private static ProgramNodeSchema groupSchema(String parameter, ProgramValueType type) {
         var inputs = new java.util.ArrayList<>(List.of(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
-                ProgramPortDefinition.requiredInput("structures", ProgramValueTypes.STRUCTURE_SET)));
-        if (parameter != null) inputs.add(ProgramPortDefinition.requiredInput(parameter, type));
-        return new ProgramNodeSchema(inputs, List.of(ProgramPortDefinition.output("result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                ProgramPortDefinition.optionalInput("structures", ProgramValueTypes.STRUCTURE_SET),
+                ProgramPortDefinition.optionalInput("structure", ProgramValueTypes.STRUCTURE_REFERENCE)));
+        if (parameter != null) inputs.add(ProgramPortDefinition.optionalInput(parameter, type));
+        return new ProgramNodeSchema(inputs, List.of(ProgramPortDefinition.output("structures", ProgramValueTypes.STRUCTURE_SET),
+                ProgramPortDefinition.output("result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
                 ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)));
     }
 
@@ -67,6 +69,7 @@ public final class ProgramStructureOrientationNodes {
                 ProgramPortDefinition.requiredInput("control", ProgramValueTypes.STRUCTURE_CONTROL)));
         if (spin) inputs.add(ProgramPortDefinition.requiredInput("axis", ProgramValueTypes.DIRECTION));
         return new ProgramNodeSchema(inputs, List.of(
+                ProgramPortDefinition.output("control", ProgramValueTypes.STRUCTURE_CONTROL),
                 ProgramPortDefinition.output("result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
                 ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)));
     }

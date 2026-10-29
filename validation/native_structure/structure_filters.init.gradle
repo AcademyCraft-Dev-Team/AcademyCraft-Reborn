@@ -4,6 +4,7 @@ allprojects {
         neoForge.runs.named(providers.gradleProperty('academyStructureOrientationRun').getOrElse('clientDev')) {
             systemProperty 'academy.structureSelectionSmoke', 'true'
             systemProperty 'academy.structureFilterSmoke', 'true'
+            systemProperty 'academy.structureSingleMovementSmoke', providers.gradleProperty('academyStructureSingleMovementSmoke').getOrElse('false')
         }
     }
 }

@@ -18,6 +18,7 @@ public final class SubLevel {
     private SubLevelState state = SubLevelState.ALLOCATED;
     private long revision;
     private long geometryRevision;
+    private long teleportRevision;
 
     public SubLevel(SubLevelId id, PlotPos plot, AABB localBounds, StructurePose pose) {
         this.id = Objects.requireNonNull(id, "id");
@@ -37,6 +38,7 @@ public final class SubLevel {
     public SubLevelState state() { return state; }
     public long revision() { return revision; }
     public long geometryRevision() { return geometryRevision; }
+    public long teleportRevision() { return teleportRevision; }
 
     void setLocalBounds(AABB bounds) { localBounds = Objects.requireNonNull(bounds); }
     void relocateStorage(PlotPos destination) { plot = Objects.requireNonNull(destination); }
@@ -50,6 +52,14 @@ public final class SubLevel {
         this.previousPose = this.pose;
         this.pose = Objects.requireNonNull(pose, "pose");
         revision = Math.incrementExact(revision);
+    }
+
+    /** An instant relocation has no swept passenger carry delta through the intervening world. */
+    void teleportPose(StructurePose pose) {
+        setPose(pose);
+        previousPose = pose;
+        carryPose = pose;
+        teleportRevision = Math.incrementExact(teleportRevision);
     }
 
     /** Consumes only the carry delta; previousPose remains available to delayed interaction validation. */

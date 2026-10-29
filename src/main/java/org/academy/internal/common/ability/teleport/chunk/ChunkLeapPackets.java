@@ -3,6 +3,8 @@ package org.academy.internal.common.ability.teleport.chunk;
 import org.academy.internal.common.ability.teleport.map.ChunkMapClientState;
 import org.academy.internal.common.ability.teleport.map.ChunkMapViewService;
 import org.academy.internal.common.ability.teleport.map.MapTileBuilder;
+import org.academy.api.common.ability.program.ProgramStructureReference;
+import org.academy.api.common.structure.StructureRef;
 
 
 import io.netty.buffer.ByteBuf;
@@ -284,27 +286,41 @@ public final class ChunkLeapPackets {
                     ByteBufCodecs.VAR_INT.encode(buf, packet.targetX);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.targetY);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.targetZ);
+                    writeStructure(buf, packet.structure);
+                    buf.writeBoolean(packet.alignDirection);
                 },
                 buf -> new EntityTeleportPacket(
                         ByteBufCodecs.VAR_INT.decode(buf),
                         ByteBufCodecs.STRING_UTF8.decode(buf),
                         clampCoord(ByteBufCodecs.VAR_INT.decode(buf)),
                         clampCoord(ByteBufCodecs.VAR_INT.decode(buf)),
-                        clampCoord(ByteBufCodecs.VAR_INT.decode(buf))));
+                        clampCoord(ByteBufCodecs.VAR_INT.decode(buf)), readStructure(buf), buf.readBoolean()));
 
         private final int entityId;
         private final String dimensionId;
         private final int targetX;
         private final int targetY;
         private final int targetZ;
+        private final @Nullable ProgramStructureReference structure;
+        private final boolean alignDirection;
 
         public EntityTeleportPacket(int entityId, String dimensionId, int targetX, int targetY, int targetZ) {
+            this(entityId, dimensionId, targetX, targetY, targetZ, null, false);
+        }
+
+        public EntityTeleportPacket(int entityId, String dimensionId, int targetX, int targetY, int targetZ,
+                                    @Nullable ProgramStructureReference structure, boolean alignDirection) {
             this.entityId = entityId;
             this.dimensionId = dimensionId;
             this.targetX = targetX;
             this.targetY = targetY;
             this.targetZ = targetZ;
+            this.structure = structure;
+            this.alignDirection = alignDirection;
         }
+
+        public @Nullable ProgramStructureReference structure() { return structure; }
+        public boolean alignDirection() { return alignDirection; }
 
         public int entityId() {
             return entityId;
@@ -416,7 +432,7 @@ public final class ChunkLeapPackets {
      * entity types retain the category-colour fallback.
      */
     public record Marker(int entityId, byte category, int typeId, int blockX, int blockZ,
-                         @Nullable UUID playerId) {
+                         @Nullable UUID playerId, @Nullable ProgramStructureReference structure) {
         public static final StreamCodec<ByteBuf, Marker> CODEC = StreamCodec.of(
                 (buf, marker) -> {
                     ByteBufCodecs.VAR_INT.encode(buf, marker.entityId);
@@ -429,6 +445,7 @@ public final class ChunkLeapPackets {
                         buf.writeLong(marker.playerId.getMostSignificantBits());
                         buf.writeLong(marker.playerId.getLeastSignificantBits());
                     }
+                    writeStructure(buf, marker.structure);
                 },
                 buf -> {
                     var entityId = ByteBufCodecs.VAR_INT.decode(buf);
@@ -440,12 +457,15 @@ public final class ChunkLeapPackets {
                     if (ByteBufCodecs.BOOL.decode(buf)) {
                         playerId = new UUID(buf.readLong(), buf.readLong());
                     }
-                    return new Marker(entityId, category, typeId, blockX, blockZ, playerId);
+                    return new Marker(entityId, category, typeId, blockX, blockZ, playerId, readStructure(buf));
                 });
 
         /** Convenience for a non-player marker. */
         public Marker(int entityId, byte category, int typeId, int blockX, int blockZ) {
-            this(entityId, category, typeId, blockX, blockZ, null);
+            this(entityId, category, typeId, blockX, blockZ, null, null);
+        }
+        public Marker(int entityId, byte category, int typeId, int blockX, int blockZ, @Nullable UUID playerId) {
+            this(entityId, category, typeId, blockX, blockZ, playerId, null);
         }
     }
     /** Entity markers for the currently viewed area; rate-limited server-side. */
@@ -1076,6 +1096,25 @@ public final class ChunkLeapPackets {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    private static void writeStructure(ByteBuf buf, @Nullable ProgramStructureReference structure) {
+        buf.writeBoolean(structure != null);
+        if (structure == null) return;
+        var reference = structure.reference();
+        writeUuid(buf, reference.id());
+        net.minecraft.resources.Identifier.STREAM_CODEC.encode(buf, reference.dimension());
+        net.minecraft.resources.Identifier.STREAM_CODEC.encode(buf, reference.backend());
+        buf.writeLong(reference.generation());
+        writeUuid(buf, structure.runtimeId());
+    }
+
+    private static @Nullable ProgramStructureReference readStructure(ByteBuf buf) {
+        if (!buf.readBoolean()) return null;
+        var id = readUuid(buf);
+        var dimension = net.minecraft.resources.Identifier.STREAM_CODEC.decode(buf);
+        var backend = net.minecraft.resources.Identifier.STREAM_CODEC.decode(buf);
+        return new ProgramStructureReference(new StructureRef(id, dimension, backend, buf.readLong()), readUuid(buf));
+    }
 
     static void writeUuid(ByteBuf buf, UUID uuid) {
         buf.writeLong(uuid.getMostSignificantBits());

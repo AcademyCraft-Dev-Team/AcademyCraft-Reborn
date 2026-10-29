@@ -24,6 +24,47 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 class StructureTransactionJournalTest {
+    @Test void completeObservationDistinguishesUnreadableDirectoryAndRetainedCorruptEvidence() throws IOException {
+        var path = directory.resolve("observed");
+        var journal = new StructureTransactionJournal(path);
+        var record = prepared(UUID.randomUUID(), List.of(cell(0, 0, 0, "minecraft:stone")));
+        journal.persist(record);
+        var healthy = journal.readSnapshot();
+        assertTrue(healthy.readable());
+        assertEquals(List.of(record), healthy.records());
+        assertTrue(healthy.corruptFiles().isEmpty());
+        Files.writeString(path.resolve("broken.dat"), "not an ownership record");
+        var damaged = journal.readSnapshot();
+        assertTrue(damaged.readable());
+        assertEquals(List.of("broken.dat"), damaged.corruptFiles());
+        assertEquals(List.of(record), damaged.records());
+        Files.move(path, directory.resolve("moved"));
+        Files.writeString(path, "directory replaced by file");
+        assertFalse(journal.readSnapshot().readable());
+    }
+    @Test void completeObservationCanRecoverAfterAnUnreadableDirectoryAndDoesNotMutateOlderSnapshots() throws IOException {
+        var path = directory.resolve("recovery_observation");
+        var moved = directory.resolve("recovery_saved");
+        var journal = new StructureTransactionJournal(path);
+        var first = prepared(UUID.randomUUID(), List.of(cell(0,0,0,"minecraft:stone")));
+        journal.persist(first);
+        var original = journal.readSnapshot();
+        Files.move(path,moved);
+        Files.writeString(path,"temporarily replaced directory");
+        assertFalse(journal.readSnapshot().readable());
+        assertFalse(journal.healthy(), "latest failed complete observation must update health");
+        Files.delete(path);
+        Files.move(moved,path);
+        var recovered = journal.readSnapshot();
+        assertTrue(recovered.readable()); assertTrue(journal.healthy());
+        assertEquals(List.of(first),recovered.records());
+        var second = prepared(UUID.randomUUID(), List.of(cell(1,0,0,"minecraft:iron_block")));
+        journal.persist(second);
+        assertEquals(2,journal.readSnapshot().records().size());
+        assertEquals(List.of(first),original.records(), "a cached complete observation must remain immutable");
+        assertThrows(UnsupportedOperationException.class,() -> original.records().add(second));
+    }
+
     private static final Identifier BACKEND = Identifier.fromNamespaceAndPath("academy", "native_level");
     private static final Identifier DIMENSION = Identifier.fromNamespaceAndPath("minecraft", "overworld");
 

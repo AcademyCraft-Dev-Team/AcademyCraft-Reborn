@@ -232,7 +232,8 @@ public final class TeleportProgramNodeCatalog implements ProgramNodeLookup {
 
     public enum TargetType {
         ENTITY("entity", "entity", ProgramValueTypes.ENTITY_REFERENCE),
-        BLOCK("block", "block", ProgramValueTypes.BLOCK_POSITION);
+        BLOCK("block", "block", ProgramValueTypes.BLOCK_POSITION),
+        STRUCTURE("structure", "structure", ProgramValueTypes.STRUCTURE_REFERENCE);
 
         private static final Codec<TargetType> CODEC = Codec.STRING.xmap(
                 TargetType::byName, TargetType::wireName);

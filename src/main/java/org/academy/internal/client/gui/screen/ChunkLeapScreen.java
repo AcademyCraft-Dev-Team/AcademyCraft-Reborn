@@ -1266,9 +1266,13 @@ public final class ChunkLeapScreen extends UiScreen {
             var entityId = selection.entityId();
             var target = selection.entityTarget();
             if (entityId < 0 || target == null) return;
+            var marker = selectedMarker();
+            if (marker == null) return;
             MisakaNetworkClient.send(new ChunkLeapPackets.EntityTeleportPacket(
                     entityId, dimension.identifier().toString(),
-                    target.getX(), target.getY(), target.getZ()));
+                    target.getX(), target.getY(), target.getZ(), marker.structure(),
+                    org.lwjgl.glfw.GLFW.glfwGetKey(minecraft.getWindow().handle(), org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
+                            == org.lwjgl.glfw.GLFW.GLFW_PRESS));
             flash("chunk_leap.status.entity_requested", MUTED);
             return;
         }
@@ -1331,7 +1335,8 @@ public final class ChunkLeapScreen extends UiScreen {
         if (page != Page.ENTITIES || renderer == null || dimension == null) return;
         var hovered = renderer.hoveredMarker(geometry(), mouseX, mouseY, dimension);
         if (hovered == null) return;
-        graphics.setTooltipForNextFrame(font, entityName(hovered.typeId()), mouseX, mouseY);
+        graphics.setTooltipForNextFrame(font, hovered.structure() == null ? entityName(hovered.typeId())
+                : Component.translatable("chunk_leap.entity.physical_structure"), mouseX, mouseY);
     }
 
     /** Names the selected entity and shows where it will be sent. */
@@ -1341,7 +1346,8 @@ public final class ChunkLeapScreen extends UiScreen {
             graphics.text(font, Component.translatable("chunk_leap.entity.none"), x, y, MUTED);
             return y + 12;
         }
-        graphics.text(font, Component.translatable("chunk_leap.entity.selected", entityName(marker.typeId())),
+        graphics.text(font, Component.translatable("chunk_leap.entity.selected", marker.structure() == null ? entityName(marker.typeId())
+                        : Component.translatable("chunk_leap.entity.physical_structure")),
                 x, y, ACCENT);
         y += 11;
         var target = selection.entityTarget();

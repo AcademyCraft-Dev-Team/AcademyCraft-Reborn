@@ -168,7 +168,7 @@ public final class StructureTransactionJournal {
     private final DurableFile.FileOperations fileOperations;
     private final Map<UUID, Record> records = new LinkedHashMap<>();
     private final List<String> corrupt = new ArrayList<>();
-    private final boolean healthy;
+    private boolean healthy;
 
     public StructureTransactionJournal(Path directory) throws IOException {
         this(directory, DurableFile.FileOperations.DEFAULT);
@@ -229,6 +229,18 @@ public final class StructureTransactionJournal {
     public List<Record> records() {
         if (healthy) scan();
         return List.copyOf(records.values());
+    }
+
+    /** Complete observation for coordinators that must retain owners on any unreadable evidence. */
+    public Snapshot readSnapshot() {
+        // A complete observation also retries a previously unreadable directory. Ownership
+        // coordinators quarantine on false, then may resume after the same directory recovers.
+        healthy = scan();
+        return new Snapshot(healthy, List.copyOf(records.values()), List.copyOf(corrupt));
+    }
+
+    public record Snapshot(boolean readable, List<Record> records, List<String> corruptFiles) {
+        public Snapshot { records = List.copyOf(records); corruptFiles = List.copyOf(corruptFiles); }
     }
 
     public Optional<Record> find(UUID transactionId) {

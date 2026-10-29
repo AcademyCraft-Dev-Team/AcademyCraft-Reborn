@@ -79,6 +79,12 @@ public final class ServerProgramExecution {
             AcademyCraft.LOGGER.warn("Failed to release program orientation commands", exception);
         }
         try {
+            frame.environment(org.academy.api.common.ability.program.ProgramStructureControlRuntime.class)
+                    .ifPresent(org.academy.api.common.ability.program.ProgramStructureControlRuntime::closeStructureControls);
+        } catch (RuntimeException exception) {
+            AcademyCraft.LOGGER.warn("Failed to release program single-structure controls", exception);
+        }
+        try {
             frame.environment(org.academy.api.common.ability.program.ProgramStructureGroupRuntime.class)
                     .ifPresent(org.academy.api.common.ability.program.ProgramStructureGroupRuntime::closeStructureGroups);
         } catch (RuntimeException exception) {

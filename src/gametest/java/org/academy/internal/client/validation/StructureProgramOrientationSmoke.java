@@ -48,6 +48,7 @@ import java.util.*;
 public final class StructureProgramOrientationSmoke {
     private static final boolean ENABLED = Boolean.getBoolean("academy.structureProgramOrientationSmoke");
     private static final boolean SELECTION = Boolean.getBoolean("academy.structureSelectionSmoke");
+    private static final boolean MOVEMENT = Boolean.getBoolean("academy.structureSingleMovementSmoke");
     private static final boolean FILTERS = Boolean.getBoolean("academy.structureFilterSmoke");
     private static final int SPIN_TICKS = 250;
     private static final int ARENA_READY_TIMEOUT_TICKS = 200;
@@ -259,6 +260,7 @@ public final class StructureProgramOrientationSmoke {
         var actual = (ProgramNodeExecutor<Object>) executor;
         return (context, configuration, inputs) -> {
             var now = player.level().getGameTime();
+            boolean first = !STARTED.containsKey(context.nodeId());
             STARTED.putIfAbsent(context.nodeId(), now);
             if (id.equals(action("spin")) && control != null) {
                 long elapsed = now - STARTED.get(context.nodeId());
@@ -273,7 +275,11 @@ public final class StructureProgramOrientationSmoke {
             }
             // Observation delegates every call to the actual registered production executor.
             if (id.equals(action("extract"))) observePublishedCapture(now);
+            var cpBefore = AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID());
             var step = actual.execute(context, configuration, inputs);
+            if (id.equals(action("move")) && !first) check(Math.abs(cpBefore
+                    - AbilitySystemServer.getSystem(player).getPlayerAvailableCP(player.getUUID())) < .001,
+                    "single movement charged again while waiting");
             if (id.equals(action("extract"))) observePublishedCapture(now);
             if (id.equals(action("extract")) && step.outputs().containsKey("structure")) {
                 reference = ((ProgramStructureReference) step.outputs().get("structure").value()).reference();
@@ -309,7 +315,10 @@ public final class StructureProgramOrientationSmoke {
                 var result = (ProgramStructureOperationResult) step.outputs().get("result").value();
                 check(result.status() == ProgramStructureOperationResult.Status.COMPLETED, "flow published before completion: " + result);
                 COMPLETED.add(context.nodeId());
-                if (id.equals(action("rotate"))) {
+                if (id.equals(action("move"))) {
+                    check(now - STARTED.get(context.nodeId()) >= 20, "single movement continued before its force window ended");
+                    check(control.equals(step.outputs().get("control").value()), "single movement lost the next action's control");
+                } else if (id.equals(action("rotate"))) {
                     rotationError = angleError(motion().pose(), ROTATION);
                     check(now > STARTED.get(context.nodeId()), "rotate reported immediate success without physics steps");
                     check(rotationError <= ANGLE_TOLERANCE && motion().angularVelocity().length() <= 0.03,
@@ -360,12 +369,14 @@ public final class StructureProgramOrientationSmoke {
         check(settlementFailure == null, "VM settlement failed: " + settlementFailure);
         check(termination.kind() == ProgramSessionScheduler.TerminationKind.COMPLETED,
                 "VM terminated: " + termination + " completed=" + COMPLETED);
-        check(COMPLETED.equals(SELECTION ? List.of(2, 3, 4, 8, 9, 10, 30, 31) : List.of(2, 3, 4, 8, 9, 10)),
-                "node completion order changed: " + COMPLETED);
+        var expectedNodes = new ArrayList<>(SELECTION ? List.of(2, 3, 4, 8, 9, 10, 30, 31) : List.of(2, 3, 4, 8, 9, 10));
+        if (MOVEMENT) expectedNodes.add(2, 12);
+        check(COMPLETED.equals(expectedNodes), "node completion order changed: " + COMPLETED);
         check(control != null && !StructureDirectControl.occupied(reference, control.structureRuntimeId()), "release retained control");
         if (StructurePayloadFixtureSupport.ENABLED) StructurePayloadFixtureSupport.verify(player, reference, BlockPos.ZERO);
         var row = new LinkedHashMap<String, Object>();
         row.put("payload_checked", StructurePayloadFixtureSupport.ENABLED);
+        row.put("single_movement_wait_and_control_chain", MOVEMENT);
         row.put("selection_nodes_and_foreach_control", SELECTION);
         row.put("multiple_structure_query_and_removal", SELECTION);
         row.put("content_source_validity_filters", FILTERS);
@@ -417,9 +428,22 @@ public final class StructureProgramOrientationSmoke {
                 edge(2, "flow", 3, "flow"), edge(2, "structure", 3, "structure"),
                 edge(3, "flow", 4, "flow"), edge(3, "control", 4, "control"),
                 edge(6, "direction", 5, "axis"), edge(7, "value", 5, "angle_radians"), edge(5, "pose", 4, "pose"),
-                edge(4, "flow", 8, "flow"), edge(3, "control", 8, "control"),
-                edge(8, "flow", 9, "flow"), edge(3, "control", 9, "control"), edge(11, "direction", 9, "axis"),
-                edge(9, "flow", 10, "flow"), edge(3, "control", 10, "control")));
+                edge(4, "flow", 8, "flow"), edge(4, "control", 8, "control"),
+                edge(8, "flow", 9, "flow"), edge(8, "control", 9, "control"), edge(11, "direction", 9, "axis"),
+                edge(9, "flow", 10, "flow"), edge(9, "control", 10, "control")));
+        if (MOVEMENT) {
+            var nodes = new ArrayList<>(graph.nodes()); var edges = new ArrayList<>(graph.edges());
+            var move = new JsonObject(); move.addProperty("duration_seconds", 1);
+            var destination = new JsonObject(); destination.addProperty("dimension", player.level().dimension().identifier().toString());
+            destination.addProperty("x", seed.getX() + .75); destination.addProperty("y", seed.getY() + .5 + expectedExtractionRise);
+            destination.addProperty("z", seed.getZ() + .5);
+            nodes.add(node(definition,12,action("move"),move));
+            nodes.add(node(definition,13,CommonProgramNodeIds.WORLD_POSITION_CONSTANT,destination));
+            edges.removeIf(edge -> edge.from().nodeId() == 3 && edge.to().nodeId() == 4);
+            edges.addAll(List.of(edge(3,"flow",12,"flow"),edge(3,"control",12,"control"),
+                    edge(13,"position",12,"target"),edge(12,"flow",4,"flow"),edge(12,"control",4,"control")));
+            graph = new ProgramGraph(nodes,edges);
+        }
         return SELECTION ? selectionGraph(definition, graph) : graph;
     }
 

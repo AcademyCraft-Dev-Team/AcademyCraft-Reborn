@@ -8,6 +8,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SubLevelPoseInterpolationTest {
+    @Test void teleportClearsTheEntireInterpolatedAndContactPath() {
+        var interpolation = new SubLevelPoseInterpolation();
+        interpolation.accept(pose(0));
+        interpolation.accept(pose(10));
+        interpolation.advance();
+        interpolation.reset(pose(64));
+        for (double fraction : new double[] {0, 0.25, 0.5, 1}) assertEquals(pose(64), interpolation.sample(fraction));
+        assertEquals(pose(64), interpolation.advance());
+        interpolation.accept(pose(65));
+        interpolation.advance();
+        assertEquals(pose(64).lerp(pose(65), 0.5), interpolation.sample(0.5));
+    }
     @Test
     void matchesEntityPreviousCurrentPhaseIndependentlyOfFrameRate() {
         var interpolation = new SubLevelPoseInterpolation();

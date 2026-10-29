@@ -4,6 +4,13 @@ import org.academy.internal.common.ability.teleport.map.ChunkMapViewService;
 import org.academy.internal.common.ability.teleport.map.MapTileBuilder;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSafety;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportStructures;
+import org.academy.api.common.ability.program.ProgramStructureReference;
+import org.academy.api.common.structure.StructureTeleports;
+import org.academy.api.common.structure.StructurePose;
+import org.academy.internal.common.structure.StructureBackendRouter;
+import org.academy.internal.common.structure.teleport.StructureTeleportMath;
+import org.academy.internal.common.structure.upgrade.control.TranslationSweep;
 
 
 import net.minecraft.core.registries.Registries;
@@ -125,7 +132,22 @@ public final class ChunkSwapService {
             releasePreloadLeases(player);
             return;
         }
-        var entityCount = countEntities(levelA, source) + countEntities(levelB, target);
+        int structureCount = 0;
+        try {
+            for (int index = 0; index < source.count(); index++) {
+                var a = source.chunkAt(index); var b = target.chunkAt(index);
+                if (levelA == levelB && a.equals(b)) continue;
+                var band = levelA == levelB ? ChunkVerticalBand.full(levelA) : ChunkVerticalBand.overlap(levelA, levelB);
+                structureCount += ChunkStructureSwap.plan(levelA, a, levelB, b, band,
+                        new Vec3((b.x() - a.x()) * 16., 0, (b.z() - a.z()) * 16.)).size();
+            }
+        } catch (RuntimeException refused) {
+            MisakaNetworkServer.send(player, new ChunkLeapPackets.SwapResultPacket(packet.opId(), false,
+                    structureRefusalReason(refused), List.of()));
+            releasePreloadLeases(player);
+            return;
+        }
+        var entityCount = countEntities(levelA, source) + countEntities(levelB, target) + structureCount;
         var movePlayers = packet.movePlayers();
         // The charge happens up front, but the pairs are applied by the tick scheduler with a time budget: a
         // large swap must never run to completion inside one server tick.
@@ -158,6 +180,8 @@ public final class ChunkSwapService {
         private final List<CompletableFuture<Void>> lightingTasks = new ArrayList<>();
         /** One completion barrier, created after every pair has been exchanged. */
         private CompletableFuture<Void> lightingCompletion;
+        private boolean structureFailure;
+        private String structureFailureReason = "chunk_leap.reason.structure_unsafe";
 
         private ActiveSwap(ServerPlayer player, UUID opId, ServerLevel levelA, ServerLevel levelB,
                            ChunkLeapSelection source, ChunkLeapSelection target, boolean movePlayers) {
@@ -189,7 +213,12 @@ public final class ChunkSwapService {
         var iterator = ACTIVE_SWAPS.iterator();
         while (iterator.hasNext()) {
             var swap = iterator.next();
-            performSwap(swap, deadline);
+            if (!swap.structureFailure) performSwap(swap, deadline);
+            if (swap.structureFailure) {
+                // Earlier atomic pairs may already be committed. Finish their normal lighting,
+                // chunk resend and carrier repair before reporting the refused remaining work.
+                swap.cursor = swap.source.count();
+            }
             if (swap.cursor < swap.source.count()) break;
             if (swap.lightingCompletion == null) {
                 swap.lightingCompletion = CompletableFuture.allOf(
@@ -235,7 +264,8 @@ public final class ChunkSwapService {
             ChunkMapViewService.invalidateChunks(swap.levelB, swap.target.bounds());
             if (!player.isRemoved() && !player.hasDisconnected()) {
                 MisakaNetworkServer.send(player, new ChunkLeapPackets.SwapResultPacket(
-                        swap.opId, true, "", List.of(swap.source.bounds(), swap.target.bounds())));
+                        swap.opId, !swap.structureFailure, swap.structureFailure ? swap.structureFailureReason : "",
+                        List.of(swap.source.bounds(), swap.target.bounds())));
             }
             releasePreloadLeases(player);
         }
@@ -256,11 +286,18 @@ public final class ChunkSwapService {
             var chunkA = swap.levelA.getChunkSource().getChunkNow(posA.x(), posA.z());
             var chunkB = swap.levelB.getChunkSource().getChunkNow(posB.x(), posB.z());
             if (chunkA != null && chunkB != null) {
-                var result = crossDimension
+                final ChunkRegionSwap.Result result;
+                try { result = crossDimension
                         ? ChunkRegionSwap.applyAcrossLevels(swap.levelA, chunkA, swap.levelB, chunkB,
-                        swap.source.bounds(), swap.target.bounds(), swap.movePlayers)
+                        swap.source.bounds(), swap.target.bounds(), swap.movePlayers, swap.player)
                         : ChunkRegionSwap.apply(swap.levelA, chunkA, chunkB,
-                        swap.source.bounds(), swap.target.bounds(), swap.movePlayers);
+                        swap.source.bounds(), swap.target.bounds(), swap.movePlayers, swap.player);
+                } catch (RuntimeException refused) {
+                    swap.structureFailure = true;
+                    swap.structureFailureReason = structureRefusalReason(refused);
+                    AcademyCraft.LOGGER.warn("Chunk pair physical structure relocation refused: {}", refused.getMessage());
+                    return;
+                }
                 swap.carriedPlayers.addAll(result.playersMoved());
                 swap.lightingTasks.add(result.lightingTask());
             }
@@ -407,18 +444,46 @@ public final class ChunkSwapService {
                     false, "chunk_leap.reason.dimension_missing"));
             return;
         }
+        if (packet.structure() != null) {
+            if (level != player.level() || !packet.structure().reference().dimension().equals(level.dimension().identifier())) {
+                MisakaNetworkServer.send(player, new ChunkLeapPackets.TeleportResultPacket(false, "chunk_leap.reason.structure_dimension"));
+                return;
+            }
+            if (!ChunkMapViewService.advertisedStructure(player, packet.structure())) {
+                MisakaNetworkServer.send(player, new ChunkLeapPackets.TeleportResultPacket(false, "chunk_leap.reason.structure_stale"));
+                return;
+            }
+        }
         var target = new net.minecraft.core.BlockPos(packet.targetX(), packet.targetY(), packet.targetZ());
         var region = ChunkLeapRegion.ofChunks(level.dimension(), target.getX() >> 4, target.getZ() >> 4, 1, 1);
+        var structureRotation = packet.alignDirection() ? TeleportStructures.facing(player.getYRot(), player.getXRot()) : null;
         runAfterPreload(player, ChunkTicketLeaseManager.acquireAndLoad(level,
                 ChunkTicketLeaseManager.preloadOwner(player.getUUID()), region),
-                () -> commitEntityTeleport(player, skill, packet, level, target),
+                () -> commitEntityTeleport(player, skill, packet, level, target, structureRotation),
                 () -> reportPreloadFailure(player));
     }
 
     private static void commitEntityTeleport(ServerPlayer player, ChunkLeap skill,
                                              ChunkLeapPackets.EntityTeleportPacket packet,
-                                             ServerLevel level, net.minecraft.core.BlockPos target) {
+                                             ServerLevel level, net.minecraft.core.BlockPos target, StructurePose structureRotation) {
         if (player.isRemoved() || player.hasDisconnected()) {
+            releasePreloadLeases(player);
+            return;
+        }
+        if (packet.structure() != null) {
+            var advertised = ChunkMapViewService.advertisedStructure(player, packet.structure());
+            var access = StructureBackendRouter.orientationAccess(player.level(), packet.structure().reference()).orElse(null);
+            var body = access == null ? null : access.observe(player.level(), packet.structure().reference()).orElse(null);
+            boolean ok = false;
+            if (advertised && level == player.level() && body != null && body.runtimeId().equals(packet.structure().runtimeId())) {
+                var rotation = structureRotation == null ? body.motion().pose() : structureRotation;
+                var centered = StructureTeleportMath.destination(body.motion().pose(), body.motion().localCenterOfMass(), Vec3.ZERO, rotation);
+                double minimum = body.localBoxes().stream().mapToDouble(box -> TranslationSweep.Box.of(box, centered).bounds().minY).min().orElse(0);
+                var landing = landingPosition(level, target);
+                ok = teleportStructure(player, packet.structure(), landing.add(0, -minimum + .01, 0), structureRotation);
+            }
+            MisakaNetworkServer.send(player, new ChunkLeapPackets.TeleportResultPacket(ok, ok ? "" :
+                    advertised ? "chunk_leap.reason.structure_unsafe" : "chunk_leap.reason.structure_stale"));
             releasePreloadLeases(player);
             return;
         }
@@ -450,6 +515,25 @@ public final class ChunkSwapService {
                     false, "chunk_leap.reason.cost"));
         }
         releasePreloadLeases(player);
+    }
+
+    /** Same skill CP/resource gate as map entity teleport, for server-owned structure selections. */
+    public static boolean teleportStructure(ServerPlayer player, ProgramStructureReference target,
+                                            Vec3 destinationCenter, boolean alignDirection) {
+        return teleportStructure(player, target, destinationCenter,
+                alignDirection ? TeleportStructures.facing(player.getYRot(), player.getXRot()) : null);
+    }
+
+    private static boolean teleportStructure(ServerPlayer player, ProgramStructureReference target,
+                                             Vec3 destinationCenter, StructurePose rotation) {
+        if (!target.reference().dimension().equals(player.level().dimension().identifier())) return false;
+        var request = new StructureTeleports.Request(target.reference(), target.runtimeId(), destinationCenter,
+                rotation);
+        if (StructureTeleports.check(player.level(), player, request) != StructureTeleports.Result.READY) return false;
+        var moved = new boolean[1];
+        Skills.CHUNK_LEAP.get().executeEntityTeleport(player, () -> moved[0] =
+                StructureTeleports.teleport(player.level(), player, request) == StructureTeleports.Result.TELEPORTED);
+        return moved[0];
     }
 
     // ---------------------------------------------------------------- player teleport
@@ -786,6 +870,10 @@ public final class ChunkSwapService {
     }
 
     // ---------------------------------------------------------------- shared
+
+    private static String structureRefusalReason(RuntimeException failure) {
+        return failure instanceof ChunkStructureSwap.Refusal refusal ? refusal.translationKey() : "chunk_leap.reason.structure_unsafe";
+    }
 
     /** Loading failures must never reach CP charging or world mutation. */
     private static void runAfterPreload(ServerPlayer player, CompletableFuture<?> loading,

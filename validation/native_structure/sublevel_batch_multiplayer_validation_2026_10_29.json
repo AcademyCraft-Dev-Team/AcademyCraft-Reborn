@@ -1,0 +1,240 @@
+{
+  "date": "2026-10-29",
+  "base_commit": "741e9b54",
+  "feature": "native_snapshot_batch_and_level_lifecycle",
+  "validation": "passed",
+  "user_world_used": false,
+  "world": "new_isolated_blank_dedicated_world",
+  "actual_tcp_clients": 2,
+  "mixed_sable_server_tested": false,
+  "wan_shaping_tested": false,
+  "player_skill_interaction_tested": false,
+  "results": {
+    "passed": true,
+    "actual_tcp_clients": 2,
+    "session": "20261029-batch-r4",
+    "process_exit_codes": {
+      "server": 0,
+      "actor": 0,
+      "observer": 0
+    },
+    "results": {
+      "server": {
+        "actual_tcp_clients": 2,
+        "server_bodies_after_remove": 0,
+        "server_velocity_fixture_driver": true,
+        "near_far_return_remove": true,
+        "moving_tick_interval_samples": 199,
+        "moving_tick_interval_p50_ms": 50.0136,
+        "moving_tick_interval_p95_ms": 52.0096,
+        "bodies": 8,
+        "passed": true,
+        "moving_server_ticks": 221,
+        "live_bodies_at_disconnect": 8
+      },
+      "actor": {
+        "role": "actor",
+        "uuid": "bf72a7b7-44ef-318f-8953-681d5d4a9064",
+        "phase_1_passed": true,
+        "moving_batch_packets": 99,
+        "moving_pose_entries": 792,
+        "pose_packet_reduction_vs_one_packet_per_entry": 0.875,
+        "moving_samples": 100,
+        "legacy_pose_packets": 0,
+        "phase_2_passed": true,
+        "phase_3_passed": true,
+        "phase_4_passed": true,
+        "snapshots_after_remove": 0,
+        "projections_after_remove": 0,
+        "collision_poses_after_remove": 0,
+        "removal_packets": 8,
+        "state_packets": 8,
+        "phase_5_passed": true,
+        "live_projections_before_disconnect": 8,
+        "state_packets_before_disconnect": 16,
+        "phase_6_passed": true,
+        "client_ticks_observing_disconnect": 2,
+        "lifecycle_after_disconnect": {
+          "retainedLevels": 0,
+          "projectionIds": 0,
+          "pendingCarryFrames": 0,
+          "discardedProjections": 8
+        },
+        "old_collision_runtime_unregistered": true,
+        "passed": true,
+        "actual_tcp_client": true,
+        "disconnect_observed": true
+      },
+      "observer": {
+        "role": "observer",
+        "uuid": "65ba7083-164d-3d3e-95ac-b489a4006d09",
+        "phase_1_passed": true,
+        "moving_batch_packets": 99,
+        "moving_pose_entries": 792,
+        "pose_packet_reduction_vs_one_packet_per_entry": 0.875,
+        "moving_samples": 100,
+        "legacy_pose_packets": 0,
+        "phase_2_passed": true,
+        "state_packets_before_return": 8,
+        "phase_3_passed": true,
+        "phase_4_passed": true,
+        "snapshots_after_remove": 0,
+        "projections_after_remove": 0,
+        "collision_poses_after_remove": 0,
+        "removal_packets": 16,
+        "state_packets": 16,
+        "phase_5_passed": true,
+        "live_projections_before_disconnect": 8,
+        "state_packets_before_disconnect": 24,
+        "phase_6_passed": true,
+        "client_ticks_observing_disconnect": 2,
+        "lifecycle_after_disconnect": {
+          "retainedLevels": 0,
+          "projectionIds": 0,
+          "pendingCarryFrames": 0,
+          "discardedProjections": 8
+        },
+        "old_collision_runtime_unregistered": true,
+        "passed": true,
+        "actual_tcp_client": true,
+        "disconnect_observed": true
+      }
+    }
+  },
+  "evidence": [
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/server-result.json",
+      "sha256": "C034462507AECED960F2CE82E0E72A89574046CAE16B0370436569B5479FD869"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/server-process.log",
+      "sha256": "A876F12912F8D074E3750DE6AF202055AC22D8CD323D7DF73F7FD57F00E8C51D"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/server-launch.json",
+      "sha256": "9725DD59BDB5D09B69DCA39CAF429E2124D2EE1A3C7525D8112EBB872DC63602"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/server-java.args",
+      "sha256": "5E34AEDE976741C8D0C5ED6E1191E8BB3BF1A9A29C834D7A43D4B7D6E89C5E09"
+    },
+    {
+      "path": "build/sublevel-batch-multiplayer-export-server-r4.log",
+      "sha256": "229357A5845654D40DDA3E8B4C95F86A141B4FB1AF94E0A090619DA83B89365F"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/actor-result.json",
+      "sha256": "39E11355BD9FC7C33E2A5CE58305B41EA28D9922B70593219F50FBAD6A6D25A6"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/actor-process.log",
+      "sha256": "75D0EA61A7A7DE881078D17AE9AA11936F2342B774AFDC3D9F27B6E29DCB6B90"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/actor-launch.json",
+      "sha256": "AD0B7A45ED5F4EBFD6E644E63DE6A78231C6D095655A7E55E866A5147DC92D15"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/actor-java.args",
+      "sha256": "3A9E433F41DCA6BEF1AAC338BBB017E81BD9BD900BC974ADF6FE5DC4AFBB84A8"
+    },
+    {
+      "path": "build/sublevel-batch-multiplayer-export-actor-r4.log",
+      "sha256": "D891BD8C20F8DDAD43C274970D600CC14EA92961CF9E32511D8C38DAE91826EB"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/observer-result.json",
+      "sha256": "1B041210421B4845DA63E48A93D0F58F9A99E9E51F4194E755E311378D90B619"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/observer-process.log",
+      "sha256": "01DF21E6CA89D37D2FB87C207C66CA0529DAA63FB4DD57AAD09AF44884E15C11"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/observer-launch.json",
+      "sha256": "76AB20FE1984FEB8BBD61294AD5B115A0BEC3EF7B847965509FFB7952D808FE7"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/observer-java.args",
+      "sha256": "4FFAFB4B12851B6CA49170913939C93467C89E54F3FA3A68592A37412EE2804B"
+    },
+    {
+      "path": "build/sublevel-batch-multiplayer-export-observer-r4.log",
+      "sha256": "FF579D4D1D0A19D27310B49C6C8F8E79C0AA864CC791C4C60DA755510AA2AE85"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/server-exit.json",
+      "sha256": "717B03C519FD110C7C036F296FB53F94819115EE2CC1C44BD89D5CCAAB4EFBD4"
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/validation-result.json",
+      "sha256": "D587992D54E128D2D9282ACCEBBD2B7A4A3FD85C0FB6D7E999DC1DF4CCCE1A34"
+    },
+    {
+      "path": "build/sublevel-batch-multiplayer-run-r4.log",
+      "sha256": "DD3D41BF9F35BFA02BA7A888169B8D48C7C42B2F09CB687C43BBC043EDC83963"
+    }
+  ],
+  "source_sha256": {
+    "src/main/java/org/academy/internal/client/sublevel/SubLevelClientState.java": "4A991C23A356915B1C03B017BFCEEC0B007414E5FB372EE82E5EA882B11D3160",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelServer.java": "297E3C8AE764B05EFD256D103D9588BD02A52661F75322B2F6AB436C957C9571",
+    "src/main/java/org/academy/internal/common/sublevel/SubLevelSnapshotVisibility.java": "AC8131DC99ABD49F6035BDB35B26A57CCCEE8B1D8F613AC0445AF38224E46B2F",
+    "src/main/java/org/academy/internal/common/network/SubLevelPoseBatchPacket.java": "748C5BDB485C6BFF167B451ED81CDE8AD0941B291E044CF680379DCEEF7F39C9",
+    "src/gametest/java/org/academy/internal/common/sublevel/validation/SubLevelBatchMultiplayerSmoke.java": "D3C5C9127B4E815EC4009F6DEB7632EC403D6A7AC05127E76C44DDC49F17987D",
+    "src/gametest/java/org/academy/internal/client/validation/SubLevelBatchMultiplayerClientSmoke.java": "247590A406F03C7C98000EE743D935D2DA97BD11163FA2B00886940121454CA1",
+    "validation/native_structure/sublevel_batch_multiplayer.init.gradle": "EFB29DFA7F07025C94EC66B888323A348F67516D97DFED08D76EECA96F79F9F8",
+    "validation/native_structure/prepare_batch_multiplayer.ps1": "CC8A7E5B4DE1F1740AFBD934A60A99E67CB61501CB8C3605048A7E4BE2D260A7",
+    "validation/native_structure/run_batch_multiplayer.py": "750CD8843E541AD680140B85C36BD94F6BAF4EED9D45B984BEB6DCD27E886373"
+  },
+  "native_runtime": {
+    "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/native-runtime/academy_physics.dll",
+    "sha256": "F68C901911B18BE6F92A9EA9E44B1E09CEA8D34DD75FF08AF50F035F6DCF4A06"
+  },
+  "native_manifest": {
+    "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/native-runtime/academy_physics.properties",
+    "sha256": "0888A08D049BFA3EA440C1AE091B566744E2EFF6D0825A28A4B6DC98AD2FCAD3"
+  },
+  "screenshots": [
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/actor/screenshots/sublevel-batch-moving-actor.png",
+      "sha256": "9C54FDFD3EB3C2866DA2DA6092530E582A97818212D390029EA5A46060F0723F",
+      "visually_reviewed": true,
+      "all_eight_structures_visible": true,
+      "notification_overlays_present_but_do_not_occlude_structures": true
+    },
+    {
+      "path": "run/sublevel-batch-multiplayer-20261029-batch-r4/observer/screenshots/sublevel-batch-moving-observer.png",
+      "sha256": "8F7CA86469144F1A75C2814738F6648CEF0CE9E040F0FB0DD95D55766DFD9771",
+      "visually_reviewed": true,
+      "all_eight_structures_visible": true,
+      "notification_overlays_present_but_do_not_occlude_structures": true
+    }
+  ],
+  "limits": [
+    "A single local machine with two real loopback TCP clients and eight one-block iron structures.",
+    "A server-side velocity driver exercises native stepping and network publication; this is not keyboard skill or standing-contact validation.",
+    "87.5% is the reduction in pose message count relative to one message per entry, not an FPS, CPU, latency or byte-volume improvement.",
+    "Tick interval percentiles are observations of this fixture, not an isolated server CPU benchmark.",
+    "Collision-free deletion, viewer interest transitions and live-world disconnect cleanup are covered; WAN jitter, large modpacks and long-duration soak remain pending."
+  ],
+  "prior_attempts": [
+    {
+      "session": "20261029-batch-r1",
+      "status": "network_and_projection_stages_passed",
+      "limits": "No level lifecycle assertion; same player coordinates obscured the screenshot. Three processes exited 0."
+    },
+    {
+      "session": "20261029-batch-r2",
+      "status": "failed_at_first_disconnect_post",
+      "detail": "Both clients observed one old level map during the Post event in which disconnect occurred after tick HEAD. Final fixture waits one subsequent complete production tick, without calling cleanup."
+    },
+    {
+      "session": "20261029-batch-r3",
+      "status": "environment_failed_before_client_tick",
+      "detail": "Observer ImGui JNI extraction raced on the global temporary DLL path. The launcher now isolates java.io.tmpdir per role; all created processes were stopped via their exact handles."
+    }
+  ],
+  "documentation_sha256": {
+    "docs/multiplayer_structure_batch_2026_10_29.zh-CN.md": "E5A64A8827F5FF0BCFE70E55A01D9456B40E9A9E1DE0BC1910D06BC49EC3DF49"
+  }
+}

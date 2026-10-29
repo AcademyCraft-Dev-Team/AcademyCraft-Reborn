@@ -45,9 +45,15 @@ public final class SableProvenanceLifecycle {
                 || grid.getSubLevel(parent.getUniqueId()) != parent || SableRestorationIsolation.hidden(parent)
                 ? null : reference(parent);
         var metadata = source == null ? null : LiveStructureProvenance.metadata(host.getServer(), source).orElse(null);
+        var mounts = SableNozzleFractures.capture(host, parent, source);
         var result = assembly.get();
-        if (metadata == null) return result;
         var child = org.academy.internal.common.structure.sable.reflect.SableReflection.optional(ServerSubLevel.class, result);
+        if (source != null && child != null && child != parent && child.getLevel() == host && !child.isRemoved()
+                && grid.getSubLevel(child.getUniqueId()) == child && !SableRestorationIsolation.hidden(child)) {
+            org.academy.internal.common.structure.upgrade.damage.LiveStructureDamage.fragmentCreated(host, source, reference(child));
+            SableNozzleFractures.moved(host, parent, child, mounts);
+        }
+        if (metadata == null) return result;
         if (child == null || child == parent || child.getLevel() != host || child.isRemoved()
                 || grid.getSubLevel(child.getUniqueId()) != child || SableRestorationIsolation.hidden(child)
                 || !LiveStructureProvenance.metadata(host.getServer(), source).filter(metadata::equals).isPresent()) return result;

@@ -9,6 +9,7 @@ allprojects {
             gameDirectory.set(directory)
             systemProperty 'academy.structureGroupSmoke', 'true'
             systemProperty 'academy.structureGroupMoveSmoke', 'true'
+            systemProperty 'academy.structureGroupBasicSmoke', providers.gradleProperty('academyStructureGroupBasicSmoke').getOrElse('false')
             programArguments.addAll('--width','1280','--height','720','--quickPlaySingleplayer','test')
         }
     }

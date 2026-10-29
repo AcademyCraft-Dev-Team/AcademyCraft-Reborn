@@ -107,6 +107,24 @@ class ChunkLeapPacketsCodecTest {
         assertEquals(100, decoded.targetX());
         assertEquals(70, decoded.targetY());
         assertEquals(-100, decoded.targetZ());
+        org.junit.jupiter.api.Assertions.assertNull(decoded.structure());
+        assertFalse(decoded.alignDirection());
+    }
+
+    @Test
+    void structureMarkerAndTeleportPreserveWholeActivationAndDirectionFlag() {
+        var reference = new org.academy.api.common.structure.StructureRef(UUID.randomUUID(), OVERWORLD.identifier(),
+                Identifier.parse("academy:sublevel"), 12);
+        var target = new org.academy.api.common.ability.program.ProgramStructureReference(reference, UUID.randomUUID());
+        var marker = new ChunkLeapPackets.Marker(Integer.MAX_VALUE, ChunkLeapPackets.CAT_OTHER, -1, 30, -40, null, target);
+        var markerDecoded = roundTrip(marker, ChunkLeapPackets.Marker.CODEC);
+        assertEquals(marker, markerDecoded);
+        var packet = new ChunkLeapPackets.EntityTeleportPacket(Integer.MAX_VALUE, "minecraft:overworld", 80, 0, -20, target, true);
+        var decoded = roundTrip(packet, ChunkLeapPackets.EntityTeleportPacket.CODEC);
+        assertEquals(target, decoded.structure());
+        assertTrue(decoded.alignDirection());
+        assertEquals(80, decoded.targetX());
+        assertEquals(-20, decoded.targetZ());
     }
 
     @Test

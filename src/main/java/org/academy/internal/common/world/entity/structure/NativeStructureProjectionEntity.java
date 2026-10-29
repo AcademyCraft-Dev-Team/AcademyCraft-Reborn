@@ -111,6 +111,11 @@ public final class NativeStructureProjectionEntity extends Entity implements Blo
         refreshAnchorAndBounds();
     }
 
+    public void applyClientTeleport(NativeStructureView view, StructurePose pose, long revision) {
+        applyClientSnapshot(view, pose, revision);
+        if (clientOnly) clientPose.reset(pose);
+    }
+
     public NativeStructureView view() {
         return entityData.get(VIEW);
     }

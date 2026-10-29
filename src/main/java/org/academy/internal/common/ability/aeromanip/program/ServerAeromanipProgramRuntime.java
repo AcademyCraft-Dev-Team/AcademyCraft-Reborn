@@ -11,6 +11,7 @@ import org.academy.api.common.ability.program.ForwardingProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramStructureAnchor;
+import org.academy.api.common.ability.program.ProgramVector;
 import org.academy.api.common.ability.program.ProgramStructureControl;
 import org.academy.api.common.ability.program.ProgramStructureOperationResult;
 import org.academy.api.common.ability.program.ProgramStructurePose;
@@ -416,6 +417,28 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     }
 
     @Override
+    public void closeStructureControls() {
+        for (var control : java.util.List.copyOf(issuedControls.values())) releaseStructure(control);
+        issuedControls.clear();
+    }
+
+    @Override
+    public ProgramStructureOperationResult finishStructureMovement(ProgramStructureControl control) {
+        var status = structureControlStatus(control);
+        if (status.status() != ProgramStructureOperationResult.Status.COMPLETED) return status;
+        if (SubLevelStructureRefs.isSubLevel(control.reference())) return subLevelControls.stopMovement(control);
+        return operationResult(HighSpeedJetStructureService.programStopMove(player, control.reference(), control.controlId()));
+    }
+
+    @Override
+    public ProgramStructureOperationResult structureControlStatus(ProgramStructureControl control) {
+        requireCasterReady(Skills.HIGH_SPEED_JET.get());
+        var rejection = validateControl(control);
+        return rejection == null ? org.academy.internal.common.ability.program.ProgramStructureControlChecks.inspect(player, control, MAX_ACTION_RANGE)
+                : ProgramStructureOperationResult.rejected(rejection);
+    }
+
+    @Override
     public StructureOperation moveStructure(ProgramStructureControl control,
                                             @Nullable ProgramWorldPosition target,
                                             @Nullable ProgramStructureAnchor anchor,
@@ -481,6 +504,11 @@ public final class ServerAeromanipProgramRuntime implements AeromanipProgramRunt
     public Operation orientationStatus(ProgramStructureControl control, UUID operationId) {
         requireCasterReady(Skills.HIGH_SPEED_JET.get());
         return orientationControls.status(control, operationId);
+    }
+
+    @Override public java.util.Optional<ProgramVector> defaultStructureDisplacement() {
+        var look = player.getLookAngle().scale(3);
+        return java.util.Optional.of(new ProgramVector(look.x, look.y, look.z));
     }
 
     @Override public Operation moveStructures(java.util.List<ProgramStructureReference> structures, org.academy.api.common.ability.program.ProgramStructureMoveRequest request) {

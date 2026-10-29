@@ -9,6 +9,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SubLevelTest {
     @Test
+    void instantTeleportStartsNewCarryHistoryWithoutChangingContentIdentity() {
+        var subLevel = new SubLevel(SubLevelId.random(), new PlotPos(2, 3),
+                new AABB(0, 0, 0, 2, 1, 1), StructurePose.identity(Vec3.ZERO));
+        var id = subLevel.id(); var plot = subLevel.plot();
+        subLevel.geometryChanged();
+        var destination = new StructurePose(new Vec3(64, 20, -32), new org.joml.Quaterniond().rotationY(.7));
+        subLevel.teleportPose(destination);
+        assertEquals(destination, subLevel.pose());
+        assertEquals(destination, subLevel.previousPose());
+        assertEquals(destination, subLevel.carryPose());
+        assertEquals(1, subLevel.teleportRevision());
+        assertEquals(1, subLevel.geometryRevision());
+        assertEquals(id, subLevel.id()); assertEquals(plot, subLevel.plot());
+        subLevel.setPose(new StructurePose(destination.worldOrigin().add(0, 1, 0), destination.rotation()));
+        assertEquals(destination, subLevel.carryPose());
+        assertEquals(1, subLevel.teleportRevision(), "ordinary physics steps must not repeatedly snap clients");
+        subLevel.teleportPose(StructurePose.identity(Vec3.ZERO));
+        assertEquals(2, subLevel.teleportRevision());
+    }
+
+    @Test
     void poseAndRevisionTrackMovement() {
         var subLevel = new SubLevel(SubLevelId.random(), new PlotPos(0, 0),
                 new AABB(0, 0, 0, 2, 3, 1), StructurePose.identity(new Vec3(5, 10, 5)));

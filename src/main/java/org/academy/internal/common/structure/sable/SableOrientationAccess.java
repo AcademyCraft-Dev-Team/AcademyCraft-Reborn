@@ -180,6 +180,30 @@ public final class SableOrientationAccess implements OrientationBackendAccess {
         return applyMotion(host, expected, linearVelocity, expected.body().motion().angularVelocity());
     }
 
+    @Override public boolean teleport(ServerLevel host, Body expected, org.academy.api.common.structure.StructurePose destination,
+                                      Vec3 linearVelocity, Vec3 angularVelocity) {
+        SableStructureAccess.requireThread(host.getServer());
+        if (!expected.sameObservation(observe(host, expected.reference()).orElse(null))) return false;
+        var handle = SableStructureAccess.resolveHandle(host.getServer(), expected.reference()).orElse(null);
+        var system = SubLevelPhysicsSystem.get(host);
+        if (handle == null || !readable(system, handle)) return false;
+        var body = handle.subLevel();
+        var pivot = body.logicalPose().rotationPoint();
+        var localPivot = new Vec3(pivot.x() - handle.plotOrigin().getX(),
+                pivot.y() - handle.plotOrigin().getY(), pivot.z() - handle.plotOrigin().getZ());
+        var point = destination.localToWorldPoint(localPivot);
+        system.getPipeline().teleport(body, new Vector3d(point.x, point.y, point.z), destination.rotation());
+        var rigidBody = system.getPhysicsHandle(body);
+        var oldLinear = rigidBody.getLinearVelocity(new Vector3d());
+        var oldAngular = rigidBody.getAngularVelocity(new Vector3d());
+        rigidBody.addLinearAndAngularVelocity(
+                new Vector3d(linearVelocity.x, linearVelocity.y, linearVelocity.z).sub(oldLinear),
+                new Vector3d(angularVelocity.x, angularVelocity.y, angularVelocity.z).sub(oldAngular));
+        body.updateLastPose();
+        body.updateBoundingBox();
+        return true;
+    }
+
     @Override public boolean applyMotion(ServerLevel host, LinearBody expected, Vec3 linearVelocity, Vec3 angularVelocity) {
         SableStructureAccess.requireThread(host.getServer());
         finite(linearVelocity, "linearVelocity");

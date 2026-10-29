@@ -458,6 +458,15 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         }
 
         public String portTranslationKey(String port) {
+            if ("target".equals(port)) {
+                var input = defaultSchema.input(port).orElse(null);
+                if (input != null && input.type().equals(ProgramValueTypes.WORLD_POSITION)) {
+                    return "screen.academy.program.port.target_position";
+                }
+                if (input != null && input.type().equals(ProgramValueTypes.BLOCK_POSITION)) {
+                    return "screen.academy.program.port.target_block_position";
+                }
+            }
             return portTranslationPrefix + port;
         }
 

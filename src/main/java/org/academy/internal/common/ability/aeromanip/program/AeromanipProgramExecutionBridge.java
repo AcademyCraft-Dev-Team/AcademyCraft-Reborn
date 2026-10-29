@@ -227,14 +227,12 @@ public final class AeromanipProgramExecutionBridge {
         put(result, AeromanipProgramNodeIds.STRUCTURE_MOVE,
                 (ProgramVmContext context,
                  AeromanipProgramNodeCatalog.MoveStructureConfiguration configuration,
-                 ProgramInputView inputs) -> structureResult(
-                        runtime(context).moveStructure(
-                                structureControl(inputs),
-                                optionalWorldPosition(inputs, "target"),
-                                optionalStructureAnchor(inputs, "anchor"),
+                 ProgramInputView inputs) -> ProgramStructureMovementExecutors.run(context, runtime(context),
+                        () -> new ProgramStructureMovementExecutors.Request(structureControl(inputs),
+                                optionalWorldPosition(inputs, "target"), optionalStructureAnchor(inputs, "anchor"),
                                 optionalFloat(inputs, "seconds", configuration.durationSeconds())),
-                        false,
-                        false));
+                        request -> runtime(context).moveStructure(request.control(), request.target(),
+                                request.anchor(), request.seconds()).result()));
         put(result, AeromanipProgramNodeIds.STRUCTURE_MOVE_GROUP,
                 org.academy.internal.common.ability.program.ProgramStructureGroupExecutors::move);
         put(result, AeromanipProgramNodeIds.STRUCTURE_ROTATE_GROUP,

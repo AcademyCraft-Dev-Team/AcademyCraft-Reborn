@@ -118,6 +118,14 @@ public final class SubLevelOrientationAccess implements OrientationBackendAccess
         return applyMotion(host, expected, linearVelocity, expected.body().motion().angularVelocity());
     }
 
+    @Override public boolean teleport(ServerLevel host, Body expected, StructurePose destination,
+                                      Vec3 linearVelocity, Vec3 angularVelocity) {
+        requireServerThread(host);
+        if (!expected.sameObservation(observe(host, expected.reference()).orElse(null))) return false;
+        return SubLevelServer.runtime(host).orElseThrow().teleport(new SubLevelId(expected.reference().id()),
+                destination, linearVelocity, angularVelocity);
+    }
+
     @Override public boolean applyMotion(ServerLevel host, LinearBody expected, Vec3 linearVelocity, Vec3 angularVelocity) {
         requireServerThread(host);
         var current = observeLinear(host, expected.body().reference()).orElse(null);

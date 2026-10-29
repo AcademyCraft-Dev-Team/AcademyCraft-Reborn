@@ -43,9 +43,16 @@ public final class SubLevelClientState {
     private static final Map<ClientLevel, Map<SubLevelId, NativeStructureProjectionEntity>> ENTITIES = new WeakHashMap<>();
     private static final Map<ClientLevel, Map<SubLevelId, StructurePose>> COLLISION_POSES = new WeakHashMap<>();
     private static final Map<Integer, SubLevelId> PROJECTION_IDS = new HashMap<>();
+    private static final boolean TELEPORT_DIAGNOSTICS = Boolean.getBoolean("academy.structureTeleportSmoke")
+            || Boolean.getBoolean("academy.multiplayerStructureSmoke");
+    private static final Map<ClientLevel, Map<SubLevelId, SnapObservation>> TELEPORT_OBSERVATIONS = new WeakHashMap<>();
+    private static final boolean PACKET_DIAGNOSTICS = Boolean.getBoolean("academy.subLevelBatchMultiplayerSmoke");
+    private static final Map<ClientLevel, long[]> PACKET_COUNTS = new WeakHashMap<>();
     private static final AtomicInteger ENTITY_IDS = new AtomicInteger(-1_000_000);
     private static List<CarryFrame> pendingCarry = List.of();
     private static ClientLevel carryLevel;
+    private static ClientLevel retainedCurrentLevel;
+    private static long discardedOnLevelChange;
 
     private SubLevelClientState() {
     }
@@ -53,6 +60,10 @@ public final class SubLevelClientState {
     public static synchronized void accept(SubLevelStatePacket packet) {
         var level = Minecraft.getInstance().level;
         if (level == null || !level.dimension().identifier().equals(packet.dimension())) return;
+        if (PACKET_DIAGNOSTICS) {
+            var counts = PACKET_COUNTS.computeIfAbsent(level, ignored -> new long[5]);
+            counts[packet.removed() ? 4 : 0]++;
+        }
         var states = STATES.computeIfAbsent(level, ignored -> new LinkedHashMap<>());
         var entities = ENTITIES.computeIfAbsent(level, ignored -> new LinkedHashMap<>());
         if (packet.removed()) {
@@ -66,6 +77,8 @@ public final class SubLevelClientState {
             if (index != null) index.remove(packet.id());
             var poses = COLLISION_POSES.get(level);
             if (poses != null) poses.remove(packet.id());
+            var observations = TELEPORT_OBSERVATIONS.get(level);
+            if (observations != null) observations.remove(packet.id());
             return;
         }
         var existing = states.get(packet.id());
@@ -99,15 +112,47 @@ public final class SubLevelClientState {
     /** Pose-only delta; the view and local geometry are unchanged. */
     public static synchronized void acceptPose(SubLevelPosePacket packet) {
         var level = Minecraft.getInstance().level;
-        if (level == null || !level.dimension().identifier().equals(packet.dimension())) return;
+        if (PACKET_DIAGNOSTICS && level != null && level.dimension().identifier().equals(packet.dimension())) {
+            PACKET_COUNTS.computeIfAbsent(level, ignored -> new long[5])[3]++;
+        }
+        acceptPose(packet.dimension(), packet.id(), packet.pose(), false);
+    }
+
+    public static synchronized void acceptPoses(org.academy.internal.common.network.SubLevelPoseBatchPacket packet) {
+        var level = Minecraft.getInstance().level;
+        if (PACKET_DIAGNOSTICS && level != null && level.dimension().identifier().equals(packet.dimension())) {
+            var counts = PACKET_COUNTS.computeIfAbsent(level, ignored -> new long[5]);
+            counts[1]++; counts[2] += packet.entries().size();
+        }
+        for (var entry : packet.entries()) acceptPose(packet.dimension(), entry.id(), entry.pose(), entry.teleport());
+    }
+
+    private static void acceptPose(net.minecraft.resources.Identifier dimension, SubLevelId id, StructurePose pose,
+                                   boolean teleport) {
+        var level = Minecraft.getInstance().level;
+        if (level == null || !level.dimension().identifier().equals(dimension)) return;
         var states = STATES.get(level);
-        var previous = states == null ? null : states.get(packet.id());
+        var previous = states == null ? null : states.get(id);
         if (previous == null) return; // A delta before the full snapshot is ignored.
-        var updated = new Snapshot(previous.plot(), packet.pose(), previous.boxes(), previous.view());
-        states.put(packet.id(), updated);
-        var projection = ENTITIES.getOrDefault(level, Map.of()).get(packet.id());
+        var updated = new Snapshot(previous.plot(), pose, previous.boxes(), previous.view());
+        states.put(id, updated);
+        var projection = ENTITIES.getOrDefault(level, Map.of()).get(id);
         if (projection != null) {
-            projection.applyClientSnapshot(previous.view(), packet.pose(), projection.viewState().revision() + 1);
+            long revision = projection.viewState().revision() + 1;
+            if (teleport) projection.applyClientTeleport(previous.view(), pose, revision);
+            else projection.applyClientSnapshot(previous.view(), pose, revision);
+        }
+        if (teleport) {
+            pendingCarry = pendingCarry.stream().filter(frame -> !frame.id().equals(id)).toList();
+            COLLISION_POSES.computeIfAbsent(level, ignored -> new HashMap<>()).put(id, pose);
+            var index = INDEXES.get(level);
+            if (index != null) index.update(id, previous.boxes(), pose, pose, 0, 0);
+            if (TELEPORT_DIAGNOSTICS && projection != null) {
+                var observations = TELEPORT_OBSERVATIONS.computeIfAbsent(level, ignored -> new HashMap<>());
+                var old = observations.get(id);
+                observations.put(id, new SnapObservation(pose, projection.clientContactPose(), projection.renderPose(0),
+                        projection.renderPose(.5f), projection.renderPose(1), old == null ? 1 : old.count() + 1));
+            }
         }
         // The collision pose advances in tick(), sampling the renderer's game-tick timeline;
         // using the packet target directly would leave the visible surface behind the contact.
@@ -121,6 +166,7 @@ public final class SubLevelClientState {
         pendingCarry = List.of();
         carryLevel = null;
         var minecraft = Minecraft.getInstance();
+        retainCurrentLevel(minecraft.level);
         if (minecraft.isPaused()) return;
         var level = minecraft.level;
         if (level == null) return;
@@ -172,6 +218,61 @@ public final class SubLevelClientState {
     public static synchronized List<Snapshot> snapshots(ClientLevel level) {
         var states = STATES.get(level);
         return states == null ? List.of() : states.values().stream().toList();
+    }
+
+    /** Entity values retain their level, so weak map keys alone cannot release an old world. */
+    private static void retainCurrentLevel(ClientLevel current) {
+        if (retainedCurrentLevel == current) return;
+        retainedCurrentLevel = current;
+        var oldLevels = new HashSet<ClientLevel>();
+        oldLevels.addAll(STATES.keySet()); oldLevels.addAll(ENTITIES.keySet());
+        oldLevels.addAll(INDEXES.keySet()); oldLevels.addAll(COLLISION_POSES.keySet());
+        oldLevels.addAll(PACKET_COUNTS.keySet()); oldLevels.addAll(TELEPORT_OBSERVATIONS.keySet());
+        for (var level : oldLevels) {
+            if (level == current) continue;
+            var entities = ENTITIES.remove(level);
+            if (entities != null) for (var projection : entities.values()) {
+                PROJECTION_IDS.remove(projection.getId());
+                projection.discard();
+                if (PACKET_DIAGNOSTICS) discardedOnLevelChange++;
+            }
+            var index = INDEXES.remove(level);
+            if (index != null) SubLevelCollisionRuntime.unregister(level, index);
+            STATES.remove(level); COLLISION_POSES.remove(level);
+            PACKET_COUNTS.remove(level); TELEPORT_OBSERVATIONS.remove(level);
+        }
+        var liveIds = new HashSet<Integer>();
+        if (current != null) for (var projection : ENTITIES.getOrDefault(current, Map.of()).values()) liveIds.add(projection.getId());
+        PROJECTION_IDS.keySet().retainAll(liveIds);
+        if (carryLevel != current) { pendingCarry = List.of(); carryLevel = null; }
+    }
+
+    public record LifecycleDiagnostics(int retainedLevels, int projectionIds, int pendingCarryFrames, long discardedProjections) {}
+    public static synchronized LifecycleDiagnostics lifecycleDiagnostics() {
+        var levels = new HashSet<ClientLevel>();
+        levels.addAll(STATES.keySet()); levels.addAll(ENTITIES.keySet()); levels.addAll(INDEXES.keySet());
+        levels.addAll(COLLISION_POSES.keySet()); levels.addAll(PACKET_COUNTS.keySet()); levels.addAll(TELEPORT_OBSERVATIONS.keySet());
+        return new LifecycleDiagnostics(levels.size(), PROJECTION_IDS.size(), pendingCarry.size(), discardedOnLevelChange);
+    }
+
+    /** Captured at receipt before later simulation samples can move the structure again. */
+    public record SnapObservation(StructurePose targetPose, StructurePose contactPose,
+                                  StructurePose render0, StructurePose renderHalf, StructurePose render1, long count) {}
+    public static synchronized java.util.Optional<SnapObservation> teleportObservation(ClientLevel level, SubLevelId id) {
+        return java.util.Optional.ofNullable(TELEPORT_OBSERVATIONS.getOrDefault(level, Map.of()).get(id));
+    }
+
+    /** Opt-in, read-only observations for the isolated two-client snapshot fixture. */
+    public record Diagnostics(int snapshots, int projections, int contactPoses, long statePackets,
+                              long batchPackets, long poseEntries, long legacyPosePackets, long removals) {}
+    public static synchronized Diagnostics diagnostics(ClientLevel level) {
+        var counts = PACKET_COUNTS.getOrDefault(level, new long[5]);
+        return new Diagnostics(STATES.getOrDefault(level, Map.of()).size(), ENTITIES.getOrDefault(level, Map.of()).size(),
+                COLLISION_POSES.getOrDefault(level, Map.of()).size(), counts[0], counts[1], counts[2], counts[3], counts[4]);
+    }
+    public static synchronized java.util.Optional<StructurePose> snapshotPose(ClientLevel level, SubLevelId id) {
+        var snapshot = STATES.getOrDefault(level, Map.of()).get(id);
+        return snapshot == null ? java.util.Optional.empty() : java.util.Optional.of(snapshot.pose());
     }
 
     /** State-only lookup for local click feedback; the snapshot remains server authoritative. */

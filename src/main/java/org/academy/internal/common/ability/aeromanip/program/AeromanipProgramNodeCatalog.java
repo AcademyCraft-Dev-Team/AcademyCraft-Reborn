@@ -260,6 +260,7 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                         ProgramPortDefinition.optionalInput("seconds", ProgramValueTypes.FLOAT)
                 ),
                 List.of(
+                        ProgramPortDefinition.output("control", ProgramValueTypes.STRUCTURE_CONTROL),
                         ProgramPortDefinition.output(
                                 "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
                         ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)
@@ -277,6 +278,7 @@ public final class AeromanipProgramNodeCatalog implements ProgramNodeLookup {
                                 "pose", ProgramValueTypes.STRUCTURE_POSE)
                 ),
                 List.of(
+                        ProgramPortDefinition.output("control", ProgramValueTypes.STRUCTURE_CONTROL),
                         ProgramPortDefinition.output(
                                 "result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
                         ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)

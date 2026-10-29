@@ -563,6 +563,16 @@ public final class MagneticStructureService {
      * participation, and the optional local force point becomes the application point. Expired
      * magnetization, lost regions and range violations end the action while retaining the body.
      */
+    /** Ends paid translation without releasing the program's exact standing control. */
+    public static ProgramResult programStopMove(ServerPlayer player, StructureRef reference, UUID controlId) {
+        requireThread(player);
+        var control = matchingProgram(player, reference, controlId);
+        if (control == null) return ProgramResult.rejected("no_matching_control");
+        control.moving = false;
+        control.moveExpiresAt = player.level().getGameTime() + MAXIMUM_PROGRAM_MOVE_TICKS;
+        return ProgramResult.completed("movement_window_completed", reference);
+    }
+
     public static ProgramResult programMove(ServerPlayer player, StructureRef reference, UUID controlId,
                                             Vec3 target, long durationTicks,
                                             @Nullable BlockPos localForcePoint) {

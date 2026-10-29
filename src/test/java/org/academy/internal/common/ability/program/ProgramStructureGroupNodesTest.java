@@ -33,12 +33,75 @@ class ProgramStructureGroupNodesTest {
             assertEquals(ProgramNodeStep.Directive.RETRY, executor.execute(context, config, inputs(List.of(TARGET, TARGET))).directive());
             assertEquals(List.of(TARGET), runtime.targets);
             assertEquals(ProgramNodeStep.Directive.RETRY, executor.execute(context, config, inputs(List.of())).directive());
-            assertEquals(ProgramNodeStep.Directive.CONTINUE, executor.execute(context, config, inputs(List.of())).directive());
+            var completed = executor.execute(context, config, inputs(List.of()));
+            assertEquals(ProgramNodeStep.Directive.CONTINUE, completed.directive());
+            assertEquals(List.of(TARGET), completed.outputs().get("structures").value());
             assertEquals(1, runtime.starts); assertEquals(2, runtime.polls); assertTrue(state.isEmpty());
             assertTrue(definition.editorCatalog().entry(id).visible());
             assertEquals(ProgramValueTypes.STRUCTURE_SET, definition.editorCatalog().schema(id,
                     definition.editorCatalog().entry(id).defaultConfiguration()).input("structures").orElseThrow().type());
         }
+    }
+
+    @Test void basicActionsNeedOnlyTheTriggerAndOneActionAndSingleSelectionsConnectDirectly() {
+        for (var category : CATEGORIES) for (var action : List.of("move_group", "rotate_group", "reset_group", "spin_group")) {
+            var definition = AbilityProgramDefinitions.require(Identifier.parse("academy:" + category));
+            var id = action(category,action);
+            var graph = new ProgramGraph(List.of(
+                    new ProgramGraph.Node(0,BaseAbilityProgramDefinition.entryId(definition.category()),1,new JsonObject()),
+                    new ProgramGraph.Node(1,id,1,definition.editorCatalog().entry(id).defaultConfiguration())),
+                    List.of(edge(0,"flow",1,"flow")));
+            var skill = Identifier.parse("academy:" + switch(category) {
+                case "accelerator" -> "kinetic_throw"; case "electromaster" -> "magnet_manipulation"; default -> "high_speed_jet";
+            });
+            var compiled = definition.compile(graph,Set.of(skill));
+            assertTrue(compiled.valid(),compiled.diagnostics()::toString);
+            var runtime = new Runtime();
+            var session = new ProgramVm.Session(compiled.program());
+            var frame = new ProgramExecutionFrame(new ProgramActionTransaction(),runtime);
+            assertEquals(ProgramVmResult.Status.SUSPENDED,session.run(0,1000,definition.executors(),frame).status());
+            session.run(1,1000,definition.executors(),frame);
+            assertEquals(ProgramVmResult.Status.COMPLETED,session.run(2,1000,definition.executors(),frame).status());
+            assertEquals(List.of(TARGET),runtime.targets); assertEquals(1,runtime.starts);
+        }
+        var runtime=new Runtime();
+        var context=new ProgramVmContext(0,new HashMap<>(),new HashMap<>(),new ProgramExecutionFrame(new ProgramActionTransaction(),runtime));
+        context.enterNode(7,action("accelerator","move_group"));
+        var single=new ProgramInputView(Map.of("structure",List.of(new ProgramValue<>(ProgramValueTypes.STRUCTURE_REFERENCE,TARGET))));
+        assertEquals(ProgramNodeStep.Directive.RETRY,ProgramStructureGroupExecutors.move(context,new ProgramStructureMovementNodes.Configuration(1),single).directive());
+        assertEquals(List.of(TARGET),runtime.targets);
+        var ambiguous=new ProgramInputView(Map.of("structure",List.of(new ProgramValue<>(ProgramValueTypes.STRUCTURE_REFERENCE,TARGET)),
+                "structures",List.of(new ProgramValue<>(ProgramValueTypes.STRUCTURE_SET,List.of(TARGET)))));
+        context.enterNode(8,action("accelerator","move_group"));
+        assertThrows(ProgramActionFailure.class,() -> ProgramStructureGroupExecutors.move(context,new ProgramStructureMovementNodes.Configuration(1),ambiguous));
+        assertEquals(1,runtime.starts);
+    }
+
+    @Test void optionalDurationIsCapturedOnceAndDoesNotChangeDuringPolling() {
+        var runtime = new Runtime();
+        var state = new HashMap<String, Object>();
+        var context = new ProgramVmContext(0, new HashMap<>(), state,
+                new ProgramExecutionFrame(new ProgramActionTransaction(), runtime));
+        context.enterNode(7, action("accelerator", "move_group"));
+        var values = new HashMap<String, List<ProgramValue<?>>>();
+        values.put("structures", List.of(new ProgramValue<>(ProgramValueTypes.STRUCTURE_SET, List.of(TARGET))));
+        values.put("displacement", List.of(new ProgramValue<>(ProgramValueTypes.VECTOR, new ProgramVector(1, 2, 3))));
+        values.put("seconds", List.of(new ProgramValue<>(ProgramValueTypes.FLOAT, .125)));
+        var config = new ProgramStructureMovementNodes.Configuration(1);
+        assertEquals(ProgramNodeStep.Directive.RETRY,
+                ProgramStructureGroupExecutors.move(context, config, new ProgramInputView(values)).directive());
+        assertEquals(3, runtime.request.durationTicks());
+        // Missing inputs during a retry cannot re-read duration, displacement or selection.
+        ProgramStructureGroupExecutors.move(context, config, new ProgramInputView(Map.of()));
+        var done = ProgramStructureGroupExecutors.move(context, config, new ProgramInputView(Map.of()));
+        assertEquals(List.of(TARGET), done.outputs().get("structures").value());
+        assertEquals(1, runtime.starts);
+        assertEquals(3, runtime.request.durationTicks());
+        assertTrue(state.isEmpty());
+        values.put("seconds", List.of(new ProgramValue<>(ProgramValueTypes.FLOAT, 10.01)));
+        assertThrows(IllegalArgumentException.class,
+                () -> ProgramStructureGroupExecutors.move(context, config, new ProgramInputView(values)));
+        assertEquals(1, runtime.starts);
     }
 
     @Test void changedReceiptsFailAndSchedulerCleanupReleasesGroupsEvenIfSingleCleanupThrows() {
@@ -52,6 +115,7 @@ class ProgramStructureGroupNodesTest {
         assertTrue(state.isEmpty());
         ServerProgramExecution.closeOrientationCommands(frame);
         assertEquals(1, runtime.closes);
+        assertEquals(1,runtime.singleCloses,"single force cleanup must run even after attitude cleanup failed");
     }
 
     @Test void allThreeCategoryGraphsSaveRoundTripAndRunTheRealVmWithBoundedGroupInputs() {
@@ -91,18 +155,25 @@ class ProgramStructureGroupNodesTest {
     private static ProgramGraph.Edge edge(int from, String output, int to, String input) {
         return new ProgramGraph.Edge(new ProgramGraph.Endpoint(from, output), new ProgramGraph.Endpoint(to, input));
     }
-    private static final class Runtime implements ProgramStructureGroupRuntime, ProgramStructureOrientationRuntime {
-        int starts, polls, closes;
+    private static final class Runtime implements ProgramStructureGroupRuntime, ProgramStructureOrientationRuntime, ProgramTargetResolver, ProgramStructureControlRuntime {
+        @Override public Optional<ProgramStructureReference> lookStructureTarget() { return Optional.of(TARGET); }
+        @Override public Optional<ProgramVector> defaultStructureDisplacement() { return Optional.of(new ProgramVector(1,2,3)); }
+        @Override public Optional<ProgramWorldPosition> positionOf(Object entity) { return Optional.empty(); }
+        @Override public Optional<ProgramDirection> lookDirectionOf(Object entity) { return Optional.empty(); }
+        @Override public List<?> entitiesAround(ProgramWorldPosition center,double radius) { return List.of(); }
+        @Override public Optional<ProgramBlockPosition> raycastBlock(ProgramWorldPosition origin,ProgramDirection direction,double distance) { return Optional.empty(); }
+        int starts, polls, closes, singleCloses;
         boolean changeReceipt, emptyCompletes;
         UUID receipt;
         List<ProgramStructureReference> targets;
+        ProgramStructureMoveRequest request;
         private Operation start(List<ProgramStructureReference> targets) {
             starts++; this.targets = targets; receipt = UUID.randomUUID();
             return targets.isEmpty() && emptyCompletes ? Operation.completed("empty") : Operation.pending(receipt, "pending");
         }
         @Override public Operation rotateStructures(List<ProgramStructureReference> targets, ProgramStructurePose pose) { return start(targets); }
         @Override public Operation moveStructures(List<ProgramStructureReference> targets, ProgramStructureMoveRequest request) {
-            assertEquals(new ProgramVector(1, 2, 3), request.displacement()); return start(targets);
+            assertEquals(new ProgramVector(1, 2, 3), request.displacement()); this.request = request; return start(targets);
         }
         @Override public Operation resetStructures(List<ProgramStructureReference> targets, ResetRequest request) { return start(targets); }
         @Override public Operation spinStructures(List<ProgramStructureReference> targets, SpinRequest request) { return start(targets); }
@@ -112,5 +183,6 @@ class ProgramStructureGroupNodesTest {
         }
         @Override public void closeOrientationCommands() { throw new IllegalStateException("injected single command cleanup failure"); }
         @Override public void closeStructureGroups() { closes++; }
+        @Override public void closeStructureControls() { singleCloses++; }
     }
 }

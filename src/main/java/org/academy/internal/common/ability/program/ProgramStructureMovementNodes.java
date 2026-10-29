@@ -24,6 +24,11 @@ public final class ProgramStructureMovementNodes {
         public ProgramStructureMoveRequest request(ProgramVector displacement) {
             return new ProgramStructureMoveRequest(displacement, (int) Math.ceil(durationSeconds * 20));
         }
+        public ProgramStructureMoveRequest request(ProgramVector displacement, ProgramInputView inputs) {
+            var seconds = inputs.first("seconds").isEmpty() ? durationSeconds
+                    : ((Number) inputs.requireCompatible("seconds", ProgramValueTypes.FLOAT).value()).doubleValue();
+            return new Configuration(seconds).request(displacement);
+        }
     }
     public static JsonObject defaults() {
         var config = new JsonObject(); config.addProperty("duration_seconds", 1.0); return config;
@@ -36,9 +41,12 @@ public final class ProgramStructureMovementNodes {
         @Override public ProgramNodePurity purity() { return ProgramNodePurity.ACTION; }
         @Override public ProgramNodeSchema schema(Configuration config) {
             return new ProgramNodeSchema(List.of(ProgramPortDefinition.requiredInput("flow", ProgramValueTypes.FLOW),
-                    ProgramPortDefinition.requiredInput("structures", ProgramValueTypes.STRUCTURE_SET),
-                    ProgramPortDefinition.requiredInput("displacement", ProgramValueTypes.VECTOR)),
-                    List.of(ProgramPortDefinition.output("result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
+                    ProgramPortDefinition.optionalInput("structures", ProgramValueTypes.STRUCTURE_SET),
+                    ProgramPortDefinition.optionalInput("structure", ProgramValueTypes.STRUCTURE_REFERENCE),
+                    ProgramPortDefinition.optionalInput("displacement", ProgramValueTypes.VECTOR),
+                    ProgramPortDefinition.optionalInput("seconds", ProgramValueTypes.FLOAT)),
+                    List.of(ProgramPortDefinition.output("structures", ProgramValueTypes.STRUCTURE_SET),
+                            ProgramPortDefinition.output("result", ProgramValueTypes.STRUCTURE_OPERATION_RESULT),
                             ProgramPortDefinition.output("flow", ProgramValueTypes.FLOW)));
         }
     }

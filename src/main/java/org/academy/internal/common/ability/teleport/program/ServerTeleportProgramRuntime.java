@@ -29,6 +29,9 @@ import org.academy.api.common.ability.program.ProgramBlockPosition;
 import org.academy.api.common.ability.program.ProgramDirection;
 import org.academy.api.common.ability.program.ProgramTargetResolver;
 import org.academy.api.common.ability.program.ProgramWorldPosition;
+import org.academy.api.common.ability.program.ProgramStructureReference;
+import org.academy.api.common.structure.StructureTeleports;
+import org.academy.api.common.structure.StructurePose;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.AbilityBlockDrops;
@@ -129,6 +132,9 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         if (targetType == TeleportProgramNodeCatalog.TargetType.BLOCK) {
             return teleportBlockAction(targetReference, destinationReference, direction, power);
         }
+        if (targetType == TeleportProgramNodeCatalog.TargetType.STRUCTURE) {
+            return teleportStructureAction(targetReference, destinationReference, direction, power);
+        }
         return new ProgramActionTransaction.ProgramAction() {
             private Entity target;
             private ProgramActionTransaction.ProgramAction action;
@@ -175,6 +181,59 @@ public final class ServerTeleportProgramRuntime implements TeleportProgramRuntim
         var moved = entity.getBoundingBox().move(destination.subtract(entity.position()));
         return targets.level().getWorldBorder().isWithinBounds(moved)
                 && targets.level().noCollision(entity, moved);
+    }
+
+    private ProgramActionTransaction.ProgramAction teleportStructureAction(
+            Object targetReference, Object destinationReference, @Nullable ProgramDirection direction, float power
+    ) {
+        ProgramPowerScale.require(power);
+        if (!(targetReference instanceof ProgramStructureReference reference)) {
+            throw new IllegalArgumentException("Teleport target must be a physical structure");
+        }
+        var destination = destinationPosition(destinationReference);
+        return new ProgramActionTransaction.ProgramAction() {
+            private StructureTeleports.Request request;
+            private StructureTeleports.Request restore;
+            private double distance;
+
+            @Override public void validate() {
+                requireCasterReady(Skills.QUICK_LOCATION_TELEPORT.get());
+                if (!destination.dimension().equals(player.level().dimension().identifier())) {
+                    throw new IllegalArgumentException("Physical structure teleport cannot migrate dimensions");
+                }
+                var motion = targets.structureMotion(reference).orElseThrow(() ->
+                        new IllegalArgumentException("Teleport structure is unavailable or outside query range"));
+                var center = motion.pose().localToWorldPoint(motion.localCenterOfMass());
+                if (center.distanceToSqr(player.getEyePosition()) > entityTargetRange(power) * entityTargetRange(power)) {
+                    throw new IllegalArgumentException("Teleport structure is outside action range");
+                }
+                var point = new Vec3(destination.x(), destination.y(), destination.z());
+                distance = center.distanceTo(point);
+                if (distance > entityMoveRange(power)) throw new IllegalArgumentException("Structure teleport exceeds its power limit");
+                var rotation = direction == null ? null : new StructurePose(Vec3.ZERO,
+                        new org.joml.Quaterniond().rotationYXZ(Math.toRadians(-rotationYaw(direction)),
+                                Math.toRadians(rotationPitch(direction)), 0));
+                request = new StructureTeleports.Request(reference.reference(), reference.runtimeId(), point, rotation);
+                restore = new StructureTeleports.Request(reference.reference(), reference.runtimeId(), center, motion.pose());
+                if (StructureTeleports.check(player.level(), player, request) != StructureTeleports.Result.READY) {
+                    throw new IllegalArgumentException("Structure teleport destination is unavailable, occupied or unsafe");
+                }
+            }
+
+            @Override public ProgramActionTransaction.Undo apply() {
+                validate();
+                charge(Skills.QUICK_LOCATION_TELEPORT.get(), entityCost(power, distance));
+                if (StructureTeleports.teleport(player.level(), player, request) != StructureTeleports.Result.TELEPORTED) {
+                    throw new IllegalStateException("Structure teleport was rejected");
+                }
+                var compensation = restore;
+                return () -> {
+                    if (StructureTeleports.teleport(player.level(), player, compensation) != StructureTeleports.Result.TELEPORTED) {
+                        throw new IllegalStateException("Unable to safely compensate structure teleport");
+                    }
+                };
+            }
+        };
     }
 
     private ProgramActionTransaction.ProgramAction teleportBlockAction(

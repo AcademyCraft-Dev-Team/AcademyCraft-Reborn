@@ -37,6 +37,7 @@ import org.academy.api.common.structure.StructurePhysicsControl;
 import org.academy.api.common.structure.StructurePhysicsLease;
 import org.academy.api.common.structure.StructurePhysicsRegion;
 import org.academy.api.common.structure.StructurePose;
+import org.academy.api.common.structure.StructureProjectileFlight;
 import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureRef;
 import org.academy.api.common.structure.StructureSpaces;
@@ -425,6 +426,16 @@ public final class VectorStructureService {
      * Program move entry: bounded anchor correction toward a world target. The body keeps its
      * inertia; range violations and lost regions end the action while retaining the structure.
      */
+    /** Ends paid translation without releasing the program's exact standing control. */
+    public static ProgramResult programStopMove(ServerPlayer player, StructureRef reference, UUID controlId) {
+        requireThread(player);
+        var held = controlledSession(player, reference, controlId);
+        if (held == null) return ProgramResult.rejected("no_matching_control");
+        held.programMove = false;
+        held.manualHover = false;
+        return ProgramResult.completed("movement_window_completed", reference);
+    }
+
     public static ProgramResult programMove(ServerPlayer player, StructureRef reference, UUID controlId,
                                             Vec3 target, long durationTicks) {
         requireThread(player);
@@ -502,6 +513,7 @@ public final class VectorStructureService {
         }
         var skill = Skills.KINETIC_THROW.get();
         var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3)) * speedScale;
+        if (!StructureProjectileFlight.canObserveKinetic(player, held.reference)) return ProgramResult.rejected("kinetic_flight_unavailable");
         held.closeControl();
         if (!StructureBackendRouter.launch(level, held.reference, direction, speed)) {
             terminate(player.getUUID());
@@ -512,6 +524,7 @@ public final class VectorStructureService {
         held.lifted = true;
         held.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
         held.velocity = direction.scale(speed);
+        if (!observeLaunched(player, held)) return ProgramResult.rejected("kinetic_flight_unavailable");
         return ProgramResult.completed("launched", held.reference);
     }
 
@@ -661,6 +674,7 @@ public final class VectorStructureService {
         var reference = hit.block().structure();
         var motion = StructureDynamics.motion(level, reference).orElse(null);
         if (motion == null) return PressResult.rejected("motion_unavailable");
+        if (!StructureProjectileFlight.canObserveKinetic(player, reference)) return PressResult.rejected("kinetic_flight_unavailable");
         var skill = Skills.KINETIC_THROW.get();
         var speed = directThrowSpeed(motion.mass(), skill.hasProficiencyMilestone(player, 3));
         var sable = StructureBackendRouter.SABLE_ID.equals(reference.backend());
@@ -709,6 +723,7 @@ public final class VectorStructureService {
         session.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
         session.velocity = direction.scale(speed);
         SESSIONS.put(player.getUUID(), session);
+        if (!observeLaunched(player, session)) return PressResult.rejected("kinetic_flight_unavailable");
         AcademyCraft.LOGGER.info("KINETIC_STRUCTURE_DIRECT_THROW tick={} structure={} mass={} speed={} sable={}",
                 level.getGameTime(), reference, motion.mass(), speed, sable);
         return PressResult.thrown(sable ? "sable_direct" : "native_direct");
@@ -918,6 +933,7 @@ public final class VectorStructureService {
         if (held.plannedExtraction && !held.lifted) return false;
         var direction = KineticThrow.throwDirection(player.getLookAngle());
         if (direction.lengthSqr() <= 1.0e-8) return false;
+        if (!StructureProjectileFlight.canObserveKinetic(player, held.reference)) return false;
         StructureOrientations.cancel(level, held.reference, held.controllerId);
         if (held.traction != null || held.directControl) return launchSable(player, held, level, direction);
         return launchNative(player, held, direction, 1.0);
@@ -931,6 +947,7 @@ public final class VectorStructureService {
         traceLiftProbeCommand("manual_launch", player, held.reference);
         var skill = Skills.KINETIC_THROW.get();
         var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3));
+        if (!StructureProjectileFlight.canObserveKinetic(player, held.reference)) return false;
         held.closeControl();
         if (!StructureBackendRouter.launch(level, held.reference, direction, speed)) {
             terminate(player.getUUID());
@@ -940,7 +957,7 @@ public final class VectorStructureService {
         held.lifted = true;
         held.expiresAt = level.getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
         held.velocity = direction.scale(speed);
-        return true;
+        return observeLaunched(player, held);
     }
 
     private static void traceLiftProbeCommand(String action, ServerPlayer player, @Nullable StructureRef reference) {
@@ -1225,6 +1242,7 @@ public final class VectorStructureService {
         if (!isFiniteVector(direction) || direction.lengthSqr() <= 1.0e-8) return false;
         var motion = held.region.motion(held.reference).orElse(null);
         if (motion == null) return false;
+        if (!StructureProjectileFlight.canObserveKinetic(player, held.reference)) return false;
         var skill = Skills.KINETIC_THROW.get();
         var speed = KineticThrow.throwSpeed(skill.hasProficiencyMilestone(player, 3)) * speedScale;
         var mass = motion.mass();
@@ -1245,7 +1263,7 @@ public final class VectorStructureService {
             terminate(player.getUUID());
             return false;
         }
-        return true;
+        return observeLaunched(player, held);
     }
 
     private static void tickCapture(ServerPlayer player) {
@@ -1301,6 +1319,9 @@ public final class VectorStructureService {
         var motion = region.motion(held.reference).orElse(null);
         if (motion == null) return;
         if (held.pendingThrowDirection != null) {
+            if (!StructureProjectileFlight.canObserveKinetic(player, held.reference)) {
+                rejectCapture(player, "kinetic_flight_unavailable"); terminate(player.getUUID()); return;
+            }
             var direction = held.pendingThrowDirection;
             var speed = KineticThrow.throwSpeed(Skills.KINETIC_THROW.get().hasProficiencyMilestone(player, 3));
             try {
@@ -1315,6 +1336,7 @@ public final class VectorStructureService {
             held.lifted = true;
             held.velocity = direction.scale(speed);
             held.expiresAt = player.level().getGameTime() + KineticThrow.MAXIMUM_FLIGHT_TICKS;
+            observeLaunched(player, held);
             return;
         }
         var skill = Skills.KINETIC_THROW.get();
@@ -1542,6 +1564,7 @@ public final class VectorStructureService {
 
     private static void applySubLevelImpacts(ServerPlayer player, Session held, StructureDynamics.State motion) {
         var level = (ServerLevel) player.level();
+        if (held.enhancedFlight) return;
         var runtime = SubLevelServer.runtime(level).orElse(null);
         if (runtime == null) return;
         var local = runtime.localCollisionBoxes(SubLevelStructureRefs.id(held.reference).orElseThrow());
@@ -1615,8 +1638,24 @@ public final class VectorStructureService {
         }
     }
 
+    private static boolean observeLaunched(ServerPlayer player, Session held) {
+        // Once handed to the new projectile path, an admission race must never revive the
+        // legacy 30-second contact/explosion loop after a failed enhancement registration.
+        held.enhancedFlight = true;
+        if (StructureProjectileFlight.observeKinetic(player, held.reference, held.tier)) return true;
+        var level = player.level();
+        var access = StructureBackendRouter.orientationAccess(level, held.reference).orElse(null);
+        if (access != null) access.observeLinear(level, held.reference).ifPresent(body -> {
+            if (!StructureDirectControl.occupied(held.reference, body.body().runtimeId()))
+                access.applyMotion(level, body, Vec3.ZERO, Vec3.ZERO);
+        });
+        terminate(player.getUUID()); rejectCapture(player, "kinetic_flight_unavailable");
+        return false;
+    }
+
     private static void applyImpacts(ServerPlayer player, Session held) {
         if (!(player.level() instanceof ServerLevel level) || held.region == null) return;
+        if (held.enhancedFlight) return;
         var projection = projection(level, held.reference, held.region.bounds().inflate(16.0));
         if (projection == null) return;
         var boxes = projection.worldCollisionBoxes();
@@ -2010,6 +2049,7 @@ public final class VectorStructureService {
         private boolean plannedExtraction;
         private StructureCaptureExtractions.@Nullable Handle extractionHandle;
         private boolean sableBody;
+        private boolean enhancedFlight;
         private boolean directControl;
         private Vec3 velocity = Vec3.ZERO;
         private @Nullable StructurePose previousImpactPose;

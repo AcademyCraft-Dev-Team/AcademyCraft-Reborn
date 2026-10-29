@@ -46,6 +46,10 @@ public interface OrientationBackendAccess {
         return expected.body().motion().angularVelocity().equals(angularVelocity) && applyLinear(host, expected, linearVelocity);
     }
 
+    /** Exact-observation instant relocation. Admission and exclusive authority belong to the caller. */
+    default boolean teleport(ServerLevel host, Body expected, StructurePose destination,
+                             Vec3 linearVelocity, Vec3 angularVelocity) { return false; }
+
     /** Transfer this exact token from older queued translation commands into planned extraction. */
     default void cancelQueuedTranslation(ServerLevel host, StructureRef reference, UUID controlId) {}
 

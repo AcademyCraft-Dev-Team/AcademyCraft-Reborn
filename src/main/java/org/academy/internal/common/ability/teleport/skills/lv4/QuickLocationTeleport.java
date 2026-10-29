@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -19,12 +20,14 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
+import org.academy.api.common.structure.*;
 import org.academy.api.common.util.ViewTargetScanner;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.teleport.targeting.TeleportSync;
+import org.academy.internal.common.ability.teleport.targeting.TeleportStructures;
 import org.academy.internal.common.ability.teleport.skills.lv3.LocationTeleport;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.common.entitycontrol.MultipartEntityTargeting;
@@ -121,8 +124,17 @@ public final class QuickLocationTeleport extends Skill {
             if (mark == null) return;
             var level = LocationTeleport.Server.resolveLevel(player, mark);
             if (level == null) return;
-            var picked = pickEntity(player, skill.scaledRange(player,
-                    skill.hasProficiencyMilestone(player, 2) ? PICK_REACH * 1.5 : PICK_REACH));
+            var reach = skill.scaledRange(player,
+                    skill.hasProficiencyMilestone(player, 2) ? PICK_REACH * 1.5 : PICK_REACH);
+            var picked = pickEntity(player, reach);
+            var eye = player.getEyePosition();
+            var structure = StructureQueries.raycast(player.level(), eye, eye.add(player.getLookAngle().scale(reach))).orElse(null);
+            if (structure != null && (picked == null || eye.distanceToSqr(structure.worldPoint())
+                    <= eye.distanceToSqr(picked.getBoundingBox().getCenter()))) {
+                teleportStructure(player, structure, level,
+                        new Vec3(mark.x() + .5, mark.y() + .5, mark.z() + .5), player.isShiftKeyDown());
+                return;
+            }
             Entity target = player;
             var destination = LocationTeleport.Server.safeDestination(player, level, mark);
             if (picked != null && picked.level() == level) {
@@ -172,6 +184,24 @@ public final class QuickLocationTeleport extends Skill {
                     }
             );
             return selected == null ? null : MultipartEntityTargeting.resolve(selected);
+        }
+
+        /** Shared by the normal cast and in-game validation, using the same skill/resource gate. */
+        public static boolean teleportStructure(ServerPlayer player, StructureHit target, ServerLevel destinationLevel,
+                                                Vec3 destination, boolean alignDirection) {
+            if (destinationLevel != player.level()) return false;
+            var skill = Skills.QUICK_LOCATION_TELEPORT.get();
+            var reach = skill.scaledRange(player,
+                    skill.hasProficiencyMilestone(player, 2) ? PICK_REACH * 1.5 : PICK_REACH);
+            var proximity = StructureQueries.proximity(player.level(), target.block().structure(), player.getEyePosition()).orElse(null);
+            if (proximity == null || !proximity.runtimeId().equals(target.runtimeId()) || proximity.distance() > reach) return false;
+            var request = new StructureTeleports.Request(target.block().structure(), target.runtimeId(), destination,
+                    alignDirection ? TeleportStructures.facing(player.getYRot(), player.getXRot()) : null);
+            if (StructureTeleports.check(player.level(), player, request) != StructureTeleports.Result.READY) return false;
+            var moved = new boolean[1];
+            skill.executeActive(player, (ctx, actualCost) -> moved[0] =
+                    StructureTeleports.teleport(player.level(), player, request) == StructureTeleports.Result.TELEPORTED);
+            return moved[0];
         }
     }
 

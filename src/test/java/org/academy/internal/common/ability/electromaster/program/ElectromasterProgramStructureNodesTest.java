@@ -111,7 +111,7 @@ class ElectromasterProgramStructureNodesTest {
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
         var transaction = new ProgramActionTransaction();
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 400L, runtime, transaction);
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
@@ -160,7 +160,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 410L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -208,7 +208,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(rotateGraph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(rotateCompiled.valid(), () -> rotateCompiled.diagnostics().toString());
 
-        var rotated = ElectromasterProgramExecutionBridge.execute(
+        var rotated = executeToCompletion(
                 rotateCompiled.program(), 430L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, rotated.status());
@@ -248,7 +248,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(terminateGraph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(terminateCompiled.valid(), () -> terminateCompiled.diagnostics().toString());
 
-        var terminated = ElectromasterProgramExecutionBridge.execute(
+        var terminated = executeToCompletion(
                 terminateCompiled.program(), 431L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.COMPLETED, terminated.status(),
@@ -293,7 +293,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 420L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -343,7 +343,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 430L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
@@ -386,7 +386,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 450L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -431,7 +431,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 500L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -479,7 +479,7 @@ class ElectromasterProgramStructureNodesTest {
                 .compile(graph, Set.of(ElectromasterProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = ElectromasterProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 520L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -539,6 +539,19 @@ class ElectromasterProgramStructureNodesTest {
     private static double expectedLaunchSpeed(float power) {
         return LegacyMotionUnits.velocityPerSecond(MagneticStructureService.LAUNCH_SPEED_PER_TICK)
                 * ProgramPowerScale.interpolate(ProgramPowerScale.require(power), 0.5, 1.0, 1.5);
+    }
+
+    private static ProgramVmResult executeToCompletion(
+            org.academy.internal.common.ability.program.compile.CompiledProgram program, long start,
+            ElectromasterProgramRuntime runtime, ProgramActionTransaction transaction) {
+        var session = new org.academy.internal.common.ability.program.ProgramVm.Session(program);
+        var frame = new org.academy.internal.common.ability.program.ProgramExecutionFrame(transaction, runtime);
+        var definition = AbilityProgramDefinitions.require(ElectromasterProgramNodeCatalog.ELECTROMASTER);
+        for (long tick = start; tick <= start + 2400; tick++) {
+            var result = session.run(tick, 10000, definition.executors(), frame);
+            if (result.status() != ProgramVmResult.Status.SUSPENDED) return result;
+        }
+        throw new AssertionError("Single-structure graph did not finish its force window");
     }
 
     private static final class ScriptedRuntime implements ElectromasterProgramRuntime {
@@ -665,6 +678,12 @@ class ElectromasterProgramStructureNodesTest {
             massGateBypassed = sableDirect && heavyMass > MagneticStructureControl.massBudget(0);
             return StructureOperation.control(control,
                     ProgramStructureOperationResult.completed("control_acquired", STRUCTURE));
+        }
+
+        @Override
+        public ProgramStructureOperationResult structureControlStatus(ProgramStructureControl token) {
+            requireControl(token);
+            return ProgramStructureOperationResult.completed("control_active");
         }
 
         @Override

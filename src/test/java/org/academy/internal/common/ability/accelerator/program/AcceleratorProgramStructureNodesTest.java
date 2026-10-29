@@ -108,7 +108,7 @@ class AcceleratorProgramStructureNodesTest {
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
         var transaction = new ProgramActionTransaction();
 
-        var result = AcceleratorProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 400L, runtime, transaction);
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
@@ -157,7 +157,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = AcceleratorProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 410L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -205,7 +205,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(rotateGraph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(rotateCompiled.valid(), () -> rotateCompiled.diagnostics().toString());
 
-        var rotated = AcceleratorProgramExecutionBridge.execute(
+        var rotated = executeToCompletion(
                 rotateCompiled.program(), 430L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, rotated.status());
@@ -245,7 +245,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(terminateGraph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(terminateCompiled.valid(), () -> terminateCompiled.diagnostics().toString());
 
-        var terminated = AcceleratorProgramExecutionBridge.execute(
+        var terminated = executeToCompletion(
                 terminateCompiled.program(), 431L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.COMPLETED, terminated.status(),
@@ -290,7 +290,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = AcceleratorProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 420L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -340,7 +340,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = AcceleratorProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 430L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.COMPLETED, result.status(),
@@ -348,13 +348,13 @@ class AcceleratorProgramStructureNodesTest {
         assertEquals(List.of(
                 "extract:BlockPos{x=10, y=64, z=10}:2:0",
                 "control:" + STRUCTURE + ":sable-direct",
-                "launch:" + STRUCTURE + ":0.0,1.0,0.0:STANDARD:sable-direct=50.0",
+                "launch:" + STRUCTURE + ":0.0,1.0,0.0:STANDARD:sable-direct=75.0",
                 "release:" + STRUCTURE + ":released",
                 "release:" + STRUCTURE + ":noop"
         ), runtime.applied);
         assertTrue(runtime.massGateBypassed,
                 "a heavy Sable body must bypass the traction mass gate");
-        assertEquals(50.0, runtime.directSpeed, 1.0e-9,
+        assertEquals(75.0, runtime.directSpeed, 1.0e-9,
                 "Sable direct launch speed must keep the skill-side calibration");
         assertTrue(runtime.structureRetained, "release must retain the structure");
         assertFalse(runtime.controlBroken, "release must not break the active control");
@@ -391,7 +391,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = AcceleratorProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 500L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -438,7 +438,7 @@ class AcceleratorProgramStructureNodesTest {
                 .compile(graph, Set.of(AcceleratorProgramCapabilities.STRUCTURE));
         assertTrue(compiled.valid(), () -> compiled.diagnostics().toString());
 
-        var result = AcceleratorProgramExecutionBridge.execute(
+        var result = executeToCompletion(
                 compiled.program(), 520L, runtime, new ProgramActionTransaction());
 
         assertEquals(ProgramVmResult.Status.FAILED, result.status());
@@ -493,6 +493,19 @@ class AcceleratorProgramStructureNodesTest {
         runtime.extractPending = false;
         assertEquals(ProgramVmResult.Status.COMPLETED, session.run(601L, 1000, executors, frame).status());
         assertTrue(runtime.publishedReference);
+    }
+
+    private static ProgramVmResult executeToCompletion(
+            org.academy.internal.common.ability.program.compile.CompiledProgram program, long start,
+            AcceleratorProgramRuntime runtime, ProgramActionTransaction transaction) {
+        var session = new org.academy.internal.common.ability.program.ProgramVm.Session(program);
+        var frame = new org.academy.internal.common.ability.program.ProgramExecutionFrame(transaction, runtime);
+        var definition = AbilityProgramDefinitions.require(AcceleratorProgramNodeCatalog.ACCELERATOR);
+        for (long tick = start; tick <= start + 2400; tick++) {
+            var result = session.run(tick, 10000, definition.executors(), frame);
+            if (result.status() != ProgramVmResult.Status.SUSPENDED) return result;
+        }
+        throw new AssertionError("Single-structure graph did not finish its force window");
     }
 
     private static final class ScriptedRuntime implements AcceleratorProgramRuntime {
@@ -629,6 +642,12 @@ class AcceleratorProgramStructureNodesTest {
             massGateBypassed = sableDirect && heavyMass > KineticStructureControl.massBudget(0);
             return StructureOperation.control(control,
                     ProgramStructureOperationResult.completed("control_acquired", STRUCTURE));
+        }
+
+        @Override
+        public ProgramStructureOperationResult structureControlStatus(ProgramStructureControl token) {
+            requireControl(token);
+            return ProgramStructureOperationResult.completed("control_active");
         }
 
         @Override

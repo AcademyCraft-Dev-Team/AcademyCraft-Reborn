@@ -722,6 +722,10 @@ public final class PacketTypes {
             SUBLEVEL_POSE = PACKET_TYPES.register("sublevel_pose",
             () -> new PacketType<>(SubLevelPosePacket.class, SubLevelPosePacket.CODEC));
 
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SubLevelPoseBatchPacket>>
+            SUBLEVEL_POSE_BATCH = PACKET_TYPES.register("sublevel_pose_batch",
+            () -> new PacketType<>(SubLevelPoseBatchPacket.class, SubLevelPoseBatchPacket.CODEC));
+
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, SubLevelMiningPacket>>
             SUBLEVEL_MINING = PACKET_TYPES.register("sublevel_mining",
             () -> new PacketType<>(SubLevelMiningPacket.class, SubLevelMiningPacket.CODEC));
