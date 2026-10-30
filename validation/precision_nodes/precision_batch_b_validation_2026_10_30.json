@@ -1,0 +1,1471 @@
+{
+  "date": "2026-10-30",
+  "baseline_commit": "dbc71964",
+  "status": "verified_user_approved_commit",
+  "scope": "Precision batch B: client palette navigation, editable task templates and bilingual text; no runtime node migration or skill execution changes",
+  "files": [
+    "docs/precision_learning_path_2026_10_30.zh-CN.md",
+    "docs/precision_node_merge_text_2026_10_30.zh-CN.md",
+    "docs/precision_operation_redesign_2026_10_30.zh-CN.md",
+    "docs/structure_skill_migration_handoff.zh-CN.md",
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionLearningPathSmoke.java",
+    "src/main/java/org/academy/internal/client/ability/program/ProgramPaletteCatalog.java",
+    "src/main/java/org/academy/internal/client/ability/program/ProgramTaskTemplates.java",
+    "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt",
+    "src/main/resources/assets/academy/lang/en_us.json",
+    "src/main/resources/assets/academy/lang/zh_cn.json",
+    "src/test/java/org/academy/internal/client/ability/program/ProgramPaletteCatalogTest.java",
+    "src/test/java/org/academy/internal/client/ability/program/ProgramTaskTemplatesTest.java",
+    "validation/precision_nodes/precision_batch_b_validation_2026_10_30.json",
+    "validation/precision_nodes/precision_learning_path.init.gradle"
+  ],
+  "source_hashes": [
+    {
+      "path": "src/gametest/java/org/academy/internal/client/validation/PrecisionLearningPathSmoke.java",
+      "size": 37554,
+      "sha256": "BA903D489067A6634AC13C73A5D9506B39C1C4E2E8FF54D85CA80126BBBD004A"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/ability/program/ProgramPaletteCatalog.java",
+      "size": 12745,
+      "sha256": "4F5A6982B51166D62626744C5281F556B76A2C58F596F6E5A22F6ACA94F8ED8D"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/ability/program/ProgramTaskTemplates.java",
+      "size": 12593,
+      "sha256": "0EA2A0BBA966BC9EF01830C47DC2284C3D4565D33DC06008F0556CAB98B10F75"
+    },
+    {
+      "path": "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt",
+      "size": 146849,
+      "sha256": "BD4A40BE80085F7474982C81EC3CB0BA8954EE2C4A1C7A42A1B8DE9DB5A2987E"
+    },
+    {
+      "path": "src/main/resources/assets/academy/lang/en_us.json",
+      "size": 342768,
+      "sha256": "0FC578A06BAFE0E59BFF4636F677E12AF92398415F73655AAB8408BAC520BDB1"
+    },
+    {
+      "path": "src/main/resources/assets/academy/lang/zh_cn.json",
+      "size": 329214,
+      "sha256": "A1C72370C7D047DC6EEC925F3D2A59FC6B395A486F0BE1457F893788C7C04E95"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/ProgramPaletteCatalogTest.java",
+      "size": 11618,
+      "sha256": "077F29BFB69AB4BA048170C4C419B2A8C0B313050E49693C53B9FDC97BB1181E"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/ProgramTaskTemplatesTest.java",
+      "size": 11561,
+      "sha256": "78DCFD530E796FFE3468D76E86A8524ABF261610322FDAB2EAEAB4F04C081994"
+    },
+    {
+      "path": "validation/precision_nodes/precision_learning_path.init.gradle",
+      "size": 1151,
+      "sha256": "CA661E096781F9702A6D7F8F6A1FC4387238CC402A670D08525FB5551DE6B67C"
+    }
+  ],
+  "tests": {
+    "test": {
+      "tests": 3385,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "builds": [
+    {
+      "configuration": "dev",
+      "log": {
+        "path": "build/precision-b-dev-final.log",
+        "size": 4316,
+        "sha256": "C128CF088EDC2F8A929926EE65CB3570F1A7DFBFC0C7B7C81384A825676399B2"
+      },
+      "artifact": {
+        "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+        "size": 32582040,
+        "sha256": "5F9F6E3DD07B5B15F92BC4DDF623A191C7BEDDDE7A75BBEC0C9428A89895680B"
+      },
+      "changed_class_and_localization_bytes_match": true,
+      "gametest_fixture_absent": true
+    },
+    {
+      "configuration": "release",
+      "log": {
+        "path": "build/precision-b-release.log",
+        "size": 4309,
+        "sha256": "97B9FCA7496499EDBF06DB4F3B114F595E3F8443196F91E35D59976FF0176E19"
+      },
+      "artifact": {
+        "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+        "size": 25110939,
+        "sha256": "D799A0F9CA0C070127B4D4901A48C22A00E9820D00AA78B2395EB91A29BF20BA"
+      },
+      "changed_class_and_localization_bytes_match": true,
+      "gametest_fixture_absent": true
+    }
+  ],
+  "clients": [
+    {
+      "directory": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030",
+      "log": {
+        "path": "build/precision-b-zh-r2-client.log",
+        "size": 1150606,
+        "sha256": "AD0C46F7BA52880DEF677BC9F50D96B33EDDE2DF21ED388105714826A55D70A7"
+      },
+      "result": {
+        "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/precision-learning-path-result.json",
+        "size": 16310,
+        "sha256": "ECB04F0AE2DCD15952F4B9398D1CF76911B5AE53134141463A7E398F3138CC06"
+      },
+      "acceptance": {
+        "passed": true,
+        "language": "zh_cn",
+        "interaction_mode": "production screen click handlers and widget callbacks invoked by reflection; not manual input",
+        "synthetic_capabilities": "all required capabilities supplied only to the in-memory editor session",
+        "cases": [
+          {
+            "scene": "common_directory",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "default_common_families": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "d1c7582cd826484d4cb64e352a10168d95ef654f58e5de0d04af199dae4c9054",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-common_directory.png"
+          },
+          {
+            "scene": "structure_family",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "family_enter_back_enter": true,
+              "original_advanced_member_retained": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "family.structure_move",
+            "palette_card_ids": [
+              "family.structure_move/0",
+              "family.structure_move/1"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "5b127c88aab9f558b7ad8f1a62ebf038a49ab9af45889bd50272c2de1e0ce3b0",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-structure_family.png"
+          },
+          {
+            "scene": "advanced_search",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "common_and_advanced_search": true,
+              "default_configuration_tooltip_matches_real_entry": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "ADVANCED",
+            "palette_family": "",
+            "palette_card_ids": [
+              "node:academy:program/core/state/shared_variable_get:0"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "502c18c23c9c7436ea685da9f3bab9b419f70981f13c982f9d87a4780b9995a7",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-advanced_search.png"
+          },
+          {
+            "scene": "compatibility",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "hidden_and_unreleased_reachable": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMPATIBILITY",
+            "palette_family": "",
+            "palette_card_ids": [
+              "node:academy:program/accelerator/action/structure/staticize:32"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "cb0b2278da6710dcc9ac40dd7b27ffa0ff2fbfb7842b3641284885ac6671e7ac",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-compatibility.png"
+          },
+          {
+            "scene": "task_choices",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "task_choices_and_both_original_examples": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.triggers",
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 0,
+            "edges": 0,
+            "program_sha256": "05326e6c8fec5353f0f649a31f719f244aad529febcc19ce3675ffbced851ebd",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-task_choices.png"
+          },
+          {
+            "scene": "accelerator_task",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "task": "ACCELERATOR_GUIDE_STRUCTURE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "f486dba07e5b07890ee1fa0966a9160694c930c66a6e80c13ad52e45e1c0190e",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-accelerator_task.png"
+          },
+          {
+            "scene": "electromaster_task",
+            "language": "zh_cn",
+            "category": "academy:electromaster",
+            "assertions": {
+              "task": "ELECTROMASTER_GUIDE_STRUCTURE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "15bc20d9a8197811b23e5548d47f7321d448a224aeb5e5be1cb15bd7408cca70",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-electromaster_task.png"
+          },
+          {
+            "scene": "aeromanip_task",
+            "language": "zh_cn",
+            "category": "academy:aeromanip",
+            "assertions": {
+              "task": "AEROMANIP_GUIDE_STRUCTURE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "f49dac4cfd8c436a7be339be435b6122ad3b334c3d3d10f21c3ddb20e0b796bb",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-aeromanip_task.png"
+          },
+          {
+            "scene": "teleport_task",
+            "language": "zh_cn",
+            "category": "academy:teleport",
+            "assertions": {
+              "task": "TELEPORT_FORWARD",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug"
+            ],
+            "nodes": 7,
+            "edges": 7,
+            "program_sha256": "77d51aa433acfa41a3171ee90385b02b1497da33d1068d2d8a4268d35bc42db2",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-teleport_task.png"
+          },
+          {
+            "scene": "basic_starter",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "task": "ORIGINAL_MANUAL_EXAMPLE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 3,
+            "edges": 2,
+            "program_sha256": "89be62666aac599183b3a677238047dd2e14d2f1e8a46e07beacc9fd229f62b6",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-zh_cn-basic_starter.png"
+          },
+          {
+            "scene": "compact_drawer_tasks",
+            "language": "zh_cn",
+            "category": "academy:accelerator",
+            "assertions": {
+              "compact_mode": "native_window_resize_with_normal_screen_reinitialization",
+              "original_graph_and_history_unchanged": true,
+              "compact_drawer_and_family": true,
+              "compact_task_picker_closes_drawers_and_fits_canvas": true
+            },
+            "visible_ticks": 45,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.triggers",
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 0,
+            "edges": 0,
+            "program_sha256": "5e18e65b553140ba116fd800a188763941ec828062b37abc0603dfd42203ad32",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              520,
+              340
+            ],
+            "window_size": [
+              1040,
+              680
+            ],
+            "compact_left": true,
+            "compact_right": true,
+            "screenshot": "screenshots/precision-learning-zh_cn-compact_drawer_tasks.png"
+          }
+        ],
+        "model_only_recipe_checks": [
+          {
+            "kind": "ACCELERATOR_GUIDE_STRUCTURE",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:accelerator",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "ACCELERATOR_ROTATE_STRUCTURE",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:accelerator",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "MENTALOUT_MENTAL_STUPOR",
+            "nodes": 4,
+            "compiled": true,
+            "category": "academy:mentalout",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 3
+          },
+          {
+            "kind": "AEROMANIP_GUIDE_STRUCTURE",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:aeromanip",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "AEROMANIP_ROTATE_STRUCTURE",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:aeromanip",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "MELTDOWNER_MINING_BEAM",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:meltdowner",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "ELECTROMASTER_GUIDE_STRUCTURE",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:electromaster",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "ELECTROMASTER_ROTATE_STRUCTURE",
+            "nodes": 2,
+            "compiled": true,
+            "category": "academy:electromaster",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 1
+          },
+          {
+            "kind": "TELEPORT_FORWARD",
+            "nodes": 7,
+            "compiled": true,
+            "category": "academy:teleport",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 7
+          },
+          {
+            "kind": "DARKMATTER_DISASSEMBLE_BLOCK",
+            "nodes": 3,
+            "compiled": true,
+            "category": "academy:darkmatter",
+            "nonempty_rejected": true,
+            "codec_round_trip": true,
+            "edges": 2
+          }
+        ],
+        "learning_path_translation_checks": {
+          "zh_cn_keys_checked": 59,
+          "en_us_keys_checked": 59,
+          "active_language_components_resolved": true
+        },
+        "screen_method_invocations": {
+          "TextInputWidget.setText": 3,
+          "configurationInputChanged": 5,
+          "handlePaletteClick": 14,
+          "handleRailClick": 1,
+          "handleStarterClick": 10,
+          "inspectorVisible": 10,
+          "openTaskTemplates": 5,
+          "paletteCards": 30,
+          "paletteVisible": 24,
+          "paletteWidth": 14,
+          "paletteX": 14,
+          "redo": 10,
+          "selectNode": 10,
+          "selectedPaletteFamily": 3,
+          "showStarter": 7,
+          "starterBounds": 6,
+          "starterTasks": 6,
+          "syncConfigurationInputs": 5,
+          "syncLayout": 1,
+          "tooltipLines": 1,
+          "undo": 10
+        },
+        "save_attempts": 0,
+        "save_packets_or_world_mutation_commands": false,
+        "runtime_skill_execution": false,
+        "visual_review_required": true,
+        "limitations": [
+          "No learned-player admission or world-execution acceptance",
+          "No performance percentage or old ten-node long-stay rendering acceptance",
+          "Screenshots and assertions do not certify absence of glyph loss or startup resource warnings"
+        ],
+        "failure": ""
+      },
+      "catalog_contract": {
+        "passed": true,
+        "baseline": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\validation\\precision_nodes\\node_inventory_2026_10_30.json",
+        "baseline_sha256": "c78157dc66c0885cbfc8012ea1ccdc4d2230a730e9e7f9adae8ff92bcc3a1a24",
+        "current": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\run\\native-sublevel-direct-smoke-precision-b-zh-r2-20261030\\precision-node-catalog-audit.json",
+        "current_sha256": "54dcb0b8c7653455294965f6fbad9c160e99afbf815e3ff40d459b9b6db00a85",
+        "unique_nodes": 342,
+        "categories": 7,
+        "presentation_states": {
+          "AVAILABLE": 274,
+          "UNRELEASED": 3,
+          "COMPATIBILITY": 65
+        },
+        "scope": "default and finite one-field schemas; registration and current bilingual completeness; not runtime skill behavior",
+        "errors": []
+      },
+      "screenshots": [
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-common_directory.png",
+          "size": 193863,
+          "sha256": "AFB87CB5F7FFB645B445F9AFF23D5DD358ADC79FCE992CFE3955F68D2BE30240"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-structure_family.png",
+          "size": 170967,
+          "sha256": "C7CFA73CBA04A460FBA727622D22452705DFB8E22A05A9898018312899E751B2"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-advanced_search.png",
+          "size": 167524,
+          "sha256": "1ED46A74BF785B12EF47F3FF4EB65D703A9CADB6CEBEEB7D743D704BAA4CFDE6"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-compatibility.png",
+          "size": 168962,
+          "sha256": "ACE6324A0CF9DDA9D84E87B41BD7CE4382F458EDC8D71A753A674DFFC94CEEF6"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-task_choices.png",
+          "size": 215330,
+          "sha256": "18CDD3943F07A32FDE73507E78EDB431B55866BA8FF1C166FCAE280A5FBE470E"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-accelerator_task.png",
+          "size": 257857,
+          "sha256": "75FD1FD09BCB6DB275AEEB766D99817A0A86699AD9E454B62C8563B6207713EC"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-electromaster_task.png",
+          "size": 265346,
+          "sha256": "42178B657BE8440093B0567000F27EC8D1A9A0F01315DFC76C27441EA3D4103E"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-aeromanip_task.png",
+          "size": 265432,
+          "sha256": "38BD62FC8F803520BFEEC276130B9F62E950CE1BC1191BC99270B55F28D9A8B7"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-teleport_task.png",
+          "size": 210380,
+          "sha256": "36EDE8D3CCF6E0FBD45609BB857AB8159E14D34A067B17C27C4DB76410B356C5"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-basic_starter.png",
+          "size": 220698,
+          "sha256": "B968468FC11E8ED715536C3E6F6B19FFF5B06DB963855D5A01A09E5B89E74550"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-zh-r2-20261030/screenshots/precision-learning-zh_cn-compact_drawer_tasks.png",
+          "size": 110360,
+          "sha256": "8388430B94BF6696452C89B68703489D48D9226567FE0F0A7ED0B7D290CF354C"
+        }
+      ],
+      "source_world_files_unchanged": 148,
+      "missing_uniform_globals_occurrences": 0
+    },
+    {
+      "directory": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030",
+      "log": {
+        "path": "build/precision-b-en-r2-client.log",
+        "size": 1161328,
+        "sha256": "E6BD02BF34BE29F919AEFEFB32D68750356A5C6F2E3043516B253663352D49BF"
+      },
+      "result": {
+        "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/precision-learning-path-result.json",
+        "size": 16310,
+        "sha256": "08D4C14E3D73A20CC931113FCD3A341FD2B3FAEFD2202325565098FF4D7C8624"
+      },
+      "acceptance": {
+        "passed": true,
+        "language": "en_us",
+        "interaction_mode": "production screen click handlers and widget callbacks invoked by reflection; not manual input",
+        "synthetic_capabilities": "all required capabilities supplied only to the in-memory editor session",
+        "cases": [
+          {
+            "scene": "common_directory",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "default_common_families": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 32,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "1483f69f6635a72aa321ca6a491b5034e1a4390ddeb55e3d2fb900e2c0131319",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-common_directory.png"
+          },
+          {
+            "scene": "structure_family",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "family_enter_back_enter": true,
+              "original_advanced_member_retained": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "family.structure_move",
+            "palette_card_ids": [
+              "family.structure_move/0",
+              "family.structure_move/1"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "ea0db4ec73fd14336306d12ba3c0d32fb944d4614d3871b8fd152d5b17f4aead",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-structure_family.png"
+          },
+          {
+            "scene": "advanced_search",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "common_and_advanced_search": true,
+              "default_configuration_tooltip_matches_real_entry": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "ADVANCED",
+            "palette_family": "",
+            "palette_card_ids": [
+              "node:academy:program/core/state/shared_variable_get:0"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "8d498c7787ae4220aaf156a548d05740f519f3b807c3f5ae7f12aab2b81f8767",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-advanced_search.png"
+          },
+          {
+            "scene": "compatibility",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "hidden_and_unreleased_reachable": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMPATIBILITY",
+            "palette_family": "",
+            "palette_card_ids": [
+              "node:academy:program/accelerator/action/structure/staticize:32"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "cb294100b4657474071d9247368c23a08ab63ee2e1a2cfbea0441a3e5389ae4c",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-compatibility.png"
+          },
+          {
+            "scene": "task_choices",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "task_choices_and_both_original_examples": true,
+              "original_graph_and_history_unchanged": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.triggers",
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 0,
+            "edges": 0,
+            "program_sha256": "ab7647ebf80b15e5f876aec04d0c9ae4f65600f10d2197039e61834363564bed",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-task_choices.png"
+          },
+          {
+            "scene": "accelerator_task",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "task": "ACCELERATOR_GUIDE_STRUCTURE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "d0f9a7df79150e889e7629f21f3999c779d7ce4267d69c59658cd38768edb43f",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-accelerator_task.png"
+          },
+          {
+            "scene": "electromaster_task",
+            "language": "en_us",
+            "category": "academy:electromaster",
+            "assertions": {
+              "task": "ELECTROMASTER_GUIDE_STRUCTURE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "0d2cdb9cc6d1e8a738821a665a682b2e9cadd61534dfa3c302bf53bc88a5a3af",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-electromaster_task.png"
+          },
+          {
+            "scene": "aeromanip_task",
+            "language": "en_us",
+            "category": "academy:aeromanip",
+            "assertions": {
+              "task": "AEROMANIP_GUIDE_STRUCTURE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 2,
+            "edges": 1,
+            "program_sha256": "ce4ca483cd6570ab75b6f048b5d5fd14999e4a0aea223c9321fdc1ee8d3fc822",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-aeromanip_task.png"
+          },
+          {
+            "scene": "teleport_task",
+            "language": "en_us",
+            "category": "academy:teleport",
+            "assertions": {
+              "task": "TELEPORT_FORWARD",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug"
+            ],
+            "nodes": 7,
+            "edges": 7,
+            "program_sha256": "c0cec4f512498a8bac94462158d905f9bc83cf45a73dd0a64195de861a3eb843",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-teleport_task.png"
+          },
+          {
+            "scene": "basic_starter",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "task": "ORIGINAL_MANUAL_EXAMPLE",
+              "template_one_undo_and_redo": true,
+              "nonempty_ui_and_stale_click_rejected": true,
+              "template_configuration_editable_without_connection_loss": true,
+              "expanded_graph_compile_and_codec": true
+            },
+            "visible_ticks": 31,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 3,
+            "edges": 2,
+            "program_sha256": "b0819fa5e062ed63d13dd4380fe5cd3425a9a53cbe765cc31741cee45ddd402c",
+            "undo_depth": 2,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              800,
+              450
+            ],
+            "window_size": [
+              1600,
+              900
+            ],
+            "compact_left": false,
+            "compact_right": false,
+            "screenshot": "screenshots/precision-learning-en_us-basic_starter.png"
+          },
+          {
+            "scene": "compact_drawer_tasks",
+            "language": "en_us",
+            "category": "academy:accelerator",
+            "assertions": {
+              "compact_mode": "native_window_resize_with_normal_screen_reinitialization",
+              "original_graph_and_history_unchanged": true,
+              "compact_drawer_and_family": true,
+              "compact_task_picker_closes_drawers_and_fits_canvas": true
+            },
+            "visible_ticks": 45,
+            "palette_layer": "COMMON",
+            "palette_family": "",
+            "palette_card_ids": [
+              "family.triggers",
+              "family.actions",
+              "family.targets",
+              "family.collections",
+              "family.values",
+              "family.flow",
+              "family.debug",
+              "family.structure_extract",
+              "family.structure_move",
+              "family.structure_pose",
+              "family.structure_launch",
+              "family.structure_release"
+            ],
+            "nodes": 0,
+            "edges": 0,
+            "program_sha256": "8e05847ada0c09d3be2b3071c6462d6878211e72c637953106cd221360e4911a",
+            "undo_depth": 0,
+            "redo_depth": 0,
+            "screen_gui_size": [
+              520,
+              340
+            ],
+            "window_size": [
+              1040,
+              680
+            ],
+            "compact_left": true,
+            "compact_right": true,
+            "screenshot": "screenshots/precision-learning-en_us-compact_drawer_tasks.png"
+          }
+        ],
+        "model_only_recipe_checks": [
+          {
+            "nonempty_rejected": true,
+            "category": "academy:teleport",
+            "compiled": true,
+            "nodes": 7,
+            "kind": "TELEPORT_FORWARD",
+            "edges": 7,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:electromaster",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "ELECTROMASTER_GUIDE_STRUCTURE",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:electromaster",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "ELECTROMASTER_ROTATE_STRUCTURE",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:meltdowner",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "MELTDOWNER_MINING_BEAM",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:aeromanip",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "AEROMANIP_GUIDE_STRUCTURE",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:aeromanip",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "AEROMANIP_ROTATE_STRUCTURE",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:mentalout",
+            "compiled": true,
+            "nodes": 4,
+            "kind": "MENTALOUT_MENTAL_STUPOR",
+            "edges": 3,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:accelerator",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "ACCELERATOR_GUIDE_STRUCTURE",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:accelerator",
+            "compiled": true,
+            "nodes": 2,
+            "kind": "ACCELERATOR_ROTATE_STRUCTURE",
+            "edges": 1,
+            "codec_round_trip": true
+          },
+          {
+            "nonempty_rejected": true,
+            "category": "academy:darkmatter",
+            "compiled": true,
+            "nodes": 3,
+            "kind": "DARKMATTER_DISASSEMBLE_BLOCK",
+            "edges": 2,
+            "codec_round_trip": true
+          }
+        ],
+        "learning_path_translation_checks": {
+          "zh_cn_keys_checked": 59,
+          "en_us_keys_checked": 59,
+          "active_language_components_resolved": true
+        },
+        "screen_method_invocations": {
+          "TextInputWidget.setText": 3,
+          "configurationInputChanged": 5,
+          "handlePaletteClick": 14,
+          "handleRailClick": 1,
+          "handleStarterClick": 10,
+          "inspectorVisible": 10,
+          "openTaskTemplates": 5,
+          "paletteCards": 30,
+          "paletteVisible": 24,
+          "paletteWidth": 14,
+          "paletteX": 14,
+          "redo": 10,
+          "selectNode": 10,
+          "selectedPaletteFamily": 3,
+          "showStarter": 7,
+          "starterBounds": 6,
+          "starterTasks": 6,
+          "syncConfigurationInputs": 5,
+          "syncLayout": 1,
+          "tooltipLines": 1,
+          "undo": 10
+        },
+        "save_attempts": 0,
+        "save_packets_or_world_mutation_commands": false,
+        "runtime_skill_execution": false,
+        "visual_review_required": true,
+        "limitations": [
+          "No learned-player admission or world-execution acceptance",
+          "No performance percentage or old ten-node long-stay rendering acceptance",
+          "Screenshots and assertions do not certify absence of glyph loss or startup resource warnings"
+        ],
+        "failure": ""
+      },
+      "catalog_contract": {
+        "passed": true,
+        "baseline": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\validation\\precision_nodes\\node_inventory_2026_10_30.json",
+        "baseline_sha256": "c78157dc66c0885cbfc8012ea1ccdc4d2230a730e9e7f9adae8ff92bcc3a1a24",
+        "current": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\run\\native-sublevel-direct-smoke-precision-b-en-r2-20261030\\precision-node-catalog-audit.json",
+        "current_sha256": "54dcb0b8c7653455294965f6fbad9c160e99afbf815e3ff40d459b9b6db00a85",
+        "unique_nodes": 342,
+        "categories": 7,
+        "presentation_states": {
+          "AVAILABLE": 274,
+          "UNRELEASED": 3,
+          "COMPATIBILITY": 65
+        },
+        "scope": "default and finite one-field schemas; registration and current bilingual completeness; not runtime skill behavior",
+        "errors": []
+      },
+      "screenshots": [
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-common_directory.png",
+          "size": 152324,
+          "sha256": "76D6FAE43EFA177FCB9336006F8743F778CEB9E186E76F8645F03872F6317A54"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-structure_family.png",
+          "size": 132346,
+          "sha256": "EA0F345F8261735FF2E37BD94E3F04D2469AE00CDD52D6A8501C2BE0FDA2AAFB"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-advanced_search.png",
+          "size": 132657,
+          "sha256": "BD8D347E04C495AA9A5480C1F2A34ACDCE754EF3BF76FFD93293B12AB580B04F"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-compatibility.png",
+          "size": 133024,
+          "sha256": "AAEE26BF3B15FDE9A7D13A61AFDA4CB8E287F57A91CD714CC715398E8AE07E27"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-task_choices.png",
+          "size": 173294,
+          "sha256": "A23EFC3F7E14F1DBB43C5ACE0B61D87FFF3034784C36F8EBA48C10B0C43744A3"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-accelerator_task.png",
+          "size": 222550,
+          "sha256": "179DE734F11105D7133A0AC2C0AF1ACEC2FE007E75E60A81FF5E84B718B6E094"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-electromaster_task.png",
+          "size": 231922,
+          "sha256": "FA6473907EC322DC9EE9FBA14F4D8445F87520DDE500E1FCE2C5037509097115"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-aeromanip_task.png",
+          "size": 232334,
+          "sha256": "348BD986FAA2FFB46453E821B440CA387FD71895970A0655C813644808EAA4EB"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-teleport_task.png",
+          "size": 173278,
+          "sha256": "50C4A213EB0A1F050AC1EED9062D516EA61CCC9FA97F465EDCFFF62025530E46"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-basic_starter.png",
+          "size": 182916,
+          "sha256": "BE2327281CBC07680BF63BAD79B69DB8D31A53C97BAB39760D41E20F8D45547A"
+        },
+        {
+          "path": "run/native-sublevel-direct-smoke-precision-b-en-r2-20261030/screenshots/precision-learning-en_us-compact_drawer_tasks.png",
+          "size": 89375,
+          "sha256": "5DE5839A753A8933B2C9C9C3CD68BF9E09ED30F1498CC82F321A56056B157850"
+        }
+      ],
+      "source_world_files_unchanged": 148,
+      "missing_uniform_globals_occurrences": 2
+    }
+  ],
+  "excluded_preexisting_rust": {
+    "path": "native/academy_physics/src/lib.rs",
+    "size": 79458,
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70"
+  },
+  "visual_review": {
+    "method": "read actual local PNG captures",
+    "scope": "New bilingual menu, family navigation, task picker, task graphs, long-search clipping and compact picker",
+    "result": "New controls and task text are readable in reviewed captures; long query no longer crosses the palette boundary; compact drawers close before opening tasks",
+    "english_first_capture_resource_reload_toast": true,
+    "does_not_close_prior_glyph_loss": true
+  },
+  "limitations": [
+    "Reflection calls the production screen handlers; these are not manual user interaction or skill execution tests.",
+    "Synthetic capabilities are supplied only to the in-memory editor session; real skill costs, targets and physical movement were not rerun by this UI batch.",
+    "No user-learning-time study or profiler performance improvement is claimed.",
+    "Existing seconds and inferred duration_seconds inputs on group movement have identical labels; future text should clarify priority while preserving both ports.",
+    "Old ten-node long-stay glyph/node loss remains open; current short scene captures do not close it.",
+    "Initial Globals upload warning, staticize backend differences, cross-dimension transfer, 64-body stress and broader fault matrices remain separate follow-up work."
+  ]
+}

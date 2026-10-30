@@ -22,6 +22,8 @@ import org.academy.internal.client.ability.program.ProgramClipboardCodec
 import org.academy.internal.client.ability.program.ProgramConfigurationOptions
 import org.academy.internal.client.ability.program.ProgramDiagnosticText
 import org.academy.internal.client.ability.program.ProgramStarterTemplates
+import org.academy.internal.client.ability.program.ProgramTaskTemplates
+import org.academy.internal.client.ability.program.ProgramPaletteCatalog
 import org.academy.internal.client.gui.layout.ProgramEditorLayout
 import org.academy.internal.client.gui.layout.ProgramEditorVariant
 import org.academy.internal.client.gui.layout.buildProgramEditorLayout
@@ -73,6 +75,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var leftDrawerOpen = false
     private var rightDrawerOpen = false
     private var starterDismissed = false
+    private var taskTemplatesOpen = false
     private var search: TextInputWidget? = null
     private val configurationInputs = HashMap<String, TextInputWidget>()
     private val configurationInputValidity = HashMap<String, Boolean>()
@@ -81,6 +84,8 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var draggingPowerField: String? = null
     private var draggingPowerNode = -1
     private var selectedGroup: ProgramEditorNodeCatalog.Group = ProgramEditorNodeCatalog.Group.TARGET
+    private var paletteLayer = ProgramPaletteCatalog.Layer.COMMON
+    private var paletteFamilyId: String? = null
     private var paletteScroll = 0
     private var selectedNode = -1
     private var inspectorPortScroll = 0
@@ -156,11 +161,24 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         inputLayer.layoutParams = FrameLayoutWidget.LayoutParams().sizeMode(SizeMode.MATCH_PARENT)
         root.addChild("input_layer", inputLayer)
 
-        search = TextInputWidget(64)
+        search = object : TextInputWidget(64) {
+            override fun renderInternal(context: Canvas) {
+                context.clipRect(0f, 0f, width, height)
+                try {
+                    super.renderInternal(context)
+                } finally {
+                    context.disableScissor()
+                }
+            }
+        }
         search!!.textSize = ProgramUiGraphics.BODY_FONT_SIZE
         search!!.hint = Component.translatable("screen.academy.precision_operation.search").string
         search!!.background = null
         search!!.textColor = TEXT
+        search!!.setOnTextChanged {
+            paletteFamilyId = null
+            paletteScroll = 0
+        }
         setTextBoxBounds(
             search!!, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y,
             paletteWidth() - 8
@@ -386,63 +404,73 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private fun renderPalette(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
         val x = paletteX()
         val width = paletteWidth()
-        headingText(
-            graphics, Component.translatable("screen.academy.precision_operation.nodes").string,
-            x + 4, canvasY + 3, DIM, width - 8
-        )
-        val groups = ProgramEditorNodeCatalog.Group.entries
-        val tabY = canvasY + PALETTE_TAB_OFFSET_Y
-        val tabW = maxOf(11, (width - 8) / groups.size)
-        for (index in groups.indices) {
-            val group = groups[index]
-            button(
-                graphics, x + 4 + index * tabW, tabY, tabW - 1, 12,
-                Component.literal(groupGlyph(group)), mouseX, mouseY,
-                group == selectedGroup, false
-            )
+        headingText(graphics, Component.translatable("screen.academy.precision_operation.nodes").string,
+            x + 4, canvasY + 3, DIM, width - 44)
+        if (!session.precisionRules()) {
+            val enabled = taskSlotEmpty()
+            val hover = enabled && inside(mouseX.toDouble(), mouseY.toDouble(),
+                (x + width - 37).toDouble(), (canvasY + 1).toDouble(), 33.0, 12.0)
+            renderControl(graphics, x + width - 37, canvasY + 1, 33, 12, enabled, taskTemplatesOpen, hover)
+            graphics.centeredText(Component.translatable("screen.academy.program.task_template.open").string,
+                x + width - 20.5f, canvasY + 3f, if (enabled) TEXT else DIM,
+                ProgramUiGraphics.BODY_FONT_SIZE, 30f)
         }
-        renderInput(
-            graphics, (search!!.x).roundToInt(), (search!!.y).roundToInt(),
-            (search!!.width).roundToInt(), search!!.isFocused
-        )
-        val entries = visibleEntries()
+        val layers = ProgramPaletteCatalog.Layer.entries
+        val layerW = (width - 8) / layers.size
+        for (index in layers.indices) {
+            button(graphics, x + 4 + index * layerW, canvasY + PALETTE_LAYER_OFFSET_Y,
+                layerW - 1, 12, Component.translatable(layers[index].translationKey()),
+                mouseX, mouseY, paletteLayer == layers[index], false)
+        }
+        val family = selectedPaletteFamily()
+        if (family != null) {
+            button(graphics, x + 4, canvasY + PALETTE_TAB_OFFSET_Y, width - 8, 12,
+                Component.translatable("screen.academy.program.palette.back", cardLabel(family)),
+                mouseX, mouseY, false, false)
+        } else if (paletteLayer == ProgramPaletteCatalog.Layer.COMMON) {
+            smallText(graphics, Component.translatable("screen.academy.program.palette.common_hint").string,
+                x + 4, canvasY + PALETTE_TAB_OFFSET_Y + 3, DIM, width - 8)
+        } else {
+            val groups = ProgramEditorNodeCatalog.Group.entries
+            val tabW = maxOf(11, (width - 8) / groups.size)
+            for (index in groups.indices) {
+                val group = groups[index]
+                button(graphics, x + 4 + index * tabW, canvasY + PALETTE_TAB_OFFSET_Y,
+                    tabW - 1, 12, Component.literal(groupGlyph(group)), mouseX, mouseY,
+                    group == selectedGroup, false)
+            }
+        }
+        renderInput(graphics, search!!.x.roundToInt(), search!!.y.roundToInt(),
+            search!!.width.roundToInt(), search!!.isFocused)
+        val cards = paletteCards()
         val listY = canvasY + PALETTE_LIST_OFFSET_Y
         val listBottom = canvasY + canvasH - 3
         val visibleRows = maxOf(1, (listBottom - listY) / ROW_H)
-        paletteScroll = paletteScroll.coerceIn(0, maxOf(0, entries.size - visibleRows))
-        var row = 0
-        while (row < visibleRows && paletteScroll + row < entries.size) {
-            val entry = entries[paletteScroll + row]
+        paletteScroll = paletteScroll.coerceIn(0, maxOf(0, cards.size - visibleRows))
+        for (row in 0 until minOf(visibleRows, cards.size - paletteScroll)) {
+            val card = cards[paletteScroll + row]
             val y = listY + row * ROW_H
-            val hover = inside(
-                mouseX.toDouble(),
-                mouseY.toDouble(),
-                (x + 3).toDouble(),
-                y.toDouble(),
-                (width - 6).toDouble(),
-                (ROW_H - 1).toDouble()
-            )
-            graphics.fill(
-                x + 3, y, x + width - 3, y + ROW_H - 1,
-                if (hover) HOVER_BACKGROUND else ROW_BACKGROUND
-            )
-            graphics.fill(x + 3, y, x + 5, y + ROW_H - 1, groupColor(entry.group()))
-            smallText(graphics, groupGlyph(entry.group()), x + 8, y + 3, groupColor(entry.group()), 8)
-            val categoryRestricted = entry.categoryRestricted()
-            smallText(
-                graphics, nodeLabel(entry).string, x + 17, y + 3, TEXT,
-                if (categoryRestricted) width - 36 else width - 22
-            )
-            if (categoryRestricted) {
-                graphics.fill(x + width - 17, y + 2, x + width - 16, y + ROW_H - 3, DIVIDER)
-                smallText(graphics, categoryGlyph(entry), x + width - 13, y + 3, accentColor, 8)
+            val hover = inside(mouseX.toDouble(), mouseY.toDouble(), (x + 3).toDouble(),
+                y.toDouble(), (width - 6).toDouble(), (ROW_H - 1).toDouble())
+            graphics.fill(x + 3, y, x + width - 3, y + ROW_H - 1,
+                if (hover) HOVER_BACKGROUND else ROW_BACKGROUND)
+            graphics.fill(x + 3, y, x + 5, y + ROW_H - 1, groupColor(card.group()))
+            smallText(graphics, groupGlyph(card.group()), x + 8, y + 3, groupColor(card.group()), 8)
+            smallText(graphics, cardLabel(card), x + 17, y + 3, TEXT, width - 34)
+            if (card.family()) {
+                smallText(graphics, ">", x + width - 12, y + 3, DIM, 8)
+            } else if (card.members().first().categoryRestricted()) {
+                smallText(graphics, categoryGlyph(card.members().first()), x + width - 13, y + 3, accentColor, 8)
             }
-            row++
         }
-        if (entries.size > visibleRows) {
+        if (cards.isEmpty()) {
+            smallText(graphics, Component.translatable("screen.academy.program.palette.empty").string,
+                x + 4, listY + 3, DIM, width - 8)
+        }
+        if (cards.size > visibleRows) {
             val trackH = listBottom - listY
-            val thumbH = maxOf(8, trackH * visibleRows / entries.size)
-            val thumbY = listY + (trackH - thumbH) * paletteScroll / maxOf(1, entries.size - visibleRows)
+            val thumbH = maxOf(8, trackH * visibleRows / cards.size)
+            val thumbY = listY + (trackH - thumbH) * paletteScroll / maxOf(1, cards.size - visibleRows)
             graphics.fill(x + width - 3, listY, x + width - 1, listBottom, CONTROL_BACKGROUND)
             graphics.fill(x + width - 3, thumbY, x + width - 1, thumbY + thumbH, DIM)
         }
@@ -470,50 +498,71 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         )
     }
 
+    private fun starterTasks(): List<ProgramTaskTemplates.Kind> =
+        ProgramTaskTemplates.available(definition, capabilities)
+
     private fun starterBounds(): Rect {
-        val width = minOf(220, canvasW - 24)
-        return Rect(canvasX + (canvasW - width) / 2, canvasY + (canvasH - 110) / 2,
-            width, 110)
+        val width = minOf(260, canvasW - 24).coerceAtLeast(1)
+        val height = 110 + starterTasks().size * 19
+        return Rect(canvasX + (canvasW - width) / 2, canvasY + maxOf(0, (canvasH - height) / 2),
+            width, height)
     }
 
-    private fun showStarter(): Boolean = !starterDismissed && session.showStarter()
-        && !session.precisionRules() && document.program().graph().nodes().isEmpty()
+    private fun openTaskTemplates(): Boolean {
+        if (session.precisionRules() || !taskSlotEmpty()) return false
+        taskTemplatesOpen = true
+        leftDrawerOpen = false
+        rightDrawerOpen = false
+        updateSearchBounds()
+        return true
+    }
+
+    private fun showStarter(): Boolean = (taskTemplatesOpen || (!starterDismissed && session.showStarter()))
+        && !session.precisionRules() && taskSlotEmpty()
+
+    private fun taskSlotEmpty(): Boolean = document.program().graph().nodes().isEmpty()
+        && document.program().graph().edges().isEmpty()
 
     private fun starterDismissBounds(permanent: Boolean): Rect {
         val bounds = starterBounds()
         val closeWidth = minOf(56, (bounds.width - 20) / 3)
-        return if (permanent) Rect(bounds.x + 13 + closeWidth, bounds.y + 87,
+        return if (permanent) Rect(bounds.x + 13 + closeWidth, bounds.y + bounds.height - 23,
             bounds.width - closeWidth - 20, 16)
-        else Rect(bounds.x + 7, bounds.y + 87, closeWidth, 16)
+        else Rect(bounds.x + 7, bounds.y + bounds.height - 23, closeWidth, 16)
+    }
+
+    private fun starterRowLabel(index: Int): Component {
+        val tasks = starterTasks()
+        if (index < tasks.size) return Component.translatable(tasks[index].translationKey())
+        val key = if (index == tasks.size) "manual" else "chat"
+        return Component.translatable("screen.academy.program.starter.$key")
     }
 
     private fun renderStarterChoices(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
         val bounds = starterBounds()
         graphics.fill(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height, POPUP_BACKGROUND)
         border(graphics, bounds.x, bounds.y, bounds.width, bounds.height, BORDER)
-        smallText(graphics, Component.translatable("screen.academy.program.starter.title").string,
+        smallText(graphics, Component.translatable("screen.academy.program.task_template.title").string,
             bounds.x + 8, bounds.y + 7, TEXT, bounds.width - 16)
-        for (index in 0..1) {
+        val rowCount = starterTasks().size + 2
+        for (index in 0 until rowCount) {
             val rowY = bounds.y + 25 + index * 19
             val hovered = inside(mouseX.toDouble(), mouseY.toDouble(),
-                (bounds.x + 7).toDouble(), rowY.toDouble(),
-                (bounds.width - 14).toDouble(), 16.0)
+                (bounds.x + 7).toDouble(), rowY.toDouble(), (bounds.width - 14).toDouble(), 16.0)
             graphics.fill(bounds.x + 7, rowY, bounds.x + bounds.width - 7, rowY + 16,
                 if (hovered) HOVER_BACKGROUND else NODE_BACKGROUND)
             graphics.fill(bounds.x + 7, rowY, bounds.x + 9, rowY + 16,
                 if (hovered) accentColor else BORDER_MUTED)
-            val key = if (index == 0) "manual" else "chat"
-            smallText(graphics, Component.translatable("screen.academy.program.starter.$key").string,
+            smallText(graphics, starterRowLabel(index).string,
                 bounds.x + 15, rowY + 4, if (hovered) TEXT else DIM, bounds.width - 30)
         }
-        smallText(graphics, Component.translatable("screen.academy.program.starter.hint").string,
-            bounds.x + 8, bounds.y + 69, DIM, bounds.width - 16)
+        smallText(graphics, Component.translatable("screen.academy.program.task_template.hint").string,
+            bounds.x + 8, bounds.y + bounds.height - 41, DIM, bounds.width - 16)
         for (permanent in listOf(false, true)) {
             val control = starterDismissBounds(permanent)
             val key = if (permanent) "dismiss_world" else "close"
             button(graphics, control.x, control.y, control.width, control.height,
-                Component.translatable("screen.academy.program.starter.$key"),
-                mouseX, mouseY, false, false)
+                Component.translatable("screen.academy.program.starter.$key"), mouseX, mouseY, false, false)
         }
     }
 
@@ -524,25 +573,32 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             if (!inside(mouseX, mouseY, control.x.toDouble(), control.y.toDouble(),
                     control.width.toDouble(), control.height.toDouble())) continue
             starterDismissed = true
+            taskTemplatesOpen = false
             if (permanent) session.dismissStarterForWorld()
             return true
         }
         val bounds = starterBounds()
-        for (index in 0..1) {
+        val tasks = starterTasks()
+        for (index in 0 until tasks.size + 2) {
             val rowY = bounds.y + 25 + index * 19
             if (!inside(mouseX, mouseY, (bounds.x + 7).toDouble(), rowY.toDouble(),
                     (bounds.width - 14).toDouble(), 16.0)) continue
-            val kind = if (index == 0) ProgramStarterTemplates.Kind.MANUAL
-                else ProgramStarterTemplates.Kind.CHAT
-            val program = ProgramStarterTemplates.create(document.program(), definition, capabilities,
-                kind,
-                Component.translatable("screen.academy.program.starter.chat_keyword").string,
-                Component.translatable("screen.academy.program.starter.output").string)
+            val program = if (index < tasks.size) {
+                ProgramTaskTemplates.create(document.program(), definition, capabilities, tasks[index])
+            } else {
+                val kind = if (index == tasks.size) ProgramStarterTemplates.Kind.MANUAL
+                    else ProgramStarterTemplates.Kind.CHAT
+                ProgramStarterTemplates.create(document.program(), definition, capabilities, kind,
+                    Component.translatable("screen.academy.program.starter.chat_keyword").string,
+                    Component.translatable("screen.academy.program.starter.output").string)
+            }
+            taskTemplatesOpen = false
             setProgram(program, true)
             fitCanvas(false)
             return true
         }
-        return false
+        return inside(mouseX, mouseY, bounds.x.toDouble(), bounds.y.toDouble(),
+            bounds.width.toDouble(), bounds.height.toDouble())
     }
 
     private fun renderEdge(graphics: ProgramUiGraphics, edge: ProgramGraph.Edge) {
@@ -993,7 +1049,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
                 contentWidth = maxOf(contentWidth, TextWidget.getTextWidth(wrapped, ProgramUiGraphics.BODY_FONT_SIZE))
             }
         }
-        val tooltipWidth = maxOf(32, (contentWidth).roundToInt() + 10)
+        val tooltipWidth = maxOf(32, ceil(contentWidth).toInt() + 10)
         val tooltipHeight = expanded.size * 9 + 8
         var x = mouseX + 10
         var y = mouseY + 8
@@ -1084,38 +1140,56 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         }
         if (paletteVisible()) {
             val x = paletteX()
-            val paletteWidth = paletteWidth()
-            val groups = ProgramEditorNodeCatalog.Group.entries
-            val tabY = canvasY + PALETTE_TAB_OFFSET_Y
-            val tabW = maxOf(11, (paletteWidth - 8) / groups.size)
-            for (index in groups.indices) {
-                if (inside(
-                        mouseX.toDouble(),
-                        mouseY.toDouble(),
-                        (x + 4 + index * tabW).toDouble(),
-                        tabY.toDouble(),
-                        (tabW - 1).toDouble(),
-                        12.0
-                    )
-                ) {
-                    return listOf(TooltipLine(Component.translatable(groupKey(groups[index])).string, TEXT))
+            val width = paletteWidth()
+            val query = search?.text.orEmpty()
+            if (query.isNotBlank() && inside(mouseX.toDouble(), mouseY.toDouble(),
+                    (x + 4).toDouble(), (canvasY + PALETTE_SEARCH_OFFSET_Y).toDouble(),
+                    (width - 8).toDouble(), 15.0)) {
+                return listOf(TooltipLine(query, TEXT))
+            }
+            if (!session.precisionRules() && inside(mouseX.toDouble(), mouseY.toDouble(),
+                    (x + width - 37).toDouble(), (canvasY + 1).toDouble(), 33.0, 12.0)) {
+                return listOf(TooltipLine(Component.translatable("screen.academy.program.task_template.open_hint").string, TEXT))
+            }
+            val layers = ProgramPaletteCatalog.Layer.entries
+            val layerW = (width - 8) / layers.size
+            for (index in layers.indices) {
+                if (inside(mouseX.toDouble(), mouseY.toDouble(), (x + 4 + index * layerW).toDouble(),
+                        (canvasY + PALETTE_LAYER_OFFSET_Y).toDouble(), (layerW - 1).toDouble(), 12.0)) {
+                    return listOf(TooltipLine(Component.translatable(layers[index].translationKey() + ".description").string, TEXT))
                 }
             }
-            val entries = visibleEntries()
-            val listY = canvasY + PALETTE_LIST_OFFSET_Y
-            val listBottom = canvasY + canvasH - 3
-            val visibleRows = maxOf(1, (listBottom - listY) / ROW_H)
-            var row = 0
-            while (row < visibleRows && paletteScroll + row < entries.size) {
-                if (!inside(
-                        mouseX.toDouble(), mouseY.toDouble(), (x + 3).toDouble(), (listY + row * ROW_H).toDouble(),
-                        (paletteWidth - 6).toDouble(), (ROW_H - 1).toDouble()
-                    )
-                ) {
-                    row++
-                    continue
+            if (paletteFamilyId == null && paletteLayer != ProgramPaletteCatalog.Layer.COMMON) {
+                val groups = ProgramEditorNodeCatalog.Group.entries
+                val tabW = maxOf(11, (width - 8) / groups.size)
+                for (index in groups.indices) {
+                    if (inside(mouseX.toDouble(), mouseY.toDouble(), (x + 4 + index * tabW).toDouble(),
+                            (canvasY + PALETTE_TAB_OFFSET_Y).toDouble(), (tabW - 1).toDouble(), 12.0)) {
+                        return listOf(TooltipLine(Component.translatable(groupKey(groups[index])).string, TEXT))
+                    }
                 }
-                return tooltipLines(entries[paletteScroll + row])
+            }
+            val cards = paletteCards()
+            val listY = canvasY + PALETTE_LIST_OFFSET_Y
+            val rows = maxOf(1, (canvasY + canvasH - 3 - listY) / ROW_H)
+            for (row in 0 until minOf(rows, cards.size - paletteScroll)) {
+                if (inside(mouseX.toDouble(), mouseY.toDouble(), (x + 3).toDouble(),
+                        (listY + row * ROW_H).toDouble(), (width - 6).toDouble(), (ROW_H - 1).toDouble())) {
+                    return cardTooltip(cards[paletteScroll + row])
+                }
+            }
+        }
+        if (showStarter()) {
+            val bounds = starterBounds()
+            val tasks = starterTasks()
+            for (index in 0 until tasks.size + 2) {
+                if (!inside(mouseX.toDouble(), mouseY.toDouble(), (bounds.x + 7).toDouble(),
+                        (bounds.y + 25 + index * 19).toDouble(), (bounds.width - 14).toDouble(), 16.0)) continue
+                val detail = if (index < tasks.size) tasks[index].descriptionTranslationKey()
+                    else "screen.academy.program.starter.hint"
+                return listOf(TooltipLine(starterRowLabel(index).string, TEXT),
+                    TooltipLine(Component.translatable(detail).string, DIM),
+                    TooltipLine(Component.translatable("screen.academy.program.task_template.hint").string, DIM))
             }
         }
         val configurationTooltip = hoveredConfigurationTooltip(mouseX, mouseY)
@@ -1202,19 +1276,29 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         return emptyList()
     }
 
-    private fun tooltipLines(entry: ProgramEditorNodeCatalog.Entry): List<TooltipLine> {
+    private fun tooltipLines(entry: ProgramEditorNodeCatalog.Entry, showDefaults: Boolean = true): List<TooltipLine> {
         val lines = ArrayList<TooltipLine>()
         lines.add(TooltipLine(nodeLabel(entry).string, TEXT))
         if (entry.categoryRestricted()) {
             lines.add(TooltipLine(categoryScopeLabel(entry).string, accentColor))
         }
         lines.add(TooltipLine(nodeDescription(entry).string, DIM))
+        if (showDefaults && entry.defaultConfiguration().isJsonObject) {
+            for ((field, value) in entry.defaultConfiguration().asJsonObject.entrySet()) {
+                if (!value.isJsonPrimitive) continue
+                val options = ProgramConfigurationOptions.options(entry, field, value)
+                val label = if (options.isEmpty()) value.asString
+                    else ProgramConfigurationOptions.selected(options, value).label().string
+                lines.add(TooltipLine(Component.translatable("screen.academy.program.palette.default_value",
+                    configurationFieldLabel(field), label).string, DIM))
+            }
+        }
         return lines.toList()
     }
 
     private fun tooltipLines(node: NodeView, error: String?): List<TooltipLine> {
         val lines = ArrayList<TooltipLine>()
-        lines.addAll(tooltipLines(node.entry))
+        lines.addAll(tooltipLines(node.entry, false))
         if (node.source.configuration().isJsonObject) {
             for (field in configurationFields(node)) {
                 val currentValue = node.source.configuration().asJsonObject.get(field)
@@ -1605,42 +1689,57 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         if (!paletteVisible()) return false
         val x = paletteX()
         val width = paletteWidth()
-        val groups = ProgramEditorNodeCatalog.Group.entries
-        val tabY = canvasY + PALETTE_TAB_OFFSET_Y
-        val tabW = maxOf(11, (width - 8) / groups.size)
-        for (index in groups.indices) {
-            if (inside(
-                    mouseX,
-                    mouseY,
-                    (x + 4 + index * tabW).toDouble(),
-                    tabY.toDouble(),
-                    (tabW - 1).toDouble(),
-                    12.0
-                )
-            ) {
-                selectedGroup = groups[index]
+        if (inside(mouseX, mouseY, (x + width - 37).toDouble(), (canvasY + 1).toDouble(), 33.0, 12.0)) {
+            return openTaskTemplates()
+        }
+        val layers = ProgramPaletteCatalog.Layer.entries
+        val layerW = (width - 8) / layers.size
+        for (index in layers.indices) {
+            if (inside(mouseX, mouseY, (x + 4 + index * layerW).toDouble(),
+                    (canvasY + PALETTE_LAYER_OFFSET_Y).toDouble(), (layerW - 1).toDouble(), 12.0)) {
+                paletteLayer = layers[index]
+                paletteFamilyId = null
                 paletteScroll = 0
                 return true
             }
         }
-        val listY = canvasY + PALETTE_LIST_OFFSET_Y
-        if (!inside(
-                mouseX, mouseY, (x + 3).toDouble(), listY.toDouble(), (width - 6).toDouble(),
-                (canvasY + canvasH - 3 - listY).toDouble()
-            )
-        ) return false
-        val row = ((mouseY - listY) / ROW_H).toInt()
-        val entries = visibleEntries()
-        val index = paletteScroll + row
-        if (index in entries.indices) {
-            addNode(
-                entries[index],
-                screenToGraphX(canvasX + canvasW / 2.0),
-                screenToGraphY(canvasY + canvasH / 2.0)
-            )
-            return true
+        val tabY = canvasY + PALETTE_TAB_OFFSET_Y
+        if (selectedPaletteFamily() != null) {
+            if (inside(mouseX, mouseY, (x + 4).toDouble(), tabY.toDouble(), (width - 8).toDouble(), 12.0)) {
+                paletteFamilyId = null
+                paletteScroll = 0
+                return true
+            }
+        } else if (paletteLayer != ProgramPaletteCatalog.Layer.COMMON) {
+            val groups = ProgramEditorNodeCatalog.Group.entries
+            val tabW = maxOf(11, (width - 8) / groups.size)
+            for (index in groups.indices) {
+                if (inside(mouseX, mouseY, (x + 4 + index * tabW).toDouble(),
+                        tabY.toDouble(), (tabW - 1).toDouble(), 12.0)) {
+                    selectedGroup = groups[index]
+                    paletteScroll = 0
+                    return true
+                }
+            }
         }
-        return false
+        val listY = canvasY + PALETTE_LIST_OFFSET_Y
+        if (!inside(mouseX, mouseY, (x + 3).toDouble(), listY.toDouble(), (width - 6).toDouble(),
+                (canvasY + canvasH - 3 - listY).toDouble())) return false
+        val row = ((mouseY - listY) / ROW_H).toInt()
+        val visibleRows = maxOf(1, (canvasY + canvasH - 3 - listY) / ROW_H)
+        if (row >= visibleRows) return false
+        val cards = paletteCards()
+        val index = paletteScroll + row
+        if (index !in cards.indices) return false
+        val card = cards[index]
+        if (card.family()) {
+            paletteFamilyId = card.id()
+            paletteScroll = 0
+        } else {
+            addNode(card.members().first(), screenToGraphX(canvasX + canvasW / 2.0),
+                screenToGraphY(canvasY + canvasH / 2.0))
+        }
+        return true
     }
 
     private fun handleInspectorClick(mouseX: Double, mouseY: Double): Boolean {
@@ -2273,27 +2372,43 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         entry.visible(), entry.metadata()
     )
 
-    private fun visibleEntries(): List<ProgramEditorNodeCatalog.Entry> {
-        val query = search?.text?.trim()?.lowercase(Locale.ROOT) ?: ""
-        val hasEntry = nodes().any { it.entry.type().role() == ProgramNodeRole.ENTRY }
-        return paletteEntries()
-            .filter { it.visible() }
-            .filter { !hasEntry || it.type().role() != ProgramNodeRole.ENTRY }
-            .filter { entryUnlocked(it) }
-            .filter { entry ->
-                if (query.isEmpty()) return@filter entry.group() == selectedGroup
-                nodeLabel(entry).string.lowercase(Locale.ROOT).contains(query)
-                        || nodeDescription(entry).string.lowercase(Locale.ROOT).contains(query)
-                        || categoryScopeLabel(entry).string.lowercase(Locale.ROOT).contains(query)
-                        || entry.id().toString().lowercase(Locale.ROOT).contains(query)
-                        || Component.translatable(groupKey(entry.group())).string.lowercase(Locale.ROOT).contains(query)
-            }
+    private fun rootPaletteCards(): List<ProgramPaletteCatalog.Card> = ProgramPaletteCatalog.cards(
+        paletteEntries(), capabilities, nodes().any { it.entry.type().role() == ProgramNodeRole.ENTRY },
+        paletteLayer, search?.text ?: "",
+        { key -> Component.translatable(key).string },
+        { entry -> nodeLabel(entry).string + "\n" + nodeDescription(entry).string + "\n" +
+            categoryScopeLabel(entry).string + "\n" + Component.translatable(groupKey(entry.group())).string }
+    )
+
+    private fun selectedPaletteFamily(): ProgramPaletteCatalog.Card? =
+        paletteFamilyId?.let { id -> rootPaletteCards().firstOrNull { it.id() == id && it.family() } }
+
+    private fun paletteCards(): List<ProgramPaletteCatalog.Card> {
+        val cards = rootPaletteCards()
+        val family = cards.firstOrNull { it.id() == paletteFamilyId && it.family() }
+        if (family != null) return family.members().mapIndexed { index, entry ->
+            ProgramPaletteCatalog.Card("${family.id()}/$index", entry.translationKey(),
+                entry.descriptionTranslationKey(), entry.group(), listOf(entry), false)
+        }
+        return if (paletteLayer != ProgramPaletteCatalog.Layer.COMMON && search?.text.isNullOrBlank())
+            cards.filter { it.group() == selectedGroup } else cards
     }
+
+    private fun cardLabel(card: ProgramPaletteCatalog.Card): String = if (card.family())
+        Component.translatable(card.titleTranslationKey()).string else nodeLabel(card.members().first()).string
+
+    private fun cardTooltip(card: ProgramPaletteCatalog.Card): List<TooltipLine> = if (!card.family())
+        tooltipLines(card.members().first()) else listOf(
+            TooltipLine(cardLabel(card), TEXT),
+            TooltipLine(Component.translatable(card.descriptionTranslationKey()).string, DIM),
+            TooltipLine(Component.translatable("screen.academy.program.palette.family_hint", card.members().size).string, DIM)
+        )
 
     private fun compatibleEntries(anchor: Endpoint): List<ProgramEditorNodeCatalog.Entry> {
         return paletteEntries()
             .asSequence()
             .filter { it.visible() }
+            .filter { it.presentationStatus() == ProgramEditorNodeCatalog.PresentationStatus.AVAILABLE }
             .filter { it.type().role() != ProgramNodeRole.ENTRY }
             .filter { entryUnlocked(it) }
             .filter {
@@ -2726,9 +2841,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         private const val TOOL_SIZE = 14
         private const val PORT_HIT = 14
         private const val SNAP_DISTANCE = 10
-        private const val PALETTE_TAB_OFFSET_Y = 16
-        private const val PALETTE_SEARCH_OFFSET_Y = 31
-        private const val PALETTE_LIST_OFFSET_Y = 49
+        private const val PALETTE_LAYER_OFFSET_Y = 16
+        private const val PALETTE_TAB_OFFSET_Y = 31
+        private const val PALETTE_SEARCH_OFFSET_Y = 46
+        private const val PALETTE_LIST_OFFSET_Y = 64
         private val TOOL_LABELS = arrayOf(
             "delete", "copy", "paste", "undo", "redo", "auto_layout", "fit",
             "export", "import", "save", "restore"

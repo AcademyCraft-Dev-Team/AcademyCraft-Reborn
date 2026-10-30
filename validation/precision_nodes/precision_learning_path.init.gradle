@@ -1,0 +1,19 @@
+// Isolated editor learning-path acceptance. Reflection calls the production UI handlers;
+// the in-memory session never saves or executes a graph. Do not run the A UI fixture too.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-precision-learning-path')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Learning-path check requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionLearningPathSmoke', 'true'
+            systemProperty 'academy.precisionPresentationSmoke', 'false'
+            systemProperty 'academy.precisionNodeCatalogAudit', 'true'
+            programArguments.addAll('--width', '1600', '--height', '900', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}
