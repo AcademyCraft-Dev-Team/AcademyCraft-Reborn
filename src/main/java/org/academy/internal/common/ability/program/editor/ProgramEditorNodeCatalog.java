@@ -5,6 +5,9 @@ import org.academy.internal.common.ability.program.registry.CommonProgramNodeCat
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.ProgramNodeExtensionIndex;
 import org.academy.internal.common.ability.program.registry.ProgramNodeLookup;
+import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeIds;
+import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
+import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
 
 
 import com.google.gson.JsonElement;
@@ -426,6 +429,26 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         VALUE
     }
 
+    /** Presentation only; it never changes lookup, graph validation or execution availability. */
+    public enum PresentationStatus {
+        AVAILABLE(null, null),
+        COMPATIBILITY("screen.academy.program.presentation.compatibility",
+                "screen.academy.program.presentation.compatibility.description"),
+        UNRELEASED("screen.academy.program.presentation.unreleased",
+                "screen.academy.program.presentation.unreleased.description");
+
+        private final @Nullable String titleTranslationKey;
+        private final @Nullable String descriptionTranslationKey;
+
+        PresentationStatus(@Nullable String titleTranslationKey, @Nullable String descriptionTranslationKey) {
+            this.titleTranslationKey = titleTranslationKey;
+            this.descriptionTranslationKey = descriptionTranslationKey;
+        }
+
+        public @Nullable String titleTranslationKey() { return titleTranslationKey; }
+        public @Nullable String descriptionTranslationKey() { return descriptionTranslationKey; }
+    }
+
     public record Entry(
             Identifier id,
             ProgramNodeType<?> type,
@@ -451,6 +474,21 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
         @Override
         public JsonElement defaultConfiguration() {
             return defaultConfiguration.deepCopy();
+        }
+
+        /**
+         * Identifies the three built-in experimental restoration entries exactly. Similar
+         * extension paths retain their own behavior and must not inherit this status.
+         * Hidden entries remain loadable and editable; compatibility describes their palette
+         * presentation rather than asserting that every extension is deprecated.
+         */
+        public PresentationStatus presentationStatus() {
+            if (id.equals(AcceleratorProgramNodeIds.STRUCTURE_STATICIZE)
+                    || id.equals(ElectromasterProgramNodeIds.STRUCTURE_STATICIZE)
+                    || id.equals(AeromanipProgramNodeIds.STRUCTURE_STATICIZE)) {
+                return PresentationStatus.UNRELEASED;
+            }
+            return visible ? PresentationStatus.AVAILABLE : PresentationStatus.COMPATIBILITY;
         }
 
         public String descriptionTranslationKey() {

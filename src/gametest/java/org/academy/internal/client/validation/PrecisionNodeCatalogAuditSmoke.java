@@ -138,6 +138,7 @@ public final class PrecisionNodeCatalogAuditSmoke {
         row.addProperty("purity", entry.type().purity().name());
         row.addProperty("group", entry.group().name());
         row.addProperty("visible", entry.visible());
+        row.addProperty("presentation_status", entry.presentationStatus().name());
         row.addProperty("schema_version", entry.type().schemaVersion());
         row.addProperty("type_class", entry.type().getClass().getName());
         row.addProperty("fallback_display_name", entry.displayName());

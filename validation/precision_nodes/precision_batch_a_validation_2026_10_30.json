@@ -1,0 +1,465 @@
+{
+  "status": "verified_user_approved_commit",
+  "base_commit": "929592f85f759a1448e78622b9faefb1c54fe6ce",
+  "suggested_commit_subject": "完善精密节点文本与兼容呈现",
+  "files": [
+    ".gitignore",
+    "docs/ABILITY_PROGRAM_NODE_CATALOG.zh-CN.md",
+    "docs/precision_node_inventory_2026_10_30.zh-CN.md",
+    "docs/precision_node_merge_text_2026_10_30.zh-CN.md",
+    "docs/precision_operation_redesign_2026_10_30.zh-CN.md",
+    "docs/structure_skill_migration_handoff.zh-CN.md",
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionNodeCatalogAuditSmoke.java",
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionPresentationSmoke.java",
+    "src/main/java/org/academy/internal/common/ability/program/editor/ProgramEditorNodeCatalog.java",
+    "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt",
+    "src/main/kotlin/org/academy/internal/client/ability/mentalout/ProgramUiGraphics.kt",
+    "src/main/resources/assets/academy/lang/en_us.json",
+    "src/main/resources/assets/academy/lang/zh_cn.json",
+    "src/test/java/org/academy/internal/common/ability/program/editor/ProgramEditorPresentationTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/registry/PrecisionNodeCatalogContractTest.java",
+    "src/test/kotlin/org/academy/internal/client/ability/mentalout/ProgramUiGraphicsWrapTest.kt",
+    "validation/precision_nodes/precision_batch_a_validation_2026_10_30.json",
+    "validation/precision_nodes/precision_presentation.init.gradle",
+    "validation/precision_nodes/verify_catalog_contract.py"
+  ],
+  "source_sha256": {
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionNodeCatalogAuditSmoke.java": "5A6366EFDED0351C2D7768D0C7EDCDE02839D11147ACCB2290511913AEA15D0D",
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionPresentationSmoke.java": "26F393A1866D5130627F8E44921E2A9E23F6561E5A07FC8CD7F7E183F402144B",
+    "src/main/java/org/academy/internal/common/ability/program/editor/ProgramEditorNodeCatalog.java": "EF09B1B0C76BE0F1568CEE2E6976914F347BE06175C00BD336F70193A2FA59B3",
+    "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt": "23F0799168B3264C667C04F14AC3014E1A148929ABD98271CF40BE3A745E078E",
+    "src/main/kotlin/org/academy/internal/client/ability/mentalout/ProgramUiGraphics.kt": "F67AA68A25511E045D6300B872B1C90FFC695DE9F0B55A4A35D25926B27A4A63",
+    "src/main/resources/assets/academy/lang/en_us.json": "E680C1E7EA4AA8331A18EF723C1E5C99FD4EB7DCFB9A330272E5F729D6E44ADA",
+    "src/main/resources/assets/academy/lang/zh_cn.json": "759E226D3DE4DC5BECFC4ACE8F2DECF990E6607092D8F55B72CF068919274B3D",
+    "src/test/java/org/academy/internal/common/ability/program/editor/ProgramEditorPresentationTest.java": "E3BEFBEBD76695A64C6F772ED8B94D2A4D1A4822A91DD53F94F39DA6A0D8EF33",
+    "src/test/java/org/academy/internal/common/ability/program/registry/PrecisionNodeCatalogContractTest.java": "0BBAB0425A2240737C7416EBACCD485FD3DEB15A96931DD4E668D32568E80E31",
+    "src/test/kotlin/org/academy/internal/client/ability/mentalout/ProgramUiGraphicsWrapTest.kt": "4BC4290734E5BB6D024014AB18301647925907421174D091C9FABC84895558D0",
+    "validation/precision_nodes/precision_presentation.init.gradle": "63B1C23F4860C5A6B561F01A9065E15F21E7CE2CA7036909AF21EC689B3B8A6D",
+    "validation/precision_nodes/verify_catalog_contract.py": "9DAFD344362903CBADD6E7D05114F6F64D7E56DC67E59C53F3CBDA07A4FDDF0E"
+  },
+  "baseline_catalog_sha256": "C78157DC66C0885CBFC8012EA1CCDC4D2230A730E9E7F9ADAE8FF92BCC3A1A24",
+  "tests": {
+    "test": {
+      "tests": 3373,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "runs": [
+    {
+      "directory": "run/native-sublevel-direct-smoke-precision-a-zh-final-20261030",
+      "result": {
+        "passed": true,
+        "language": "zh_cn",
+        "cases": [
+          {
+            "visible_ticks": 31,
+            "scene": "extraction",
+            "codec_round_trip": true,
+            "editor_graph_unchanged": true,
+            "screenshot": "screenshots/precision-zh_cn-extraction.png",
+            "graph_compiled": true,
+            "language": "zh_cn"
+          },
+          {
+            "visible_ticks": 31,
+            "scene": "charge",
+            "codec_round_trip": true,
+            "editor_graph_unchanged": true,
+            "screenshot": "screenshots/precision-zh_cn-charge.png",
+            "graph_compiled": true,
+            "language": "zh_cn"
+          },
+          {
+            "visible_ticks": 31,
+            "scene": "unreleased",
+            "codec_round_trip": true,
+            "editor_graph_unchanged": true,
+            "screenshot": "screenshots/precision-zh_cn-unreleased.png",
+            "graph_compiled": true,
+            "language": "zh_cn"
+          },
+          {
+            "visible_ticks": 141,
+            "scene": "legacy",
+            "codec_round_trip": true,
+            "editor_graph_unchanged": true,
+            "screenshot": "screenshots/precision-zh_cn-legacy.png",
+            "graph_compiled": true,
+            "language": "zh_cn"
+          },
+          {
+            "visible_ticks": 31,
+            "scene": "two_node_move",
+            "codec_round_trip": true,
+            "editor_graph_unchanged": true,
+            "screenshot": "screenshots/precision-zh_cn-two_node_move.png",
+            "graph_compiled": true,
+            "language": "zh_cn"
+          }
+        ],
+        "world_mutation_or_save_packets": false,
+        "runtime_skill_execution": false,
+        "visual_review_required": true,
+        "failure": ""
+      },
+      "result_sha256": "35A64AAEB611789BFE419853C4D7C1A71031D2871D97B413FBD44E9D29363B29",
+      "catalog_contract": {
+        "passed": true,
+        "baseline": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\validation\\precision_nodes\\node_inventory_2026_10_30.json",
+        "baseline_sha256": "c78157dc66c0885cbfc8012ea1ccdc4d2230a730e9e7f9adae8ff92bcc3a1a24",
+        "current": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\run\\native-sublevel-direct-smoke-precision-a-zh-final-20261030\\precision-node-catalog-audit.json",
+        "current_sha256": "9cad92eea6ae57f2fc746cb3ef49ce0d35f827441383d4d33d3d5db888099def",
+        "unique_nodes": 342,
+        "categories": 7,
+        "presentation_states": {
+          "AVAILABLE": 274,
+          "UNRELEASED": 3,
+          "COMPATIBILITY": 65
+        },
+        "scope": "default and finite one-field schemas; registration and current bilingual completeness; not runtime skill behavior",
+        "errors": []
+      },
+      "screenshots_sha256": {
+        "run/native-sublevel-direct-smoke-precision-a-zh-final-20261030/screenshots/precision-zh_cn-extraction.png": "3CDE184F674FBCD5BC30F3A9FFC39D2A8D897FAA409D1DF98C9CF392B3163A84",
+        "run/native-sublevel-direct-smoke-precision-a-zh-final-20261030/screenshots/precision-zh_cn-charge.png": "6552FBF5DE5FEEB20DC4A1D7923A9A632B10022F9EC632A1916CEF91CE334827",
+        "run/native-sublevel-direct-smoke-precision-a-zh-final-20261030/screenshots/precision-zh_cn-unreleased.png": "7241E9B1E5CC0B66F3FCDF485590C941A2091DEF6AC135F26790CBFAAD712F66",
+        "run/native-sublevel-direct-smoke-precision-a-zh-final-20261030/screenshots/precision-zh_cn-legacy.png": "404A9D8D7F9B30212EA4DE955077184B26DEFB2FE0862FDE70AA454DDCF96CA9",
+        "run/native-sublevel-direct-smoke-precision-a-zh-final-20261030/screenshots/precision-zh_cn-two_node_move.png": "FFFD3FFFAF43F03194FB5045DD2A0BE904E3D7AEE073A2762CFE7189BE5ED2BB"
+      },
+      "visual_review": {
+        "reviewer": "root",
+        "changed_labels_and_descriptions": "readable and complete",
+        "known_remaining_issue": "some old palette/header glyphs missing in later English captures; not accepted as a clean whole-screen rendering check"
+      },
+      "source_world_files_unchanged": 148,
+      "startup_missing_globals_warning": true,
+      "log": "build/precision-a-client-zh-validated-20261030.log"
+    },
+    {
+      "directory": "run/native-sublevel-direct-smoke-precision-a-en-final-20261030",
+      "result": {
+        "passed": true,
+        "language": "en_us",
+        "cases": [
+          {
+            "graph_compiled": true,
+            "screenshot": "screenshots/precision-en_us-extraction.png",
+            "editor_graph_unchanged": true,
+            "codec_round_trip": true,
+            "scene": "extraction",
+            "visible_ticks": 32,
+            "language": "en_us"
+          },
+          {
+            "graph_compiled": true,
+            "screenshot": "screenshots/precision-en_us-charge.png",
+            "editor_graph_unchanged": true,
+            "codec_round_trip": true,
+            "scene": "charge",
+            "visible_ticks": 31,
+            "language": "en_us"
+          },
+          {
+            "graph_compiled": true,
+            "screenshot": "screenshots/precision-en_us-unreleased.png",
+            "editor_graph_unchanged": true,
+            "codec_round_trip": true,
+            "scene": "unreleased",
+            "visible_ticks": 31,
+            "language": "en_us"
+          },
+          {
+            "graph_compiled": true,
+            "screenshot": "screenshots/precision-en_us-legacy.png",
+            "editor_graph_unchanged": true,
+            "codec_round_trip": true,
+            "scene": "legacy",
+            "visible_ticks": 141,
+            "language": "en_us"
+          },
+          {
+            "graph_compiled": true,
+            "screenshot": "screenshots/precision-en_us-two_node_move.png",
+            "editor_graph_unchanged": true,
+            "codec_round_trip": true,
+            "scene": "two_node_move",
+            "visible_ticks": 31,
+            "language": "en_us"
+          }
+        ],
+        "world_mutation_or_save_packets": false,
+        "runtime_skill_execution": false,
+        "visual_review_required": true,
+        "failure": ""
+      },
+      "result_sha256": "A06C2BEAA4EC1ECCB21C17C60BFE6F42C55DEB707BE5199E78D44AA51380DAAF",
+      "catalog_contract": {
+        "passed": true,
+        "baseline": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\validation\\precision_nodes\\node_inventory_2026_10_30.json",
+        "baseline_sha256": "c78157dc66c0885cbfc8012ea1ccdc4d2230a730e9e7f9adae8ff92bcc3a1a24",
+        "current": "D:\\mcmodtest\\AcademyCraft-Reborn-26.2\\run\\native-sublevel-direct-smoke-precision-a-en-final-20261030\\precision-node-catalog-audit.json",
+        "current_sha256": "9cad92eea6ae57f2fc746cb3ef49ce0d35f827441383d4d33d3d5db888099def",
+        "unique_nodes": 342,
+        "categories": 7,
+        "presentation_states": {
+          "AVAILABLE": 274,
+          "UNRELEASED": 3,
+          "COMPATIBILITY": 65
+        },
+        "scope": "default and finite one-field schemas; registration and current bilingual completeness; not runtime skill behavior",
+        "errors": []
+      },
+      "screenshots_sha256": {
+        "run/native-sublevel-direct-smoke-precision-a-en-final-20261030/screenshots/precision-en_us-extraction.png": "F78AB9CB44492F3919F849C31A85A941C979761D84BF2F04FAECB776CFB5C0C6",
+        "run/native-sublevel-direct-smoke-precision-a-en-final-20261030/screenshots/precision-en_us-charge.png": "8FBC8AE20162AAF0DB07B8AC9E51B53F5E5B4EAB25F5457099A945505C714AF5",
+        "run/native-sublevel-direct-smoke-precision-a-en-final-20261030/screenshots/precision-en_us-unreleased.png": "A926E2C73D1D73A9109BD8EE441A7A8BD64E43D8A715713C579E8401A5EA4F0D",
+        "run/native-sublevel-direct-smoke-precision-a-en-final-20261030/screenshots/precision-en_us-legacy.png": "7C332D2F5F725ADED860C7E5FE592705AA616749BF2D6829E649C13BB0806033",
+        "run/native-sublevel-direct-smoke-precision-a-en-final-20261030/screenshots/precision-en_us-two_node_move.png": "425CCF2C72886ACD9B21A94A757F5339A645AEB9BA89BBB7A3E92F1514B67D3F"
+      },
+      "visual_review": {
+        "reviewer": "root",
+        "changed_labels_and_descriptions": "readable and complete",
+        "known_remaining_issue": "some old palette/header glyphs missing in later English captures; not accepted as a clean whole-screen rendering check"
+      },
+      "source_world_files_unchanged": 148,
+      "startup_missing_globals_warning": true,
+      "log": "build/precision-a-client-en-validated-20261030.log"
+    }
+  ],
+  "language_changes": {
+    "zh_cn": {
+      "changed_existing_keys": [
+        "screen.academy.precision_operation.node.direction_between",
+        "screen.academy.precision_operation.node.direction_between.description",
+        "screen.academy.precision_operation.node.random",
+        "screen.academy.precision_operation.node.remove_control",
+        "screen.academy.program.accelerator.node.control",
+        "screen.academy.program.accelerator.node.control.description",
+        "screen.academy.program.accelerator.node.extract",
+        "screen.academy.program.accelerator.node.extract.description",
+        "screen.academy.program.accelerator.node.launch.description",
+        "screen.academy.program.accelerator.node.move",
+        "screen.academy.program.accelerator.node.move.description",
+        "screen.academy.program.accelerator.node.move_group",
+        "screen.academy.program.accelerator.node.move_group.description",
+        "screen.academy.program.accelerator.node.release",
+        "screen.academy.program.accelerator.node.release.description",
+        "screen.academy.program.accelerator.node.reset_group.description",
+        "screen.academy.program.accelerator.node.reset_orientation",
+        "screen.academy.program.accelerator.node.reset_orientation.description",
+        "screen.academy.program.accelerator.node.rotate",
+        "screen.academy.program.accelerator.node.rotate.description",
+        "screen.academy.program.accelerator.node.rotate_group",
+        "screen.academy.program.accelerator.node.rotate_group.description",
+        "screen.academy.program.accelerator.node.spin",
+        "screen.academy.program.accelerator.node.spin.description",
+        "screen.academy.program.accelerator.node.spin_group.description",
+        "screen.academy.program.accelerator.node.staticize",
+        "screen.academy.program.accelerator.node.staticize.description",
+        "screen.academy.program.aeromanip.node.control",
+        "screen.academy.program.aeromanip.node.control.description",
+        "screen.academy.program.aeromanip.node.extract",
+        "screen.academy.program.aeromanip.node.extract.description",
+        "screen.academy.program.aeromanip.node.launch",
+        "screen.academy.program.aeromanip.node.launch.description",
+        "screen.academy.program.aeromanip.node.move",
+        "screen.academy.program.aeromanip.node.move.description",
+        "screen.academy.program.aeromanip.node.move_group",
+        "screen.academy.program.aeromanip.node.move_group.description",
+        "screen.academy.program.aeromanip.node.release",
+        "screen.academy.program.aeromanip.node.release.description",
+        "screen.academy.program.aeromanip.node.reset_group.description",
+        "screen.academy.program.aeromanip.node.reset_orientation",
+        "screen.academy.program.aeromanip.node.reset_orientation.description",
+        "screen.academy.program.aeromanip.node.rotate",
+        "screen.academy.program.aeromanip.node.rotate.description",
+        "screen.academy.program.aeromanip.node.rotate_group",
+        "screen.academy.program.aeromanip.node.rotate_group.description",
+        "screen.academy.program.aeromanip.node.spin",
+        "screen.academy.program.aeromanip.node.spin.description",
+        "screen.academy.program.aeromanip.node.spin_group.description",
+        "screen.academy.program.aeromanip.node.staticize",
+        "screen.academy.program.aeromanip.node.staticize.description",
+        "screen.academy.program.electromaster.node.control",
+        "screen.academy.program.electromaster.node.control.description",
+        "screen.academy.program.electromaster.node.extract",
+        "screen.academy.program.electromaster.node.extract.description",
+        "screen.academy.program.electromaster.node.launch.description",
+        "screen.academy.program.electromaster.node.move",
+        "screen.academy.program.electromaster.node.move.description",
+        "screen.academy.program.electromaster.node.move_group",
+        "screen.academy.program.electromaster.node.move_group.description",
+        "screen.academy.program.electromaster.node.release",
+        "screen.academy.program.electromaster.node.release.description",
+        "screen.academy.program.electromaster.node.reset_group.description",
+        "screen.academy.program.electromaster.node.reset_orientation",
+        "screen.academy.program.electromaster.node.reset_orientation.description",
+        "screen.academy.program.electromaster.node.rotate",
+        "screen.academy.program.electromaster.node.rotate.description",
+        "screen.academy.program.electromaster.node.rotate_group",
+        "screen.academy.program.electromaster.node.rotate_group.description",
+        "screen.academy.program.electromaster.node.spin",
+        "screen.academy.program.electromaster.node.spin.description",
+        "screen.academy.program.electromaster.node.spin_group.description",
+        "screen.academy.program.electromaster.node.staticize",
+        "screen.academy.program.electromaster.node.staticize.description",
+        "screen.academy.program.node.collection.direction.get",
+        "screen.academy.program.node.flow.stop",
+        "screen.academy.program.node.flow.stop.description",
+        "screen.academy.program.port.control",
+        "screen.academy.program.port.tier"
+      ],
+      "added_keys": [
+        "screen.academy.program.configuration.field.charge_tier",
+        "screen.academy.program.configuration.field.tier",
+        "screen.academy.program.presentation.compatibility",
+        "screen.academy.program.presentation.compatibility.description",
+        "screen.academy.program.presentation.unreleased",
+        "screen.academy.program.presentation.unreleased.description"
+      ]
+    },
+    "en_us": {
+      "changed_existing_keys": [
+        "screen.academy.precision_operation.node.direction_between",
+        "screen.academy.precision_operation.node.direction_between.description",
+        "screen.academy.precision_operation.node.random",
+        "screen.academy.precision_operation.node.remove_control",
+        "screen.academy.program.accelerator.node.control",
+        "screen.academy.program.accelerator.node.control.description",
+        "screen.academy.program.accelerator.node.extract",
+        "screen.academy.program.accelerator.node.extract.description",
+        "screen.academy.program.accelerator.node.launch",
+        "screen.academy.program.accelerator.node.launch.description",
+        "screen.academy.program.accelerator.node.move",
+        "screen.academy.program.accelerator.node.move.description",
+        "screen.academy.program.accelerator.node.move_group",
+        "screen.academy.program.accelerator.node.move_group.description",
+        "screen.academy.program.accelerator.node.release",
+        "screen.academy.program.accelerator.node.release.description",
+        "screen.academy.program.accelerator.node.reset_group.description",
+        "screen.academy.program.accelerator.node.reset_orientation.description",
+        "screen.academy.program.accelerator.node.rotate",
+        "screen.academy.program.accelerator.node.rotate.description",
+        "screen.academy.program.accelerator.node.rotate_group",
+        "screen.academy.program.accelerator.node.rotate_group.description",
+        "screen.academy.program.accelerator.node.spin.description",
+        "screen.academy.program.accelerator.node.spin_group.description",
+        "screen.academy.program.accelerator.node.staticize",
+        "screen.academy.program.accelerator.node.staticize.description",
+        "screen.academy.program.aeromanip.node.control",
+        "screen.academy.program.aeromanip.node.control.description",
+        "screen.academy.program.aeromanip.node.extract",
+        "screen.academy.program.aeromanip.node.extract.description",
+        "screen.academy.program.aeromanip.node.launch",
+        "screen.academy.program.aeromanip.node.launch.description",
+        "screen.academy.program.aeromanip.node.move",
+        "screen.academy.program.aeromanip.node.move.description",
+        "screen.academy.program.aeromanip.node.move_group",
+        "screen.academy.program.aeromanip.node.move_group.description",
+        "screen.academy.program.aeromanip.node.release",
+        "screen.academy.program.aeromanip.node.release.description",
+        "screen.academy.program.aeromanip.node.reset_group.description",
+        "screen.academy.program.aeromanip.node.reset_orientation.description",
+        "screen.academy.program.aeromanip.node.rotate",
+        "screen.academy.program.aeromanip.node.rotate.description",
+        "screen.academy.program.aeromanip.node.rotate_group",
+        "screen.academy.program.aeromanip.node.rotate_group.description",
+        "screen.academy.program.aeromanip.node.spin.description",
+        "screen.academy.program.aeromanip.node.spin_group.description",
+        "screen.academy.program.aeromanip.node.staticize",
+        "screen.academy.program.aeromanip.node.staticize.description",
+        "screen.academy.program.electromaster.node.control",
+        "screen.academy.program.electromaster.node.control.description",
+        "screen.academy.program.electromaster.node.extract",
+        "screen.academy.program.electromaster.node.extract.description",
+        "screen.academy.program.electromaster.node.launch",
+        "screen.academy.program.electromaster.node.launch.description",
+        "screen.academy.program.electromaster.node.move",
+        "screen.academy.program.electromaster.node.move.description",
+        "screen.academy.program.electromaster.node.move_group",
+        "screen.academy.program.electromaster.node.move_group.description",
+        "screen.academy.program.electromaster.node.release",
+        "screen.academy.program.electromaster.node.release.description",
+        "screen.academy.program.electromaster.node.reset_group.description",
+        "screen.academy.program.electromaster.node.reset_orientation.description",
+        "screen.academy.program.electromaster.node.rotate",
+        "screen.academy.program.electromaster.node.rotate.description",
+        "screen.academy.program.electromaster.node.rotate_group",
+        "screen.academy.program.electromaster.node.rotate_group.description",
+        "screen.academy.program.electromaster.node.spin.description",
+        "screen.academy.program.electromaster.node.spin_group.description",
+        "screen.academy.program.electromaster.node.staticize",
+        "screen.academy.program.electromaster.node.staticize.description",
+        "screen.academy.program.node.collection.direction.get",
+        "screen.academy.program.node.flow.stop",
+        "screen.academy.program.node.flow.stop.description",
+        "screen.academy.program.port.control",
+        "screen.academy.program.port.tier"
+      ],
+      "added_keys": [
+        "screen.academy.program.configuration.field.charge_tier",
+        "screen.academy.program.configuration.field.tier",
+        "screen.academy.program.presentation.compatibility",
+        "screen.academy.program.presentation.compatibility.description",
+        "screen.academy.program.presentation.unreleased",
+        "screen.academy.program.presentation.unreleased.description"
+      ]
+    }
+  },
+  "artifacts": {
+    "dev": {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32552805,
+      "sha256": "0829220908841FCD379AA06DD4614E04DF7428221FDDB6EB90D00F9A21B68AF3",
+      "languages_match_sources": true,
+      "changed_classes_match_compiled_output": true,
+      "test_fixtures_absent": true
+    },
+    "release": {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 25081704,
+      "sha256": "E2A44F8F2F68946ED4403639CCE0B1B7D557C715D910C13600ECB026299660CC",
+      "languages_match_sources": true,
+      "changed_classes_match_compiled_output": true,
+      "test_fixtures_absent": true
+    }
+  },
+  "excluded_rust_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "build_logs": [
+    "build/precision-a-validated-dev-20261030.log",
+    "build/precision-a-validated-release-20261030.log"
+  ],
+  "scope": [
+    "342 registered IDs and 353 finite single-field configurations retain defaults, ports, capabilities and runtime bindings",
+    "65 compatibility entries remain loadable; three exact built-in restoration IDs are presentation-only unreleased",
+    "bilingual names, descriptions, default and finite-mode ports and configuration fields are complete",
+    "real GUI examples compile and round-trip without editing graphs; wrapped description lines retain text and pass final-width fitting",
+    "no skill executors, fees, physics controls or wire formats changed"
+  ],
+  "limits": [
+    "No claim of exhaustive Cartesian configurations or new world-execution matrix",
+    "Old 10-node long-stay rendering bug remains open; this legacy scene contains only two nodes",
+    "Restoration backend behavior remains inconsistent and rotated restoration is not fully supported; status is not a runtime gate",
+    "Both final clients and earlier diagnostic runs logged a Missing uniform Globals initial resource reload error before the precision screen; second reload entered the editor. Root cause and attribution are unconfirmed; this batch does not fix it",
+    "Palette families, starter templates, compile/query/UI cache work remain batches B-E; no performance percentage claimed"
+  ],
+  "verifier_negative_audit": {
+    "positive_cases": 2,
+    "negative_cases": 18,
+    "all_expected": true
+  }
+}

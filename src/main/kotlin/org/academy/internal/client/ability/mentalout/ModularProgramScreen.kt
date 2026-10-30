@@ -633,8 +633,18 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         ProgramNodePalette.label(entry.id(), entry.defaultConfiguration())
             ?: Component.translatable(entry.translationKey())
 
-    private fun nodeDescription(entry: ProgramEditorNodeCatalog.Entry): Component =
-        Component.translatable(entry.descriptionTranslationKey())
+    private fun nodeDescription(entry: ProgramEditorNodeCatalog.Entry): Component {
+        val description = Component.translatable(entry.descriptionTranslationKey())
+        val status = entry.presentationStatus()
+        val titleKey = status.titleTranslationKey() ?: return description
+        val detailKey = status.descriptionTranslationKey() ?: return description
+        // Every inspector/tooltip measurement already uses this description. Keeping the
+        // notice in the same Component avoids an extra row with a different height contract.
+        return Component.empty()
+            .append(Component.translatable(titleKey)).append(": ")
+            .append(Component.translatable(detailKey)).append("\n")
+            .append(description)
+    }
 
     private fun renderSelectionDrag(graphics: ProgramUiGraphics) {
         val drag = selectionDrag ?: return

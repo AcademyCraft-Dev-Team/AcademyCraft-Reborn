@@ -1,14 +1,14 @@
 # 自定义能力程序节点总表
 
-本文档对应当前工作区实现，用于统一调整节点归属、端口、参数、效果和数值。节点定义以服务端代码为准，本地化文本仅用于显示。
+本文件保留历史手工节点索引，供查找旧 ID 和理解节点族。**2026-10-30 之后的完整节点、可见性、默认配置、端口及有限模式以[实测完整清单](precision_node_inventory_2026_10_30.zh-CN.md)和[动态 JSON](../validation/precision_nodes/node_inventory_2026_10_30.json)为准**；下文旧表没有覆盖后来增加的全部结构群组、姿态和查询节点，不能再作为当前总数或默认值的权威。执行效果仍以服务端代码为准，目录可见及 executor 存在也不代表功能已正式开放。
 
 ## 1. 统计口径
 
-- 已注册的唯一节点类型：305 个（按 `*ProgramNodeIds` 常量与集合域展开静态统计，精确注册数需运行注册表核对）。
-- 编辑器当前可见的唯一节点类型：240 个（同一静态口径：305 减去 34 个旧数值/运算兼容节点、12 个非心理系旧目标节点、2 个心理系旧目标节点、12 个旧心理过滤节点与 5 个旧心理别名节点）；被合并节点仍注册为隐藏兼容节点。
-- 共享节点：170 个（134 个 `CommonProgramNodeIds` 常量 + 4 种集合域 × 9 个操作共 36 个动态展开；按 `*ProgramNodeIds` 常量与集合域展开静态统计，精确注册数需运行注册表核对），全部能力分类都可使用。旧口径“155 个”已不成立。
+- 2026-10-30 在真实客户端注册及资源加载后导出：去重注册 ID **342** 个，目录可见 **277**、隐藏兼容 **65**。旧静态口径 305/240 已过期，不再用于当前验收。
+- “可见”只表示目录标志，还未应用玩家能力、技能门槛、已有入口和搜索过滤。三系 `staticize` 仍可见但标记未正式开放，不作为常用动作或安全还原能力完成的证明。
+- 共享节点 **189 = 155 可见 + 34 隐藏**；能力专属 ID 合计 **153 = 122 可见 + 31 隐藏**。七系目录呈现发生数共 **1476 = 189×7+153**，不是 1476 个独立节点。
 - 入口节点：7 个分类手动入口、6 个共享自动入口（含 2026-10 新增的 `flow/trigger/chat`）；每个槽位严格限制为一个入口。Level 0 不再注册程序定义和入口。
-- 非心理系分类专属节点：73 个（矢量操作 19、气流操纵 16、电气掌握 18、空间移动 6、未元物质 8、原子崩坏 6，均含隐藏兼容旧目标节点；按 `*ProgramNodeIds` 常量静态统计，精确注册数需运行注册表核对）。
+- 各分类专属 ID（含分类入口及隐藏兼容项）：矢量操作 26、空力使 23、电击使 25、传送使 7、未元物质 9、原子崩坏 7、心理掌握 56。默认图与配置详见动态清单，不再由旧 `*ProgramNodeIds` 常量行数推算。
 - 心理掌握专属节点：入口 1 个、功能节点 55 个；其中 5 个旧精密操作别名、12 个旧过滤节点以及 `target/caster`、`target/look_living` 已隐藏，但仍可导入和执行。
 - 每个程序最多 128 个节点、256 条边；每个服务端时间片燃料上限为 16385 步，挂起会话最长保留 72000 个逻辑 tick。
 - 共享查询与分类行动使用同一套服务端距离策略，查询集合最多返回 128 个结果：未识别的扩展分类默认 32 格；传送使、心理掌握 64 格；未元物质、电击使 48 格；原子崩坏、空力使 32 格；矢量操作 24 格。
@@ -299,17 +299,17 @@ ID 前缀：`academy:program/accelerator/`。一般行动节点使用配置 `str
 
 ### 结构操作节点
 
-七个结构节点共用 `flow:F` 输入与 `result:SQ, flow:F` 输出，能力归属均为“动能投掷”，端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5 说明。捕获分两阶段：首次执行发起内容捕获，`CAPTURING` 阶段节点原地重试（PENDING），提交后才输出结构引用；选区为空、超预算、权限不足或结构已被替换时以明确的 `result.detail` 拒绝。`rotate` 与 `staticize` 目前固定返回 `unavailable`。
+下表保留早期七个结构 ID，能力归属为“动能投掷”；**当前该分类实际有 13 个 `action/structure/*` ID**，新增的回正、持续旋转及群组动作见动态清单。端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5。捕获/抬升等待用同一操作续跑，完成后才给出可用结构输出；已发生的软格清理或持久转移不会因后续失败被伪装为未执行。`rotate` 已有有限力矩控制；`staticize` 为后端行为尚未统一的实验入口，不能保证仅检查或安全写回。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
 | `action/structure/extract` | 行动 | 动能投掷 | `flow:F, host:BP → structure:SR, result:SQ, flow:F` | `tier=0/1/2`（默认 `1`，选择捕获几何与质量预算）、`budget=0..256`（`0` 使用后端默认）；从宿主格捕获连通结构，提交后输出结构引用。CP 30。 |
 | `action/structure/control` | 行动 | 动能投掷 | `flow:F, structure:SR → control:SC, result:SQ, flow:F` | 取得该结构的一次性独占控制令牌；令牌绑定施术者、运行时与结构代次，不持久化，失效后不恢复权限。CP 10。 |
 | `action/structure/move` | 行动 | 动能投掷 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → result:SQ, flow:F` | `target` 与 `anchor` 至少连接一个；两者都连接时按锚点位移修正目标。`seconds` 未连接时使用配置 `duration_seconds=0.1..10`（默认 `1.0`）。CP 5。 |
-| `action/structure/rotate` | 行动 | 动能投掷 | `flow:F, control:SC, [pose:SP] → result:SQ, flow:F` | 请求目标姿态；当前返回 `unavailable`（`finite_torque_control_unavailable`），有限力矩姿态控制尚未实现。 |
+| `action/structure/rotate` | 行动 | 动能投掷 | `flow:F, control:SC, [pose:SP] → control:SC, result:SQ, flow:F` | 以有限力矩调整至输入世界绝对姿态，等待到位后回传原控制；碰撞、超时或控制失效会拒绝/终止。仅控制朝向，不提供抬升或悬停。 |
 | `action/structure/launch` | 行动 | 动能投掷 | `flow:F, control:SC, direction:D → result:SQ, flow:F` | `strength=0/1/2` 映射发射速度倍率 `0.5/1.0/1.5`。CP 15。 |
 | `action/structure/release` | 行动 | 动能投掷 | `flow:F, control:SC → result:SQ, flow:F` | 幂等撤销本令牌下发的后续命令与持续力，保留结构、惯性与重力；不单独收取 CP。 |
-| `action/structure/staticize` | 行动 | 动能投掷 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 安全静态化预检：校验完整目标 footprint 的加载、权限、占用与可旋转方块状态；即使预检全部通过也返回 `safe_staticization_unavailable`，尚未写回方块。 |
+| `action/structure/staticize` | 行动 | 动能投掷 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 未正式开放，旧图保留原行为。本地 SubLevel 路径可能实际写回世界并迁移内容，其他路径可能仅预检/拒绝；旋转后准确还原尚不保证。结束能力作用应使用 `release`，不能用本节点代替。 |
 
 ### 矢量操作数值
 
@@ -343,17 +343,17 @@ ID 前缀：`academy:program/aeromanip/`；一般行动配置为连续 `power=0.
 
 ### 结构操作节点
 
-七个结构节点共用 `flow:F` 输入与 `result:SQ, flow:F` 输出，能力归属均为“高速射流”，端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5 说明。捕获同样分两阶段（PENDING 原地重试），捕获宿主必须解析到施术者拥有的外置方块喷口；选区为空、超预算、权限不足或结构已被替换时以明确的 `result.detail` 拒绝。`rotate` 与 `staticize` 目前固定返回 `unavailable`。
+下表保留早期七个结构 ID，能力归属为“高速射流”；**当前该分类实际有 13 个 `action/structure/*` ID**，端口与新增回正、持续旋转/群组动作见动态清单。捕获需要本人有效喷口支持，等待捕获/抬升完成后才给出可用结构输出。`rotate` 已有受喷口/有限力矩约束的姿态控制；`staticize` 为后端行为尚未统一的实验入口，不能保证仅检查或安全写回。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
 | `action/structure/extract` | 行动 | 高速射流 | `flow:F, host:BP → structure:SR, result:SQ, flow:F` | `radius=2..8`（默认 `2`）、`budget=0..256`（`0` 使用后端默认）；从喷口宿主格捕获球形连通结构，喷口支撑格必须落入捕获结果。CP 30。 |
 | `action/structure/control` | 行动 | 高速射流 | `flow:F, structure:SR → control:SC, result:SQ, flow:F` | 取得该结构的一次性独占控制令牌；令牌绑定施术者、运行时与结构代次，不持久化，失效后不恢复权限。CP 10。 |
-| `action/structure/move` | 行动 | 高速射流 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → result:SQ, flow:F` | `target` 为世界坐标目标，`anchor` 为结构局部作用点，两者都可留空（留空时沿用当前喷口驱动）；目标须在移动上限内。`seconds` 未连接时使用配置 `duration_seconds=0.1..10`（默认 `1.0`）。CP 5。 |
-| `action/structure/rotate` | 行动 | 高速射流 | `flow:F, control:SC, [pose:SP] → result:SQ, flow:F` | 请求目标姿态；当前返回 `unavailable`（`finite_torque_control_unavailable`），有限力矩姿态控制尚未实现。 |
+| `action/structure/move` | 行动 | 高速射流 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → control:SC, result:SQ, flow:F` | 世界落点和局部作用点至少连接一项；只接作用点时目标为该点启动时的世界位置。秒数输入覆盖配置，窗口结束后继续并回传控制；仍须有效喷口，实际位移受质量/碰撞/推力影响。 |
+| `action/structure/rotate` | 行动 | 高速射流 | `flow:F, control:SC, [pose:SP] → control:SC, result:SQ, flow:F` | 以有限力矩调整至输入世界绝对姿态，等待到位后回传原控制；须有本人有效喷口，同一结构喷口共用推力预算。仅控制朝向，不提供抬升或悬停。 |
 | `action/structure/launch` | 行动 | 高速射流 | `flow:F, control:SC, direction:D → result:SQ, flow:F` | `power=0.00..2.00` 控制发射强度，`duration_seconds=0.1..60`（默认 `8.0`）控制有界发射窗口；`restore_when_settled` 仅保留旧配置回读兼容，不会在结构静止后恢复方块。CP 15。 |
 | `action/structure/release` | 行动 | 高速射流 | `flow:F, control:SC → result:SQ, flow:F` | 幂等撤销本令牌下发的后续命令与持续力，保留结构、惯性与重力；不单独收取 CP。 |
-| `action/structure/staticize` | 行动 | 高速射流 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 安全静态化预检：校验完整目标 footprint 的加载、权限、占用与可旋转方块状态；即使预检全部通过也返回 `safe_staticization_unavailable`，尚未写回方块。 |
+| `action/structure/staticize` | 行动 | 高速射流 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 未正式开放，旧图保留原行为。本地 SubLevel 路径可能实际写回世界并迁移内容，其他路径可能仅预检/拒绝；旋转后准确还原尚不保证。结束能力作用应使用 `release`，不能用本节点代替。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|
@@ -409,17 +409,17 @@ ID 前缀：`academy:program/electromaster/`；一般行动配置为连续 `powe
 
 ### 结构操作节点
 
-七个结构节点共用 `flow:F` 输入与 `result:SQ, flow:F` 输出，能力归属均为“磁力操纵”，端口缩写 `SR/SC/SQ/SA/SP` 见 §3.5 说明。捕获分两阶段（PENDING 原地重试），宿主格必须能被磁力服务识别；选区为空、超预算、权限不足或结构已被替换时以明确的 `result.detail` 拒绝。`rotate` 与 `staticize` 目前固定返回 `unavailable`。
+下表保留早期七个结构 ID，能力归属为“磁力操纵”；**当前该分类实际有 13 个 `action/structure/*` ID**，端口与新增回正、持续旋转/群组动作见动态清单。宿主必须满足磁性或强制磁化规则，捕获/抬升等待沿同一操作续跑。`rotate` 已有受磁性参与/有限力矩约束的姿态控制；`staticize` 为后端行为尚未统一的实验入口，不能保证仅检查或安全写回。
 
 | ID 后缀 | 类别 | 能力归属 | 输入 → 输出 | 效果 |
 |---|---|---|---|---|
 | `action/structure/extract` | 行动 | 磁力操纵 | `flow:F, host:BP → structure:SR, result:SQ, flow:F` | `budget=0..256`（`0` 使用后端默认）、`force_magnetize`（对非磁性可编辑方块额外收取 24 CP 并附加限时磁化覆盖）；从宿主格捕获磁性连通结构，提交后输出结构引用。基础 CP 30。 |
 | `action/structure/control` | 行动 | 磁力操纵 | `flow:F, structure:SR → control:SC, result:SQ, flow:F` | 取得该结构的一次性独占控制令牌；令牌绑定施术者、运行时与结构代次，不持久化，失效后不恢复权限。CP 10。 |
 | `action/structure/move` | 行动 | 磁力操纵 | `flow:F, control:SC, [target:WP], [anchor:SA], [seconds:N] → result:SQ, flow:F` | `target` 与 `anchor` 至少连接一个；两者都连接时按锚点位移修正目标。`seconds` 未连接时使用配置 `duration_seconds=0.1..10`（默认 `1.0`）。CP 5。 |
-| `action/structure/rotate` | 行动 | 磁力操纵 | `flow:F, control:SC, [pose:SP] → result:SQ, flow:F` | 请求目标姿态；当前返回 `unavailable`（`finite_torque_control_unavailable`），有限力矩姿态控制尚未实现。 |
+| `action/structure/rotate` | 行动 | 磁力操纵 | `flow:F, control:SC, [pose:SP] → control:SC, result:SQ, flow:F` | 以有限力矩调整至输入世界绝对姿态，等待到位后回传原控制；须有有效磁性参与，临时磁化到期会结束动作。仅控制朝向，不提供抬升或悬停。 |
 | `action/structure/launch` | 行动 | 磁力操纵 | `flow:F, control:SC, direction:D → result:SQ, flow:F` | `power=0.00..2.00` 映射发射速度倍率 `0.5/1.0/1.5`。CP 15。 |
 | `action/structure/release` | 行动 | 磁力操纵 | `flow:F, control:SC → result:SQ, flow:F` | 幂等撤销本令牌下发的后续命令与持续力（含本次磁场与磁化覆盖），保留结构、惯性与重力；不单独收取 CP。 |
-| `action/structure/staticize` | 行动 | 磁力操纵 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 安全静态化预检：校验完整目标 footprint 的加载、权限、占用与可旋转方块状态；即使预检全部通过也返回 `safe_staticization_unavailable`，尚未写回方块。 |
+| `action/structure/staticize` | 行动 | 磁力操纵 | `flow:F, structure:SR, [target:BP] → result:SQ, flow:F` | 未正式开放，旧图保留原行为。本地 SubLevel 路径可能实际写回世界并迁移内容，其他路径可能仅预检/拒绝；旋转后准确还原尚不保证。结束能力作用应使用 `release`，不能用本节点代替。 |
 
 | 节点 | 受控 `0` | 标准 `1` | 最大 `2` |
 |---|---|---|---|

@@ -8,6 +8,8 @@ import org.academy.api.client.gui.text.model.TextShapingOptions
 import org.academy.api.client.gui.text.record.TextPainter
 import org.academy.api.client.gui.text.shape.TextMeasurer
 import org.academy.api.client.gui.widget.TextWidget
+import java.text.BreakIterator
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -81,8 +83,70 @@ class ProgramUiGraphics(private val context: Canvas) {
 
         @JvmStatic
         fun wrap(value: String?, maxWidth: Float, fontSize: Float): List<String> {
+            return wrapMeasured(
+                value, maxWidth,
+                { TextMeasurer.measureWidth(it, fontSize) },
+                { TextMeasurer.wrapLines(it, fontSize, maxWidth) }
+            )
+        }
+
+        /**
+         * Keep the shaper's usual line breaks when they fit the same measurement used by [fit].
+         * AWT wrapping and glyph shaping can disagree, so reflow only affected paragraphs.
+         * A single code point wider than the available space is retained to guarantee progress.
+         */
+        internal fun wrapMeasured(
+            value: String?,
+            maxWidth: Float,
+            measureWidth: (String) -> Float,
+            suggestedLines: (String) -> List<String> = { listOf(it) }
+        ): List<String> {
             if (value.isNullOrEmpty()) return listOf("")
-            return TextMeasurer.wrapLines(value, fontSize, maxWidth)
+            val result = ArrayList<String>()
+            for (paragraph in value.split('\n')) {
+                if (paragraph.isEmpty()) {
+                    result.add("")
+                    continue
+                }
+                val suggested = suggestedLines(paragraph)
+                if (suggested.isNotEmpty() && suggested.joinToString("") == paragraph &&
+                    suggested.all { it.isNotEmpty() && measureWidth(it) <= maxWidth } &&
+                    suggested.dropLast(1).none { Character.isHighSurrogate(it.last()) }
+                ) {
+                    result.addAll(suggested)
+                    continue
+                }
+
+                val breaks = BreakIterator.getLineInstance(Locale.ROOT)
+                breaks.setText(paragraph)
+                var start = 0
+                while (start < paragraph.length) {
+                    val remaining = paragraph.substring(start)
+                    if (measureWidth(remaining) <= maxWidth) {
+                        result.add(remaining)
+                        break
+                    }
+                    var low = 0
+                    var high = remaining.codePointCount(0, remaining.length)
+                    while (low < high) {
+                        val middle = (low + high + 1) ushr 1
+                        val end = remaining.offsetByCodePoints(0, middle)
+                        if (measureWidth(remaining.substring(0, end)) <= maxWidth) {
+                            low = middle
+                        } else {
+                            high = middle - 1
+                        }
+                    }
+                    var end = start + remaining.offsetByCodePoints(0, max(1, low))
+                    val wordEnd = if (breaks.isBoundary(end)) end else breaks.preceding(end)
+                    if (wordEnd > start && measureWidth(paragraph.substring(start, wordEnd)) <= maxWidth) {
+                        end = wordEnd
+                    }
+                    result.add(paragraph.substring(start, end))
+                    start = end
+                }
+            }
+            return result
         }
 
         @JvmStatic

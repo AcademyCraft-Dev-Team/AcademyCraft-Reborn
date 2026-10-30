@@ -1,0 +1,17 @@
+// Isolated real editor/resource check. Does not send save or execution packets.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-precision-presentation')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Presentation check requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionPresentationSmoke', 'true'
+            systemProperty 'academy.precisionNodeCatalogAudit', 'true'
+            programArguments.addAll('--width', '1600', '--height', '900', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

@@ -137,6 +137,7 @@ runs/
 # Local scratch scripts and notes: ignored only under local-only trees, so new tracked
 # files under validation/, tools/ and docs/ stay visible to git status.
 /validation/**/*.py
+!validation/precision_nodes/verify_catalog_contract.py
 /tools/**/*.py
 /docs/**/*.py
 /validation/**/*.txt
