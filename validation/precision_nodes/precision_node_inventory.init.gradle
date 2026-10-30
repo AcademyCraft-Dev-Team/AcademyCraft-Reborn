@@ -1,0 +1,8 @@
+// Read-only runtime inventory; may run alongside an isolated gameplay validation.
+allprojects {
+    afterEvaluate {
+        neoForge.runs.named(providers.gradleProperty('academyPrecisionInventoryRun').getOrElse('clientDev')) {
+            systemProperty 'academy.precisionNodeCatalogAudit', 'true'
+        }
+    }
+}

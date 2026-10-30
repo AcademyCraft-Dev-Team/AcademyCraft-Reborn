@@ -3111,7 +3111,7 @@
   "skill.academy.kinetic_energy_applied.proficiency.2000": "各级冲击波半径 +15%，但方块破坏半径不变。",
   "skill.academy.kinetic_energy_applied.proficiency.3000": "直接命中产生主冲击后，6 tick 后追加一次 30% 伤害的回震；同一目标每秒最多承受一次回震。",
   "skill.academy.kinetic_throw": "动能投掷",
-  "skill.academy.kinetic_throw.desc": "瞄准方块按住 H 蓄力，将选区内的完整物理结构抬起并以有限力悬浮。瞄准物理结构再按 H，沿视线以 75 格/秒投出，速度精熟档为 90 格/秒，不因结构重量降低。发射后累计实际路程 64 格内可破坏沿途可破坏方块；有效实体命中或不可穿透硬障碍的实际碰撞可触发爆破，碎片按真实方块规则产生掉落，箱内物品一并处理。保护、缺区块或处理预算不足时安全停止增强；未发生有效碰撞而到达 64 格时恢复自然运动，保留结构。",
+  "skill.academy.kinetic_throw.desc": "瞄准方块按住 H 蓄力，将选区内的完整物理结构抬起并以有限力悬浮。瞄准物理结构再按 H，沿视线以 52.5 格/秒投出，速度精熟档为 63 格/秒，不因结构重量降低。发射后累计实际路程 64 格内可破坏沿途可破坏方块；有效实体命中或不可穿透硬障碍的实际碰撞可触发爆破，碎片按真实方块规则产生掉落，箱内物品一并处理。保护、缺区块或处理预算不足时安全停止增强；未发生有效碰撞而到达 64 格时恢复自然运动，保留结构。",
   "skill.academy.kinetic_throw.proficiency.1000": "施放消耗CP -10%。",
   "skill.academy.kinetic_throw.proficiency.2000": "一秒与两秒蓄力档位的达成时间缩短 20%。",
   "skill.academy.kinetic_throw.proficiency.3000": "投掷速度 +20%，结构碰撞击退 +25%。",

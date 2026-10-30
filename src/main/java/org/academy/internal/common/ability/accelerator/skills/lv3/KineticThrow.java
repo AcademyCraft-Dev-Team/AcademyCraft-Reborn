@@ -63,7 +63,7 @@ public final class KineticThrow extends Skill {
     public static final int HOVER_TICKS = 10 * 20;
     public static final double PLAYER_CLEARANCE = 1.0;
     public static final int MAXIMUM_FLIGHT_TICKS = 30 * 20;
-    public static final double BASE_THROW_SPEED = 3.75;
+    public static final double BASE_THROW_SPEED = 2.625;
     public static final float DAMAGE_PER_BLOCK = 5.0f;
 
     private static final int[] HORIZONTAL_RADII = {5, 7, 9};

@@ -1,0 +1,190 @@
+{
+  "date": "2026-10-30",
+  "base_commit": "d42acb2da8fe35c3152a845b10872478b89872d3",
+  "status": "verified_user_approved_commit",
+  "commit_subject": "降低动能投掷速度并梳理精密节点方案",
+  "implemented": [
+    "Kinetic shared standard speed 75 -> 52.5 blocks/s",
+    "Kinetic shared milestone speed 90 -> 63 blocks/s",
+    "Both language descriptions and calibration assertions updated"
+  ],
+  "design_only": [
+    "Node merging, localization redesign, performance and playability changes; current IDs, schemas, defaults and executors retained"
+  ],
+  "tests": {
+    "test": {
+      "tests": 3361,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "builds": [
+    {
+      "isDev": true,
+      "passed": true,
+      "log": "build/kinetic-speed30-final-dev-build-20261030.log"
+    },
+    {
+      "isDev": false,
+      "passed": true,
+      "log": "build/kinetic-speed30-final-release-build-20261030.log"
+    }
+  ],
+  "game_checks": [
+    {
+      "report": "run/native-sublevel-direct-smoke-speed30-native-52-catalog-20261030/kinetic-h-protocol-result.json",
+      "sha256": "44157F12BE7EB01E3441FC75EB0A58A8127A81B7C1F325D6951C9CFD17BEC1FE",
+      "passed": true,
+      "cases": [
+        {
+          "surface": "irregular",
+          "tier": 2,
+          "mode": "h_launch",
+          "expected_height": 7,
+          "expected_launch_speed": 52.5,
+          "source_solids": 127,
+          "source_soft_plants": 0,
+          "reference": "StructureRef[id=3e81db4e-3f13-4231-ae4f-4bbbb65865c7, dimension=minecraft:overworld, backend=academy:sublevel, generation=1]",
+          "captured_cells": 127,
+          "solver_mass": 127.0,
+          "source_center": "(-122.93307086614173, 200.5, 72.94094488188976)",
+          "target_center": "(-122.93307086614173, 207.5, 72.94094488188976)",
+          "first_physical_settled_server_tick": 92,
+          "lifted_server_tick": 94,
+          "arrival_after_release_server_ticks": 34,
+          "launch_projected_speed": 52.5,
+          "flight_elapsed_server_ticks": 8,
+          "flight_forward_distance": 21.0,
+          "flight_velocity": "(52.5, -4.414500000000003, 6.429395976072131E-15)",
+          "destructible_wall_cells": 10,
+          "actual_h_c2s": true,
+          "max_hover_height_error": 0.018740961686518176,
+          "passed": true
+        }
+      ],
+      "normal_client_jvm": true,
+      "source_world_files": 148,
+      "source_world_unchanged": true
+    },
+    {
+      "report": "run/native-sublevel-direct-smoke-speed30-native-63-20261030/kinetic-h-protocol-result.json",
+      "sha256": "77A7A46DCCB182FEF183EDE26C796AC7967EEE27DF3D8D869265FAC8AC4EDD85",
+      "passed": true,
+      "cases": [
+        {
+          "surface": "irregular",
+          "tier": 2,
+          "mode": "h_launch",
+          "expected_height": 7,
+          "expected_launch_speed": 63.0,
+          "source_solids": 127,
+          "source_soft_plants": 0,
+          "reference": "StructureRef[id=edd14925-fa66-41ef-bfa7-7a77cd68ff53, dimension=minecraft:overworld, backend=academy:sublevel, generation=1]",
+          "captured_cells": 127,
+          "solver_mass": 127.0,
+          "source_center": "(-134.93307086614172, 200.5, 63.94094488188976)",
+          "target_center": "(-134.93307086614172, 207.5, 63.94094488188976)",
+          "first_physical_settled_server_tick": 95,
+          "lifted_server_tick": 97,
+          "arrival_after_release_server_ticks": 36,
+          "launch_projected_speed": 63.0,
+          "flight_elapsed_server_ticks": 8,
+          "flight_forward_distance": 25.199999999999946,
+          "flight_velocity": "(63.0, -4.414500000000003, 7.715275171286557E-15)",
+          "destructible_wall_cells": 10,
+          "actual_h_c2s": true,
+          "max_hover_height_error": 0.018740961686518176,
+          "passed": true
+        }
+      ],
+      "normal_client_jvm": true,
+      "source_world_files": 148,
+      "source_world_unchanged": true
+    }
+  ],
+  "inventory": {
+    "path": "validation/precision_nodes/node_inventory_2026_10_30.json",
+    "sha256": "C78157DC66C0885CBFC8012EA1CCDC4D2230A730E9E7F9ADAE8FF92BCC3A1A24",
+    "source_report": "run/native-sublevel-direct-smoke-speed30-native-52-catalog-20261030/precision-node-catalog-audit.json",
+    "category_count": 7,
+    "unique_registered_ids": 342,
+    "visible_ids": 277,
+    "hidden_ids": 65,
+    "common_ids": 189,
+    "category_ids": 153,
+    "registered_occurrences": 1476,
+    "full_markdown_id_set_matches_json": true,
+    "schema_scope": "default configuration plus finite one-field option variants; not a Cartesian enumeration or runtime-world acceptance proof"
+  },
+  "artifacts": [
+    {
+      "variant": "dev",
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "size": 32548487,
+      "sha256": "3157A2B2125A29B7E3B773273F7CE32DCB0D7F506159D9DBBE884D007190E189",
+      "fix_class_matches_compiled_output": true,
+      "node_audit_fixture_packaged": false
+    },
+    {
+      "variant": "release",
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "size": 25077386,
+      "sha256": "CC1073DEF299E66950A97F158F35466A6DF27A169BC16AC1A59164CD669B2E60",
+      "fix_class_matches_compiled_output": true,
+      "node_audit_fixture_packaged": false
+    }
+  ],
+  "files": [
+    "docs/precision_node_inventory_2026_10_30.zh-CN.md",
+    "docs/precision_node_merge_text_2026_10_30.zh-CN.md",
+    "docs/precision_node_performance_play_2026_10_30.zh-CN.md",
+    "docs/precision_operation_redesign_2026_10_30.zh-CN.md",
+    "docs/structure_skill_migration_handoff.zh-CN.md",
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionNodeCatalogAuditSmoke.java",
+    "src/main/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrow.java",
+    "src/main/resources/assets/academy/lang/en_us.json",
+    "src/main/resources/assets/academy/lang/zh_cn.json",
+    "src/test/java/org/academy/internal/common/ability/accelerator/movement/VectorStructureServiceTest.java",
+    "src/test/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramStructureNodesTest.java",
+    "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrowTest.java",
+    "validation/precision_nodes/kinetic_speed30_and_node_design_validation_2026_10_30.json",
+    "validation/precision_nodes/node_inventory_2026_10_30.json",
+    "validation/precision_nodes/precision_node_inventory.init.gradle"
+  ],
+  "source_sha256": {
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionNodeCatalogAuditSmoke.java": "571817106C97F40FF696581002C34801E5957B755AB6A74FD6F38DA23C156A3C",
+    "src/main/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrow.java": "86B1731D556CF08E6BA027BF634CE80620C0FF2D364B3ED0F21651B7C798C9AA",
+    "src/main/resources/assets/academy/lang/en_us.json": "F98993544D738E99AB4BF073D152A6DF7A81996917C5EC444C48B23DA8839074",
+    "src/main/resources/assets/academy/lang/zh_cn.json": "609854B6C4F799EF51006AB19BACEDB0A3D3D80D6E31640855ED2F1A3464A2C1",
+    "src/test/java/org/academy/internal/common/ability/accelerator/movement/VectorStructureServiceTest.java": "9FCE6DC589189E8F3D1F483B6E7EE6B3289807E0BEB003326E69DD3B7BBBFF8B",
+    "src/test/java/org/academy/internal/common/ability/accelerator/program/AcceleratorProgramStructureNodesTest.java": "5B627371C7E5E27D911609EC2DB246524A88C5B3406658E26DCE9DFD918C9301",
+    "src/test/java/org/academy/internal/common/ability/accelerator/skills/lv3/KineticThrowTest.java": "CB162E51F9B101BB53FDF5A48140F5F428C634C97910BC18DA8980FAF5EACB10",
+    "validation/precision_nodes/node_inventory_2026_10_30.json": "C78157DC66C0885CBFC8012EA1CCDC4D2230A730E9E7F9ADAE8FF92BCC3A1A24",
+    "validation/precision_nodes/precision_node_inventory.init.gradle": "2C688D58F882BAD173EA800338C9422BB3E547FF635677F8559972981D6F2E86"
+  },
+  "unrelated_rust": {
+    "path": "native/academy_physics/src/lib.rs",
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+    "preserved": true,
+    "include_in_commit": false
+  },
+  "limits": [
+    "Actual new-speed gameplay tests cover native 127-cell H throws, not a new mixed-backend gameplay matrix.",
+    "Node audit is a registered/default-schema/finite-option inventory, not runtime acceptance of all node configurations.",
+    "Performance recommendations are proposed targets; no performance gain has been measured.",
+    "Historical validation reports retain their original 75/90 readings."
+  ]
+}

@@ -53,8 +53,8 @@ class KineticThrowTest {
     }
 
     @Test
-    void sharedThrowSpeedUsesSeventyFiveAndNinetyBlocksPerSecond() {
-        assertEquals(75.0, KineticThrow.throwSpeed(false), 1.0e-9);
-        assertEquals(90.0, KineticThrow.throwSpeed(true), 1.0e-9);
+    void sharedThrowSpeedUsesThirtyPercentReducedCalibration() {
+        assertEquals(52.5, KineticThrow.throwSpeed(false), 1.0e-9);
+        assertEquals(63.0, KineticThrow.throwSpeed(true), 1.0e-9);
     }
 }

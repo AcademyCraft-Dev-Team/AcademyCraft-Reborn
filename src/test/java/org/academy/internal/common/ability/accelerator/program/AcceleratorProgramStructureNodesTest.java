@@ -348,13 +348,13 @@ class AcceleratorProgramStructureNodesTest {
         assertEquals(List.of(
                 "extract:BlockPos{x=10, y=64, z=10}:2:0",
                 "control:" + STRUCTURE + ":sable-direct",
-                "launch:" + STRUCTURE + ":0.0,1.0,0.0:STANDARD:sable-direct=75.0",
+                "launch:" + STRUCTURE + ":0.0,1.0,0.0:STANDARD:sable-direct=52.5",
                 "release:" + STRUCTURE + ":released",
                 "release:" + STRUCTURE + ":noop"
         ), runtime.applied);
         assertTrue(runtime.massGateBypassed,
                 "a heavy Sable body must bypass the traction mass gate");
-        assertEquals(75.0, runtime.directSpeed, 1.0e-9,
+        assertEquals(52.5, runtime.directSpeed, 1.0e-9,
                 "Sable direct launch speed must keep the skill-side calibration");
         assertTrue(runtime.structureRetained, "release must retain the structure");
         assertFalse(runtime.controlBroken, "release must not break the active control");
