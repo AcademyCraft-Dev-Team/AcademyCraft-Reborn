@@ -1,0 +1,1341 @@
+{
+  "actual_mock_connection_metrics": {
+    "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+    "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+    "capture_enabled": true,
+    "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+    "operations": [
+      {
+        "allocation_samples": 1,
+        "kind": "sync",
+        "calls": 1,
+        "allocated_bytes": 263192,
+        "cpu_samples": 1,
+        "succeeded": 1,
+        "payload_bytes": 0,
+        "failed": 0,
+        "phase": "send",
+        "cpu_nanos": 0,
+        "wall_nanos": 73300
+      },
+      {
+        "allocation_samples": 1,
+        "kind": "sync",
+        "calls": 1,
+        "allocated_bytes": 262704,
+        "cpu_samples": 1,
+        "succeeded": 1,
+        "payload_bytes": 213554,
+        "failed": 0,
+        "phase": "encode",
+        "cpu_nanos": 0,
+        "wall_nanos": 34300
+      },
+      {
+        "allocation_samples": 4,
+        "kind": "result",
+        "calls": 4,
+        "allocated_bytes": 44848,
+        "cpu_samples": 4,
+        "succeeded": 4,
+        "payload_bytes": 0,
+        "failed": 0,
+        "phase": "send",
+        "cpu_nanos": 0,
+        "wall_nanos": 117900
+      },
+      {
+        "allocation_samples": 4,
+        "kind": "result",
+        "calls": 4,
+        "allocated_bytes": 42896,
+        "cpu_samples": 4,
+        "succeeded": 4,
+        "payload_bytes": 7320,
+        "failed": 0,
+        "phase": "encode",
+        "cpu_nanos": 0,
+        "wall_nanos": 36200
+      }
+    ]
+  },
+  "passed": true,
+  "stage": "baseline",
+  "base_commit": "c701bd9a",
+  "cases": [
+    {
+      "name": "request",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 20,
+      "payload_sha256": "1c869415e689ee73dcb5ac64288aa25e1002068324b9702bd30c6faddc237a89",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 388900,
+        "available": true,
+        "p95": 80800,
+        "samples": 128,
+        "p50": 12100,
+        "p99": 280400
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 3200,
+        "available": true,
+        "p95": 712,
+        "samples": 128,
+        "p50": 712,
+        "p99": 928
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "request",
+            "calls": 16,
+            "allocated_bytes": 4224,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 320,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 84200
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "request",
+            "calls": 16,
+            "allocated_bytes": 1408,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 320,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 30500
+          }
+        ]
+      }
+    },
+    {
+      "name": "request",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 20,
+      "payload_sha256": "1c869415e689ee73dcb5ac64288aa25e1002068324b9702bd30c6faddc237a89",
+      "misaka_envelope_bytes": 22,
+      "wall_nanos": {
+        "max": 289900,
+        "available": true,
+        "p95": 70800,
+        "samples": 128,
+        "p50": 11500,
+        "p99": 196700
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 34240,
+        "available": true,
+        "p95": 1608,
+        "samples": 128,
+        "p50": 1608,
+        "p99": 34232
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "request",
+            "calls": 16,
+            "allocated_bytes": 4224,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 320,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 14700
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "request",
+            "calls": 16,
+            "allocated_bytes": 2048,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 320,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 19200
+          }
+        ]
+      }
+    },
+    {
+      "name": "save_max_graph",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 21392,
+      "payload_sha256": "eef8e9599651f5b76a32e9bc4efcb75eb90e73f5edbfb729411fa07a904eb28d",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 434300,
+        "available": true,
+        "p95": 26800,
+        "samples": 128,
+        "p50": 8100,
+        "p99": 82200
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 81520,
+        "available": true,
+        "p95": 76296,
+        "samples": 128,
+        "p50": 76296,
+        "p99": 76296
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "save",
+            "calls": 16,
+            "allocated_bytes": 529024,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 342272,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 54900
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "save",
+            "calls": 16,
+            "allocated_bytes": 685952,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 342272,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 63300
+          }
+        ]
+      }
+    },
+    {
+      "name": "save_max_graph",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 21392,
+      "payload_sha256": "eef8e9599651f5b76a32e9bc4efcb75eb90e73f5edbfb729411fa07a904eb28d",
+      "misaka_envelope_bytes": 21394,
+      "wall_nanos": {
+        "max": 6073100,
+        "available": true,
+        "p95": 41800,
+        "samples": 128,
+        "p50": 15700,
+        "p99": 116900
+      },
+      "thread_cpu_nanos": {
+        "max": 15625000,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 131344,
+        "available": true,
+        "p95": 131344,
+        "samples": 128,
+        "p50": 131344,
+        "p99": 131344
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "save",
+            "calls": 16,
+            "allocated_bytes": 529024,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 342272,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 50800
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "save",
+            "calls": 16,
+            "allocated_bytes": 686592,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 342272,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 66200
+          }
+        ]
+      }
+    },
+    {
+      "name": "import_ten_slot_book",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 213496,
+      "payload_sha256": "3ec3b80b77c9d0549060e437ddbae5687db22f6a3fbc7571369d777e598a693f",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 156300,
+        "available": true,
+        "p95": 57200,
+        "samples": 128,
+        "p50": 43900,
+        "p99": 106400
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 689888,
+        "available": true,
+        "p95": 689888,
+        "samples": 128,
+        "p50": 689888,
+        "p99": 689888
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "import",
+            "calls": 16,
+            "allocated_bytes": 4199040,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3415936,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 265400
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "import",
+            "calls": 16,
+            "allocated_bytes": 6833408,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3415936,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 440700
+          }
+        ]
+      }
+    },
+    {
+      "name": "import_ten_slot_book",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 213496,
+      "payload_sha256": "3ec3b80b77c9d0549060e437ddbae5687db22f6a3fbc7571369d777e598a693f",
+      "misaka_envelope_bytes": 213498,
+      "wall_nanos": {
+        "max": 301200,
+        "available": true,
+        "p95": 233500,
+        "samples": 128,
+        "p50": 190800,
+        "p99": 280900
+      },
+      "thread_cpu_nanos": {
+        "max": 15625000,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 15625000
+      },
+      "thread_allocated_bytes": {
+        "max": 1166632,
+        "available": true,
+        "p95": 1166416,
+        "samples": 128,
+        "p50": 1166416,
+        "p99": 1166416
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "import",
+            "calls": 16,
+            "allocated_bytes": 4199040,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3415936,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 721100
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "import",
+            "calls": 16,
+            "allocated_bytes": 6834048,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3415936,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 1123600
+          }
+        ]
+      }
+    },
+    {
+      "name": "execute",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 29,
+      "payload_sha256": "726ee023a74b862a5216bc97512d6129240dc1e9d85b22e91fc9e342cae7ce2b",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 111000,
+        "available": true,
+        "p95": 2300,
+        "samples": 128,
+        "p50": 1400,
+        "p99": 35400
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 832,
+        "available": true,
+        "p95": 720,
+        "samples": 128,
+        "p50": 720,
+        "p99": 720
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "execute",
+            "calls": 16,
+            "allocated_bytes": 4224,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 464,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 16900
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "execute",
+            "calls": 16,
+            "allocated_bytes": 1536,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 464,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 6800
+          }
+        ]
+      }
+    },
+    {
+      "name": "execute",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 29,
+      "payload_sha256": "726ee023a74b862a5216bc97512d6129240dc1e9d85b22e91fc9e342cae7ce2b",
+      "misaka_envelope_bytes": 31,
+      "wall_nanos": {
+        "max": 132500,
+        "available": true,
+        "p95": 15300,
+        "samples": 128,
+        "p50": 2800,
+        "p99": 17800
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 1624,
+        "available": true,
+        "p95": 1624,
+        "samples": 128,
+        "p50": 1624,
+        "p99": 1624
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "execute",
+            "calls": 16,
+            "allocated_bytes": 4224,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 464,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 28400
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "execute",
+            "calls": 16,
+            "allocated_bytes": 2176,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 464,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 9900
+          }
+        ]
+      }
+    },
+    {
+      "name": "sync_ten_slot_book",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 213554,
+      "payload_sha256": "549ef79d5681767438bbae08776b2ffd20f7aef3792a07ff8373bcdc8f2d30ab",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 269600,
+        "available": true,
+        "p95": 111400,
+        "samples": 128,
+        "p50": 44800,
+        "p99": 119300
+      },
+      "thread_cpu_nanos": {
+        "max": 15625000,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 690968,
+        "available": true,
+        "p95": 690256,
+        "samples": 128,
+        "p50": 690256,
+        "p99": 690256
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "sync",
+            "calls": 16,
+            "allocated_bytes": 4203264,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3416864,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 264700
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "sync",
+            "calls": 16,
+            "allocated_bytes": 6835072,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3416864,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 443900
+          }
+        ]
+      }
+    },
+    {
+      "name": "sync_ten_slot_book",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 213554,
+      "payload_sha256": "549ef79d5681767438bbae08776b2ffd20f7aef3792a07ff8373bcdc8f2d30ab",
+      "misaka_envelope_bytes": 213556,
+      "wall_nanos": {
+        "max": 311400,
+        "available": true,
+        "p95": 127100,
+        "samples": 128,
+        "p50": 95400,
+        "p99": 273000
+      },
+      "thread_cpu_nanos": {
+        "max": 15625000,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 1199560,
+        "available": true,
+        "p95": 1166928,
+        "samples": 128,
+        "p50": 1166928,
+        "p99": 1199552
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "sync",
+            "calls": 16,
+            "allocated_bytes": 4203264,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3416864,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 290100
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "sync",
+            "calls": 16,
+            "allocated_bytes": 6836992,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 3416864,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 423800
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_success",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 46,
+      "payload_sha256": "d39a1c9feff907e74cb7bebf58714765ee7532999f5cd715903881a8994e9a3f",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 108600,
+        "available": true,
+        "p95": 13800,
+        "samples": 128,
+        "p50": 3400,
+        "p99": 65400
+      },
+      "thread_cpu_nanos": {
+        "max": 15625000,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 1776,
+        "available": true,
+        "p95": 1776,
+        "samples": 128,
+        "p50": 1776,
+        "p99": 1776
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 13184,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 30500
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 9472,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 27000
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_success",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 46,
+      "payload_sha256": "d39a1c9feff907e74cb7bebf58714765ee7532999f5cd715903881a8994e9a3f",
+      "misaka_envelope_bytes": 48,
+      "wall_nanos": {
+        "max": 77900,
+        "available": true,
+        "p95": 30100,
+        "samples": 128,
+        "p50": 9100,
+        "p99": 41700
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 2696,
+        "available": true,
+        "p95": 2696,
+        "samples": 128,
+        "p50": 2696,
+        "p99": 2696
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 13184,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 48400
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 10112,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 78200
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_waiting",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 56,
+      "payload_sha256": "5e8986580f58cf9f68e0b35a9fc9b2a12524f92805b7ba2239e9f68557baaaf3",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 7000,
+        "available": true,
+        "p95": 2100,
+        "samples": 128,
+        "p50": 1800,
+        "p99": 4800
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 1872,
+        "available": true,
+        "p95": 1872,
+        "samples": 128,
+        "p50": 1872,
+        "p99": 1872
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 13184,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 896,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 77600
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 11008,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 896,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 166900
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_waiting",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 56,
+      "payload_sha256": "5e8986580f58cf9f68e0b35a9fc9b2a12524f92805b7ba2239e9f68557baaaf3",
+      "misaka_envelope_bytes": 58,
+      "wall_nanos": {
+        "max": 16700,
+        "available": true,
+        "p95": 9000,
+        "samples": 128,
+        "p50": 3000,
+        "p99": 13100
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 2848,
+        "available": true,
+        "p95": 2848,
+        "samples": 128,
+        "p50": 2848,
+        "p99": 2848
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 13184,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 896,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 17500
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 12416,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 896,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 18500
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_failed_trace48",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 7172,
+      "payload_sha256": "d4466cbf1f734096aef7465c74a5bd2fd2ec612673f41959f5f3d2fcc6c542ec",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 104000,
+        "available": true,
+        "p95": 40500,
+        "samples": 128,
+        "p50": 27400,
+        "p99": 77200
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 54504,
+        "available": true,
+        "p95": 54408,
+        "samples": 128,
+        "p50": 54408,
+        "p99": 54472
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 648832,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 114752,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 349100
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 215936,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 114752,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 127400
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_failed_trace48",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 7172,
+      "payload_sha256": "d4466cbf1f734096aef7465c74a5bd2fd2ec612673f41959f5f3d2fcc6c542ec",
+      "misaka_envelope_bytes": 7174,
+      "wall_nanos": {
+        "max": 105800,
+        "available": true,
+        "p95": 53500,
+        "samples": 128,
+        "p50": 26800,
+        "p99": 80000
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 79416,
+        "available": true,
+        "p95": 79416,
+        "samples": 128,
+        "p50": 79416,
+        "p99": 79416
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 648832,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 114752,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 309700
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 356608,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 114752,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 132100
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_revision_conflict",
+      "layer": "application_codec_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 46,
+      "payload_sha256": "e36ecd77b7ca285b92182ab9d04828d1b52f2f902aee0d8373f56c5e60252c6c",
+      "misaka_envelope_bytes": 0,
+      "wall_nanos": {
+        "max": 2600,
+        "available": true,
+        "p95": 1400,
+        "samples": 128,
+        "p50": 1100,
+        "p99": 2500
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 1776,
+        "available": true,
+        "p95": 1776,
+        "samples": 128,
+        "p50": 1776,
+        "p99": 1776
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 13184,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 9000
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 9472,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 7800
+          }
+        ]
+      }
+    },
+    {
+      "name": "result_revision_conflict",
+      "layer": "misaka_envelope_roundtrip",
+      "warmup": 32,
+      "samples": 128,
+      "payload_bytes": 46,
+      "payload_sha256": "e36ecd77b7ca285b92182ab9d04828d1b52f2f902aee0d8373f56c5e60252c6c",
+      "misaka_envelope_bytes": 48,
+      "wall_nanos": {
+        "max": 16800,
+        "available": true,
+        "p95": 2400,
+        "samples": 128,
+        "p50": 2000,
+        "p99": 14400
+      },
+      "thread_cpu_nanos": {
+        "max": 0,
+        "available": true,
+        "p95": 0,
+        "samples": 128,
+        "p50": 0,
+        "p99": 0
+      },
+      "thread_allocated_bytes": {
+        "max": 2696,
+        "available": true,
+        "p95": 2696,
+        "samples": 128,
+        "p50": 2696,
+        "p99": 2696
+      },
+      "separate_instrumented_pass_calls": 16,
+      "metrics": {
+        "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement",
+        "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+        "capture_enabled": true,
+        "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+        "operations": [
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 13184,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "encode",
+            "cpu_nanos": 0,
+            "wall_nanos": 27300
+          },
+          {
+            "allocation_samples": 16,
+            "kind": "result",
+            "calls": 16,
+            "allocated_bytes": 10112,
+            "cpu_samples": 16,
+            "succeeded": 16,
+            "payload_bytes": 736,
+            "failed": 0,
+            "phase": "decode",
+            "cpu_nanos": 0,
+            "wall_nanos": 33900
+          }
+        ]
+      }
+    }
+  ],
+  "actual_mock_connection_captures": [
+    {
+      "envelope_bytes": 213556,
+      "payload_bytes": 213554,
+      "name": "sync_ten_slot_book",
+      "kind": "sync"
+    },
+    {
+      "envelope_bytes": 48,
+      "payload_bytes": 46,
+      "name": "result_success",
+      "kind": "result"
+    },
+    {
+      "envelope_bytes": 58,
+      "payload_bytes": 56,
+      "name": "result_waiting",
+      "kind": "result"
+    },
+    {
+      "envelope_bytes": 7174,
+      "payload_bytes": 7172,
+      "name": "result_failed_trace48",
+      "kind": "result"
+    },
+    {
+      "envelope_bytes": 48,
+      "payload_bytes": 46,
+      "name": "result_revision_conflict",
+      "kind": "result"
+    }
+  ],
+  "corpus": {
+    "book_slots": 10,
+    "program_nodes": 128,
+    "program_edges": 256,
+    "program_binary_bytes": 21360,
+    "book_binary_bytes": 213465
+  },
+  "measurement_scope": [
+    "Application roundtrip uses the original registered packet CODEC and Netty ByteBuf",
+    "Misaka envelope roundtrip uses real C2SPacket/S2CPacket constructor, STREAM_CODEC encode/decode, registry id and application decode",
+    "Fixture-managed wrapper buffers and temporary write copies are released explicitly; this does not change the production dependency",
+    "Mock Connection sends are registered ServerPlayer/EmbeddedChannel objects, not logged-in game clients or TCP sockets",
+    "No Minecraft outer packet-id/length framing, compression, encryption or TCP/IP bytes are counted",
+    "nanoTime is wall elapsed; current-thread CPU is separate and can be coarsely quantized; allocations exclude other threads/native memory",
+    "Packet construction and ProgramBookCodec serialization precede application roundtrip timing; envelope timing includes wrapper construction",
+    "Success/wait/failure are codec payload cases, not evidence of runtime admission, cancellation or committed transactions",
+    "Ten slots at the maximum 128-node/256-edge graph size do not claim the exact 1 MiB book byte boundary"
+  ]
+}

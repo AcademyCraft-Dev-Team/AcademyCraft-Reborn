@@ -1,0 +1,21 @@
+// Admission/cooldown/latch regression on a disposable dedicated GameTest server.
+allprojects {
+    afterEvaluate {
+        def runId = providers.gradleProperty('academyAutomaticSemanticsRun').getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) throw new GradleException('Invalid semantics run id')
+        def directory = rootProject.file("run/precision-automatic-semantics-${runId}").canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || (directory.exists() && directory.listFiles()?.length > 0)) {
+            throw new GradleException('Automatic semantics requires a fresh isolated directory')
+        }
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_automatic_semantics') {
+            throw new GradleException('Select only academy:precision_automatic_semantics')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionAutomaticSemantics', 'true'
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_automatic_semantics')
+        }
+    }
+}

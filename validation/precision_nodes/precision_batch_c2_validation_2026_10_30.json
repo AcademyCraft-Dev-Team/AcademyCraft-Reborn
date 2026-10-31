@@ -1,0 +1,524 @@
+{
+  "schema_version": 1,
+  "batch": "precision C2 automatic and network",
+  "date": "2026-10-30",
+  "generated_at_utc": "2026-10-31T03:17:05.712890+00:00",
+  "status": "validated_user_authorized_local_commit",
+  "base_commit": "c701bd9a",
+  "current_HEAD": "c701bd9a05401c5b4d2b82fd35c923ecd7006255",
+  "commit_state": "User explicitly approved local commit of these 34 files; the commit containing this report identifies the batch. Unrelated Rust and build/run artifacts excluded. No remote push authorized or performed.",
+  "files_count": 34,
+  "files": [
+    "docs/precision_automatic_network_stage_c_2026_10_30.zh-CN.md",
+    "docs/structure_skill_migration_handoff.zh-CN.md",
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionAutomaticNetworkSmoke.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/CapturedProgramPlayer.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramAutomaticBenchmarkGameTests.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramAutomaticSemanticsGameTests.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramNetworkBenchmarkGameTests.java",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramNetworkEnvelopeProbe.java",
+    "src/main/java/org/academy/internal/client/ability/program/AbilityProgramEditorClient.java",
+    "src/main/java/org/academy/internal/common/ability/program/AbilityProgramManager.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramAutomaticMetrics.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramNetworkMetrics.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramSessionScheduler.java",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStoredBookCache.java",
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramScheduler.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramAutomaticMetricsTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramNetworkMetricsTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramNetworkPacketBoundsTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramSessionCapacityTest.java",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStoredBookCacheTest.java",
+    "validation/precision_nodes/precision_automatic_network_client.init.gradle",
+    "validation/precision_nodes/precision_automatic_performance.init.gradle",
+    "validation/precision_nodes/precision_automatic_semantics.init.gradle",
+    "validation/precision_nodes/precision_batch_c2_validation_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_automatic_baseline_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_automatic_optimized_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_automatic_optimized_r2_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_baseline_source_hashes_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_client_baseline_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_client_optimized_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_network_baseline_2026_10_30.json",
+    "validation/precision_nodes/precision_c2_network_optimized_2026_10_30.json",
+    "validation/precision_nodes/precision_network_performance.init.gradle",
+    "validation/precision_nodes/verify_automatic_network_reports.py"
+  ],
+  "force_add_paths_due_to_existing_ignore_rule": [
+    "validation/precision_nodes/verify_automatic_network_reports.py"
+  ],
+  "source_hashes": {
+    "src/gametest/java/org/academy/internal/client/validation/PrecisionAutomaticNetworkSmoke.java": "3EF71CE12EE1220C3B9BBB09173199991AFF7E9B41101C2C0C786EC2C93B0BE3",
+    "src/gametest/java/org/academy/internal/common/ability/program/CapturedProgramPlayer.java": "951CC6875CF1AA63974A779D07D78FFB4DE786A80708950F05B5A6E2C3BC3E40",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramAutomaticBenchmarkGameTests.java": "793E96CB0BE7A330B9F0A2E59CBF2F6E762A3FCD4A66243BE068D75C41989F65",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramAutomaticSemanticsGameTests.java": "2625AAC6A3A7CF8EE66DE512B4C5D0C76AF5CD82E3C402EFF5DB581E8BE23B58",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramNetworkBenchmarkGameTests.java": "779F9A9E5A0363B3A89F6875B8B96672BFA85AFF7353B30C296A705BF1490AF5",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramNetworkEnvelopeProbe.java": "FDF40CCE6C4EEFB4918E05AB6EEA729BC0BD3C96E4922217341DAEF8C268DAAE",
+    "src/main/java/org/academy/internal/client/ability/program/AbilityProgramEditorClient.java": "43BE5999E6B2FA2ED133E921F8BCCCAA83A19A5F91EA4BD0699B7DC4FC18F66C",
+    "src/main/java/org/academy/internal/common/ability/program/AbilityProgramManager.java": "F7A5BC588F5CD0BEB5D7B4EC6F3E31768B89133DB758332F8D792A15288F33D0",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramAutomaticMetrics.java": "842A95298B806091D6A7EAA242898381C53AEF24733F39A06AAD217B06D10D50",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramNetworkMetrics.java": "156DFFDDE7DF53F94501D4F23841DA5D6C5CE9860CCAF4ED26BEE9F4B6D14E7E",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramSessionScheduler.java": "ECA71A7C65FFBCB68C46123DE7A14C73F945ABA1986A8AD2D31A58E2AA6A9D8C",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramStoredBookCache.java": "9555D3D96E4989014282C6D21E5E85B16474533CC691E698EAD54FA09F980AB8",
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramScheduler.java": "DA16BFD85C5FC8344301585228D5797F1707CF094C42261A75C1C897169629E8",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramAutomaticMetricsTest.java": "726F52A1FBF794C17347C70CCBBAAFC154BBFB7D394AB5F7618792F5D0095A76",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramNetworkMetricsTest.java": "CD35DCD8B05381AFDA0B239F5F22FC82CB366C87294B9B2CB724E9FFC8D1255F",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramNetworkPacketBoundsTest.java": "D6D1F0053EEB3235F2D53B6AE868B2B89894753BC9C4768B848D569A2C326CDE",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramSessionCapacityTest.java": "0F575EE0513CA7C19BC93750DEBE3ED2200E97C6729688565A18CC4878632AC1",
+    "src/test/java/org/academy/internal/common/ability/program/ProgramStoredBookCacheTest.java": "E58BE76263AEBE52F65AA25D6FA80D12A90C0A898A3EE604CB463C22BA03D60D",
+    "validation/precision_nodes/precision_automatic_network_client.init.gradle": "939C0B4EDBEC056841CE5B15B131369DBBA023A5DBDE4B54245EE325A71B8ACF",
+    "validation/precision_nodes/precision_automatic_performance.init.gradle": "46BF420B102AE343B4E20F9DD2789D9F196B81AFDBE0A7EC493264019835ACDB",
+    "validation/precision_nodes/precision_automatic_semantics.init.gradle": "92697735B3D540E705A4920569655584474A467C9F17326D96D901B74A3F1717",
+    "validation/precision_nodes/precision_network_performance.init.gradle": "136EF97C136CD36678EEE82C05031E5C2C2D83DF709225DA24174D67AB585379",
+    "validation/precision_nodes/verify_automatic_network_reports.py": "528DA26ADA33B9E9C0D95066F7D7E60821D1CA91DFAAC2C4CA79464359E93281"
+  },
+  "document_hashes": {
+    "docs/precision_automatic_network_stage_c_2026_10_30.zh-CN.md": "69CEC522FEDE19541B791BEA8A481B5CFD420C8155C350BBE8615584C8A09106",
+    "docs/structure_skill_migration_handoff.zh-CN.md": "9BCC3D6D2E0FBE65DB2D2457B6EA7951644D9A89A99D9AA7D47E43BDD06998CD"
+  },
+  "raw_evidence": [
+    {
+      "path": "validation/precision_nodes/precision_c2_automatic_baseline_2026_10_30.json",
+      "bytes": 353666,
+      "sha256": "A74A427049883B5E22EB1A0159B60AB25F7F64E463018687960E009E5B846ADE"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_automatic_optimized_2026_10_30.json",
+      "bytes": 344164,
+      "sha256": "3C5B22201902A1084D4DDE6BD72FF623B1C636AE7F46061E189E5D3AD0F8EEAD"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_automatic_optimized_r2_2026_10_30.json",
+      "bytes": 343939,
+      "sha256": "EFF5CB51E6A36E65BA7837C541E44D6694143C8D8A808093D81B59B6C53B9891"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_baseline_source_hashes_2026_10_30.json",
+      "bytes": 3483,
+      "sha256": "73DF4058EC00C3231F7A32287B08AA52B4AE67D4EEC4BC0C34005C916C3DBC0E"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_client_baseline_2026_10_30.json",
+      "bytes": 6780,
+      "sha256": "FE3385980AD76C326E817DEA9F01BFDDC49042E26212328166B3C7368E3079F2"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_client_optimized_2026_10_30.json",
+      "bytes": 6775,
+      "sha256": "E2C34076DC27B7E9D9A5397708909215B23C0D9DC32E7F97872964D229FC44F8"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_network_baseline_2026_10_30.json",
+      "bytes": 42219,
+      "sha256": "B500F934919333AE623D0EE29624FC65C2DFC6B75F582F8D679EDAC0392C0DC9"
+    },
+    {
+      "path": "validation/precision_nodes/precision_c2_network_optimized_2026_10_30.json",
+      "bytes": 42204,
+      "sha256": "BCA64AFDD5A7D2AA205CE8E887541612EADCA5850FC44C8FCF1E598C3A0FD34E"
+    }
+  ],
+  "tests": {
+    "test": {
+      "tests": 3428,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_files": 749,
+      "xml_directory": "build/test-results/test",
+      "manifest_sha256": "A3F0255DD5DBE7B5214F815C2EDE4F937B916B5971A40AF34E53A345C4482457"
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_files": 9,
+      "xml_directory": "build/test-results/sableCompatTest",
+      "manifest_sha256": "7A3CB267DF6DFD905F7B9F52D65CC6261836C3CA35AEA4090AF802DB07F0DC49"
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_files": 18,
+      "xml_directory": "build/test-results/editorTest",
+      "manifest_sha256": "417730079962216F38130710637EB9A8B3B7C1E97202D81C194804668616DFCF"
+    }
+  },
+  "tests_note": "Main dev test command and release build passed; XML manifest reflects latest release build. Specialized tasks passed with dev configuration.",
+  "successful_logs": {
+    "main_and_specialized_tests": {
+      "path": "build/precision-c2-tests.log",
+      "bytes": 4189,
+      "sha256": "7539DC452261BD44DC15FFB2FBF2D52E7F418D9A413B6A59233D1AD39CCA90BE"
+    },
+    "development_build": {
+      "path": "build/precision-c2-build-dev.log",
+      "bytes": 2574,
+      "sha256": "C67BB1E4C462E45637FD06A5E9DD661AF03996686E5B0362A65FECB2F71BD148"
+    },
+    "release_build": {
+      "path": "build/precision-c2-build-release.log",
+      "bytes": 4309,
+      "sha256": "50CC1A6320A8D2D8BB5608CB99E8DEDF5F3B9535E520CAACE583B252F473FA9F"
+    },
+    "automatic_baseline_r4": {
+      "path": "build/precision-c2-auto-baseline-r4.log",
+      "bytes": 5037243,
+      "sha256": "F3F747D94015D04ECBB1F4F9C0F86BED894F903ECCD8B5FB0C0C55E2032267B9"
+    },
+    "automatic_optimized_r1": {
+      "path": "build/precision-c2-auto-optimized-r1.log",
+      "bytes": 5026362,
+      "sha256": "07F94A500367B4D24FDC03EA230659FC1F712A6EAFD3CE9E81E919E728A35A90"
+    },
+    "automatic_optimized_r2": {
+      "path": "build/precision-c2-auto-optimized-r2.log",
+      "bytes": 5037320,
+      "sha256": "C1111C4FE20DB4BC2B365766157CB643559E0B0847BDCC09AC9E93C1F846A0DB"
+    },
+    "network_baseline": {
+      "path": "build/precision-c2-network-baseline-r1.log",
+      "bytes": 4897720,
+      "sha256": "ED2752697CD53F1D849E65EA7AC40B93B84927E9FD9DC5A474611C7C49719E96"
+    },
+    "network_optimized": {
+      "path": "build/precision-c2-network-optimized-r1.log",
+      "bytes": 4908704,
+      "sha256": "E5DFBB5D8037AF36614B80BAE71C34CDDBD38F0BFCDF36C33F045D4C6429FD0B"
+    },
+    "semantics_after_cache": {
+      "path": "build/precision-c2-semantics-baseline-r3.log",
+      "bytes": 4899393,
+      "sha256": "73A292F07D72E3E723DF4808617BD2D74C164B9D32AB0D2ABC4BFACF631AE309"
+    },
+    "client_baseline": {
+      "path": "build/precision-c2-client-baseline-r1.log",
+      "bytes": 1164090,
+      "sha256": "8B3CB9F50572D819CA9627EE17F53F7A3636B0340434601F4C66067CC7DAA0A2"
+    },
+    "client_optimized": {
+      "path": "build/precision-c2-client-optimized-r1.log",
+      "bytes": 1172212,
+      "sha256": "627785A828D235792FC8E622E0DE4B2E9B9351CB7BA8CD821D792D898F436114"
+    }
+  },
+  "artifacts": {
+    "dev": {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "bytes": 32653979,
+      "sha256": "5D195B3F2EF53B5DBFCD8131696160E0C9A183A858160EA756009B723383D413",
+      "cache_packaged": true,
+      "fixture_classes_packaged": false
+    },
+    "release": {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "bytes": 25182878,
+      "sha256": "24A38DC2A5F62A2FE658C5B13C00D988F0157436C68671B5C0F8B53CAE1D1891",
+      "cache_packaged": true,
+      "fixture_classes_packaged": false
+    }
+  },
+  "client_visual_and_source_world_checks": {
+    "baseline": {
+      "screenshot": {
+        "path": "run/native-sublevel-direct-smoke-precision-automatic-network-baseline-20261030-r1/screenshots/precision-automatic-network-baseline.png",
+        "bytes": 244587,
+        "sha256": "9F06EA1D4C221B525390883900D1F26430A75522033A90427A11F958F7A8B910"
+      },
+      "source_world_files_unchanged": 148,
+      "visual_review": "Four nodes, connections and labels complete; no long-duration original-save glyph regression claim"
+    },
+    "optimized": {
+      "screenshot": {
+        "path": "run/native-sublevel-direct-smoke-precision-automatic-network-optimized-20261030-r1/screenshots/precision-automatic-network-optimized.png",
+        "bytes": 235211,
+        "sha256": "C9E068AA224B54C015F409B1135AC796FABAADFA40A86B0DC9A72C73A1ABDB91"
+      },
+      "source_world_files_unchanged": 148,
+      "visual_review": "Four nodes, connections and labels complete; no long-duration original-save glyph regression claim"
+    }
+  },
+  "comparison": {
+    "passed": true,
+    "automatic": {
+      "precision_c2_automatic_optimized_2026_10_30.json": [
+        {
+          "players": 1,
+          "graphs": 1,
+          "wait": 0,
+          "dispatch_p95_ms_before": 0.7102,
+          "dispatch_p95_ms_after": 0.8823,
+          "dispatch_mean_allocated_bytes_before": 168096.5,
+          "dispatch_mean_allocated_bytes_after": 72523.0
+        },
+        {
+          "players": 1,
+          "graphs": 4,
+          "wait": 0,
+          "dispatch_p95_ms_before": 1.3451,
+          "dispatch_p95_ms_after": 0.9624,
+          "dispatch_mean_allocated_bytes_before": 649898.25,
+          "dispatch_mean_allocated_bytes_after": 272444.5
+        },
+        {
+          "players": 8,
+          "graphs": 1,
+          "wait": 0,
+          "dispatch_p95_ms_before": 1.972,
+          "dispatch_p95_ms_after": 1.5259,
+          "dispatch_mean_allocated_bytes_before": 1374896.5625,
+          "dispatch_mean_allocated_bytes_after": 609157.3125
+        },
+        {
+          "players": 8,
+          "graphs": 4,
+          "wait": 0,
+          "dispatch_p95_ms_before": 4.0087,
+          "dispatch_p95_ms_after": 3.8809,
+          "dispatch_mean_allocated_bytes_before": 5468486.8125,
+          "dispatch_mean_allocated_bytes_after": 2439760.8125
+        },
+        {
+          "players": 32,
+          "graphs": 1,
+          "wait": 0,
+          "dispatch_p95_ms_before": 4.2944,
+          "dispatch_p95_ms_after": 3.6296,
+          "dispatch_mean_allocated_bytes_before": 6806060.625,
+          "dispatch_mean_allocated_bytes_after": 3698732.625
+        },
+        {
+          "players": 32,
+          "graphs": 4,
+          "wait": 0,
+          "dispatch_p95_ms_before": 13.8858,
+          "dispatch_p95_ms_after": 9.6378,
+          "dispatch_mean_allocated_bytes_before": 27196216.4375,
+          "dispatch_mean_allocated_bytes_after": 14890296.9375
+        },
+        {
+          "players": 1,
+          "graphs": 1,
+          "wait": 4,
+          "dispatch_p95_ms_before": 0.1267,
+          "dispatch_p95_ms_after": 0.0894,
+          "dispatch_mean_allocated_bytes_before": 119337.5625,
+          "dispatch_mean_allocated_bytes_after": 7727.5625
+        },
+        {
+          "players": 1,
+          "graphs": 4,
+          "wait": 4,
+          "dispatch_p95_ms_before": 0.2485,
+          "dispatch_p95_ms_after": 0.1427,
+          "dispatch_mean_allocated_bytes_before": 468711.5,
+          "dispatch_mean_allocated_bytes_after": 26405.0
+        },
+        {
+          "players": 8,
+          "graphs": 1,
+          "wait": 4,
+          "dispatch_p95_ms_before": 0.5004,
+          "dispatch_p95_ms_after": 0.3066,
+          "dispatch_mean_allocated_bytes_before": 954524.75,
+          "dispatch_mean_allocated_bytes_after": 61694.5625
+        },
+        {
+          "players": 8,
+          "graphs": 4,
+          "wait": 4,
+          "dispatch_p95_ms_before": 1.296,
+          "dispatch_p95_ms_after": 0.5577,
+          "dispatch_mean_allocated_bytes_before": 3747118.8125,
+          "dispatch_mean_allocated_bytes_after": 209510.25
+        },
+        {
+          "players": 32,
+          "graphs": 1,
+          "wait": 4,
+          "dispatch_p95_ms_before": 1.7032,
+          "dispatch_p95_ms_after": 0.7675,
+          "dispatch_mean_allocated_bytes_before": 3811814.25,
+          "dispatch_mean_allocated_bytes_after": 243366.25
+        },
+        {
+          "players": 32,
+          "graphs": 4,
+          "wait": 4,
+          "dispatch_p95_ms_before": 4.7038,
+          "dispatch_p95_ms_after": 2.0622,
+          "dispatch_mean_allocated_bytes_before": 14986648.25,
+          "dispatch_mean_allocated_bytes_after": 835224.25
+        }
+      ],
+      "precision_c2_automatic_optimized_r2_2026_10_30.json": [
+        {
+          "players": 1,
+          "graphs": 1,
+          "wait": 0,
+          "dispatch_p95_ms_before": 0.7102,
+          "dispatch_p95_ms_after": 0.5713,
+          "dispatch_mean_allocated_bytes_before": 168096.5,
+          "dispatch_mean_allocated_bytes_after": 72241.9375
+        },
+        {
+          "players": 1,
+          "graphs": 4,
+          "wait": 0,
+          "dispatch_p95_ms_before": 1.3451,
+          "dispatch_p95_ms_after": 1.0543,
+          "dispatch_mean_allocated_bytes_before": 649898.25,
+          "dispatch_mean_allocated_bytes_after": 272014.9375
+        },
+        {
+          "players": 8,
+          "graphs": 1,
+          "wait": 0,
+          "dispatch_p95_ms_before": 1.972,
+          "dispatch_p95_ms_after": 1.4698,
+          "dispatch_mean_allocated_bytes_before": 1374896.5625,
+          "dispatch_mean_allocated_bytes_after": 610555.3125
+        },
+        {
+          "players": 8,
+          "graphs": 4,
+          "wait": 0,
+          "dispatch_p95_ms_before": 4.0087,
+          "dispatch_p95_ms_after": 3.2372,
+          "dispatch_mean_allocated_bytes_before": 5468486.8125,
+          "dispatch_mean_allocated_bytes_after": 2443231.5
+        },
+        {
+          "players": 32,
+          "graphs": 1,
+          "wait": 0,
+          "dispatch_p95_ms_before": 4.2944,
+          "dispatch_p95_ms_after": 3.7184,
+          "dispatch_mean_allocated_bytes_before": 6806060.625,
+          "dispatch_mean_allocated_bytes_after": 3749420.625
+        },
+        {
+          "players": 32,
+          "graphs": 4,
+          "wait": 0,
+          "dispatch_p95_ms_before": 13.8858,
+          "dispatch_p95_ms_after": 11.1559,
+          "dispatch_mean_allocated_bytes_before": 27196216.4375,
+          "dispatch_mean_allocated_bytes_after": 15099191.6875
+        },
+        {
+          "players": 1,
+          "graphs": 1,
+          "wait": 4,
+          "dispatch_p95_ms_before": 0.1267,
+          "dispatch_p95_ms_after": 0.0793,
+          "dispatch_mean_allocated_bytes_before": 119337.5625,
+          "dispatch_mean_allocated_bytes_after": 7757.5625
+        },
+        {
+          "players": 1,
+          "graphs": 4,
+          "wait": 4,
+          "dispatch_p95_ms_before": 0.2485,
+          "dispatch_p95_ms_after": 0.1552,
+          "dispatch_mean_allocated_bytes_before": 468711.5,
+          "dispatch_mean_allocated_bytes_after": 26420.0
+        },
+        {
+          "players": 8,
+          "graphs": 1,
+          "wait": 4,
+          "dispatch_p95_ms_before": 0.5004,
+          "dispatch_p95_ms_after": 0.3057,
+          "dispatch_mean_allocated_bytes_before": 954524.75,
+          "dispatch_mean_allocated_bytes_after": 61881.75
+        },
+        {
+          "players": 8,
+          "graphs": 4,
+          "wait": 4,
+          "dispatch_p95_ms_before": 1.296,
+          "dispatch_p95_ms_after": 0.5663,
+          "dispatch_mean_allocated_bytes_before": 3747118.8125,
+          "dispatch_mean_allocated_bytes_after": 208718.8125
+        },
+        {
+          "players": 32,
+          "graphs": 1,
+          "wait": 4,
+          "dispatch_p95_ms_before": 1.7032,
+          "dispatch_p95_ms_after": 0.7818,
+          "dispatch_mean_allocated_bytes_before": 3811814.25,
+          "dispatch_mean_allocated_bytes_after": 241254.25
+        },
+        {
+          "players": 32,
+          "graphs": 4,
+          "wait": 4,
+          "dispatch_p95_ms_before": 4.7038,
+          "dispatch_p95_ms_after": 1.9573,
+          "dispatch_mean_allocated_bytes_before": 14986648.25,
+          "dispatch_mean_allocated_bytes_after": 832920.25
+        }
+      ]
+    },
+    "network_wire_contracts_equal": true,
+    "client_checks_equal": true
+  },
+  "preserved_unrelated_rust": {
+    "path": "native/academy_physics/src/lib.rs",
+    "bytes": 79458,
+    "sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70"
+  },
+  "cache": {
+    "max_entries": 64,
+    "max_estimated_weight_bytes": 4194304,
+    "distinct_32_four_graph_books_estimated_weight_bytes": 3827392,
+    "only_successful_pure_decode_cached": true,
+    "migration_authorization_budget_unchanged": true
+  },
+  "failed_attempts_and_fixes": [
+    "automatic r1 compile: corrected ProgramGraph.Edge Endpoint constructor in fixture",
+    "automatic r2: mock player lacked NeoForge ConfigSync registration; added public configuration preparation",
+    "automatic r3: PlayerList registration alone does not tick Connection; registered actual server connection list",
+    "semantics r1/r2: capture occurred before normal end-of-tick flush; assert delivery on next natural tick",
+    "Small 1-player graph P95 rose in first optimization run; retained both full optimized reports instead of overwriting"
+  ],
+  "verification_checks": {
+    "raw_comparison_script_passed": true,
+    "wire_bytes_unchanged": true,
+    "automatic_results_and_counters_unchanged": true,
+    "natural_256_session_boundary_passed": true,
+    "real_client_nine_checks_passed": true,
+    "git_diff_check_passed": true
+  },
+  "limitations": [
+    "Actual PlayerList players and natural server ticks use EmbeddedChannel simulated peers, not 32 full clients or TCP/WAN.",
+    "GameTest ticks run accelerated. Timing is sampled server-thread wall/CPU/allocation and includes opt-in observer overhead, not TPS.",
+    "WAIT dispatch excludes separately measured scheduler resume; nested stages must not be summed.",
+    "All players in each world case share one book. Distinct 32-book capacity was independently unit tested, not world-load measured.",
+    "Network counts are application CODEC bytes plus separately reported Misaka registry ID; no Minecraft framing/compression/TCP bytes.",
+    "No network behavior optimization: changing traces remain complete. Wire benchmarks are repeatability/contract checks.",
+    "automatic baseline r4 network_scope retains obsolete re-encode wording; actual helper observes a readonly sent body; documentation corrects it.",
+    "semantics directory baseline-r3 already contains the decode cache; this is first post-cache regression, not a timing baseline.",
+    "Small-load P95 varies; no universal latency, FPS or TPS improvement claim.",
+    "Physical paid actions, Sable/Create/Aeronautics mixed stress, real many-client compression and original long-duration editor glyph issue remain outside this batch."
+  ],
+  "next_work": [
+    "Profile remaining execution-bridge and actual-query allocation without cross-action caching",
+    "Measure distinct larger books and ability categories with real multiple clients and mixed mods",
+    "Only after a new stable-state workload baseline consider exact automatic successful-trace deduplication",
+    "Retain existing trigger fairness, deferred failure/trace-before-commit and global fuel budget limitations in handoff"
+  ],
+  "runtime": {
+    "java_home": "C:/Users/Dusk/.gradle/jdks/jetbrains_s_r_o_-25-amd64-windows.2",
+    "gradle_jvm_args": "-Xmx768m -XX:MaxMetaspaceSize=512m -XX:TieredStopAtLevel=1",
+    "kotlin_execution_strategy": "in-process",
+    "game_default_jvm_changed": false
+  },
+  "commit_subject": "优化精密自动触发解码并完善网络测量",
+  "current_HEAD_context": "HEAD at pre-commit validation; the local batch commit is the one containing this report."
+}

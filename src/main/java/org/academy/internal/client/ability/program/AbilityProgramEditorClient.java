@@ -117,7 +117,7 @@ public final class AbilityProgramEditorClient {
         var state = state(player.getUUID(), category.getKey());
         screen = new ModularProgramScreen(new Session(category, state));
         minecraft.gui.setScreen(screen);
-        MisakaNetworkClient.send(new AbilityProgramManager.RequestPacket(category.getKey()));
+        ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.RequestPacket(category.getKey()));
     }
 
     public static boolean isSupportedCategory(@Nullable AbilityCategory category) {
@@ -185,7 +185,7 @@ public final class AbilityProgramEditorClient {
             notify("message.academy.program.editor.extension_mismatch", ChatFormatting.RED);
             return;
         }
-        MisakaNetworkClient.send(new AbilityProgramManager.ExecutePacket(
+        ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.ExecutePacket(
                 category.getKey(),
                 Math.clamp(slot, 0, SLOT_COUNT - 1),
                 executionSequence++
@@ -281,6 +281,14 @@ public final class AbilityProgramEditorClient {
     }
 
     public static void handleSync(Identifier category, byte[] encoded, boolean dismissedStarter) {
+        try (var scope = ProgramNetworkMetrics.begin(ProgramNetworkMetrics.Kind.SYNC,
+                ProgramNetworkMetrics.Phase.CLIENT_SYNC_APPLY)) {
+            handleSyncInternal(category, encoded, dismissedStarter);
+            scope.succeeded(0);
+        }
+    }
+
+    private static void handleSyncInternal(Identifier category, byte[] encoded, boolean dismissedStarter) {
         if (!isSupportedCategoryId(category)) return;
         var decoded = ProgramBookCodec.decode(encoded);
         if (!decoded.valid() || !validBook(category, decoded.book())) return;
@@ -294,7 +302,7 @@ public final class AbilityProgramEditorClient {
                 && shouldImportCachedBook(decoded.book(), state.saved)) {
             if (!state.importPending) {
                 state.importPending = true;
-                MisakaNetworkClient.send(new AbilityProgramManager.ImportPacket(
+                ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.ImportPacket(
                         category, decoded.book().revision(), ProgramBookCodec.encode(state.saved)));
             }
             return;
@@ -351,6 +359,20 @@ public final class AbilityProgramEditorClient {
             String diagnosticDetail,
             List<ProgramRunTrace.Step> trace,
             boolean traceTruncated
+    ) {
+        try (var scope = ProgramNetworkMetrics.begin(ProgramNetworkMetrics.Kind.RESULT,
+                ProgramNetworkMetrics.Phase.CLIENT_RESULT_APPLY)) {
+            handleResultInternal(category, slot, type, revision, code, diagnostic, nodeId,
+                    vmDiagnostic, diagnosticPort, diagnosticDetail, trace, traceTruncated);
+            scope.succeeded(0);
+        }
+    }
+
+    private static void handleResultInternal(
+            Identifier category, int slot, AbilityProgramManager.FeedbackType type, long revision,
+            AbilityProgramManager.ResultCode code, @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
+            ProgramVmDiagnostic vmDiagnostic, String diagnosticPort, String diagnosticDetail,
+            List<ProgramRunTrace.Step> trace, boolean traceTruncated
     ) {
         if (!isSupportedCategoryId(category)) return;
         slot = Math.clamp(slot, 0, SLOT_COUNT - 1);
@@ -515,7 +537,7 @@ public final class AbilityProgramEditorClient {
         @Override
         public void dismissStarterForWorld() {
             starterDismissed = true;
-            MisakaNetworkClient.send(new AbilityProgramManager.DismissStarterPacket());
+            ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.DismissStarterPacket());
         }
 
         @Override
@@ -628,7 +650,7 @@ public final class AbilityProgramEditorClient {
                 return;
             }
             state.drafts[slot] = program;
-            MisakaNetworkClient.send(new AbilityProgramManager.SavePacket(
+            ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.SavePacket(
                     category.getKey(), slot, expectedRevision, encoded));
         }
 

@@ -1,0 +1,70 @@
+{
+  "base_commit": "c701bd9a05401c5b4d2b82fd35c923ecd7006255",
+  "note": "Observation and fixture sources at passing automatic baseline r4 before optimization; client r1 predates observer-only fixes",
+  "sources": [
+    {
+      "path": "src/gametest/java/org/academy/internal/client/validation/PrecisionAutomaticNetworkSmoke.java",
+      "sha256": "3EF71CE12EE1220C3B9BBB09173199991AFF7E9B41101C2C0C786EC2C93B0BE3"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/CapturedProgramPlayer.java",
+      "sha256": "DE3DE44C0A88C1D1BEF2ACFCF9F201E29A841E6D35DAB82D9AB63637C84B05C9"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/ProgramAutomaticBenchmarkGameTests.java",
+      "sha256": "AC0CF0CF29612FFF903CC2DDBDEE7694101D2D770DEA8BF8ED4ECF2898414CFD"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/ProgramAutomaticSemanticsGameTests.java",
+      "sha256": "F213B816958CAB0C8EFE125B56F5B415C2A568C12667683A92E2A61DB2D68807"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/ProgramNetworkBenchmarkGameTests.java",
+      "sha256": "779F9A9E5A0363B3A89F6875B8B96672BFA85AFF7353B30C296A705BF1490AF5"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/ProgramNetworkEnvelopeProbe.java",
+      "sha256": "FDF40CCE6C4EEFB4918E05AB6EEA729BC0BD3C96E4922217341DAEF8C268DAAE"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/ability/program/AbilityProgramEditorClient.java",
+      "sha256": "43BE5999E6B2FA2ED133E921F8BCCCAA83A19A5F91EA4BD0699B7DC4FC18F66C"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/AbilityProgramManager.java",
+      "sha256": "29AB67C249AB17BC82132DC5958B41B63FFDE16E022C9ABF0506A041F59EC813"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ProgramAutomaticMetrics.java",
+      "sha256": "B4AAC72D04C1DF026DD36AA8406C746E8AA1FEF925D92A97B975124A8DFAB23B"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ProgramNetworkMetrics.java",
+      "sha256": "9F2F451760EA4097174044CCDE109B019FA8A1E17B1292F2E77CB49A6FBA0C6F"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ProgramSessionScheduler.java",
+      "sha256": "ECA71A7C65FFBCB68C46123DE7A14C73F945ABA1986A8AD2D31A58E2AA6A9D8C"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ServerProgramScheduler.java",
+      "sha256": "DA16BFD85C5FC8344301585228D5797F1707CF094C42261A75C1C897169629E8"
+    },
+    {
+      "path": "validation/precision_nodes/precision_automatic_network_client.init.gradle",
+      "sha256": "939C0B4EDBEC056841CE5B15B131369DBBA023A5DBDE4B54245EE325A71B8ACF"
+    },
+    {
+      "path": "validation/precision_nodes/precision_automatic_performance.init.gradle",
+      "sha256": "46BF420B102AE343B4E20F9DD2789D9F196B81AFDBE0A7EC493264019835ACDB"
+    },
+    {
+      "path": "validation/precision_nodes/precision_automatic_semantics.init.gradle",
+      "sha256": "92697735B3D540E705A4920569655584474A467C9F17326D96D901B74A3F1717"
+    },
+    {
+      "path": "validation/precision_nodes/precision_network_performance.init.gradle",
+      "sha256": "136EF97C136CD36678EEE82C05031E5C2C2D83DF709225DA24174D67AB585379"
+    }
+  ]
+}

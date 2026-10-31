@@ -78,6 +78,7 @@ public final class AbilityProgramManager {
     private static final Map<LoopExecutionKey, Long> FAILED_LOOP_RETRY_AT = new HashMap<>();
     private static final Map<UUID, AutomaticRunBudget> AUTOMATIC_RUN_BUDGETS = new HashMap<>();
     private static final Map<UUID, Integer> NEXT_AUTOMATIC_SLOT = new HashMap<>();
+    private static final ProgramStoredBookCache STORED_BOOKS = new ProgramStoredBookCache();
     private static final Map<Identifier, CategoryExecutionAdapter> EXECUTION_ADAPTERS = Map.of(
             AcceleratorProgramNodeCatalog.ACCELERATOR,
             AbilityProgramManager::executeAccelerator,
@@ -136,7 +137,15 @@ public final class AbilityProgramManager {
             return ProgramBook.empty(SLOT_COUNT);
         }
         try {
-            var decoded = ProgramBookCodec.decode(Base64.getDecoder().decode(encoded));
+            var decoded = STORED_BOOKS.decode(encoded, () -> {
+                byte[] bytes;
+                try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.BASE64)) {
+                    bytes = Base64.getDecoder().decode(encoded);
+                }
+                try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.BOOK_CODEC)) {
+                    return ProgramBookCodec.decode(bytes);
+                }
+            });
             if (decoded.valid()) {
                 var book = decoded.book();
                 if (book.schemaVersion() == ProgramBook.CURRENT_SCHEMA_VERSION
@@ -146,9 +155,11 @@ public final class AbilityProgramManager {
                         || slot.program().schemaVersion() == AbilityProgram.CURRENT_SCHEMA_VERSION
                         && slot.program().category().equals(category))) {
                     var definition = AbilityProgramDefinitions.find(category);
-                    return (definition == null ? book
-                            : ProgramGraphMigrations.migrateBook(
-                            book, category, definition.nodeLookup())).resize(SLOT_COUNT);
+                    try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.BOOK_MIGRATE)) {
+                        return (definition == null ? book
+                                : ProgramGraphMigrations.migrateBook(
+                                book, category, definition.nodeLookup())).resize(SLOT_COUNT);
+                    }
                 }
             }
         } catch (IllegalArgumentException ignored) {
@@ -160,6 +171,8 @@ public final class AbilityProgramManager {
     static String encodeStoredBook(ProgramBook book) {
         return Base64.getEncoder().encodeToString(ProgramBookCodec.encode(book));
     }
+
+    static ProgramStoredBookCache.Stats storedBookCacheStats() { return STORED_BOOKS.stats(); }
 
     static Set<Identifier> learnedCapabilities(Player playerData) {
         if (playerData == null) return Set.of();
@@ -176,97 +189,121 @@ public final class AbilityProgramManager {
             ProgramTriggers.Type trigger,
             CommonProgramNodeCatalog.MovementCondition movement
     ) {
-        if (!unlocked(player)) return;
-        var currentCategory = AbilitySystemServer.getSystem(player)
-                .getPlayerAbilityCategory(player.getUUID());
-        if (currentCategory == null || !isSupportedCategory(currentCategory.getKey())) return;
-        var category = currentCategory.getKey();
-        var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
-        if (playerData == null) return;
-        var current = book(playerData, category, player.getUUID());
-        var definition = AbilityProgramDefinitions.require(category);
-        var adapter = executionAdapter(category);
-        if (adapter == null) return;
-        var gameTime = player.level().getGameTime();
-        var capabilities = learnedCapabilities(playerData);
-        var playerId = player.getUUID();
-        var firstSlot = NEXT_AUTOMATIC_SLOT.getOrDefault(playerId, 0);
-        for (var offset = 0; offset < SLOT_COUNT; offset++) {
-            var slot = (firstSlot + offset) % SLOT_COUNT;
-            var program = current.slot(slot).program();
-            if (program == null) continue;
-            // Health matching latches its threshold, so do not consume that edge when no run can start.
-            if (trigger == ProgramTriggers.Type.HEALTH
-                    && !automaticRunBudgetAvailable(playerId, gameTime)) continue;
-            var matches = trigger == ProgramTriggers.Type.HEALTH
-                    ? ProgramTriggers.matchesHealth(program, player, category, slot)
-                    : ProgramTriggers.matches(program, trigger, movement, gameTime);
-            if (matches && trigger == ProgramTriggers.Type.CHAT) {
-                matches = ProgramTriggers.matchesChat(program,
-                        AbilityProgramTriggerRuntime.currentChatMessage(playerId),
-                        playerId.equals(AbilityProgramTriggerRuntime.currentChatSender(playerId)));
+        try (var observation = ProgramAutomaticMetrics.dispatch(player.getUUID(), trigger)) {
+            if (!unlocked(player)) { ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.LOCKED); return; }
+            var currentCategory = AbilitySystemServer.getSystem(player)
+                    .getPlayerAbilityCategory(player.getUUID());
+            if (currentCategory == null || !isSupportedCategory(currentCategory.getKey())) {
+                ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.CATEGORY_UNAVAILABLE); return;
             }
-            if (!matches) continue;
-            var sessionKey = new ServerProgramScheduler.SessionKey(
-                    player.getUUID(), category, program.id(), slot);
-            if (ServerProgramScheduler.contains(
-                    player.level().getServer(), sessionKey)) continue;
-            ProgramCompileResult compiled;
-            AcademyProfiler.push("academy.program.trigger.compile");
-            try {
-                AcademyProfiler.incrementCounter("program.trigger.compile_candidates");
-                compiled = definition.compile(program, capabilities);
-            } finally {
-                AcademyProfiler.pop();
+            var category = currentCategory.getKey();
+            var playerData = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
+            if (playerData == null) { ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.DATA_UNAVAILABLE); return; }
+            ProgramBook current;
+            try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.BOOK)) {
+                current = book(playerData, category, player.getUUID());
             }
-            var executionSlot = slot;
-            if (!compiled.valid()) continue;
-            var loopKey = new LoopExecutionKey(player.getUUID(), category, slot, program.id());
-            if (trigger == ProgramTriggers.Type.LOOP
-                    && gameTime < FAILED_LOOP_RETRY_AT.getOrDefault(loopKey, Long.MIN_VALUE)) continue;
-            if (!consumeAutomaticRunBudget(playerId, gameTime)) {
-                AcademyProfiler.incrementCounter("program.trigger.budget_rejected_after_compile");
-                continue;
+            var definition = AbilityProgramDefinitions.require(category);
+            var adapter = executionAdapter(category);
+            if (adapter == null) return;
+            var gameTime = player.level().getGameTime();
+            Set<Identifier> capabilities;
+            try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.CAPABILITIES)) {
+                capabilities = learnedCapabilities(playerData);
             }
-            NEXT_AUTOMATIC_SLOT.put(playerId, (slot + 1) % SLOT_COUNT);
-            var loopIndex = trigger == ProgramTriggers.Type.LOOP
-                    ? LOOP_EXECUTION_COUNTS.getOrDefault(loopKey, 0L) : 0L;
-            var invocation = AbilityProgramTriggerRuntime.invocation(
-                    player, program.id(), slot, trigger, movement, loopIndex);
-            var outcome = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(
-                    compiled.program(),
-                    player,
-                    ProgramTriggers.costMultiplier(program),
-                    executionSlot,
-                    invocation
-            ));
-            if (outcome.deferred()) {
-                var finalSlot = slot;
-                invocation.onRunComplete(result -> sendRunTrace(player, category, finalSlot,
-                        current.revision(), invocation, result));
-            }
-            if (!invocation.runTrace().steps().isEmpty()) {
-                var previousTraceTick = LAST_TRACE_TICK.getOrDefault(loopKey, Long.MIN_VALUE);
-                var traceInterval = trigger == ProgramTriggers.Type.LOOP
-                        || trigger == ProgramTriggers.Type.HEALTH ? 100 : 20;
-                if (!outcome.successful() || previousTraceTick == Long.MIN_VALUE
-                        || gameTime - previousTraceTick >= traceInterval || previousTraceTick > gameTime) {
-                    LAST_TRACE_TICK.put(loopKey, gameTime);
-                    MisakaNetworkServer.send(player, new ResultPacket(category.toString(), slot,
-                            FeedbackType.TRACE, current.revision(),
-                            outcome.successful() ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
-                            null, outcome.nodeId(), outcome.vmDiagnostic(), outcome.port(),
-                            outcome.detail(), invocation.runTrace().steps(), invocation.runTrace().truncated()));
+            var playerId = player.getUUID();
+            var firstSlot = NEXT_AUTOMATIC_SLOT.getOrDefault(playerId, 0);
+            for (var offset = 0; offset < SLOT_COUNT; offset++) {
+                var slot = (firstSlot + offset) % SLOT_COUNT;
+                ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.SLOT_EXAMINED);
+                var program = current.slot(slot).program();
+                if (program == null) continue;
+                // Health matching latches its threshold, so do not consume that edge when no run can start.
+                if (trigger == ProgramTriggers.Type.HEALTH
+                        && !automaticRunBudgetAvailable(playerId, gameTime)) continue;
+                boolean matches;
+                try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.MATCH)) {
+                    matches = trigger == ProgramTriggers.Type.HEALTH
+                            ? ProgramTriggers.matchesHealth(program, player, category, slot)
+                            : ProgramTriggers.matches(program, trigger, movement, gameTime);
                 }
-            }
-            if (trigger == ProgramTriggers.Type.LOOP && outcome.successful()) {
-                FAILED_LOOP_RETRY_AT.remove(loopKey);
-                LOOP_EXECUTION_COUNTS.put(
-                        loopKey,
-                        loopIndex == Long.MAX_VALUE ? Long.MAX_VALUE : loopIndex + 1L
-                );
-            } else if (trigger == ProgramTriggers.Type.LOOP && !outcome.successful()) {
-                FAILED_LOOP_RETRY_AT.put(loopKey, gameTime + FAILED_LOOP_RETRY_TICKS);
+                if (matches && trigger == ProgramTriggers.Type.CHAT) {
+                    matches = ProgramTriggers.matchesChat(program,
+                            AbilityProgramTriggerRuntime.currentChatMessage(playerId),
+                            playerId.equals(AbilityProgramTriggerRuntime.currentChatSender(playerId)));
+                }
+                if (!matches) continue;
+                ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.MATCHED);
+                var sessionKey = new ServerProgramScheduler.SessionKey(
+                        player.getUUID(), category, program.id(), slot);
+                boolean alreadyRunning;
+                try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.SESSION_LOOKUP)) {
+                    alreadyRunning = ServerProgramScheduler.contains(player.level().getServer(), sessionKey);
+                }
+                if (alreadyRunning) {
+                    ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.ALREADY_RUNNING); continue;
+                }
+                ProgramCompileResult compiled;
+                try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.COMPILE)) {
+                    AcademyProfiler.incrementCounter("program.trigger.compile_candidates");
+                    compiled = definition.compile(program, capabilities);
+                }
+                var executionSlot = slot;
+                if (!compiled.valid()) { ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.COMPILE_INVALID); continue; }
+                var loopKey = new LoopExecutionKey(player.getUUID(), category, slot, program.id());
+                if (trigger == ProgramTriggers.Type.LOOP
+                        && gameTime < FAILED_LOOP_RETRY_AT.getOrDefault(loopKey, Long.MIN_VALUE)) {
+                    ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.FAILED_RETRY_WAIT); continue;
+                }
+                if (!consumeAutomaticRunBudget(playerId, gameTime)) {
+                    AcademyProfiler.incrementCounter("program.trigger.budget_rejected_after_compile");
+                    ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.BUDGET_REJECTED);
+                    continue;
+                }
+                NEXT_AUTOMATIC_SLOT.put(playerId, (slot + 1) % SLOT_COUNT);
+                var loopIndex = trigger == ProgramTriggers.Type.LOOP
+                        ? LOOP_EXECUTION_COUNTS.getOrDefault(loopKey, 0L) : 0L;
+                var invocation = AbilityProgramTriggerRuntime.invocation(
+                        player, program.id(), slot, trigger, movement, loopIndex);
+                ExecutionOutcome outcome;
+                ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.ADMISSION_ATTEMPT);
+                try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.EXECUTE)) {
+                    outcome = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(
+                            compiled.program(), player, ProgramTriggers.costMultiplier(program),
+                            executionSlot, invocation));
+                }
+                ProgramAutomaticMetrics.count(!outcome.successful()
+                        ? ProgramAutomaticMetrics.Counter.EXECUTION_REJECTED
+                        : outcome.deferred() ? ProgramAutomaticMetrics.Counter.ACCEPTED_DEFERRED
+                        : ProgramAutomaticMetrics.Counter.ACCEPTED_IMMEDIATE);
+                if (outcome.deferred()) {
+                    var finalSlot = slot;
+                    invocation.onRunComplete(result -> sendRunTrace(player, category, finalSlot,
+                            current.revision(), invocation, result));
+                }
+                if (!invocation.runTrace().steps().isEmpty()) {
+                    var previousTraceTick = LAST_TRACE_TICK.getOrDefault(loopKey, Long.MIN_VALUE);
+                    var traceInterval = trigger == ProgramTriggers.Type.LOOP
+                            || trigger == ProgramTriggers.Type.HEALTH ? 100 : 20;
+                    if (!outcome.successful() || previousTraceTick == Long.MIN_VALUE
+                            || gameTime - previousTraceTick >= traceInterval || previousTraceTick > gameTime) {
+                        LAST_TRACE_TICK.put(loopKey, gameTime);
+                    ProgramNetworkMetrics.send(player, new ResultPacket(category.toString(), slot,
+                                FeedbackType.TRACE, current.revision(),
+                                outcome.successful() ? ResultCode.OK : ResultCode.EXECUTION_FAILED,
+                                null, outcome.nodeId(), outcome.vmDiagnostic(), outcome.port(),
+                                outcome.detail(), invocation.runTrace().steps(), invocation.runTrace().truncated()));
+                    }
+                }
+                if (trigger == ProgramTriggers.Type.LOOP && outcome.successful()) {
+                    FAILED_LOOP_RETRY_AT.remove(loopKey);
+                    LOOP_EXECUTION_COUNTS.put(
+                            loopKey,
+                            loopIndex == Long.MAX_VALUE ? Long.MAX_VALUE : loopIndex + 1L
+                    );
+                } else if (trigger == ProgramTriggers.Type.LOOP && !outcome.successful()) {
+                    FAILED_LOOP_RETRY_AT.put(loopKey, gameTime + FAILED_LOOP_RETRY_TICKS);
+                }
             }
         }
     }
@@ -290,7 +327,7 @@ public final class AbilityProgramManager {
             ServerPlayer player, Identifier category, int slot, long revision,
             ProgramInvocationContext invocation, ProgramVmResult result
     ) {
-        MisakaNetworkServer.send(player, new ResultPacket(category.toString(), slot,
+        ProgramNetworkMetrics.send(player, new ResultPacket(category.toString(), slot,
                 FeedbackType.TRACE, revision,
                 result.status() == ProgramVmResult.Status.FAILED
                         ? ResultCode.EXECUTION_FAILED : ResultCode.OK,
@@ -299,6 +336,7 @@ public final class AbilityProgramManager {
     }
 
     public static void clear() {
+        STORED_BOOKS.clear();
         LAST_EXECUTION_SEQUENCE.clear();
         LOOP_EXECUTION_COUNTS.clear();
         LAST_TRACE_TICK.clear();
@@ -465,7 +503,7 @@ public final class AbilityProgramManager {
     }
 
     private static void sync(ServerPlayer player, Identifier category, ProgramBook book) {
-        MisakaNetworkServer.send(player, new SyncPacket(
+        ProgramNetworkMetrics.send(player, new SyncPacket(
                 category.toString(),
                 AbilityProgramDefinitions.require(category).extensionFingerprint(),
                 ProgramBookCodec.encode(book),
@@ -1157,7 +1195,7 @@ public final class AbilityProgramManager {
                 int nodeId, ProgramVmDiagnostic vmDiagnostic, @Nullable String port,
                 @Nullable String detail, List<ProgramRunTrace.Step> trace, boolean traceTruncated
         ) {
-            MisakaNetworkServer.send(player, new ResultPacket(
+            ProgramNetworkMetrics.send(player, new ResultPacket(
                     category,
                     Mth.clamp(slot, 0, SLOT_COUNT - 1),
                     type,
@@ -1205,8 +1243,9 @@ public final class AbilityProgramManager {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class DismissStarterPacket extends Packet<ServerGamePacketListenerImpl, DismissStarterPacket> {
-        public static final StreamCodec<ByteBuf, DismissStarterPacket> CODEC = StreamCodec.of(
-                (buf, packet) -> {}, buf -> new DismissStarterPacket());
+        public static final StreamCodec<ByteBuf, DismissStarterPacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.DISMISS_STARTER, StreamCodec.of(
+                (buf, packet) -> {}, buf -> new DismissStarterPacket()));
 
         @Override
         public PacketType<ServerGamePacketListenerImpl, DismissStarterPacket> getPacketType() {
@@ -1217,7 +1256,8 @@ public final class AbilityProgramManager {
     @PacketTarget(ThreadType.SERVER)
     public static final class RequestPacket extends Packet<ServerGamePacketListenerImpl, RequestPacket> {
         public static final StreamCodec<ByteBuf, RequestPacket> CODEC =
-                ByteBufCodecs.STRING_UTF8.map(RequestPacket::new, packet -> packet.category);
+                ProgramNetworkMetrics.instrument(ProgramNetworkMetrics.Kind.REQUEST,
+                        ByteBufCodecs.STRING_UTF8.map(RequestPacket::new, packet -> packet.category));
         private final String category;
 
         public RequestPacket(Identifier category) {
@@ -1240,7 +1280,8 @@ public final class AbilityProgramManager {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class ImportPacket extends Packet<ServerGamePacketListenerImpl, ImportPacket> {
-        public static final StreamCodec<ByteBuf, ImportPacket> CODEC = StreamCodec.of(
+        public static final StreamCodec<ByteBuf, ImportPacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.IMPORT, StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
                     buf.writeLong(packet.expectedRevision);
@@ -1251,7 +1292,7 @@ public final class AbilityProgramManager {
                         buf.readLong(),
                         readBytes(buf, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES)
                 )
-        );
+        ));
         private final String category;
         private final long expectedRevision;
         private final byte[] book;
@@ -1286,7 +1327,8 @@ public final class AbilityProgramManager {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class SavePacket extends Packet<ServerGamePacketListenerImpl, SavePacket> {
-        public static final StreamCodec<ByteBuf, SavePacket> CODEC = StreamCodec.of(
+        public static final StreamCodec<ByteBuf, SavePacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.SAVE, StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
@@ -1299,7 +1341,7 @@ public final class AbilityProgramManager {
                         buf.readLong(),
                         readBytes(buf, ProgramBookCodec.MAX_PROGRAM_ENCODED_BYTES)
                 )
-        );
+        ));
         private final String category;
         private final int slot;
         private final long expectedRevision;
@@ -1346,7 +1388,8 @@ public final class AbilityProgramManager {
 
     @PacketTarget(ThreadType.SERVER)
     public static final class ExecutePacket extends Packet<ServerGamePacketListenerImpl, ExecutePacket> {
-        public static final StreamCodec<ByteBuf, ExecutePacket> CODEC = StreamCodec.of(
+        public static final StreamCodec<ByteBuf, ExecutePacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.EXECUTE, StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
@@ -1357,7 +1400,7 @@ public final class AbilityProgramManager {
                         ByteBufCodecs.VAR_INT.decode(buf),
                         buf.readLong()
                 )
-        );
+        ));
         private final String category;
         private final int slot;
         private final long sequence;
@@ -1392,7 +1435,8 @@ public final class AbilityProgramManager {
 
     @PacketTarget(ThreadType.CLIENT)
     public static final class SyncPacket extends Packet<ClientPacketListener, SyncPacket> {
-        public static final StreamCodec<ByteBuf, SyncPacket> CODEC = StreamCodec.of(
+        public static final StreamCodec<ByteBuf, SyncPacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.SYNC, StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.extensionFingerprint);
@@ -1405,7 +1449,7 @@ public final class AbilityProgramManager {
                         readBytes(buf, ProgramBookCodec.MAX_BOOK_ENCODED_BYTES),
                         buf.readBoolean()
                 )
-        );
+        ));
         private final String category;
         private final String extensionFingerprint;
         private final byte[] book;
@@ -1457,7 +1501,8 @@ public final class AbilityProgramManager {
 
     @PacketTarget(ThreadType.CLIENT)
     public static final class ResultPacket extends Packet<ClientPacketListener, ResultPacket> {
-        public static final StreamCodec<ByteBuf, ResultPacket> CODEC = StreamCodec.of(
+        public static final StreamCodec<ByteBuf, ResultPacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.RESULT, StreamCodec.of(
                 (buf, packet) -> {
                     ByteBufCodecs.STRING_UTF8.encode(buf, packet.category);
                     ByteBufCodecs.VAR_INT.encode(buf, packet.slot);
@@ -1501,7 +1546,7 @@ public final class AbilityProgramManager {
                     return new ResultPacket(category, slot, type, revision, code,
                             diagnostic, nodeId, vmDiagnostic, port, detail, trace, buf.readBoolean());
                 }
-        );
+        ));
         private final String category;
         private final int slot;
         private final FeedbackType type;

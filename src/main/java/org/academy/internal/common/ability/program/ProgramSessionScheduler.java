@@ -70,7 +70,10 @@ public final class ProgramSessionScheduler<K> {
         if (maxLifetimeTicks < 1) {
             throw new IllegalArgumentException("Session lifetime must be positive");
         }
-        if (sessions.containsKey(key) || sessions.size() >= maxSessions) return false;
+        if (sessions.containsKey(key) || sessions.size() >= maxSessions) {
+            ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.SESSION_REJECTED);
+            return false;
+        }
         sessions.put(key, new RunningSession<>(
                 session,
                 executors,
@@ -80,6 +83,7 @@ public final class ProgramSessionScheduler<K> {
                 maxLifetimeTicks,
                 listener
         ));
+        ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.SESSION_ADMITTED);
         return true;
     }
 
@@ -98,6 +102,7 @@ public final class ProgramSessionScheduler<K> {
         }
         var running = sessions.get(key);
         if (running == null) return;
+        ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.SESSION_TICK);
         if (gameTime - running.startedAt >= running.maxLifetimeTicks) {
             terminate(key, running, Termination.expired(running.vm.currentNodeId()));
             return;
@@ -154,6 +159,12 @@ public final class ProgramSessionScheduler<K> {
     }
 
     private void notifyListener(K key, RunningSession<K> running, Termination termination) {
+        ProgramAutomaticMetrics.count(switch (termination.kind()) {
+            case COMPLETED -> ProgramAutomaticMetrics.Counter.SESSION_COMPLETED;
+            case FAILED -> ProgramAutomaticMetrics.Counter.SESSION_FAILED;
+            case EXPIRED -> ProgramAutomaticMetrics.Counter.SESSION_EXPIRED;
+            case CANCELLED -> ProgramAutomaticMetrics.Counter.SESSION_CANCELLED;
+        });
         try {
             running.listener.onTerminated(key, termination);
         } catch (RuntimeException ignored) {

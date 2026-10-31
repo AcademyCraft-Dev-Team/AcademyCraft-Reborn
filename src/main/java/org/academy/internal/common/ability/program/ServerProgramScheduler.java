@@ -189,7 +189,9 @@ public final class ServerProgramScheduler {
                 sessionIds.remove(key);
                 return;
             }
-            scheduler.tick(key, logicalTick);
+            try (var ignored = ProgramAutomaticMetrics.scheduler(key.ownerId())) {
+                scheduler.tick(key, logicalTick);
+            }
             if (scheduler.contains(key)) {
                 logicalTicks.put(key, logicalTick + 1L);
             } else {

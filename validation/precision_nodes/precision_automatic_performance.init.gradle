@@ -1,0 +1,35 @@
+// Isolated natural-player-tick automatic program benchmark; no real client or TCP claim.
+// .\gradlew.bat runGameTestServer -DisDev=true -I validation/precision_nodes/precision_automatic_performance.init.gradle \
+//   -PacademyGameTests=academy:precision_automatic_benchmark -PacademyAutomaticStage=baseline \
+//   -PacademyAutomaticRun=r1-20261030
+allprojects {
+    afterEvaluate {
+        def stage = providers.gradleProperty('academyAutomaticStage').getOrElse('baseline')
+        if (!(stage in ['baseline', 'optimized'])) {
+            throw new GradleException('Automatic benchmark stage must be baseline or optimized')
+        }
+        def runId = providers.gradleProperty('academyAutomaticRun').getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) {
+            throw new GradleException('Automatic benchmark run id must contain only letters, digits, _ and -')
+        }
+        def prefix = "program-automatic-gametest-precision-c-${stage}-"
+        def directory = rootProject.file("run/${prefix}${runId}").canonicalFile
+        def runRoot = rootProject.file('run').canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath()) || !directory.name.startsWith(prefix)) {
+            throw new GradleException('Automatic benchmark requires an isolated run directory')
+        }
+        if (directory.exists() && directory.listFiles()?.length > 0) {
+            throw new GradleException('Automatic benchmark directory must be fresh; choose a new academyAutomaticRun')
+        }
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_automatic_benchmark') {
+            throw new GradleException('Automatic benchmark must select academy:precision_automatic_benchmark only')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionAutomaticBenchmark', 'true'
+            systemProperty 'academy.precisionAutomaticBenchmark.stage', stage
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_automatic_benchmark')
+        }
+    }
+}

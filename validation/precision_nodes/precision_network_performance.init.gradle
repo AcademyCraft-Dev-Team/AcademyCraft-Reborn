@@ -1,0 +1,25 @@
+// Real application/Misaka codecs and registered mock-Connection capture; not a TCP throughput test.
+allprojects {
+    afterEvaluate {
+        def stage = providers.gradleProperty('academyNetworkStage').getOrElse('baseline')
+        if (!(stage in ['baseline', 'optimized'])) throw new GradleException('Expected baseline or optimized network stage')
+        def runId = providers.gradleProperty('academyNetworkRun').getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) throw new GradleException('Invalid network run id')
+        def prefix = "native-program-network-gametest-precision-c2-${stage}-"
+        def directory = rootProject.file(providers.gradleProperty('academyNetworkDirectory')
+                .getOrElse("run/${prefix}${runId}")).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith(prefix)) throw new GradleException('Network probe must use its isolated stage directory')
+        if (directory.exists() && directory.listFiles()?.length > 0) throw new GradleException('Network probe directory must be fresh')
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_network_benchmark') {
+            throw new GradleException('Network probe must select academy:precision_network_benchmark only')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionNetworkBenchmark', 'true'
+            systemProperty 'academy.precisionNetworkStage', stage
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_network_benchmark')
+        }
+    }
+}
