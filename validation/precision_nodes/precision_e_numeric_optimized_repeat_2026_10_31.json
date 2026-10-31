@@ -1,0 +1,375 @@
+{
+  "passed": true,
+  "stage": "optimized",
+  "base_commit": "195ed8c6",
+  "java": "25.0.3+1-b329.124",
+  "warmup_sessions_per_case": 128,
+  "samples": 128,
+  "batch_sessions": 4,
+  "cases": [
+    {
+      "edges": 1,
+      "kind": "none",
+      "nodes": 2,
+      "signature": "COMPLETED:1:1:{}",
+      "wall_nanos_per_session": {
+        "p99": 49500,
+        "min": 1850,
+        "max": 57700,
+        "p50": 5700,
+        "available": true,
+        "samples": 128,
+        "p95": 32900
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 1816,
+        "min": 1816,
+        "max": 1816,
+        "p50": 1816,
+        "available": true,
+        "samples": 128,
+        "p95": 1816
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 1,
+      "kind": "none",
+      "nodes": 2,
+      "signature": "COMPLETED:1:1:{}",
+      "wall_nanos_per_session": {
+        "p99": 6175,
+        "min": 1375,
+        "max": 10575,
+        "p50": 1475,
+        "available": true,
+        "samples": 128,
+        "p95": 4275
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 1816,
+        "min": 1816,
+        "max": 1816,
+        "p50": 1816,
+        "available": true,
+        "samples": 128,
+        "p95": 1816
+      },
+      "variant": "explicit_numeric"
+    },
+    {
+      "edges": 58,
+      "kind": "integer",
+      "nodes": 32,
+      "signature": "COMPLETED:1:31:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/integer], value\u003d57]}",
+      "wall_nanos_per_session": {
+        "p99": 305800,
+        "min": 38425,
+        "max": 339125,
+        "p50": 107825,
+        "available": true,
+        "samples": 128,
+        "p95": 246025
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 69632,
+        "min": 59848,
+        "max": 69652,
+        "p50": 62136,
+        "available": true,
+        "samples": 128,
+        "p95": 67840
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 58,
+      "kind": "integer",
+      "nodes": 32,
+      "signature": "COMPLETED:1:31:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/integer], value\u003d57]}",
+      "wall_nanos_per_session": {
+        "p99": 113700,
+        "min": 30875,
+        "max": 775525,
+        "p50": 42225,
+        "available": true,
+        "samples": 128,
+        "p95": 99400
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 59862,
+        "min": 59712,
+        "max": 60054,
+        "p50": 59776,
+        "available": true,
+        "samples": 128,
+        "p95": 59848
+      },
+      "variant": "explicit_numeric"
+    },
+    {
+      "edges": 58,
+      "kind": "big_integer",
+      "nodes": 32,
+      "signature": "COMPLETED:1:31:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/big_integer], value\u003d57]}",
+      "wall_nanos_per_session": {
+        "p99": 112925,
+        "min": 29200,
+        "max": 159425,
+        "p50": 34300,
+        "available": true,
+        "samples": 128,
+        "p95": 106425
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 60720,
+        "min": 60720,
+        "max": 60732,
+        "p50": 60720,
+        "available": true,
+        "samples": 128,
+        "p95": 60720
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 58,
+      "kind": "big_integer",
+      "nodes": 32,
+      "signature": "COMPLETED:1:31:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/big_integer], value\u003d57]}",
+      "wall_nanos_per_session": {
+        "p99": 100325,
+        "min": 27250,
+        "max": 109950,
+        "p50": 33275,
+        "available": true,
+        "samples": 128,
+        "p95": 89750
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 60648,
+        "min": 60432,
+        "max": 60686,
+        "p50": 60432,
+        "available": true,
+        "samples": 128,
+        "p95": 60648
+      },
+      "variant": "explicit_numeric"
+    },
+    {
+      "edges": 58,
+      "kind": "float",
+      "nodes": 32,
+      "signature": "COMPLETED:1:31:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/float], value\u003d57.0]}",
+      "wall_nanos_per_session": {
+        "p99": 147075,
+        "min": 27650,
+        "max": 175025,
+        "p50": 42175,
+        "available": true,
+        "samples": 128,
+        "p95": 84975
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 61088,
+        "min": 59264,
+        "max": 61088,
+        "p50": 59264,
+        "available": true,
+        "samples": 128,
+        "p95": 61088
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 58,
+      "kind": "float",
+      "nodes": 32,
+      "signature": "COMPLETED:1:31:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/float], value\u003d57.0]}",
+      "wall_nanos_per_session": {
+        "p99": 30025,
+        "min": 20875,
+        "max": 47875,
+        "p50": 21950,
+        "available": true,
+        "samples": 128,
+        "p95": 24325
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 59712,
+        "min": 59712,
+        "max": 59712,
+        "p50": 59712,
+        "available": true,
+        "samples": 128,
+        "p95": 59712
+      },
+      "variant": "explicit_numeric"
+    },
+    {
+      "edges": 250,
+      "kind": "integer",
+      "nodes": 128,
+      "signature": "COMPLETED:1:127:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/integer], value\u003d249]}",
+      "wall_nanos_per_session": {
+        "p99": 130025,
+        "min": 43150,
+        "max": 178725,
+        "p50": 53175,
+        "available": true,
+        "samples": 128,
+        "p95": 103125
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 215784,
+        "min": 213688,
+        "max": 215804,
+        "p50": 213688,
+        "available": true,
+        "samples": 128,
+        "p95": 215784
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 250,
+      "kind": "integer",
+      "nodes": 128,
+      "signature": "COMPLETED:1:127:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/integer], value\u003d249]}",
+      "wall_nanos_per_session": {
+        "p99": 85025,
+        "min": 41575,
+        "max": 216800,
+        "p50": 43750,
+        "available": true,
+        "samples": 128,
+        "p95": 63425
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 213672,
+        "min": 213672,
+        "max": 213684,
+        "p50": 213672,
+        "available": true,
+        "samples": 128,
+        "p95": 213672
+      },
+      "variant": "explicit_numeric"
+    },
+    {
+      "edges": 250,
+      "kind": "big_integer",
+      "nodes": 128,
+      "signature": "COMPLETED:1:127:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/big_integer], value\u003d249]}",
+      "wall_nanos_per_session": {
+        "p99": 83050,
+        "min": 42575,
+        "max": 308800,
+        "p50": 44825,
+        "available": true,
+        "samples": 128,
+        "p95": 71875
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 220760,
+        "min": 220760,
+        "max": 220772,
+        "p50": 220760,
+        "available": true,
+        "samples": 128,
+        "p95": 220760
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 250,
+      "kind": "big_integer",
+      "nodes": 128,
+      "signature": "COMPLETED:1:127:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/big_integer], value\u003d249]}",
+      "wall_nanos_per_session": {
+        "p99": 69000,
+        "min": 41700,
+        "max": 192050,
+        "p50": 42950,
+        "available": true,
+        "samples": 128,
+        "p95": 48525
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 220760,
+        "min": 220760,
+        "max": 220772,
+        "p50": 220760,
+        "available": true,
+        "samples": 128,
+        "p95": 220760
+      },
+      "variant": "explicit_numeric"
+    },
+    {
+      "edges": 250,
+      "kind": "float",
+      "nodes": 128,
+      "signature": "COMPLETED:1:127:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/float], value\u003d249.0]}",
+      "wall_nanos_per_session": {
+        "p99": 77600,
+        "min": 41100,
+        "max": 211600,
+        "p50": 42750,
+        "available": true,
+        "samples": 128,
+        "p95": 65575
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 215832,
+        "min": 215768,
+        "max": 215832,
+        "p50": 215768,
+        "available": true,
+        "samples": 128,
+        "p95": 215832
+      },
+      "variant": "legacy"
+    },
+    {
+      "edges": 250,
+      "kind": "float",
+      "nodes": 128,
+      "signature": "COMPLETED:1:127:{answer\u003dProgramValue[type\u003dProgramValueType[id\u003dacademy:program_type/float], value\u003d249.0]}",
+      "wall_nanos_per_session": {
+        "p99": 72925,
+        "min": 40550,
+        "max": 205100,
+        "p50": 41750,
+        "available": true,
+        "samples": 128,
+        "p95": 54825
+      },
+      "thread_allocated_bytes_per_session": {
+        "p99": 215768,
+        "min": 215768,
+        "max": 215780,
+        "p50": 215768,
+        "available": true,
+        "samples": 128,
+        "p95": 215768
+      },
+      "variant": "explicit_numeric"
+    }
+  ],
+  "source_sha256": {
+    "src/main/java/org/academy/internal/common/ability/program/CommonProgramExecutors.java": "4ac9868a3957df57d07a2745c300630a6973167b3544781e10fed1b2c6e7234c",
+    "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeCatalog.java": "6ba39a9d66f88fd6e569652b3953a541312b9d9b8457c8b323ce4053102b906e",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramVm.java": "f115525270a17b456d0a9cb818cb28f2fe047a6dfaa1383ee24c589572f2accc"
+  },
+  "scope": [
+    "Fresh real ProgramVm.Session and ProgramExecutionFrame, actual node resolveConfiguration and registered executors",
+    "Graphs compiled directly before measurement, without migration or compile cache; 2-node entry/STOP is the no-arithmetic control",
+    "32/128-node typed addition DAGs plus session variable sink; scalar sources identical in legacy/explicit variants",
+    "nanoTime wall duration and current-thread Java allocated bytes, not CPU/TPS or multiplayer/physics throughput",
+    "Correctness, exact fuel boundary, signature formatting and JSON are outside timed samples; default profiling remains off",
+    "No world query, random source, paid action or WAIT executes in this timing corpus; independent equivalence tests cover those semantics",
+    "Both pre-optimization source snapshots and optimized runs are required before drawing a performance conclusion"
+  ]
+}

@@ -1,0 +1,17 @@
+// Opt-in actual ProgramVm latency/allocation corpus, without an MC client or world.
+allprojects {
+    afterEvaluate {
+        def stage = providers.gradleProperty('academyNumericUpgradeStage').getOrElse('baseline')
+        if (!(stage in ['baseline', 'optimized'])) throw new GradleException('Expected baseline or optimized numeric stage')
+        def report = rootProject.file(providers.gradleProperty('academyNumericUpgradeReport')
+                .getOrElse("build/precision-e-numeric-${stage}.json")).canonicalFile
+        if (!report.toPath().startsWith(rootProject.file('build').canonicalFile.toPath())) {
+            throw new GradleException('Numeric VM measurement must write its raw report under build/')
+        }
+        if (report.exists()) throw new GradleException('Use a fresh numeric VM report path')
+        tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+            systemProperty 'academy.numericUpgradeBenchmarkStage', stage
+            systemProperty 'academy.numericUpgradeBenchmarkReport', report.absolutePath
+        }
+    }
+}

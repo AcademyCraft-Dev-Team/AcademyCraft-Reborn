@@ -28,6 +28,7 @@ import org.academy.internal.client.ability.program.ProgramTaskPreview
 import org.academy.internal.client.ability.program.ProgramPaletteCatalog
 import org.academy.internal.client.ability.program.ProgramEditorMetrics
 import org.academy.internal.client.ability.program.ProgramEditorCachePolicy
+import org.academy.internal.client.ability.program.ProgramUpgradeBackup
 import org.academy.api.common.profiler.AcademyProfiler
 import org.academy.internal.client.gui.layout.ProgramEditorLayout
 import org.academy.internal.client.gui.layout.ProgramEditorVariant
@@ -38,12 +39,14 @@ import org.academy.internal.common.ability.mentalout.precision.PrecisionOperatio
 import org.academy.internal.common.ability.program.*
 import org.academy.internal.common.ability.program.editor.ProgramEditorDocument
 import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog
+import org.academy.internal.common.ability.program.migrate.ProgramNumericUpgrades
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinition
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds
 import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds
 import java.math.BigDecimal
+import java.io.IOException
 import java.util.*
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -119,6 +122,20 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var initialView = true
     private var connection: ConnectionDrag? = null
     private var quickInsert: QuickInsert? = null
+    private var numericUpgradePreview: ProgramNumericUpgrades.Plan? = null
+    private var numericUpgradeScroll = 0
+    private var numericUpgradeSlot = -1
+    private var numericUpgradeRevision = -1L
+    private var numericUpgradeSessionRevision = -1L
+    private var numericUpgradeExtensions: ProgramNodeExtensionIndex.Snapshot? = null
+    private var numericUpgradeError: Component? = null
+    private var numericUpgradeLastBackup: ProgramUpgradeBackup.Receipt? = null
+    private var numericUpgradeCachedPlan: ProgramNumericUpgrades.Plan? = null
+    private var numericUpgradeCachedError: Component? = null
+    private var numericUpgradeCachedLanguage: Language? = null
+    private var numericUpgradeCachedExtensions: ProgramNodeExtensionIndex.Snapshot? = null
+    private var numericUpgradeCachedWidth = -1
+    private var numericUpgradeCachedLines: List<String> = emptyList()
     private var serverDiagnostic: PrecisionGraph.Diagnostic = PrecisionGraph.Diagnostic.OK
     private var serverCompileDiagnostic: ProgramDiagnostic? = null
     private var transientDetail: Component? = null
@@ -255,6 +272,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     fun applyServerState(selectedSlot: Int, serverProgram: AbilityProgram, serverRevision: Long) {
+        closeNumericUpgradePreview()
         revision = serverRevision
         if (slot != selectedSlot) return
         setProgram(serverProgram, false)
@@ -354,6 +372,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     override fun isPauseScreen(): Boolean = !showRunTrace
 
     override fun removed() {
+        closeNumericUpgradePreview()
         session.closed(this)
         super.removed()
     }
@@ -379,6 +398,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
                     if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY)
                     renderStatus(graphics)
                     renderQuickInsert(graphics, mouseX, mouseY)
+                    renderNumericUpgradePreview(graphics, mouseX, mouseY)
                 }
             } finally {
                 performanceMetrics.endFrame(started)
@@ -389,6 +409,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private inner class TooltipSurface : AbstractWidget() {
         override fun renderInternal(context: Canvas) {
             super.renderInternal(context)
+            if (numericUpgradePreview != null) return
             val minecraft = Minecraft.getInstance()
             val window = minecraft.window
             val mouseX = renderMouseCoordinate(minecraft.mouseHandler.getScaledXPos(window))
@@ -1505,6 +1526,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         syncLayout()
         val x = e.x()
         val y = e.y()
+        if (numericUpgradePreview != null) {
+            if (e.button() == 0) handleNumericUpgradeClick(x, y)
+            return true
+        }
         if (e.button() == 0) {
             if (search != null && search!!.isVisible()
                 && inside(x, y, search!!.x.toDouble(), search!!.y.toDouble(), search!!.width.toDouble(), 15.0)
@@ -1565,6 +1590,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun mouseDragged(e: MouseButtonEvent, mouseX: Double, mouseY: Double): Boolean {
+        if (numericUpgradePreview != null) return true
         if (draggingPowerField != null && e.button() == 0) {
             val selected = node(draggingPowerNode)
             if (selected != null) updatePowerSlider(selected, draggingPowerField!!, e.x())
@@ -1591,6 +1617,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun mouseReleased(e: MouseButtonEvent): Boolean {
+        if (numericUpgradePreview != null) return true
         if (draggingPowerField != null && e.button() == 0) {
             draggingPowerField = null
             draggingPowerNode = -1
@@ -1617,6 +1644,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         scrollX: Double,
         scrollY: Double
     ): Boolean {
+        if (numericUpgradePreview != null) {
+            scrollNumericUpgrade(-sign(scrollY).toInt() * 3)
+            return true
+        }
         if (showTaskPreview && inspectorVisible() && inside(mouseX, mouseY,
                 inspectorX().toDouble(), canvasY.toDouble(), inspectorWidth().toDouble(), canvasH.toDouble())) {
             val rows = maxOf(1, (canvasH - 30) / 10)
@@ -1674,6 +1705,16 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun keyPressed(e: KeyEvent): Boolean {
+        if (numericUpgradePreview != null) {
+            when (e.key()) {
+                InputConstants.KEY_ESCAPE -> closeNumericUpgradePreview()
+                InputConstants.KEY_UP -> scrollNumericUpgrade(-1)
+                InputConstants.KEY_DOWN -> scrollNumericUpgrade(1)
+                InputConstants.KEY_PAGEUP -> scrollNumericUpgrade(-numericUpgradeVisibleRows())
+                InputConstants.KEY_PAGEDOWN -> scrollNumericUpgrade(numericUpgradeVisibleRows())
+            }
+            return true
+        }
         val quick = quickInsert
         if (quick != null) {
             val entries = quickInsertEntries(quick)
@@ -1760,6 +1801,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun charTyped(e: CharacterEvent): Boolean {
+        if (numericUpgradePreview != null) return true
         val quick = quickInsert
         if (quick != null) {
             if (quick.query.length < 64 && !Character.isISOControl(e.codepoint())) {
@@ -1791,6 +1833,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun keyReleased(e: KeyEvent): Boolean {
+        if (numericUpgradePreview != null) return true
         if (e.key() == InputConstants.KEY_SPACE) {
             spaceDown = false
             panning = false
@@ -1800,12 +1843,14 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun onClose() {
+        closeNumericUpgradePreview()
         session.updateLocalProgram(slot, document.program())
         session.closed(this)
         super.onClose()
     }
 
     private fun handleTopBarClick(mouseX: Double, mouseY: Double): Boolean {
+        if (numericUpgradePreview != null) return handleNumericUpgradeClick(mouseX, mouseY)
         var x = panelX + 4 + (if (panelW >= 620) 96 else 0)
         val slotWidth = slotTabWidth(x)
         for (index in 0 until session.slotCount()) {
@@ -1846,6 +1891,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
                     8 -> importProgram()
                     9 -> save()
                     10 -> setProgram(session.restoredProgram(slot), true)
+                    11 -> openNumericUpgradePreview()
                     else -> {
                     }
                 }
@@ -1854,6 +1900,242 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             toolsX += TOOL_SIZE + 2
         }
         return false
+    }
+
+    private fun openNumericUpgradePreview(): Boolean {
+        if (numericUpgradePreview != null) return true
+        if (!configurationInputsValid()) {
+            showTransient(PrecisionGraph.Diagnostic.INVALID_PARAMETER)
+            return false
+        }
+        val plan = try {
+            ProgramNumericUpgrades.preview(document.program(), definition, session.capabilities().toSet())
+        } catch (_: RuntimeException) {
+            transientDetail = upgradeText("validation_failed")
+            transientUntil = System.currentTimeMillis() + 6000
+            return false
+        }
+        numericUpgradeSlot = slot
+        numericUpgradeRevision = revision
+        numericUpgradeSessionRevision = session.revision()
+        numericUpgradeExtensions = ProgramNodeExtensionIndex.snapshot(document.program().category())
+        numericUpgradePreview = plan
+        numericUpgradeScroll = 0
+        numericUpgradeError = null
+        clearNumericUpgradeLines()
+        numericUpgradeLastBackup = null
+        quickInsert = null
+        taskTemplatesOpen = false
+        connection = null
+        draggingNode = null
+        selectionDrag = null
+        draggingPowerField = null
+        draggingPowerNode = -1
+        panning = false
+        spaceDown = false
+        search?.isFocused = false
+        clearConfigurationInputs()
+        updateSearchBounds()
+        return true
+    }
+
+    private fun closeNumericUpgradePreview() {
+        numericUpgradePreview = null
+        numericUpgradeError = null
+        numericUpgradeExtensions = null
+        numericUpgradeSlot = -1
+        numericUpgradeScroll = 0
+        clearNumericUpgradeLines()
+        updateSearchBounds()
+    }
+
+    private fun clearNumericUpgradeLines() {
+        numericUpgradeCachedPlan = null
+        numericUpgradeCachedError = null
+        numericUpgradeCachedLanguage = null
+        numericUpgradeCachedExtensions = null
+        numericUpgradeCachedWidth = -1
+        numericUpgradeCachedLines = emptyList()
+    }
+
+    private fun upgradeText(key: String, vararg args: Any): Component =
+        Component.translatable("screen.academy.program.upgrade.$key", *args)
+
+    private fun numericUpgradeBounds(): Rect {
+        val w = minOf(620, (panelW - 12).coerceAtLeast(1))
+        val h = minOf(380, (panelH - 12).coerceAtLeast(1))
+        return Rect(panelX + (panelW - w) / 2, panelY + (panelH - h) / 2, w, h)
+    }
+
+    private fun numericUpgradeApplyBounds(): Rect {
+        val b = numericUpgradeBounds()
+        val w = (b.width - 24).coerceAtLeast(2) / 2
+        return Rect(b.x + b.width - w - 8, b.y + b.height - 28, w, 20)
+    }
+
+    private fun numericUpgradeKeepBounds(): Rect {
+        val b = numericUpgradeBounds()
+        return Rect(b.x + 8, b.y + b.height - 28, (b.width - 24).coerceAtLeast(2) / 2, 20)
+    }
+
+    private fun numericUpgradeVisibleRows(): Int = maxOf(1, (numericUpgradeBounds().height - 68) / 10)
+
+    private fun numericUpgradeLines(): List<String> {
+        val plan = numericUpgradePreview ?: return emptyList()
+        val width = (numericUpgradeBounds().width - 26).coerceAtLeast(1)
+        val language = Language.getInstance()
+        val extensions = ProgramNodeExtensionIndex.snapshot(plan.source().category())
+        if (numericUpgradeCachedPlan === plan && numericUpgradeCachedError === numericUpgradeError
+            && numericUpgradeCachedLanguage === language && numericUpgradeCachedExtensions === extensions
+            && numericUpgradeCachedWidth == width) return numericUpgradeCachedLines
+        val lines = ArrayList<String>()
+        fun add(value: String) {
+            lines.addAll(ProgramUiGraphics.wrap(value, width.toFloat(), ProgramUiGraphics.BODY_FONT_SIZE))
+            lines.add("")
+        }
+        numericUpgradeError?.let { add(it.string) }
+        add(upgradeText("explanation").string)
+        add(upgradeText("backup_help").string)
+        add(upgradeText("summary", plan.changes().size, plan.retained().size).string)
+        for (change in plan.changes()) {
+            val from = catalog.entry(change.sourceType())?.let { Component.translatable(it.translationKey()).string }
+                ?: change.sourceType().toString()
+            val to = catalog.entry(change.targetType())?.let { Component.translatable(it.translationKey()).string }
+                ?: change.targetType().toString()
+            val config = change.configuration().asJsonObject
+            // These two fields belong to the planner's audited built-in mapping. Resolve the same
+            // finite labels as the inspector without retaining results from dynamic option providers.
+            val kind = Component.translatable("screen.academy.program.configuration.scalar_type." + config.get("type").asString).string
+            val operatorGroup = if (change.targetType() == CommonProgramNodeIds.NUMERIC_COMPARE) "comparison" else "arithmetic"
+            val operator = Component.translatable("screen.academy.program.configuration.$operatorGroup." + config.get("operator").asString).string
+            add(upgradeText("change", change.nodeId(), from, to, "$kind · $operator").string)
+        }
+        for (retained in plan.retained()) {
+            val label = catalog.entry(retained.type())?.let { Component.translatable(it.translationKey()).string }
+                ?: retained.type().toString()
+            add(upgradeText("retained", retained.nodeId(), label,
+                upgradeText("reason." + retained.reason().name.lowercase(Locale.ROOT)).string).string)
+        }
+        if (plan.changes().isEmpty()) add(upgradeText("no_changes").string)
+        for (diagnostic in plan.diagnostics()) {
+            add(ProgramDiagnosticText.describe(plan.source(), catalog, diagnostic).string)
+        }
+        numericUpgradeCachedPlan = plan
+        numericUpgradeCachedError = numericUpgradeError
+        numericUpgradeCachedLanguage = language
+        numericUpgradeCachedExtensions = extensions
+        numericUpgradeCachedWidth = width
+        numericUpgradeCachedLines = lines.toList()
+        return numericUpgradeCachedLines
+    }
+
+    private fun scrollNumericUpgrade(delta: Int) {
+        numericUpgradeScroll = (numericUpgradeScroll + delta)
+            .coerceIn(0, maxOf(0, numericUpgradeLines().size - numericUpgradeVisibleRows()))
+    }
+
+    private fun renderNumericUpgradePreview(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
+        val plan = numericUpgradePreview ?: return
+        val b = numericUpgradeBounds()
+        graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xC0000000.toInt())
+        graphics.fill(b.x, b.y, b.x + b.width, b.y + b.height, POPUP_BACKGROUND)
+        border(graphics, b.x, b.y, b.width, b.height, BORDER)
+        headingText(graphics, upgradeText("title").string, b.x + 8, b.y + 8, TEXT, b.width - 16)
+        val lines = numericUpgradeLines()
+        val rows = numericUpgradeVisibleRows()
+        numericUpgradeScroll = numericUpgradeScroll.coerceIn(0, maxOf(0, lines.size - rows))
+        graphics.enableScissor(b.x + 8, b.y + 24, b.x + b.width - 8, b.y + b.height - 40)
+        try {
+            for (i in 0 until rows) {
+                val index = numericUpgradeScroll + i
+                if (index >= lines.size) break
+                smallText(graphics, lines[index], b.x + 8, b.y + 25 + i * 10,
+                    if (numericUpgradeError != null && index == 0) ERROR else DIM, b.width - 26)
+            }
+        } finally { graphics.disableScissor() }
+        if (lines.size > rows) {
+            val track = (b.height - 68).coerceAtLeast(1)
+            val thumb = maxOf(8, track * rows / lines.size).coerceAtMost(track)
+            val top = b.y + 25 + (track - thumb) * numericUpgradeScroll / (lines.size - rows)
+            graphics.fill(b.x + b.width - 11, top, b.x + b.width - 9, top + thumb, accentColor)
+        }
+        smallText(graphics, upgradeText("scroll_hint").string, b.x + 8, b.y + b.height - 39, DIM, b.width - 16)
+        val keep = numericUpgradeKeepBounds()
+        button(graphics, keep.x, keep.y, keep.width, keep.height, upgradeText("keep"), mouseX, mouseY, false, false)
+        val apply = numericUpgradeApplyBounds()
+        val enabled = plan.canApply() && numericUpgradeIdentityCurrent(plan)
+        renderControl(graphics, apply.x, apply.y, apply.width, apply.height, enabled, false,
+            enabled && inside(mouseX.toDouble(), mouseY.toDouble(), apply.x.toDouble(), apply.y.toDouble(),
+                apply.width.toDouble(), apply.height.toDouble()))
+        graphics.centeredText(upgradeText("apply").string, apply.x + apply.width / 2f, apply.y + 6f,
+            if (enabled) TEXT else DISABLED, ProgramUiGraphics.BODY_FONT_SIZE, (apply.width - 6).toFloat())
+    }
+
+    private fun handleNumericUpgradeClick(x: Double, y: Double): Boolean {
+        if (numericUpgradePreview == null) return false
+        val keep = numericUpgradeKeepBounds()
+        val apply = numericUpgradeApplyBounds()
+        if (inside(x, y, keep.x.toDouble(), keep.y.toDouble(), keep.width.toDouble(), keep.height.toDouble())) {
+            closeNumericUpgradePreview()
+        } else if (inside(x, y, apply.x.toDouble(), apply.y.toDouble(), apply.width.toDouble(), apply.height.toDouble())) {
+            applyNumericUpgrade()
+        }
+        return true
+    }
+
+    private fun numericUpgradeIdentityCurrent(plan: ProgramNumericUpgrades.Plan): Boolean =
+        Minecraft.getInstance().gui.screen() === this && slot == numericUpgradeSlot
+            && revision == numericUpgradeRevision && session.revision() == numericUpgradeSessionRevision
+            && ProgramNodeExtensionIndex.snapshot(plan.source().category()) === numericUpgradeExtensions
+
+    private fun applyNumericUpgrade(): Boolean {
+        val plan = numericUpgradePreview ?: return false
+        fun fail(key: String, vararg args: Any): Boolean {
+            numericUpgradeError = upgradeText(key, *args)
+            numericUpgradeScroll = 0
+            clearNumericUpgradeLines()
+            return false
+        }
+        if (!numericUpgradeIdentityCurrent(plan) || !ProgramUpgradeBackup.sameProgram(plan.source(), document.program())) {
+            return fail("stale")
+        }
+        val fresh: ProgramNumericUpgrades.Plan
+        val replacement: ProgramEditorDocument
+        try {
+            val currentCapabilities = session.capabilities().toSet()
+            fresh = ProgramNumericUpgrades.preview(document.program(), definition, currentCapabilities)
+            if (!fresh.canApply() || !ProgramUpgradeBackup.sameProgram(fresh.source(), plan.source())
+                || !ProgramUpgradeBackup.sameProgram(fresh.candidate(), plan.candidate())
+                || !definition.compile(fresh.candidate(), currentCapabilities).valid()) return fail("validation_failed")
+            replacement = ProgramEditorDocument(fresh.candidate(), definition, currentCapabilities)
+            // Both the new document and a future undo must preserve the exact archived graph.
+            if (!ProgramUpgradeBackup.sameProgram(replacement.program(), fresh.candidate())
+                || !ProgramUpgradeBackup.sameProgram(document(fresh.source()).program(), fresh.source())) {
+                return fail("normalization")
+            }
+        } catch (_: RuntimeException) { return fail("validation_failed") }
+        val receipt = try {
+            ProgramUpgradeBackup.create(Minecraft.getInstance().gameDirectory.toPath(), slot,
+                numericUpgradeSessionRevision, fresh.source(), fresh.candidate())
+        } catch (failure: IOException) {
+            return fail("backup_failed", failure.message ?: failure.javaClass.simpleName)
+        }
+        numericUpgradeLastBackup = receipt
+        if (!numericUpgradeIdentityCurrent(plan) || !ProgramUpgradeBackup.sameProgram(plan.source(), document.program())) {
+            return fail("stale_backup_written", receipt.path().toString())
+        }
+        pushUndo(fresh.source())
+        closeNumericUpgradePreview()
+        install(replacement, true)
+        selectNode(-1)
+        selectionDrag = null
+        connection = null
+        quickInsert = null
+        configurationInputValidity.clear()
+        transientDiagnostic = PrecisionGraph.Diagnostic.OK
+        transientDetail = upgradeText("backup_saved", receipt.path().toString())
+        transientUntil = System.currentTimeMillis() + 15000
+        return true
     }
 
     private fun slotTabWidth(startX: Int): Int {
@@ -2503,12 +2785,17 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun pushUndo() {
-        undo.push(document.program())
+        pushUndo(document.program())
+    }
+
+    private fun pushUndo(program: AbilityProgram) {
+        undo.push(program)
         while (undo.size > 64) undo.removeLast()
         redo.clear()
     }
 
     private fun setProgram(program: AbilityProgram?, recordUndo: Boolean) {
+        closeNumericUpgradePreview()
         if (recordUndo) pushUndo()
         document = document(program ?: session.emptyProgram(slot))
         selectNode(-1)
@@ -2794,12 +3081,16 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
 
     private fun updateSearchBounds() {
         val box = search ?: return
-        box.visibility = if (paletteVisible()) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
+        box.visibility = if (numericUpgradePreview == null && paletteVisible()) Widget.Visibility.VISIBLE else Widget.Visibility.GONE
         if (!box.isVisible()) box.isFocused = false
         setTextBoxBounds(box, paletteX() + 4, canvasY + PALETTE_SEARCH_OFFSET_Y, paletteWidth() - 8)
     }
 
     private fun syncConfigurationInputs() {
+        if (numericUpgradePreview != null) {
+            clearConfigurationInputs()
+            return
+        }
         val selected = node(selectedNode)
         val fields = if (selected == null) emptyList() else configurationFields(selected)
         val visible = inspectorVisible() && !showRunTrace && !showTaskPreview && selected != null && fields.isNotEmpty()
@@ -3160,10 +3451,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         private const val PALETTE_LIST_OFFSET_Y = 64
         private val TOOL_LABELS = arrayOf(
             "delete", "copy", "paste", "undo", "redo", "auto_layout", "fit",
-            "export", "import", "save", "restore"
+            "export", "import", "save", "restore", "upgrade_numeric"
         )
         private val TOOL_GLYPHS = arrayOf(
-            "X", "C", "P", "<", ">", "A", "F", "E", "I", "S", "R"
+            "X", "C", "P", "<", ">", "A", "F", "E", "I", "S", "R", "U"
         )
 
         @JvmStatic

@@ -1,0 +1,21 @@
+// Real old/new numeric output drives the same paid world action in a fresh isolated server.
+allprojects {
+    afterEvaluate {
+        def runId = providers.gradleProperty('academyNumericUpgradeRun').getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) throw new GradleException('Invalid numeric upgrade run id')
+        def prefix = 'native-program-numeric-upgrade-precision-e-'
+        def directory = rootProject.file(providers.gradleProperty('academyNumericUpgradeDirectory')
+                .getOrElse("run/${prefix}${runId}")).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath()) || !directory.name.startsWith(prefix)) {
+            throw new GradleException('Numeric paid-action test requires its isolated directory')
+        }
+        if (directory.exists() && directory.listFiles()?.length > 0) throw new GradleException('Use a fresh numeric paid-action directory')
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_numeric_upgrade_equivalence') throw new GradleException('Select only the numeric upgrade equivalence test')
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionNumericUpgradeEquivalence', 'true'
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_numeric_upgrade_equivalence')
+        }
+    }
+}

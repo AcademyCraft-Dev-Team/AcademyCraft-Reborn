@@ -1,0 +1,25 @@
+// Actual numeric upgrade UI and revisioned save in a disposable copied world; language is external.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-precision-numeric-upgrade-client')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke-precision-numeric-upgrade-')) {
+            throw new GradleException('Numeric upgrade client requires its isolated copied directory')
+        }
+        if (!new File(directory, 'saves/test/level.dat').isFile()) throw new GradleException('Prepare a copied saves/test world first')
+        if (directory.listFiles()?.any { it.name.startsWith('precision-numeric-upgrade-') && it.name.endsWith('-result.json') }) {
+            throw new GradleException('Use a fresh numeric upgrade client result directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionNumericUpgradeSmoke', 'true'
+            systemProperty 'academy.precisionQueryPlaySmoke', 'false'
+            systemProperty 'academy.precisionAutomaticNetworkSmoke', 'false'
+            systemProperty 'academy.precisionPerformanceSmoke', 'false'
+            systemProperty 'academy.precisionLearningPathSmoke', 'false'
+            systemProperty 'academy.precisionPresentationSmoke', 'false'
+            programArguments.addAll('--width', '1600', '--height', '900', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

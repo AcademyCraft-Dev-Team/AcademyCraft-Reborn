@@ -1,0 +1,845 @@
+{
+  "passed": true,
+  "stage": "precision E, optional numeric upgrade, shared execution and bounded fixed configuration",
+  "baseline": "195ed8c6",
+  "date": "2026-10-31",
+  "unit_tests": {
+    "test": {
+      "tests": 3494,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "sableCompatTest": {
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "editorTest": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "files": [
+    {
+      "path": "docs/precision_node_merge_text_2026_10_30.zh-CN.md",
+      "sha256": null
+    },
+    {
+      "path": "docs/precision_numeric_upgrade_stage_e_2026_10_31.zh-CN.md",
+      "sha256": null
+    },
+    {
+      "path": "docs/precision_operation_redesign_2026_10_30.zh-CN.md",
+      "sha256": null
+    },
+    {
+      "path": "docs/structure_skill_migration_handoff.zh-CN.md",
+      "sha256": null
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/client/validation/PrecisionNumericUpgradeSmoke.java",
+      "sha256": "52D659FCAD2D22194E02C22A7362BD701BBBD09474C88AD86B20B39B808F3677"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/ProgramNumericUpgradeGameTests.java",
+      "sha256": "B5850996CD8AD10E2B501480C39E55500E044DE9EE849766BE82E1939DCB2415"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/ability/program/ProgramUpgradeBackup.java",
+      "sha256": "E56B018B1688E7F55E7EB3E3D8C4A94E246FE0680980D1F2496D5071362BE050"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/CommonProgramExecutors.java",
+      "sha256": "4AC9868A3957DF57D07A2745C300630A6973167B3544781E10FED1B2C6E7234C"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/migrate/ProgramNumericUpgrades.java",
+      "sha256": "2C1F446368837BF8D19E772D19E69435472AD0FFCE4E065E43C0B365CE7D9B8C"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeCatalog.java",
+      "sha256": "6BA39A9D66F88FD6E569652B3953A541312B9D9B8457C8B323CE4053102B906E"
+    },
+    {
+      "path": "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt",
+      "sha256": "0C7D9173E1030732F58810DA4F33A7DBDA6E8A4868BE6830E698BE724F6E9652"
+    },
+    {
+      "path": "src/main/resources/assets/academy/lang/en_us.json",
+      "sha256": "4E7FC8FEC59B5639FD6FEBC9F1A04154FD9776F0256F3805B3FC78D177301101"
+    },
+    {
+      "path": "src/main/resources/assets/academy/lang/zh_cn.json",
+      "sha256": "AB44C53C16B411EA07F1111339D1740C976F8931BE1B43D26FC53AB226395853"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/ability/program/ProgramUpgradeBackupTest.java",
+      "sha256": "530C36DF85F0FD188C96FB0CD775FF65804CAE972E94033637E3B1B832BEFAF5"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramNumericUpgradeBenchmark.java",
+      "sha256": "2CF2438D09AA310A689F270FA3AC22B1BA7EAC6365A6E2A80D1A0E8CAE22F2BB"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramNumericUpgradeEquivalenceTest.java",
+      "sha256": "55BFA1365F53D9958EF37F76F8A744BD12C9A26E9DDA79D21357A9E9A9CB2F6E"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/migrate/ProgramNumericUpgradesTest.java",
+      "sha256": "58B896BB5964621D2F72854B307BD08FF1D0DD6EC805D1DE84988B3655B81345"
+    },
+    {
+      "path": "validation/precision_nodes/numeric_upgrade_en_us_final_2026_10_31.json",
+      "sha256": "8DD93E17D7F0B01564595F382A285373E0678830A7DCE368E6C226CFAF55D804"
+    },
+    {
+      "path": "validation/precision_nodes/numeric_upgrade_paid_final_2026_10_31.json",
+      "sha256": "04C79CB266550412CC438F6367AB76403CCA916C197C22BAB78ABEA316B8D93A"
+    },
+    {
+      "path": "validation/precision_nodes/numeric_upgrade_zh_cn_final_2026_10_31.json",
+      "sha256": "B6628256DFD4DE7E21F8A8F333D14FA24E4EE19078556A904AAB39C4EC58E5A8"
+    },
+    {
+      "path": "validation/precision_nodes/precision_batch_e_validation_2026_10_31.json",
+      "sha256": null
+    },
+    {
+      "path": "validation/precision_nodes/precision_e_numeric_baseline_2026_10_31.json",
+      "sha256": "E9220B500B02E83E36A31E2CCB02F7C16773D916F351B0CD14132376A92953B7"
+    },
+    {
+      "path": "validation/precision_nodes/precision_e_numeric_baseline_source_hashes_2026_10_31.json",
+      "sha256": "1D117EB2DBA33C4E9470F36185BAFCABA304AD7D73DE5239B5C546F210A950D6"
+    },
+    {
+      "path": "validation/precision_nodes/precision_e_numeric_optimized_2026_10_31.json",
+      "sha256": "EAB3B59CEC92955F0948CBB26A0954BE3001CA0005E4F05746453DAA9EAC8B73"
+    },
+    {
+      "path": "validation/precision_nodes/precision_e_numeric_optimized_repeat_2026_10_31.json",
+      "sha256": "3C399299C4FE4E78D1ED25CB3B9C8F7AAC17AD661EA731EBFD6C1520FA569CD0"
+    },
+    {
+      "path": "validation/precision_nodes/precision_numeric_upgrade_client.init.gradle",
+      "sha256": "515B14F1A9AC577802E634863996FDEE01CFFCB8BA6D8366685C524FD4CD6CC5"
+    },
+    {
+      "path": "validation/precision_nodes/precision_numeric_upgrade_gametest.init.gradle",
+      "sha256": "6E716994BDC936A849CDDF7259D4812F81455FC7018C0E7E653D33253E3D6D75"
+    },
+    {
+      "path": "validation/precision_nodes/precision_numeric_vm_benchmark.init.gradle",
+      "sha256": "90BAE409FC64B0A3B3AF29B9A680C93667E36B13CF1B7B16AF1A1DE17FEFD817"
+    },
+    {
+      "path": "validation/precision_nodes/verify_numeric_upgrade_reports.py",
+      "sha256": "A805CF5AD001AC152EE2F2D253BA0BF9C734CF199412775FCB851672018A6BED"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-dev.jar",
+      "sha256": "39223A4F9D77985C4A4F54B27F32DFFC4123C137D9A27E4F73A8F368C2D3658C",
+      "matched_compiled_classes": 95,
+      "languages_match": true,
+      "fixture_classes_absent": true
+    },
+    {
+      "path": "build/libs/academy-26.2.0-0.0.4-alpha-release.jar",
+      "sha256": "EF85FC2D30AD7412DD04E0A79C42F79201F2ED48349AC495AAECC4BA0B6A26E8",
+      "matched_compiled_classes": 95,
+      "languages_match": true,
+      "fixture_classes_absent": true
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-zh-r2-20261031/screenshots/precision-numeric-upgrade-zh_cn-preview.png",
+      "sha256": "CE8BE490AF296DD48BB79878AECD18C492D4C69C98B20E8A97D90E953F98E587",
+      "visually_reviewed": true
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-zh-r2-20261031/screenshots/precision-numeric-upgrade-zh_cn-applied.png",
+      "sha256": "452478C179E67CAD4178AFD9A6B193715BCCC79731E5B86F5AE477CAC5E1E355",
+      "visually_reviewed": true
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-zh-r2-20261031/screenshots/precision-numeric-upgrade-zh_cn-restored.png",
+      "sha256": "1DBD25E3593355A42DF6C0C6C5BEADE64DC49F06521B687A74279EE4870C6882",
+      "visually_reviewed": true
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-en-r2-20261031/screenshots/precision-numeric-upgrade-en_us-preview.png",
+      "sha256": "5DCD5445FC3F4DB81F160AE36AE9602AB33C4E306B6203ADFF644E719C46775F",
+      "visually_reviewed": true
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-en-r2-20261031/screenshots/precision-numeric-upgrade-en_us-applied.png",
+      "sha256": "831A5A83F8B365F2940031192311B1B920DD3D70734A4D2D2948888D48671587",
+      "visually_reviewed": true
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-en-r2-20261031/screenshots/precision-numeric-upgrade-en_us-restored.png",
+      "sha256": "DD53A6B195B053B602A94232EC2D5BC2491FF313F1E666681A9AE41D96E62275",
+      "visually_reviewed": true
+    }
+  ],
+  "client_backups": [
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-zh-r2-20261031/academy/program-upgrade-backups/program-upgrade-5300fe4e-274e-4316-9d14-1c2ebe8ed0f0.json",
+      "sha256": "2B8C8AEDF953CA229A63AB96C90F826BB50EB4AEEC469C2AE9F042808A5805A8"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke-precision-numeric-upgrade-en-r2-20261031/academy/program-upgrade-backups/program-upgrade-86f0e968-3b2b-479a-aa54-ab827e3e7f0a.json",
+      "sha256": "5151E86F12528D81FAC7D881B79633213B906BEEEEB8BE5661DA094F8564055B"
+    }
+  ],
+  "source_world_files": [
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/academy.json",
+      "sha256": "512C9438F4EEA4E1334E589FD937F0701D13A22AD6C0685F5D01D1EF3ACE8EE6"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/icon.png",
+      "sha256": "85ECBB2970F522C748F140A0F9B52F8868C5B83EF1BA0E16B39B656B5DE2935F"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/level.dat",
+      "sha256": "CC4D604E941A80D66C48481047F093E924DC359AB4138278804DEB8BD0247463"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/level.dat_old",
+      "sha256": "3343DDEC654E5D101E9854AED9843DEBF99DA5C01F68E1A5BBB4FDB31BD735D1"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/academy/native_structures/metadata.dat",
+      "sha256": "4A12E79BD167887100BFB1453A909DE6B8BD07A42A9E1F5D4288A1EC6235706E"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/academy/native_structures/owner_0.txt",
+      "sha256": "6DDC630EACB936AA29FFDC9C405FFEAEA3BF1DA1655DA2DED219B5EB3CCF3D5A"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/academy/native_structures/owner_1.txt",
+      "sha256": "A0853FBE81C25E50F55493D3F743DECDA12CA6A33D92420EB2FCEE69DE9B6DC0"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/academy/native_structures/owner_2.txt",
+      "sha256": "6F2368CDC2E0AABF4D455CFF9544343E7C13EFDA129D1399083C9528CFBF411C"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/academy/native_structures/owner_3.txt",
+      "sha256": "232D370CD733ACAD9329B8D243A694D47869D23398E7A69238FD4AE245A92EEC"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/academy/sublevels/metadata.dat",
+      "sha256": "041E1B83C22D1DEDE4A677FACEBF9F19BB8444A3A5E4FA2B42CC2E932D4CA60D"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/custom_boss_events.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/game_rules.dat",
+      "sha256": "DD488FC27AE307672F6618D73C0CE0CF42B46BE5852011605EB289A6769F92F1"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/random_sequences.dat",
+      "sha256": "9286DD7C20BDD3782D2CEBFF82E7982B972592D4AF085CC1FAFB20150C80C641"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/scheduled_events.dat",
+      "sha256": "CE2E6DD5438C192EDD35018243C99FB343B268A2A471CE3CB85C2A65184C163E"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/scoreboard.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/stopwatches.dat",
+      "sha256": "E1CFAB0753C6040172525467C952005CDFE616FC209A15FC06CD0028DC0B80D6"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/wandering_trader.dat",
+      "sha256": "E34A3EF874B718B6B76031FB41C1612830BBEE7718877B8ADCD82524971E9473"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/weather.dat",
+      "sha256": "AA05E9FBB665DF2308A81FE59DF880DE1ADE9C0E01DBADF69B1CA39F47D1D2ED"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/world_clocks.dat",
+      "sha256": "34CD8EE21CE6554646384EDD1C0FDF8F6544FC7A6D2E9351E27380920D145E15"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/data/minecraft/world_gen_settings.dat",
+      "sha256": "5A0B233BF220E981AE2BB63CA2B0A309C97BC8BF987959E4B3D26C850D6658CF"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/data/minecraft/raids.dat",
+      "sha256": "2D7D2825F613C4748AE58666F85BA3FCD60AC717EB0CD517472019EA0424DDE8"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/entities/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/entities/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/entities/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/entities/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/poi/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/poi/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/poi/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/poi/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/region/r.-1.-1.mca",
+      "sha256": "46DE97C401888204ED3D9E4C0B46FC819A351A04FA3C7C649EBA3CF5B0D8E948"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/region/r.-1.0.mca",
+      "sha256": "EF9076FF826C49030FE4E6CA8288C859E984A2F7AAD15C68FB34F14FCEBF6FEF"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/region/r.0.-1.mca",
+      "sha256": "3E61A884C84A7F81F8E51ED3D47F5D54BDCE35DFDCFD170C49D57BCE9CC677E8"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_0/region/r.0.0.mca",
+      "sha256": "712A02A259E903BC46F30455F50E2CF8B452F82FEA891989D6225072EBAEA4FF"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/data/minecraft/raids.dat",
+      "sha256": "13CA9A4D298D105479DFB082B7664E7D96BA536053CB5FA48108E4B32F2EC215"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/entities/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/entities/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/entities/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/entities/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/poi/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/poi/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/poi/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/poi/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/region/r.-1.-1.mca",
+      "sha256": "4E648F002E3237C7E507CDF48099B5EB537FF884CA3AB6A258F9FCE42928EB00"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/region/r.-1.0.mca",
+      "sha256": "ED206820D69A1838FAF38B45852D6FE32673E2E1A6C0CCB329A41A98BCE31839"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/region/r.0.-1.mca",
+      "sha256": "6F367BFE94D72D3F99B201DE48463AE8930C266B51C4A2F67B5449BC6015CAAA"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_1/region/r.0.0.mca",
+      "sha256": "4F9452A6006DF02A6970A33285318703C123DB63D9118D8274131DA0D2205F6F"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/data/minecraft/raids.dat",
+      "sha256": "700A22D9D3AF541DBD6D1CC6F69A765B8683DFB54ADB77C8E622ABA33EBA4B46"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/entities/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/entities/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/entities/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/entities/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/poi/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/poi/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/poi/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/poi/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/region/r.-1.-1.mca",
+      "sha256": "BBD1000BCF828C3F87D8505750BE6C87EB2F796D0A2A4A62A550B8A09002BFD4"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/region/r.-1.0.mca",
+      "sha256": "BBC9E5B635B1824597EC6AF8176301C9F5DFDBB69B3FB1655861FBAC71E7B073"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/region/r.0.-1.mca",
+      "sha256": "3151B5CFF1878903FFD51370CB7FEE7D5745B5BEE584C6B98F7D30B5D6BE29A4"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_2/region/r.0.0.mca",
+      "sha256": "791B6A26CCB9EBEC7280900A2FAE5A7B7ADD6090DCF5BE232E9CA2C18934F5B4"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/data/minecraft/raids.dat",
+      "sha256": "9EE3E6A5CC1DE8320D30EEC380AA023D7ABFB34EF3C8CBCD1E5A3122B8551809"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/entities/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/entities/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/entities/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/entities/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/poi/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/poi/r.-1.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/poi/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/poi/r.0.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/region/r.-1.-1.mca",
+      "sha256": "C285097BD9A62FB3FFBFF67F91E324A7E9756B28E621912705228E399ED10643"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/region/r.-1.0.mca",
+      "sha256": "7FA4E34E08DBD3FC40AD16B63406C28D35B28604449C6D4A218573D753CD36CD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/region/r.0.-1.mca",
+      "sha256": "901B850FFB445EE652E4C1B8770DC357F37AB96F95620EC51CE114A7F2AFDF97"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/structure_space_3/region/r.0.0.mca",
+      "sha256": "74C2D8D5B92A463033A78423A0BCEABA1101BB5CB5D9F311F3F5DCC9ABAF9D52"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/data/minecraft/raids.dat",
+      "sha256": "CE51A07BD88C62F4413B0073DD05B0ADCC7477154CED75013F0BD21AACFB6A77"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/entities/r.31.31.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/poi/r.30.30.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/poi/r.30.31.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/poi/r.31.30.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/poi/r.31.31.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/region/r.30.30.mca",
+      "sha256": "D54B31E5FE8B00CEF7028F44F494B75B8ED485E15D9C5916235280A22E2BD536"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/region/r.30.31.mca",
+      "sha256": "E84136F41B11E7C948FD2617C6A42336AEA0446ED30BB5887BF1CC0A9288023A"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/region/r.31.30.mca",
+      "sha256": "91E778CBE20D5FF27FEC570D9FD9F893502A30346979C55D85E07DD284121E76"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/academy/sublevel_plots/region/r.31.31.mca",
+      "sha256": "2771A78950D0BCA1A5BA12A9580734DB68EEF2FB2E98AE5CC019BFC7BEEFC955"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/academy/mental_work_orders.dat",
+      "sha256": "B8FB43731970B39D34E83DBE15C920E05565C2CF3FFC1A24A7D29B065DC5DD7E"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/academy/pvp_cooldowns.dat",
+      "sha256": "7311BCD695DEE2A52FD436E07A0E387511AD23477D804BF5F777478482457840"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/academy/temporal_state.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/minecraft/raids.dat",
+      "sha256": "A9330C4EE9BE702685D3F2767D4D30E6B6283DA80E33DA5E70B48C6532FBDDC6"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/entities/r.-1.-1.mca",
+      "sha256": "BBF42AF178576F4B0FD8A4A99E30C6BAF19DDB20A7C2AAC2DEAC5FBEB651EEFB"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/entities/r.-1.0.mca",
+      "sha256": "30664E47F7159A3A53961E7CE6B63798BF18ED5FFA287477132CF61538E5F691"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/entities/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/entities/r.0.0.mca",
+      "sha256": "FB6FE3C9A5637B8DB9B39C89E8AE0B8D062FC0451AA851E1583F7F3349777353"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.-1.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.-1.0.mca",
+      "sha256": "784768C1BFD4ADA390FB387543A2BC034A2DF9BA4D6A0C15267E142C1FFA0F9C"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.-1.1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.-2.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.-2.0.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.-2.1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.0.-1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.0.0.mca",
+      "sha256": "BCA67C5D19611D1F33F8CE0659A4A5E62051FB610C8F20D36A44D41D5CEF996F"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/poi/r.0.1.mca",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.-1.-1.mca",
+      "sha256": "D4769DDB2D106A475BB725433C743FA11054DF9E979616AB8B4FF9FB28CD692C"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.-1.0.mca",
+      "sha256": "640E73CBB6B1ABF2B5597416CD7F7A02E026B713069B865EA26C2CD48D8CC2F1"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.-1.1.mca",
+      "sha256": "3F474F2587D381806AC6B8D8BD5F194B688C0FC338E9F2FC7178ECEDE43F78C7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.-2.-1.mca",
+      "sha256": "281938E826DCEE323CE14193E10F54AA81C828168935EACF12ABD7016AE8164A"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.-2.0.mca",
+      "sha256": "53C7BD8DC934BF3508706BE80227E329E6C147D5113D378A512B276BC8ACD55C"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.-2.1.mca",
+      "sha256": "E5ABB12EE62F648B9D044AF9B1DCE09A454ADE6C1CEB8E9EC0CC3E3E4DE6D1E4"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.0.-1.mca",
+      "sha256": "B95016B028433586342FD326543CD04E61E1E261FD581B663CB82B2A66FBE5E1"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.0.0.mca",
+      "sha256": "6CE498DFDBC5AB8FDC8468704A0269C9BCCD9CFA7E4D8A5D0485F5A4ED31B7D0"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/overworld/region/r.0.1.mca",
+      "sha256": "901740CC4145739BBF43990E2C243BDB8FF0F265BAAC4815F35F7D50DDE21E5D"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_end/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_end/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_end/data/minecraft/ender_dragon_fight.dat",
+      "sha256": "5B5E617B69BCAD2E4CD2F0D2E8AF561D94DBACE2B2D158FA8D2CCEB2D741280F"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_end/data/minecraft/raids.dat",
+      "sha256": "A9330C4EE9BE702685D3F2767D4D30E6B6283DA80E33DA5E70B48C6532FBDDC6"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_end/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_end/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_nether/data/academy/suppressed_water.dat",
+      "sha256": "47DCBA4C39A1A281B077E570C56D7B9D856B3602CC5C472D81CBD35028014FFD"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_nether/data/minecraft/chunk_tickets.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_nether/data/minecraft/raids.dat",
+      "sha256": "A9330C4EE9BE702685D3F2767D4D30E6B6283DA80E33DA5E70B48C6532FBDDC6"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_nether/data/minecraft/world_border.dat",
+      "sha256": "DB53306EEAA8468FAF0AD141256319C533C6CC3B9703E9F1F34947E9AD4EF083"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/dimensions/minecraft/the_nether/data/neoforge/data_attachments.dat",
+      "sha256": "109B72FAF6CC8256C38C76506D99DDD00389FB9A7F45E9008F99E2C08EA3BEA7"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/players/advancements/380df991-f603-344c-a090-369bad2a924a.json",
+      "sha256": "9660668F662C9D6A7647120FC7A150CC6635455C4EA50A426AD4B1AB1FF159E0"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/players/data/380df991-f603-344c-a090-369bad2a924a.dat",
+      "sha256": "30B88786F9C520F353EE1FE3BAA79BB2727503D46A3CAB67D45B5C75A8F89E90"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/players/data/380df991-f603-344c-a090-369bad2a924a.dat_old",
+      "sha256": "8AEDD596F83A9693A48DA77D6A6E9F439DEDA84AFE91B51060EA44482EAF395E"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/players/stats/380df991-f603-344c-a090-369bad2a924a.json",
+      "sha256": "5E2ACA6850355E0E563C7D30A5853601B9357D0342F6AA917CE5B6F280B6FBF3"
+    },
+    {
+      "path": "run/native-sublevel-direct-smoke/saves/Native SubLevel Direct Smoke/serverconfig/readme.txt",
+      "sha256": "B1022AB932F8F0EA0CF78D9F312E95B85A4F96F59CA430E63F9A435E512D1186"
+    }
+  ],
+  "preserved_unrelated_rust_sha256": "0B172501A5DA088A1CDA8AD13A41C88005D64B8D62D5347103DB566F84AC3C70",
+  "commit_authorized": true,
+  "raw_reports": [
+    "validation/precision_nodes/precision_e_numeric_baseline_2026_10_31.json",
+    "validation/precision_nodes/precision_e_numeric_optimized_2026_10_31.json",
+    "validation/precision_nodes/precision_e_numeric_optimized_repeat_2026_10_31.json",
+    "validation/precision_nodes/numeric_upgrade_paid_final_2026_10_31.json",
+    "validation/precision_nodes/numeric_upgrade_zh_cn_final_2026_10_31.json",
+    "validation/precision_nodes/numeric_upgrade_en_us_final_2026_10_31.json"
+  ],
+  "successful_logs": [
+    "build/precision-e-baseline-r1.log",
+    "build/precision-e-optimized-r1.log",
+    "build/precision-e-optimized-r3.log",
+    "build/precision-e-equivalence-r1.log",
+    "build/precision-e-full-tests-r2.log",
+    "build/precision-e-paid-r2.log",
+    "build/precision-e-client-zh-r2.log",
+    "build/precision-e-client-en-r2.log",
+    "build/precision-e-build-dev.log",
+    "build/precision-e-build-release.log"
+  ],
+  "early_failures": [
+    {
+      "log": "build/precision-e-core-optimized-r2.log",
+      "cause": "Unsupported stage parameter optimized_repeat; corrected to optimized without changing benchmark whitelist"
+    },
+    {
+      "log": "build/precision-e-ui-compile-r1.log",
+      "cause": "Wrong legacy diagnostic constant and Minecraft screen accessor; corrected to actual mapped APIs"
+    },
+    {
+      "log": "build/precision-e-ui-compile-r2.log",
+      "cause": "Gui screen private field used instead of screen() accessor; corrected"
+    },
+    {
+      "log": "build/precision-e-full-paid-r1.log",
+      "cause": "New language keys unsorted; paid GameTest reused same Runnable map key and lost its rescheduled polling entry. Corrected key ordering and unique callback per poll; original assertions/deadline retained"
+    }
+  ],
+  "scope_limits": [
+    "Only 29 audited arithmetic/comparison aliases are opt-in upgrade candidates; original integer division overflow, constants, mental filters and physical actions remain unchanged",
+    "No runtime ID removal, no node-count or fuel reduction, no automatic graph rewrite on load/save/compile",
+    "Measurements cover single-thread real VM addition DAGs with fixed 128 warmups; no universal old-graph latency, TPS, network or physics performance claim",
+    "Paid gameplay validates one real Darkmatter disassembly action driven by old/new numeric outputs, plus insufficient CP, not every ability action",
+    "Client checks use one real integrated client per language in disposable worlds; no multiplayer WAN/long-term rendering or physical multi-body matrix",
+    "Backup is the current draft, not untouched historical server bytes; disk power-loss recovery and hostile filesystem mutation are not claimed",
+    "D compact layouts, complex physical positive tasks, world/CP preview, old glyph issue and C2 scheduling/fairness remain pending"
+  ]
+}

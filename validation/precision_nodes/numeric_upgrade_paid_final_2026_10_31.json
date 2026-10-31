@@ -1,0 +1,148 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "name": "legacy_paid",
+      "vm": {
+        "status": "COMPLETED",
+        "nodeId": 6,
+        "diagnostic": "NONE"
+      },
+      "accepted": true,
+      "block_became_air": true,
+      "available_cp_before": 400.0,
+      "available_cp_after": 392.85715,
+      "cp_delta": 7.142853,
+      "trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 5,
+          "flowOutput": "flow",
+          "detail": "power\u003d1.0"
+        },
+        {
+          "nodeId": 6,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "transaction": {
+        "rollback_failures": 0,
+        "successful": true,
+        "node_id": -1,
+        "cause": "",
+        "state": "COMMITTED",
+        "phase": "APPLY"
+      }
+    },
+    {
+      "name": "upgraded_paid",
+      "vm": {
+        "status": "COMPLETED",
+        "nodeId": 6,
+        "diagnostic": "NONE"
+      },
+      "accepted": true,
+      "block_became_air": true,
+      "available_cp_before": 400.0,
+      "available_cp_after": 392.85715,
+      "cp_delta": 7.142853,
+      "trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 5,
+          "flowOutput": "flow",
+          "detail": "power\u003d1.0"
+        },
+        {
+          "nodeId": 6,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "transaction": {
+        "rollback_failures": 0,
+        "successful": true,
+        "node_id": -1,
+        "cause": "",
+        "state": "COMMITTED",
+        "phase": "APPLY"
+      }
+    },
+    {
+      "name": "legacy_insufficient_cp",
+      "vm": {
+        "status": "FAILED",
+        "nodeId": 5,
+        "diagnostic": "ACTION_CONDITION_FAILED"
+      },
+      "accepted": false,
+      "block_became_air": false,
+      "available_cp_before": 0.0,
+      "available_cp_after": 0.0,
+      "cp_delta": 0.0,
+      "trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 5,
+          "flowOutput": "error",
+          "detail": ""
+        }
+      ],
+      "transaction": {
+        "rollback_failures": 0,
+        "successful": false,
+        "node_id": 5,
+        "cause": "java.lang.IllegalStateException: Darkmatter block disassembly was rejected",
+        "state": "FAILED",
+        "phase": "APPLY"
+      }
+    },
+    {
+      "name": "upgraded_insufficient_cp",
+      "vm": {
+        "status": "FAILED",
+        "nodeId": 5,
+        "diagnostic": "ACTION_CONDITION_FAILED"
+      },
+      "accepted": false,
+      "block_became_air": false,
+      "available_cp_before": 0.0,
+      "available_cp_after": 0.0,
+      "cp_delta": 0.0,
+      "trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 5,
+          "flowOutput": "error",
+          "detail": ""
+        }
+      ],
+      "transaction": {
+        "rollback_failures": 0,
+        "successful": false,
+        "node_id": 5,
+        "cause": "java.lang.IllegalStateException: Darkmatter block disassembly was rejected",
+        "state": "FAILED",
+        "phase": "APPLY"
+      }
+    }
+  ],
+  "scope": "Isolated registered fixture players, real Darkmatter skill, transaction, block destruction and CP payment/rejection; this does not claim all 29 operations are paid world actions"
+}

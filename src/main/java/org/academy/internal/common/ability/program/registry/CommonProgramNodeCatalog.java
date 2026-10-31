@@ -5,6 +5,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.ProgramNodePurity;
+import org.academy.api.common.ability.program.ProgramConfigurationPort;
+import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramEntityPositionAnchor;
 import org.academy.api.common.ability.program.ProgramNodeRole;
 import org.academy.api.common.ability.program.ProgramNodeSchema;
@@ -122,7 +124,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
     }
 
     private static void registerScalarLogic(Map<Identifier, ProgramNodeType<?>> result) {
-        put(result, CommonProgramNodeIds.NUMERIC_ARITHMETIC, type(
+        put(result, CommonProgramNodeIds.NUMERIC_ARITHMETIC, fixedConfigurationType(
                 NumericArithmeticConfiguration.CODEC,
                 configuration -> configuration.operator() == ArithmeticOperator.ABSOLUTE
                         ? unarySchema("value", configuration.kind().type(),
@@ -137,7 +139,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
                         "result", configuration.target().type()),
                 ProgramNodeRole.VALUE, ProgramNodePurity.PURE
         ));
-        put(result, CommonProgramNodeIds.NUMERIC_COMPARE, type(
+        put(result, CommonProgramNodeIds.NUMERIC_COMPARE, fixedConfigurationType(
                 NumericComparisonConfiguration.CODEC,
                 configuration -> binarySchema(
                         configuration.kind().type(),
@@ -1061,7 +1063,17 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
             ProgramNodeRole role,
             ProgramNodePurity purity
     ) {
-        return new FixedNodeType<>(codec, schema, role, purity);
+        return new FixedNodeType<>(codec, schema, role, purity, true);
+    }
+
+    /** Only for the audited immutable enum configurations with no runtime configuration inputs. */
+    private static <C> ProgramNodeType<C> fixedConfigurationType(
+            Codec<C> codec,
+            Function<C, ProgramNodeSchema> schema,
+            ProgramNodeRole role,
+            ProgramNodePurity purity
+    ) {
+        return new FixedNodeType<>(codec, schema, role, purity, false);
     }
 
     private static void put(
@@ -2188,7 +2200,8 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
             Codec<C> configurationCodec,
             Function<C, ProgramNodeSchema> schemaFactory,
             ProgramNodeRole role,
-            ProgramNodePurity purity
+            ProgramNodePurity purity,
+            boolean inferConfigurationInputs
     ) implements ProgramNodeType<C> {
         @Override
         public int schemaVersion() {
@@ -2198,6 +2211,20 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
         @Override
         public ProgramNodeSchema schema(C configuration) {
             return schemaFactory.apply(configuration);
+        }
+
+        @Override
+        public List<ProgramConfigurationPort> configurationPorts(C configuration) {
+            return inferConfigurationInputs ? ProgramNodeType.super.configurationPorts(configuration) : List.of();
+        }
+
+        @Override
+        public C resolveConfiguration(C configuration, ProgramInputView inputs) {
+            // These two numeric records contain only non-null immutable enums. Their schema was
+            // checked by compilation and cannot change through an input, so repeat codec/reflection
+            // and schema construction on every DATA evaluation would only recreate the same result.
+            return inferConfigurationInputs ? ProgramNodeType.super.resolveConfiguration(configuration, inputs)
+                    : configuration;
         }
 
         @Override

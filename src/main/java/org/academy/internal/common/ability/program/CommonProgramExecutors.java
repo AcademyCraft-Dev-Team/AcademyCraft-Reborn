@@ -1,6 +1,9 @@
 package org.academy.internal.common.ability.program;
 
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog.ArithmeticOperator;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog.ComparisonOperator;
+import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog.NumericKind;
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
 import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
 import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
@@ -63,9 +66,6 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BiFunction;
-import java.util.function.DoubleBinaryOperator;
-import java.util.function.IntBinaryOperator;
 import java.util.function.Predicate;
 
 /**
@@ -241,38 +241,41 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
                     };
                     return data("result", ProgramValueTypes.BOOLEAN, matches);
                 });
-        integerBinary(result, CommonProgramNodeIds.INTEGER_ADD, Math::addExact);
-        integerBinary(result, CommonProgramNodeIds.INTEGER_SUBTRACT, Math::subtractExact);
-        integerBinary(result, CommonProgramNodeIds.INTEGER_MULTIPLY, Math::multiplyExact);
-        integerBinary(result, CommonProgramNodeIds.INTEGER_DIVIDE, (left, right) -> left / right);
-        integerBinary(result, CommonProgramNodeIds.INTEGER_MODULO, (left, right) -> left % right);
-        integerComparison(result, CommonProgramNodeIds.INTEGER_EQUAL, value -> value == 0);
-        integerComparison(result, CommonProgramNodeIds.INTEGER_LESS, value -> value < 0);
-        integerComparison(result, CommonProgramNodeIds.INTEGER_LESS_EQUAL, value -> value <= 0);
-        integerComparison(result, CommonProgramNodeIds.INTEGER_GREATER, value -> value > 0);
-        integerComparison(result, CommonProgramNodeIds.INTEGER_GREATER_EQUAL, value -> value >= 0);
+        legacyArithmetic(result, CommonProgramNodeIds.INTEGER_ADD, NumericKind.INTEGER, ArithmeticOperator.ADD);
+        legacyArithmetic(result, CommonProgramNodeIds.INTEGER_SUBTRACT, NumericKind.INTEGER, ArithmeticOperator.SUBTRACT);
+        legacyArithmetic(result, CommonProgramNodeIds.INTEGER_MULTIPLY, NumericKind.INTEGER, ArithmeticOperator.MULTIPLY);
+        // Legacy int division deliberately keeps Java's MIN_VALUE / -1 wraparound. The unified
+        // numeric node rejects that overflow; this ID is not an equivalent upgrade candidate.
+        put(result, CommonProgramNodeIds.INTEGER_DIVIDE, (_, _, inputs) -> data(
+                "result", ProgramValueTypes.INTEGER, integer(inputs, "left") / integer(inputs, "right")));
+        legacyArithmetic(result, CommonProgramNodeIds.INTEGER_MODULO, NumericKind.INTEGER, ArithmeticOperator.MODULO);
+        legacyComparison(result, CommonProgramNodeIds.INTEGER_EQUAL, NumericKind.INTEGER, ComparisonOperator.EQUAL);
+        legacyComparison(result, CommonProgramNodeIds.INTEGER_LESS, NumericKind.INTEGER, ComparisonOperator.LESS);
+        legacyComparison(result, CommonProgramNodeIds.INTEGER_LESS_EQUAL, NumericKind.INTEGER, ComparisonOperator.LESS_EQUAL);
+        legacyComparison(result, CommonProgramNodeIds.INTEGER_GREATER, NumericKind.INTEGER, ComparisonOperator.GREATER);
+        legacyComparison(result, CommonProgramNodeIds.INTEGER_GREATER_EQUAL, NumericKind.INTEGER, ComparisonOperator.GREATER_EQUAL);
 
-        bigIntegerBinary(result, CommonProgramNodeIds.BIG_INTEGER_ADD, BigInteger::add);
-        bigIntegerBinary(result, CommonProgramNodeIds.BIG_INTEGER_SUBTRACT, BigInteger::subtract);
-        bigIntegerBinary(result, CommonProgramNodeIds.BIG_INTEGER_MULTIPLY, BigInteger::multiply);
-        bigIntegerBinary(result, CommonProgramNodeIds.BIG_INTEGER_DIVIDE, BigInteger::divide);
-        bigIntegerBinary(result, CommonProgramNodeIds.BIG_INTEGER_MODULO, BigInteger::remainder);
-        bigIntegerComparison(result, CommonProgramNodeIds.BIG_INTEGER_EQUAL, value -> value == 0);
-        bigIntegerComparison(result, CommonProgramNodeIds.BIG_INTEGER_LESS, value -> value < 0);
-        bigIntegerComparison(result, CommonProgramNodeIds.BIG_INTEGER_LESS_EQUAL, value -> value <= 0);
-        bigIntegerComparison(result, CommonProgramNodeIds.BIG_INTEGER_GREATER, value -> value > 0);
-        bigIntegerComparison(result, CommonProgramNodeIds.BIG_INTEGER_GREATER_EQUAL, value -> value >= 0);
+        legacyArithmetic(result, CommonProgramNodeIds.BIG_INTEGER_ADD, NumericKind.BIG_INTEGER, ArithmeticOperator.ADD);
+        legacyArithmetic(result, CommonProgramNodeIds.BIG_INTEGER_SUBTRACT, NumericKind.BIG_INTEGER, ArithmeticOperator.SUBTRACT);
+        legacyArithmetic(result, CommonProgramNodeIds.BIG_INTEGER_MULTIPLY, NumericKind.BIG_INTEGER, ArithmeticOperator.MULTIPLY);
+        legacyArithmetic(result, CommonProgramNodeIds.BIG_INTEGER_DIVIDE, NumericKind.BIG_INTEGER, ArithmeticOperator.DIVIDE);
+        legacyArithmetic(result, CommonProgramNodeIds.BIG_INTEGER_MODULO, NumericKind.BIG_INTEGER, ArithmeticOperator.MODULO);
+        legacyComparison(result, CommonProgramNodeIds.BIG_INTEGER_EQUAL, NumericKind.BIG_INTEGER, ComparisonOperator.EQUAL);
+        legacyComparison(result, CommonProgramNodeIds.BIG_INTEGER_LESS, NumericKind.BIG_INTEGER, ComparisonOperator.LESS);
+        legacyComparison(result, CommonProgramNodeIds.BIG_INTEGER_LESS_EQUAL, NumericKind.BIG_INTEGER, ComparisonOperator.LESS_EQUAL);
+        legacyComparison(result, CommonProgramNodeIds.BIG_INTEGER_GREATER, NumericKind.BIG_INTEGER, ComparisonOperator.GREATER);
+        legacyComparison(result, CommonProgramNodeIds.BIG_INTEGER_GREATER_EQUAL, NumericKind.BIG_INTEGER, ComparisonOperator.GREATER_EQUAL);
 
-        floatBinary(result, CommonProgramNodeIds.FLOAT_ADD, (left, right) -> left + right);
-        floatBinary(result, CommonProgramNodeIds.FLOAT_SUBTRACT, (left, right) -> left - right);
-        floatBinary(result, CommonProgramNodeIds.FLOAT_MULTIPLY, (left, right) -> left * right);
-        floatBinary(result, CommonProgramNodeIds.FLOAT_DIVIDE, (left, right) -> left / right);
-        floatBinary(result, CommonProgramNodeIds.FLOAT_MODULO, (left, right) -> left % right);
-        floatComparison(result, CommonProgramNodeIds.FLOAT_EQUAL, value -> value == 0);
-        floatComparison(result, CommonProgramNodeIds.FLOAT_LESS, value -> value < 0);
-        floatComparison(result, CommonProgramNodeIds.FLOAT_LESS_EQUAL, value -> value <= 0);
-        floatComparison(result, CommonProgramNodeIds.FLOAT_GREATER, value -> value > 0);
-        floatComparison(result, CommonProgramNodeIds.FLOAT_GREATER_EQUAL, value -> value >= 0);
+        legacyArithmetic(result, CommonProgramNodeIds.FLOAT_ADD, NumericKind.FLOAT, ArithmeticOperator.ADD);
+        legacyArithmetic(result, CommonProgramNodeIds.FLOAT_SUBTRACT, NumericKind.FLOAT, ArithmeticOperator.SUBTRACT);
+        legacyArithmetic(result, CommonProgramNodeIds.FLOAT_MULTIPLY, NumericKind.FLOAT, ArithmeticOperator.MULTIPLY);
+        legacyArithmetic(result, CommonProgramNodeIds.FLOAT_DIVIDE, NumericKind.FLOAT, ArithmeticOperator.DIVIDE);
+        legacyArithmetic(result, CommonProgramNodeIds.FLOAT_MODULO, NumericKind.FLOAT, ArithmeticOperator.MODULO);
+        legacyComparison(result, CommonProgramNodeIds.FLOAT_EQUAL, NumericKind.FLOAT, ComparisonOperator.EQUAL);
+        legacyComparison(result, CommonProgramNodeIds.FLOAT_LESS, NumericKind.FLOAT, ComparisonOperator.LESS);
+        legacyComparison(result, CommonProgramNodeIds.FLOAT_LESS_EQUAL, NumericKind.FLOAT, ComparisonOperator.LESS_EQUAL);
+        legacyComparison(result, CommonProgramNodeIds.FLOAT_GREATER, NumericKind.FLOAT, ComparisonOperator.GREATER);
+        legacyComparison(result, CommonProgramNodeIds.FLOAT_GREATER_EQUAL, NumericKind.FLOAT, ComparisonOperator.GREATER_EQUAL);
 
         put(result, CommonProgramNodeIds.BOOLEAN_NOT, (_, _, inputs) -> data(
                 "result",
@@ -1426,81 +1429,26 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         });
     }
 
-    private static void integerBinary(
+    private static void legacyArithmetic(
             Map<Identifier, ProgramNodeExecutor<?>> result,
             Identifier id,
-            IntBinaryOperator operation
+            NumericKind kind,
+            ArithmeticOperator operator
     ) {
-        put(result, id, (_, _, inputs) -> data(
-                "result",
-                ProgramValueTypes.INTEGER,
-                operation.applyAsInt(integer(inputs, "left"), integer(inputs, "right"))
-        ));
+        var configuration = new CommonProgramNodeCatalog.NumericArithmeticConfiguration(kind, operator);
+        put(result, id, (_, _, inputs) -> numericArithmetic(inputs, configuration));
     }
 
-    private static void integerComparison(
+    private static void legacyComparison(
             Map<Identifier, ProgramNodeExecutor<?>> result,
             Identifier id,
-            IntPredicate predicate
+            NumericKind kind,
+            ComparisonOperator operator
     ) {
         put(result, id, (_, _, inputs) -> data(
                 "result",
                 ProgramValueTypes.BOOLEAN,
-                predicate.test(Integer.compare(integer(inputs, "left"), integer(inputs, "right")))
-        ));
-    }
-
-    private static void bigIntegerBinary(
-            Map<Identifier, ProgramNodeExecutor<?>> result,
-            Identifier id,
-            BiFunction<BigInteger, BigInteger, BigInteger> operation
-    ) {
-        put(result, id, (_, _, inputs) -> data(
-                "result",
-                ProgramValueTypes.BIG_INTEGER,
-                operation.apply(bigInteger(inputs, "left"), bigInteger(inputs, "right"))
-        ));
-    }
-
-    private static void bigIntegerComparison(
-            Map<Identifier, ProgramNodeExecutor<?>> result,
-            Identifier id,
-            IntPredicate predicate
-    ) {
-        put(result, id, (_, _, inputs) -> data(
-                "result",
-                ProgramValueTypes.BOOLEAN,
-                predicate.test(bigInteger(inputs, "left").compareTo(bigInteger(inputs, "right")))
-        ));
-    }
-
-    private static void floatBinary(
-            Map<Identifier, ProgramNodeExecutor<?>> result,
-            Identifier id,
-            DoubleBinaryOperator operation
-    ) {
-        put(result, id, (_, _, inputs) -> data(
-                "result",
-                ProgramValueTypes.FLOAT,
-                finite(operation.applyAsDouble(
-                        floatValue(inputs, "left"),
-                        floatValue(inputs, "right")
-                ))
-        ));
-    }
-
-    private static void floatComparison(
-            Map<Identifier, ProgramNodeExecutor<?>> result,
-            Identifier id,
-            IntPredicate predicate
-    ) {
-        put(result, id, (_, _, inputs) -> data(
-                "result",
-                ProgramValueTypes.BOOLEAN,
-                predicate.test(Double.compare(
-                        floatValue(inputs, "left"),
-                        floatValue(inputs, "right")
-                ))
+                operator.test(compareNumeric(inputs, kind))
         ));
     }
 
@@ -1846,11 +1794,6 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
         private IterationState {
             values = List.copyOf(values);
         }
-    }
-
-    @FunctionalInterface
-    private interface IntPredicate {
-        boolean test(int value);
     }
 
     @FunctionalInterface

@@ -1,0 +1,271 @@
+{
+  "passed": true,
+  "language": "en_us",
+  "phase": 13,
+  "client_ticks": 86,
+  "checks": [
+    "Requested saved legacy graph remained unchanged and executed (6+3)*(6/3)\u003d18 through real handlers",
+    "Preview/keep/apply changed only the reviewed draft after creating a recoverable local backup; saved graph and execution count stayed unchanged",
+    "One ordinary undo and redo preserved full graph, configuration, ports and layout",
+    "Explicit save advanced the authoritative revision and the upgraded graph still executed to 18",
+    "The documented original_clipboard + normal import restored the complete original draft",
+    "Restored legacy graph saved through the real revisioned protocol and remained authoritative"
+  ],
+  "screenshots": [
+    "screenshots/precision-numeric-upgrade-en_us-preview.png",
+    "screenshots/precision-numeric-upgrade-en_us-applied.png",
+    "screenshots/precision-numeric-upgrade-en_us-restored.png"
+  ],
+  "evidence": {
+    "legacy_trace": [
+      {
+        "nodeId": 0,
+        "flowOutput": "",
+        "detail": ""
+      },
+      {
+        "nodeId": 6,
+        "flowOutput": "flow",
+        "detail": "value\u003d18"
+      },
+      {
+        "nodeId": 7,
+        "flowOutput": "",
+        "detail": ""
+      }
+    ],
+    "change_nodes": [
+      3,
+      5
+    ],
+    "retained": [
+      {
+        "nodeId": 4,
+        "type": {
+          "namespace": "academy",
+          "path": "program/core/logic/integer/divide"
+        },
+        "reason": "INTEGER_DIVISION_SEMANTICS"
+      }
+    ],
+    "preview_apply_network": {
+      "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+      "capture_enabled": true,
+      "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+      "operations": [
+        {
+          "succeeded": 2,
+          "payload_bytes": 0,
+          "failed": 0,
+          "phase": "send",
+          "cpu_nanos": 0,
+          "wall_nanos": 195300,
+          "allocation_samples": 2,
+          "kind": "request",
+          "calls": 2,
+          "allocated_bytes": 3584,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 2,
+          "payload_bytes": 40,
+          "failed": 0,
+          "phase": "encode",
+          "cpu_nanos": 0,
+          "wall_nanos": 47700,
+          "allocation_samples": 2,
+          "kind": "request",
+          "calls": 2,
+          "allocated_bytes": 528,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 2,
+          "payload_bytes": 40,
+          "failed": 0,
+          "phase": "decode",
+          "cpu_nanos": 0,
+          "wall_nanos": 48800,
+          "allocation_samples": 2,
+          "kind": "request",
+          "calls": 2,
+          "allocated_bytes": 256,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 0,
+          "failed": 0,
+          "phase": "send",
+          "cpu_nanos": 0,
+          "wall_nanos": 51200,
+          "allocation_samples": 1,
+          "kind": "execute",
+          "calls": 1,
+          "allocated_bytes": 720,
+          "cpu_samples": 1
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 29,
+          "failed": 0,
+          "phase": "encode",
+          "cpu_nanos": 0,
+          "wall_nanos": 22900,
+          "allocation_samples": 1,
+          "kind": "execute",
+          "calls": 1,
+          "allocated_bytes": 264,
+          "cpu_samples": 1
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 29,
+          "failed": 0,
+          "phase": "decode",
+          "cpu_nanos": 0,
+          "wall_nanos": 101500,
+          "allocation_samples": 1,
+          "kind": "execute",
+          "calls": 1,
+          "allocated_bytes": 136,
+          "cpu_samples": 1
+        },
+        {
+          "succeeded": 2,
+          "payload_bytes": 0,
+          "failed": 0,
+          "phase": "send",
+          "cpu_nanos": 0,
+          "wall_nanos": 129000,
+          "allocation_samples": 2,
+          "kind": "sync",
+          "calls": 2,
+          "allocated_bytes": 6128,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 2,
+          "payload_bytes": 2266,
+          "failed": 0,
+          "phase": "encode",
+          "cpu_nanos": 0,
+          "wall_nanos": 56300,
+          "allocation_samples": 2,
+          "kind": "sync",
+          "calls": 2,
+          "allocated_bytes": 5216,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 2,
+          "payload_bytes": 2266,
+          "failed": 0,
+          "phase": "decode",
+          "cpu_nanos": 0,
+          "wall_nanos": 78500,
+          "allocation_samples": 2,
+          "kind": "sync",
+          "calls": 2,
+          "allocated_bytes": 4928,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 2,
+          "payload_bytes": 0,
+          "failed": 0,
+          "phase": "client_sync_apply",
+          "cpu_nanos": 15625000,
+          "wall_nanos": 9415400,
+          "allocation_samples": 2,
+          "kind": "sync",
+          "calls": 2,
+          "allocated_bytes": 4353560,
+          "cpu_samples": 2
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 0,
+          "failed": 0,
+          "phase": "send",
+          "cpu_nanos": 0,
+          "wall_nanos": 229600,
+          "allocation_samples": 1,
+          "kind": "result",
+          "calls": 1,
+          "allocated_bytes": 2864,
+          "cpu_samples": 1
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 67,
+          "failed": 0,
+          "phase": "encode",
+          "cpu_nanos": 0,
+          "wall_nanos": 199100,
+          "allocation_samples": 1,
+          "kind": "result",
+          "calls": 1,
+          "allocated_bytes": 2408,
+          "cpu_samples": 1
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 67,
+          "failed": 0,
+          "phase": "decode",
+          "cpu_nanos": 0,
+          "wall_nanos": 205800,
+          "allocation_samples": 1,
+          "kind": "result",
+          "calls": 1,
+          "allocated_bytes": 3048,
+          "cpu_samples": 1
+        },
+        {
+          "succeeded": 1,
+          "payload_bytes": 0,
+          "failed": 0,
+          "phase": "client_result_apply",
+          "cpu_nanos": 0,
+          "wall_nanos": 62500,
+          "allocation_samples": 1,
+          "kind": "result",
+          "calls": 1,
+          "allocated_bytes": 776,
+          "cpu_samples": 1
+        }
+      ],
+      "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement"
+    },
+    "backup": "academy\\program-upgrade-backups\\program-upgrade-86f0e968-3b2b-479a-aa54-ab827e3e7f0a.json",
+    "upgraded_trace": [
+      {
+        "nodeId": 0,
+        "flowOutput": "",
+        "detail": ""
+      },
+      {
+        "nodeId": 6,
+        "flowOutput": "flow",
+        "detail": "value\u003d18"
+      },
+      {
+        "nodeId": 7,
+        "flowOutput": "",
+        "detail": ""
+      }
+    ],
+    "after_numeric_execution_cp": {
+      "occupied_cp": 0.0,
+      "available_cp": 400.0
+    }
+  },
+  "revision": 3,
+  "scope": [
+    "One real integrated client/server and ordinary request/execute/save/sync handlers; local transport, not network throughput",
+    "Explicit toolbar preview/keep/apply, local backup, normal undo/redo and documented clipboard/import recovery; no production test entry",
+    "Pure numeric real executions both yield 18; no paid gameplay action is included in this UI fixture"
+  ],
+  "error": ""
+}

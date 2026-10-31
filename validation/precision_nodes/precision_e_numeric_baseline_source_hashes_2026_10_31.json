@@ -1,0 +1,23 @@
+{
+  "baseline": "195ed8c6",
+  "date": "2026-10-31",
+  "scope": "Numeric execution and configuration-port inference before E optimization",
+  "files": [
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/CommonProgramExecutors.java",
+      "sha256": "2D808C4027B9868AC177AB1058F385B600C6BE3BA80BD14042AA84C80F55961A"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/registry/CommonProgramNodeCatalog.java",
+      "sha256": "F11CF0365853D84CC8B23978D9CE919D244A8ABD3A79A2FF6272F60F72BF6879"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ProgramVm.java",
+      "sha256": "F115525270A17B456D0A9CB818CB28F2FE047A6DFAA1383EE24C589572F2ACCC"
+    },
+    {
+      "path": "src/main/java/org/academy/api/common/ability/program/ProgramConfigurationPorts.java",
+      "sha256": "879291A1C4D2B49DABE39BF506814BC3CC7924BEA92C3D86CB5AC16540341C37"
+    }
+  ]
+}
