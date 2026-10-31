@@ -153,6 +153,13 @@ public final class ProgramSessionScheduler<K> {
         return List.copyOf(sessions.keySet());
     }
 
+    @Nullable Observation observation(K key) {
+        var running = sessions.get(key);
+        return running == null ? null : new Observation(running.vm, running.attachment);
+    }
+
+    record Observation(ProgramVm.Session session, @Nullable Object attachment) {}
+
     private void terminate(K key, RunningSession<K> running, Termination termination) {
         if (!sessions.remove(key, running)) return;
         notifyListener(key, running, termination);

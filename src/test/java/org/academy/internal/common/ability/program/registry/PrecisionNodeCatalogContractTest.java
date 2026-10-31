@@ -42,6 +42,10 @@ class PrecisionNodeCatalogContractTest {
     private static final Set<String> CATEGORIES = Set.of(
             "academy:accelerator", "academy:aeromanip", "academy:darkmatter",
             "academy:electromaster", "academy:meltdowner", "academy:mentalout", "academy:teleport");
+    // New runtime contracts are checked separately; this test continues to freeze all original 342 IDs.
+    // Unknown additions still fail the exact-set checks below.
+    private static final Set<net.minecraft.resources.Identifier> DECLARED_ADDITIONS = Set.of(
+            CommonProgramNodeIds.SAMPLE_VALUE);
     private static JsonObject baseline;
     private static Map<String, JsonObject> expectedNodes;
     private static Map<String, JsonObject> expectedCategories;
@@ -69,7 +73,7 @@ class PrecisionNodeCatalogContractTest {
         for (var definition : definitions) {
             var category = definition.category().toString();
             var expectedCategory = expectedCategories.get(category);
-            var entries = definition.editorCatalog().entries();
+            var entries = legacyEntries(definition);
             var ids = new HashSet<String>();
             for (var entry : entries) {
                 var id = entry.id().toString();
@@ -101,6 +105,7 @@ class PrecisionNodeCatalogContractTest {
                 .map(Map.Entry::getKey).collect(Collectors.toSet());
         assertEquals(189, expectedCommon.size());
         assertEquals(expectedCommon, CommonProgramNodeCatalog.INSTANCE.types().keySet().stream()
+                .filter(id -> !DECLARED_ADDITIONS.contains(id))
                 .map(Object::toString).collect(Collectors.toSet()));
     }
 
@@ -108,7 +113,7 @@ class PrecisionNodeCatalogContractTest {
     void defaultsCodecsScopesAndRuntimeBindingsStayCompatible() {
         for (var definition : definitions()) {
             var category = definition.category().toString();
-            for (var entry : definition.editorCatalog().entries()) {
+            for (var entry : legacyEntries(definition)) {
                 var expected = expectedFor(category, entry.id().toString());
                 var context = category + " / " + entry.id();
                 var type = entry.type();
@@ -138,7 +143,7 @@ class PrecisionNodeCatalogContractTest {
         for (var definition : definitions()) {
             var category = definition.category().toString();
             var catalog = definition.editorCatalog();
-            for (var entry : catalog.entries()) {
+            for (var entry : legacyEntries(definition)) {
                 var firstOccurrence = uniqueIds.add(entry.id().toString());
                 var expected = expectedFor(category, entry.id().toString());
                 var fields = expected.getAsJsonObject("configuration_fields");
@@ -247,6 +252,11 @@ class PrecisionNodeCatalogContractTest {
     private static List<AbilityProgramDefinition> definitions() {
         return AbilityProgramDefinitions.all().stream()
                 .sorted(Comparator.comparing(definition -> definition.category().toString())).toList();
+    }
+
+    private static List<ProgramEditorNodeCatalog.Entry> legacyEntries(AbilityProgramDefinition definition) {
+        return definition.editorCatalog().entries().stream()
+                .filter(entry -> !DECLARED_ADDITIONS.contains(entry.id())).toList();
     }
 
     private static JsonObject expectedFor(String category, String id) {

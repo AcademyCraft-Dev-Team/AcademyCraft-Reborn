@@ -1,0 +1,560 @@
+{
+  "passed": true,
+  "checks": [
+    "ACCELERATOR_GUIDE_OWNED_NEARBY: actual queries took the false branch without an action or CP cost",
+    "ELECTROMASTER_RECHARGE_LOW_BATTERY: actual queries took the false branch without an action or CP cost",
+    "AEROMANIP_GUIDE_WITH_NOZZLES: actual queries took the false branch without an action or CP cost",
+    "TELEPORT_CHECKED_FORWARD: actual queries took the false branch without an action or CP cost",
+    "MELTDOWNER_LOCKED_MINING: actual queries took the false branch without an action or CP cost",
+    "DARKMATTER_FILTERED_BLOCK: actual queries took the false branch without an action or CP cost",
+    "MENTALOUT_ROSTER_GUARD: actual queries took the false branch without an action or CP cost",
+    "Clear forward destination teleported through the real transaction and consumed CP",
+    "Matching stone was destroyed by the real Darkmatter action and consumed CP",
+    "Matching target passed the graph condition but the actual CP check rejected destruction",
+    "Real same-slot stupor lease and CP occupation survived the empty-roster false/STOP graph unchanged",
+    "Natural WAIT resumed with the original sampled block set after the live crosshair moved to another stone"
+  ],
+  "cases": [
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 13,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 6,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 13,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "accelerator_guide_owned_nearby_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 10,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 2,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 7,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "electromaster_recharge_low_battery_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 17,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 6,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 14,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 17,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "aeromanip_guide_with_nozzles_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 11,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 6,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 8,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 11,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "teleport_checked_forward_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 12,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 3,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 9,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 12,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "meltdowner_locked_mining_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 13,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 4,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 13,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "darkmatter_filtered_block_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "state": "COMPLETED",
+        "diagnostic": "OK",
+        "nodeId": -1,
+        "port": -1,
+        "affectedCount": 0
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 4,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 9,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 12,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "mentalout_roster_guard_negative"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 10,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 6,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 8,
+          "flowOutput": "true",
+          "detail": "condition\u003dtrue"
+        },
+        {
+          "nodeId": 9,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "teleport_positive"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "COMPLETED",
+          "nodeId": 12,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": true,
+          "state": "COMMITTED",
+          "phase": "APPLY",
+          "node_id": -1,
+          "rollback_failures": 0,
+          "causes": []
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 4,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "true",
+          "detail": "condition\u003dtrue"
+        },
+        {
+          "nodeId": 11,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 12,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "darkmatter_positive"
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "FAILED",
+          "nodeId": 11,
+          "diagnostic": "ACTION_CONDITION_FAILED"
+        },
+        "transaction_present": true,
+        "transaction": {
+          "successful": false,
+          "state": "FAILED",
+          "phase": "APPLY",
+          "node_id": 11,
+          "rollback_failures": 0,
+          "causes": [
+            "java.lang.IllegalStateException: Darkmatter block disassembly was rejected"
+          ]
+        }
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 4,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "true",
+          "detail": "condition\u003dtrue"
+        },
+        {
+          "nodeId": 11,
+          "flowOutput": "error",
+          "detail": ""
+        }
+      ],
+      "name": "darkmatter_insufficient_cp"
+    },
+    {
+      "available_cp": 393.57144,
+      "occupied_cp": 6.4285583,
+      "name": "mental_no_op_preserves_same_slot_control",
+      "prior_lease": {
+        "capability": "FREEZE_AI",
+        "leaseId": "fe9225be-c54e-4d3a-af29-09660e70f179",
+        "controllerId": "06228966-4126-35d9-a9b2-c080be3aba25",
+        "source": {
+          "namespace": "academy",
+          "path": "precision_operation"
+        },
+        "scopeId": "6adadec2-23e1-475b-9eb0-b972ce04a2f4",
+        "priority": 200,
+        "expiresAt": 9223372036854775807,
+        "directive": {}
+      },
+      "passed": true,
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 4,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 9,
+          "flowOutput": "false",
+          "detail": "condition\u003dfalse"
+        },
+        {
+          "nodeId": 12,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "retained_lease": {
+        "capability": "FREEZE_AI",
+        "leaseId": "fe9225be-c54e-4d3a-af29-09660e70f179",
+        "controllerId": "06228966-4126-35d9-a9b2-c080be3aba25",
+        "source": {
+          "namespace": "academy",
+          "path": "precision_operation"
+        },
+        "scopeId": "6adadec2-23e1-475b-9eb0-b972ce04a2f4",
+        "priority": 200,
+        "expiresAt": 9223372036854775807,
+        "directive": {}
+      },
+      "seed_execution": {
+        "state": "STARTED",
+        "diagnostic": "OK",
+        "nodeId": -1,
+        "port": -1,
+        "affectedCount": 0
+      },
+      "execution": {
+        "state": "COMPLETED",
+        "diagnostic": "OK",
+        "nodeId": -1,
+        "port": -1,
+        "affectedCount": 0
+      }
+    },
+    {
+      "passed": true,
+      "initial_execution_result": {
+        "vm": {
+          "status": "SUSPENDED",
+          "nodeId": 10,
+          "diagnostic": "NONE"
+        },
+        "transaction_present": false
+      },
+      "flow_trace": [
+        {
+          "nodeId": 0,
+          "flowOutput": "",
+          "detail": ""
+        },
+        {
+          "nodeId": 4,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 14,
+          "flowOutput": "flow",
+          "detail": "ticks\u003d2"
+        },
+        {
+          "nodeId": 10,
+          "flowOutput": "true",
+          "detail": "condition\u003dtrue"
+        },
+        {
+          "nodeId": 11,
+          "flowOutput": "flow",
+          "detail": ""
+        },
+        {
+          "nodeId": 12,
+          "flowOutput": "",
+          "detail": ""
+        }
+      ],
+      "name": "sample_wait_crosshair_changed"
+    }
+  ],
+  "scope": [
+    "Actual registered fixture ServerPlayer, production category execution bridges, world queries, transactions and natural WAIT scheduler",
+    "Seven negative branches; real teleport and block disassembly success; CP rejection; edited graph WAIT target snapshot; same-slot real mental lease and CP preservation",
+    "Three structure-control templates exercise empty-selection exits, not positive native/Sable physical group control",
+    "Fixture players/chunks/blocks are isolated; no real user save is touched"
+  ]
+}

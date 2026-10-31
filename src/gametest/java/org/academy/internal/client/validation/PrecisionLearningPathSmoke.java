@@ -167,7 +167,7 @@ public final class PrecisionLearningPathSmoke {
                         "compiled", true, "codec_round_trip", true, "nonempty_rejected", true));
             }
         }
-        check(MODEL_RESULTS.size() == 10, "expected all ten built-in task recipes");
+        check(MODEL_RESULTS.size() == ProgramTaskTemplates.Kind.values().length, "expected all ten built-in task recipes");
         initialized = true;
     }
 

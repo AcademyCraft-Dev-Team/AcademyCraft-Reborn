@@ -8,6 +8,7 @@ import org.academy.api.client.ability.program.ProgramNodeEditorOptions;
 import org.academy.api.common.ability.program.ProgramNodeEditorMetadata;
 import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.ability.program.ProgramValueSnapshots;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramNodeIds;
 import org.academy.internal.common.ability.aeromanip.program.AeromanipProgramNodeIds;
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeIds;
@@ -331,6 +332,13 @@ public final class ProgramConfigurationOptions {
                     "screen.academy.program.configuration.block_item_teleport.",
                     "place", "collect"
             );
+        }
+        if (id.equals(CommonProgramNodeIds.SAMPLE_VALUE) && field.equals("type")) {
+            return ProgramValueSnapshots.supportedTypes().stream().map(type -> option(
+                    type.id().toString(),
+                    "screen.academy.program.configuration.value_type."
+                            + type.id().getPath().substring("program_type/".length())
+            )).toList();
         }
         if ((id.equals(CommonProgramNodeIds.VARIABLE_GET)
                 || id.equals(CommonProgramNodeIds.VARIABLE_SET)

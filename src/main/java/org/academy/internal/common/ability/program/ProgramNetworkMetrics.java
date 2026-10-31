@@ -21,13 +21,13 @@ import java.util.function.Supplier;
 /** Opt-in fixed-cardinality program-packet measurements; never retains packets, players or buffers. */
 public final class ProgramNetworkMetrics {
     public enum Kind {
-        REQUEST, IMPORT, SAVE, EXECUTE, DISMISS_STARTER, SYNC, RESULT, OTHER;
+        REQUEST, IMPORT, SAVE, EXECUTE, DISMISS_STARTER, SYNC, RESULT, OTHER, OBSERVE_RUN, RUN_STATUS;
         private final String label = name().toLowerCase(Locale.ROOT);
         public String label() { return label; }
     }
 
     public enum Phase {
-        SEND, ENCODE, DECODE, CLIENT_SYNC_APPLY, CLIENT_RESULT_APPLY;
+        SEND, ENCODE, DECODE, CLIENT_SYNC_APPLY, CLIENT_RESULT_APPLY, CLIENT_STATUS_APPLY;
         private final String label = name().toLowerCase(Locale.ROOT);
         public String label() { return label; }
     }
@@ -127,6 +127,8 @@ public final class ProgramNetworkMetrics {
     }
 
     public static Kind kind(Packet<?, ?> packet) {
+        if (packet instanceof AbilityProgramManager.ObserveRunPacket) return Kind.OBSERVE_RUN;
+        if (packet instanceof AbilityProgramManager.RunStatusPacket) return Kind.RUN_STATUS;
         if (packet instanceof AbilityProgramManager.RequestPacket) return Kind.REQUEST;
         if (packet instanceof AbilityProgramManager.ImportPacket) return Kind.IMPORT;
         if (packet instanceof AbilityProgramManager.SavePacket) return Kind.SAVE;

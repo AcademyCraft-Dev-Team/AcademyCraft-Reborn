@@ -1,0 +1,26 @@
+// One real integrated client in a disposable copied world; set language externally before launch.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-precision-query-play-client')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke-precision-query-play-')) {
+            throw new GradleException('Query/play smoke requires an isolated precision-query-play copied directory')
+        }
+        if (!new File(directory, 'saves/test/level.dat').isFile()) {
+            throw new GradleException('Prepare a disposable saves/test copied world before the query/play client')
+        }
+        if (directory.listFiles()?.any { it.name.startsWith('precision-query-play-') && it.name.endsWith('-result.json') }) {
+            throw new GradleException('Query/play smoke requires a fresh result directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionQueryPlaySmoke', 'true'
+            systemProperty 'academy.precisionAutomaticNetworkSmoke', 'false'
+            systemProperty 'academy.precisionPerformanceSmoke', 'false'
+            systemProperty 'academy.precisionLearningPathSmoke', 'false'
+            systemProperty 'academy.precisionPresentationSmoke', 'false'
+            programArguments.addAll('--width', '1600', '--height', '900', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

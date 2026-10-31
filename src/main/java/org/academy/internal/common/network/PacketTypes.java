@@ -1052,6 +1052,12 @@ public final class PacketTypes {
             ABILITY_PROGRAM_REQUEST = PACKET_TYPES.register("ability_program_request",
             () -> new PacketType<>(AbilityProgramManager.RequestPacket.class,
                     AbilityProgramManager.RequestPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.ObserveRunPacket>>
+            ABILITY_PROGRAM_OBSERVE_RUN = PACKET_TYPES.register("ability_program_observe_run",
+            () -> new PacketType<>(AbilityProgramManager.ObserveRunPacket.class, AbilityProgramManager.ObserveRunPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AbilityProgramManager.RunStatusPacket>>
+            ABILITY_PROGRAM_RUN_STATUS = PACKET_TYPES.register("ability_program_run_status",
+            () -> new PacketType<>(AbilityProgramManager.RunStatusPacket.class, AbilityProgramManager.RunStatusPacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, AbilityProgramManager.DismissStarterPacket>>
             ABILITY_PROGRAM_DISMISS_STARTER = PACKET_TYPES.register("ability_program_dismiss_starter",
             () -> new PacketType<>(AbilityProgramManager.DismissStarterPacket.class,

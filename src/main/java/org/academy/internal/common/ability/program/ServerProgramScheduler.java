@@ -61,6 +61,17 @@ public final class ServerProgramScheduler {
         return state != null && state.contains(key);
     }
 
+    static @Nullable Observation observation(MinecraftServer server, SessionKey key) {
+        requireServerThread(server);
+        var state = SCHEDULERS.get(server);
+        var observed = state == null ? null : state.scheduler.observation(key);
+        if (observed == null || !(observed.attachment() instanceof ProgramExecutionFrame frame)) return null;
+        var invocation = frame.invocation().orElse(null);
+        return invocation == null ? null : new Observation(observed.session(), frame, invocation);
+    }
+
+    record Observation(ProgramVm.Session session, ProgramExecutionFrame frame, ProgramInvocationContext invocation) {}
+
     public static boolean resume(
             MinecraftServer server,
             SessionKey key,

@@ -201,7 +201,7 @@ class ProgramCompilationCacheTest {
                 checked++;
             }
         }
-        assertEquals(1476, checked);
+        assertEquals(1476 + 7, checked, "Original inventory plus one explicitly audited common sample node in seven categories");
         assertEquals(Set.of(), unsupported, "All unsupported native defaults are reported together for explicit audit");
     }
 

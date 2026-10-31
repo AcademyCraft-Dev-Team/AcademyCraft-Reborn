@@ -17,6 +17,7 @@ import org.academy.api.common.ability.program.ProgramValueType;
 import org.academy.api.common.ability.program.ProgramValueTypes;
 import org.academy.internal.common.ability.program.ProgramChatHistory;
 import org.academy.internal.common.ability.program.ProgramSharedVariables;
+import org.academy.internal.common.ability.program.ProgramSamplingNodes;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -260,6 +261,7 @@ public final class CommonProgramNodeCatalog implements ProgramNodeLookup {
     }
 
     private static void registerControlAndState(Map<Identifier, ProgramNodeType<?>> result) {
+        put(result, CommonProgramNodeIds.SAMPLE_VALUE, ProgramSamplingNodes.type());
         put(result, CommonProgramNodeIds.TRIGGER_HURT, type(
                 unitCodec(),
                 _ -> entrySchema(),

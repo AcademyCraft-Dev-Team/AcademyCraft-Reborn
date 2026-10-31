@@ -74,6 +74,7 @@ public final class CommonProgramNodeIds {
     public static final Identifier TRIGGER_CHAT = id("flow/trigger/chat");
     public static final Identifier VARIABLE_GET = id("state/variable_get");
     public static final Identifier VARIABLE_SET = id("state/variable_set");
+    public static final Identifier SAMPLE_VALUE = id("state/sample_value");
     public static final Identifier SHARED_VARIABLE_GET = id("state/shared_variable_get");
     public static final Identifier SHARED_VARIABLE_SET = id("state/shared_variable_set");
     public static final Identifier SHARED_VARIABLE_CLEAR = id("state/shared_variable_clear");

@@ -139,8 +139,18 @@ public final class PrecisionOperationRuntime {
                     now + 1L,
                     ServerProgramExecution.MAX_LIFETIME_TICKS,
                     (_, termination) -> {
-                        if (termination.kind()
-                                != ProgramSessionScheduler.TerminationKind.COMPLETED) return;
+                        if (termination.kind() != ProgramSessionScheduler.TerminationKind.COMPLETED) {
+                            var aborted = transaction.abort();
+                            var phase = switch (termination.kind()) {
+                                case CANCELLED -> org.academy.api.common.ability.program.ProgramRunStatus.Phase.CANCELLED;
+                                case EXPIRED -> org.academy.api.common.ability.program.ProgramRunStatus.Phase.EXPIRED;
+                                default -> org.academy.api.common.ability.program.ProgramRunStatus.Phase.FAILED;
+                            };
+                            org.academy.internal.common.ability.program.ProgramRunObservations.settled(invocation, phase,
+                                    termination.nodeId(), termination.diagnostic(), termination.port(), termination.detail(),
+                                    !aborted.successful(), player.level().getGameTime());
+                            return;
+                        }
                         completeNativeExecution(
                                 player,
                                 slot,
@@ -151,13 +161,19 @@ public final class PrecisionOperationRuntime {
                                 transaction,
                                 activeActions,
                                 planner,
-                                PrecisionProgramExecutionBridge.NativeResult.success()
+                                PrecisionProgramExecutionBridge.NativeResult.success(),
+                                invocation
                         );
                     }
             );
-            return scheduled
-                    ? ExecutionResult.started()
-                    : ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
+            if (!scheduled) {
+                var aborted = transaction.abort();
+                org.academy.internal.common.ability.program.ProgramRunObservations.settled(invocation,
+                        org.academy.api.common.ability.program.ProgramRunStatus.Phase.FAILED, vmResult.nodeId(),
+                        ProgramVmDiagnostic.ACTION_REJECTED, null, "session_admission_rejected",
+                        !aborted.successful(), player.level().getGameTime());
+            }
+            return scheduled ? ExecutionResult.started() : ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
         }
         return completeNativeExecution(
                 player,
@@ -169,8 +185,21 @@ public final class PrecisionOperationRuntime {
                 transaction,
                 activeActions,
                 planner,
-                PrecisionProgramExecutionBridge.nativeResult(vmResult)
+                PrecisionProgramExecutionBridge.nativeResult(vmResult),
+                invocation
         );
+    }
+
+    private static void observeNativeFailure(ServerPlayer player, ProgramInvocationContext invocation,
+                                             ProgramActionTransaction transaction, int nodeId, String port, String detail, boolean priorRollbackIncomplete) {
+        boolean rollbackIncomplete = priorRollbackIncomplete || transaction.state() == ProgramActionTransaction.State.RELEASED;
+        if (!rollbackIncomplete) {
+            var aborted = transaction.abort();
+            rollbackIncomplete |= !aborted.successful();
+        }
+        org.academy.internal.common.ability.program.ProgramRunObservations.settled(invocation,
+                org.academy.api.common.ability.program.ProgramRunStatus.Phase.FAILED, nodeId,
+                ProgramVmDiagnostic.ACTION_REJECTED, port, detail, rollbackIncomplete, player.level().getGameTime());
     }
 
     private static ExecutionResult completeNativeExecution(
@@ -183,10 +212,26 @@ public final class PrecisionOperationRuntime {
             ProgramActionTransaction transaction,
             ArrayList<ActiveAction> activeActions,
             NativePlanner planner,
-            PrecisionProgramExecutionBridge.NativeResult nativeResult
+            PrecisionProgramExecutionBridge.NativeResult nativeResult,
+            ProgramInvocationContext invocation
     ) {
+        // A successful branch that reached STOP without staging an action is a no-op.
+        // It must not refresh this slot, close an older control, or replace CP occupation.
+        if (planner.successfulNoOp(nativeResult)) {
+            var committed = transaction.commit();
+            if (!committed.successful()) {
+                observeNativeFailure(player, invocation, transaction, committed.nodeId(), null, "commit_failed", committed.rollbackFailures() > 0);
+                return ExecutionResult.failed(PrecisionGraph.Diagnostic.ACTION_FAILED);
+            }
+            transaction.release();
+            org.academy.internal.common.ability.program.ProgramRunObservations.settled(invocation,
+                    ProgramRunStatus.Phase.COMPLETED, -1, ProgramVmDiagnostic.NONE, null, "committed", false, player.level().getGameTime());
+            if (Arrays.stream(slots).allMatch(Objects::isNull)) ACTIVE.remove(player.getUUID(), slots);
+            return ExecutionResult.completed();
+        }
         var evaluated = planner.finish(nativeResult);
         if (!evaluated.valid()) {
+            observeNativeFailure(player, invocation, transaction, evaluated.nodeId, null, evaluated.diagnostic.name(), false);
             return ExecutionResult.failed(
                     evaluated.diagnostic, evaluated.nodeId, evaluated.port, evaluated.affectedCount);
         }
@@ -207,6 +252,7 @@ public final class PrecisionOperationRuntime {
                 occupationPlan.permanentCost(),
                 occupationPlan.timedCharges()
         )) {
+            observeNativeFailure(player, invocation, transaction, -1, null, "insufficient_cp", false);
             return ExecutionResult.failed(PrecisionGraph.Diagnostic.INSUFFICIENT_CP);
         }
 
@@ -232,16 +278,21 @@ public final class PrecisionOperationRuntime {
             slots[slot] = activeActions.isEmpty()
                     ? null : new ActiveContext(++nextContextSequence, activeActions, feedback);
             transaction.release();
+            org.academy.internal.common.ability.program.ProgramRunObservations.settled(invocation,
+                    org.academy.api.common.ability.program.ProgramRunStatus.Phase.COMPLETED, -1,
+                    ProgramVmDiagnostic.NONE, null, "committed", false, player.level().getGameTime());
             if (Arrays.stream(slots).allMatch(Objects::isNull)) {
                 ACTIVE.remove(player.getUUID());
             }
             return activeActions.isEmpty() ? ExecutionResult.completed() : ExecutionResult.started();
         } catch (RuntimeException exception) {
+            boolean rollbackIncomplete = false;
             if (transaction.state() == ProgramActionTransaction.State.COMMITTED) {
-                transaction.rollback();
+                rollbackIncomplete = !transaction.rollback().successful();
             }
             activeActions.forEach(action -> action.close(player));
             system.replacePermanentOccupation(player.getUUID(), permanentCost(player, slots), skill);
+            observeNativeFailure(player, invocation, transaction, applyingNodeId, null, "native_action_failed", rollbackIncomplete);
             var diagnostic = actionDiagnostic(exception);
             if (diagnostic == PrecisionGraph.Diagnostic.ACTION_FAILED) {
                 AcademyCraft.LOGGER.error(
@@ -870,6 +921,11 @@ public final class PrecisionOperationRuntime {
                 };
             });
             return ProgramNodeStep.next("flow");
+        }
+
+        private boolean successfulNoOp(PrecisionProgramExecutionBridge.NativeResult result) {
+            return result.valid() && failure == PrecisionGraph.Diagnostic.OK && actions.isEmpty()
+                    && transaction.size() == 0 && !endIntrusion;
         }
 
         private Evaluation finish(PrecisionProgramExecutionBridge.NativeResult result) {

@@ -11,6 +11,7 @@ import org.academy.internal.common.ability.darkmatter.program.DarkmatterProgramN
 import org.academy.internal.common.ability.electromaster.program.ElectromasterProgramNodeCatalog;
 import org.academy.internal.common.ability.meltdowner.program.MeltdownerProgramNodeCatalog;
 import org.academy.internal.common.ability.program.ProgramStructureMovementNodes;
+import org.academy.internal.common.ability.program.ProgramSamplingNodes;
 import org.academy.internal.common.ability.program.ProgramStructureOrientationNodes;
 import org.academy.internal.common.ability.program.compile.ProgramCompileResult;
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
@@ -74,6 +75,7 @@ final class ProgramCompilationCache {
             CommonProgramNodeCatalog.TextToVec3Configuration.class,
             CommonProgramNodeCatalog.TextComparisonConfiguration.class,
             CommonProgramNodeCatalog.EntityKindConfiguration.class,
+            ProgramSamplingNodes.Configuration.class,
             ProgramStructureFilters.Blocks.class,
             ProgramStructureFilters.Source.class,
             PrecisionProgramNodeCatalog.PrecisionConfiguration.class,

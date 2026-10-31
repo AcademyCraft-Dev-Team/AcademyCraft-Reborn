@@ -301,6 +301,9 @@ public final class CommonProgramExecutors implements ProgramExecutorLookup {
     private static void registerControlAndState(
             Map<Identifier, ProgramNodeExecutor<?>> result
     ) {
+        put(result, CommonProgramNodeIds.SAMPLE_VALUE,
+                (ProgramVmContext _, ProgramSamplingNodes.Configuration configuration, ProgramInputView inputs) ->
+                        ProgramSamplingNodes.sample(configuration, inputs));
         put(result, CommonProgramNodeIds.BRANCH, (_, _, inputs) -> ProgramNodeStep.next(
                 Boolean.toString(booleanValue(inputs, "condition"))
         ));

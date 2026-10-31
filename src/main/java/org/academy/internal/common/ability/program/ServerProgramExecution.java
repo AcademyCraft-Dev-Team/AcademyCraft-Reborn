@@ -8,6 +8,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.ProgramStructureOrientationRuntime;
+import org.academy.api.common.ability.program.ProgramRunStatus;
 
 import java.util.Optional;
 
@@ -36,10 +37,16 @@ public final class ServerProgramExecution {
             if (vmResult.status() == ProgramVmResult.Status.COMPLETED) {
                 var committed = transaction.commit();
                 if (committed.successful()) transaction.release();
+                ProgramRunObservations.settled(invocation, committed.successful() ? ProgramRunStatus.Phase.COMPLETED : ProgramRunStatus.Phase.FAILED,
+                        committed.successful() ? vmResult.nodeId() : committed.nodeId(), committed.successful() ? ProgramVmDiagnostic.NONE
+                                : AbilityProgramManager.actionDiagnostic(committed.cause()), null, committed.successful() ? "committed" : "commit_failed",
+                        committed.rollbackFailures() > 0, player.level().getGameTime());
                 return new Result(vmResult, Optional.of(committed));
             }
             if (vmResult.status() == ProgramVmResult.Status.FAILED) {
                 var aborted = transaction.abort();
+                ProgramRunObservations.settled(invocation, ProgramRunStatus.Phase.FAILED, vmResult.nodeId(), vmResult.diagnostic(),
+                        vmResult.port(), vmResult.detail(), !aborted.successful(), player.level().getGameTime());
                 return new Result(vmResult, aborted.successful()
                         ? Optional.empty() : Optional.of(aborted));
             }
@@ -62,7 +69,9 @@ public final class ServerProgramExecution {
                     }
             );
             if (!scheduled) {
-                transaction.abort();
+                var aborted = transaction.abort();
+                ProgramRunObservations.settled(invocation, ProgramRunStatus.Phase.FAILED, vmResult.nodeId(), ProgramVmDiagnostic.ACTION_REJECTED,
+                        null, "session_admission_rejected", !aborted.successful(), player.level().getGameTime());
                 return rejected(vmResult);
             }
             return new Result(vmResult, Optional.empty());
@@ -112,6 +121,14 @@ public final class ServerProgramExecution {
     ) {
         if (termination.kind() != ProgramSessionScheduler.TerminationKind.COMPLETED) {
             var aborted = transaction.abort();
+            var phase = switch (termination.kind()) {
+                case CANCELLED -> ProgramRunStatus.Phase.CANCELLED;
+                case EXPIRED -> ProgramRunStatus.Phase.EXPIRED;
+                default -> ProgramRunStatus.Phase.FAILED;
+            };
+            ProgramRunObservations.settled(invocation, phase, termination.nodeId(), termination.diagnostic(), termination.port(),
+                    termination.detail() == null ? phase.name().toLowerCase(java.util.Locale.ROOT) : termination.detail(),
+                    !aborted.successful(), player.level().getGameTime());
             if (termination.kind() != ProgramSessionScheduler.TerminationKind.CANCELLED) {
                 AbilityProgramManager.reportDeferredFailure(player, category, invocation,
                         termination.nodeId(), termination.kind() == ProgramSessionScheduler.TerminationKind.EXPIRED
@@ -125,8 +142,13 @@ public final class ServerProgramExecution {
         var committed = transaction.commit();
         if (committed.successful()) {
             transaction.release();
+            ProgramRunObservations.settled(invocation, ProgramRunStatus.Phase.COMPLETED, termination.nodeId(), ProgramVmDiagnostic.NONE,
+                    null, "committed", false, player.level().getGameTime());
             return;
         }
+        ProgramRunObservations.settled(invocation, ProgramRunStatus.Phase.FAILED, committed.nodeId(),
+                AbilityProgramManager.actionDiagnostic(committed.cause()), null, "commit_failed", committed.rollbackFailures() > 0,
+                player.level().getGameTime());
         AbilityProgramManager.reportDeferredFailure(player, category, invocation,
                 committed.nodeId(), AbilityProgramManager.actionDiagnostic(committed.cause()),
                 null, null);

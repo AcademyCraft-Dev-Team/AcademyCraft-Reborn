@@ -38,6 +38,11 @@ public final class ProgramVm {
         private boolean completeAfterWake;
         private boolean completed;
         private boolean failed;
+        private long lastRunLogicalTick = -1;
+        private int suspensionSource = -1;
+        private org.academy.api.common.ability.program.ProgramRunStatus.WaitKind suspensionKind =
+                org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.NONE;
+        private @Nullable ProgramVmResult lastObservationResult;
 
         public Session(CompiledProgram program) {
             this.program = program;
@@ -50,8 +55,11 @@ public final class ProgramVm {
                 ProgramExecutorLookup executors,
                 @Nullable Object attachment
         ) {
+            lastRunLogicalTick = gameTime;
             var result = runSlice(gameTime, fuel, executors, attachment);
+            lastObservationResult = result;
             if (attachment instanceof ProgramExecutionFrame frame) {
+                ProgramRunObservations.vmSlice(this, result, frame);
                 frame.invocation().ifPresent(invocation -> invocation.reportRunResult(result));
             }
             return result;
@@ -86,6 +94,8 @@ public final class ProgramVm {
                 );
             }
             if (completeAfterWake) return complete();
+            suspensionKind = org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.NONE;
+            suspensionSource = -1;
 
             var budget = new Fuel(fuel);
             var context = new ProgramVmContext(gameTime, variables, executorState, attachment);
@@ -101,6 +111,8 @@ public final class ProgramVm {
                 var node = program.nodes().get(currentNodeId);
                 if (node == null) return fail(ProgramVmDiagnostic.INVALID_FLOW_OUTPUT);
                 if (!budget.tryConsume()) {
+                    suspensionKind = org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.FUEL;
+                    suspensionSource = currentNodeId;
                     return new ProgramVmResult(
                             ProgramVmResult.Status.FUEL_EXHAUSTED,
                             currentNodeId,
@@ -136,6 +148,8 @@ public final class ProgramVm {
                             latchedOutputs.put(new CompiledProgram.OutputKey(node.id(), port), value));
                     switch (step.directive()) {
                         case RETRY -> {
+                            suspensionKind = org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.RETRY;
+                            suspensionSource = node.id();
                             wakeAt = gameTime + step.delayTicks();
                             return new ProgramVmResult(ProgramVmResult.Status.SUSPENDED,
                                     currentNodeId, ProgramVmDiagnostic.NONE);
@@ -195,6 +209,8 @@ public final class ProgramVm {
                                 currentNodeId = target;
                             }
                             if (step.directive() == ProgramNodeStep.Directive.YIELD) {
+                                suspensionKind = org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.WAIT;
+                                suspensionSource = node.id();
                                 wakeAt = gameTime + step.delayTicks();
                                 completeAfterWake = terminalYield;
                                 return new ProgramVmResult(
@@ -206,6 +222,8 @@ public final class ProgramVm {
                         }
                     }
                 } catch (FuelExhausted exception) {
+                    suspensionKind = org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.FUEL;
+                    suspensionSource = currentNodeId;
                     return new ProgramVmResult(
                             ProgramVmResult.Status.FUEL_EXHAUSTED,
                             currentNodeId,
@@ -248,6 +266,27 @@ public final class ProgramVm {
         public long wakeAt() {
             return wakeAt;
         }
+
+        ProgramVmResult observationStatus() {
+            return lastObservationResult == null ? new ProgramVmResult(ProgramVmResult.Status.FUEL_EXHAUSTED,
+                    currentNodeId, ProgramVmDiagnostic.NONE) : lastObservationResult;
+        }
+
+        ObservationView observationView() {
+            var kind = lastObservationResult != null && (lastObservationResult.status() == ProgramVmResult.Status.SUSPENDED
+                    || lastObservationResult.status() == ProgramVmResult.Status.FUEL_EXHAUSTED)
+                    ? suspensionKind : org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.NONE;
+            int source = kind == org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.NONE ? -1 : suspensionSource;
+            int actual = lastObservationResult != null && lastObservationResult.status() == ProgramVmResult.Status.FAILED
+                    ? lastObservationResult.nodeId() : currentNodeId;
+            var node = program.nodes().get(source >= 0 ? source : actual);
+            return new ObservationView(source, node == null ? null : node.typeId(), lastRunLogicalTick,
+                    kind == org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.WAIT
+                            || kind == org.academy.api.common.ability.program.ProgramRunStatus.WaitKind.RETRY ? wakeAt : -1, kind);
+        }
+
+        record ObservationView(int sourceNodeId, @Nullable Identifier nodeType, long logicalTick, long wakeAt,
+                               org.academy.api.common.ability.program.ProgramRunStatus.WaitKind kind) {}
 
         private ProgramInputView resolveInputs(
                 CompiledProgram.CompiledNode node,

@@ -1,0 +1,22 @@
+// Seven real advanced-template execution paths in a fresh, isolated GameTest world.
+allprojects {
+    afterEvaluate {
+        def runId = providers.gradleProperty('academyAdvancedTasksRun').getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) throw new GradleException('Invalid advanced tasks run id')
+        def prefix = 'native-program-advanced-tasks-precision-d-'
+        def directory = rootProject.file(providers.gradleProperty('academyAdvancedTasksDirectory')
+                .getOrElse("run/${prefix}${runId}")).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith(prefix)) throw new GradleException('Advanced tasks require their isolated directory')
+        if (directory.exists() && directory.listFiles()?.length > 0) throw new GradleException('Advanced tasks directory must be fresh')
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_advanced_tasks') {
+            throw new GradleException('Advanced tasks must select academy:precision_advanced_tasks only')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionAdvancedTasks', 'true'
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_advanced_tasks')
+        }
+    }
+}

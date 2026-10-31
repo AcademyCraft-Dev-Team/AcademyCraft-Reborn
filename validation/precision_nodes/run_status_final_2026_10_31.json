@@ -1,0 +1,657 @@
+{
+  "passed": true,
+  "phase": "logout_cleanup",
+  "checks": {
+    "unsubscribed_no_status_packet": true,
+    "midrun_attach_wait_source_and_no_early_commit": true,
+    "cancel_after_abort_without_downstream_write": true,
+    "new_run_commits_and_replaces_old_terminal": true,
+    "actual_commit_failure_never_announces_completion": true,
+    "physical_server_tick_lease_expiry_does_not_cancel_execution": true,
+    "mentalout_deferred_real_no_action_settlement": true,
+    "actual_dimension_transfer_stops_observation_without_cancelling_execution": true,
+    "actual_logout_clears_subscription_and_session": true
+  },
+  "status_packets": [
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 1,
+      "updateSequence": 4,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 7,
+      "wakeAtLogicalTick": 33,
+      "worldGameTick": 6,
+      "observedServerTick": 6,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 1,
+      "updateSequence": 9,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 12,
+      "wakeAtLogicalTick": 33,
+      "worldGameTick": 11,
+      "observedServerTick": 11,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 1,
+      "updateSequence": 12,
+      "phase": "CANCELLED",
+      "waitKind": "NONE",
+      "nodeId": 4,
+      "sourceNodeId": -1,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 14,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 14,
+      "observedServerTick": 14,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "cancelled",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 15,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 23,
+      "wakeAtLogicalTick": 52,
+      "worldGameTick": 22,
+      "observedServerTick": 22,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 20,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 28,
+      "wakeAtLogicalTick": 52,
+      "worldGameTick": 27,
+      "observedServerTick": 27,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 25,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 33,
+      "wakeAtLogicalTick": 52,
+      "worldGameTick": 32,
+      "observedServerTick": 32,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 30,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 38,
+      "wakeAtLogicalTick": 52,
+      "worldGameTick": 37,
+      "observedServerTick": 37,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 35,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 43,
+      "wakeAtLogicalTick": 52,
+      "worldGameTick": 42,
+      "observedServerTick": 42,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 40,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 48,
+      "wakeAtLogicalTick": 52,
+      "worldGameTick": 47,
+      "observedServerTick": 47,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "26c7d36d-432b-4a89-b201-ee30fc8dfbc3",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "b70bc8ba-f0cc-48d0-bad1-418acc9bc337",
+        "bookRevision": 1
+      },
+      "runSequence": 2,
+      "updateSequence": 45,
+      "phase": "COMPLETED",
+      "waitKind": "NONE",
+      "nodeId": 4,
+      "sourceNodeId": -1,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/state/shared_variable_set"
+      },
+      "logicalTick": 52,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 51,
+      "observedServerTick": 51,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "committed",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "2b147305-1ce6-4ba9-a80a-0b8bb28a7e39",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "784e986c-11b0-4388-937e-a628c70a8c77",
+        "bookRevision": 2
+      },
+      "runSequence": 3,
+      "updateSequence": 4,
+      "phase": "FAILED",
+      "waitKind": "NONE",
+      "nodeId": 4,
+      "sourceNodeId": -1,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/stop"
+      },
+      "logicalTick": 62,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 62,
+      "observedServerTick": 62,
+      "diagnosticCode": "ACTION_REJECTED",
+      "port": "",
+      "reasonCode": "commit_failed",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "6990b865-816b-41dc-83f5-4257ec266601",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "4b9633d8-65eb-4618-9f1f-a350e1b356e5",
+        "bookRevision": 3
+      },
+      "runSequence": 0,
+      "updateSequence": 1,
+      "phase": "IDLE",
+      "waitKind": "NONE",
+      "nodeId": -1,
+      "sourceNodeId": -1,
+      "logicalTick": -1,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 70,
+      "observedServerTick": 70,
+      "diagnosticCode": "",
+      "port": "",
+      "reasonCode": "no_active_run",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "096df84d-5072-4f57-bf1f-518513da7720",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "bae75cbc-7ade-44e7-a766-e58e2adcf1c2",
+        "bookRevision": 4
+      },
+      "runSequence": 4,
+      "updateSequence": 4,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 489,
+      "wakeAtLogicalTick": 498,
+      "worldGameTick": 488,
+      "observedServerTick": 488,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "096df84d-5072-4f57-bf1f-518513da7720",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "bae75cbc-7ade-44e7-a766-e58e2adcf1c2",
+        "bookRevision": 4
+      },
+      "runSequence": 4,
+      "updateSequence": 9,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 494,
+      "wakeAtLogicalTick": 498,
+      "worldGameTick": 493,
+      "observedServerTick": 493,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "096df84d-5072-4f57-bf1f-518513da7720",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "bae75cbc-7ade-44e7-a766-e58e2adcf1c2",
+        "bookRevision": 4
+      },
+      "runSequence": 4,
+      "updateSequence": 14,
+      "phase": "COMPLETED",
+      "waitKind": "NONE",
+      "nodeId": -1,
+      "sourceNodeId": -1,
+      "logicalTick": 498,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 497,
+      "observedServerTick": 497,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "committed",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "e0a7e12e-fe8b-49cd-bffb-7b6f24d3f73d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "17169a4d-1295-435b-832e-8f2644d837e0",
+        "bookRevision": 5
+      },
+      "runSequence": 5,
+      "updateSequence": 4,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 507,
+      "wakeAtLogicalTick": 536,
+      "worldGameTick": 506,
+      "observedServerTick": 506,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "e0a7e12e-fe8b-49cd-bffb-7b6f24d3f73d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "17169a4d-1295-435b-832e-8f2644d837e0",
+        "bookRevision": 5
+      },
+      "runSequence": 5,
+      "updateSequence": 9,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 512,
+      "wakeAtLogicalTick": 536,
+      "worldGameTick": 511,
+      "observedServerTick": 511,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "d614c368-deb5-4112-bc0f-a149d346c84d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "b7342d45-0c78-47f6-9577-024c8a1977de",
+        "bookRevision": 6
+      },
+      "runSequence": 6,
+      "updateSequence": 4,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 523,
+      "wakeAtLogicalTick": 552,
+      "worldGameTick": 522,
+      "observedServerTick": 522,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    {
+      "token": "d614c368-deb5-4112-bc0f-a149d346c84d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "mentalout"
+        },
+        "slot": 0,
+        "programId": "b7342d45-0c78-47f6-9577-024c8a1977de",
+        "bookRevision": 6
+      },
+      "runSequence": 6,
+      "updateSequence": 9,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 4,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 528,
+      "wakeAtLogicalTick": 552,
+      "worldGameTick": 527,
+      "observedServerTick": 527,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    }
+  ],
+  "scope": "One actual registered ServerPlayer, natural scheduler resume and real outbound status CODEC. Saved books installed during setup; subscriptions use server helper. Commit rejection is an injected action through production ServerProgramExecution/transaction. Not a real remote client or physical paid-action acceptance.",
+  "failure": ""
+}

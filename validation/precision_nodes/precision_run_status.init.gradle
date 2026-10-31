@@ -1,0 +1,17 @@
+// Real registered-player status lifecycle; fresh isolated world, no client rendering claim.
+allprojects {
+    afterEvaluate {
+        def runId = providers.gradleProperty('academyRunStatusRun').getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) throw new GradleException('Invalid status run id')
+        def directory = rootProject.file("run/precision-run-status-${runId}").canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || directory.exists() && directory.listFiles()?.length > 0) throw new GradleException('Run status smoke needs a fresh isolated directory')
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_run_status') throw new GradleException('Select only academy:precision_run_status')
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionRunStatusSmoke', 'true'
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_run_status')
+        }
+    }
+}

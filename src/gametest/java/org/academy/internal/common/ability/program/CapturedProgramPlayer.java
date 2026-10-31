@@ -30,7 +30,8 @@ import java.lang.reflect.Proxy;
 /** Registered server player with a real mock Connection; this is not a logged-in game client or TCP peer. */
 public final class CapturedProgramPlayer implements AutoCloseable {
     private static final Set<Class<?>> PROGRAM_PACKETS = Set.of(
-            AbilityProgramManager.SyncPacket.class, AbilityProgramManager.ResultPacket.class);
+            AbilityProgramManager.SyncPacket.class, AbilityProgramManager.ResultPacket.class,
+            AbilityProgramManager.RunStatusPacket.class);
     private static final Field WRAPPER_ID = wrapperField("id");
     private static final Field WRAPPER_BODY = wrapperField("byteBuf");
     private final ServerPlayer player;

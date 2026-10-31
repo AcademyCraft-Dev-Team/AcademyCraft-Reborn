@@ -24,6 +24,7 @@ import org.academy.internal.client.ability.program.ProgramConfigurationOptions
 import org.academy.internal.client.ability.program.ProgramDiagnosticText
 import org.academy.internal.client.ability.program.ProgramStarterTemplates
 import org.academy.internal.client.ability.program.ProgramTaskTemplates
+import org.academy.internal.client.ability.program.ProgramTaskPreview
 import org.academy.internal.client.ability.program.ProgramPaletteCatalog
 import org.academy.internal.client.ability.program.ProgramEditorMetrics
 import org.academy.internal.client.ability.program.ProgramEditorCachePolicy
@@ -128,6 +129,20 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var runTrace: List<ProgramRunTrace.Step> = emptyList()
     private var runTraceTruncated = false
     private var showRunTrace = false
+    private var showTaskPreview = false
+    private var previewScroll = 0
+    private var previewDocument: ProgramEditorDocument? = null
+    private var previewLanguage: Language? = null
+    private var previewExtensions: ProgramNodeExtensionIndex.Snapshot? = null
+    private var previewPaletteRevision = -1L
+    private var previewWidth = -1
+    private var previewLines: List<PreviewLine> = emptyList()
+    private var statusCached: ProgramRunStatus? = null
+    private var statusDocument: ProgramEditorDocument? = null
+    private var statusSaved: AbilityProgram? = null
+    private var statusLanguage: Language? = null
+    private var statusWidth = -1
+    private var statusLines: List<String> = emptyList()
     private var runTraceScroll = 0
     private var transientDiagnostic: PrecisionGraph.Diagnostic = PrecisionGraph.Diagnostic.OK
     private var transientUntil = 0L
@@ -328,6 +343,19 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         editorSurface?.invalidate()
         tooltipSurface?.invalidate()
         super.extractRenderState(graphics, mouseX, mouseY, a)
+    }
+
+    override fun tick() {
+        super.tick()
+        session.observeRunStatus(this, slot, showRunTrace && inspectorVisible())
+    }
+
+    // A visible run monitor must not freeze its integrated server while it is waiting.
+    override fun isPauseScreen(): Boolean = !showRunTrace
+
+    override fun removed() {
+        session.closed(this)
+        super.removed()
     }
 
     private inner class EditorSurface : AbstractWidget() {
@@ -561,7 +589,10 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
 
     private fun starterRowLabel(index: Int): Component {
         val tasks = starterTasks()
-        if (index < tasks.size) return Component.translatable(tasks[index].translationKey())
+        if (index < tasks.size) {
+            val label = Component.translatable(tasks[index].translationKey())
+            return if (tasks[index].advanced()) Component.translatable("screen.academy.program.inspector.advanced", label) else label
+        }
         val key = if (index == tasks.size) "manual" else "chat"
         return Component.translatable("screen.academy.program.starter.$key")
     }
@@ -757,15 +788,20 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private fun renderInspector(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
         val x = inspectorX()
         val width = inspectorWidth()
-        headingText(
-            graphics, Component.translatable("screen.academy.precision_operation.inspector").string,
-            x + 5, canvasY + 4, DIM, width - 10
-        )
-        if (!session.precisionRules()) {
-            val label = Component.translatable("screen.academy.program.run_trace.title").string
-            val buttonWidth = minOf(70, width / 2)
-            button(graphics, x + width - buttonWidth - 4, canvasY + 2, buttonWidth, 15,
-                Component.literal(label), mouseX, mouseY, showRunTrace, true)
+        if (session.precisionRules()) {
+            headingText(graphics, Component.translatable("screen.academy.precision_operation.inspector").string,
+                x + 5, canvasY + 4, DIM, width - 10)
+        } else {
+            val tabWidth = (width - 8) / 3
+            for ((index, key) in listOf("node", "preview", "run").withIndex()) {
+                val selected = when (index) { 1 -> showTaskPreview; 2 -> showRunTrace; else -> !showRunTrace && !showTaskPreview }
+                button(graphics, x + 4 + tabWidth * index, canvasY + 2, tabWidth, 15,
+                    Component.translatable("screen.academy.program.inspector.$key"), mouseX, mouseY, selected, true)
+            }
+            if (showTaskPreview) {
+                renderTaskPreview(graphics, x, width)
+                return
+            }
             if (showRunTrace) {
                 renderRunTrace(graphics, x, width, mouseX, mouseY)
                 return
@@ -822,13 +858,134 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         return maxOf(0, (canvasY + canvasH - listY - 2) / 9)
     }
 
-    private fun traceVisibleRows(): Int = maxOf(1, (canvasH - 42) / 25)
+    private fun runTraceOffset(): Int = 40 + runStatusLines().size * 10
+
+    private fun traceVisibleRows(): Int = maxOf(0, (canvasH - runTraceOffset() - 16) / 25)
+
+    private fun runStatusLines(): List<String> {
+        val status = session.runStatus(slot)
+        val saved = session.restoredProgram(slot)
+        val language = Language.getInstance()
+        val width = inspectorWidth() - 10
+        if (statusCached === status && statusDocument === document && statusSaved === saved &&
+            statusLanguage === language && statusWidth == width) return statusLines
+        val lines = ArrayList<String>()
+        fun add(key: String, vararg args: Any) {
+            lines.addAll(ProgramUiGraphics.wrap(Component.translatable("screen.academy.program.run_status.$key", *args).string,
+                width.toFloat(), ProgramUiGraphics.BODY_FONT_SIZE))
+        }
+        if (saved == null) add("unsaved")
+        else {
+            add("saved_revision", session.revision())
+            if (saved != document.program()) add("draft_differs")
+            if (status == null) add("connecting")
+            else {
+                add("phase.${status.phase().name.lowercase(Locale.ROOT)}")
+                if (status.rollbackIncomplete()) add("rollback_incomplete")
+                val source = if (status.sourceNodeId() >= 0) status.sourceNodeId() else status.nodeId()
+                if (source >= 0) {
+                    val entry = status.nodeType()?.let { catalog.entry(it) }
+                    add("node", source, if (entry == null) "" else nodeLabel(entry).string)
+                }
+                when (status.waitKind()) {
+                    ProgramRunStatus.WaitKind.WAIT -> if (status.logicalTick() >= 0 && status.wakeAtLogicalTick() >= 0)
+                        add("wait", maxOf(0L, status.wakeAtLogicalTick() - status.logicalTick()))
+                    ProgramRunStatus.WaitKind.RETRY -> add("retry")
+                    ProgramRunStatus.WaitKind.FUEL -> add("fuel")
+                    else -> Unit
+                }
+                if (status.diagnosticCode().isNotEmpty()) {
+                    val diagnostic = runCatching { ProgramVmDiagnostic.valueOf(status.diagnosticCode()) }.getOrNull()
+                    if (diagnostic != null && diagnostic != ProgramVmDiagnostic.NONE)
+                        lines.addAll(ProgramUiGraphics.wrap(Component.translatable(diagnostic.translationKey()).string,
+                            width.toFloat(), ProgramUiGraphics.BODY_FONT_SIZE))
+                }
+            }
+        }
+        statusCached = status; statusDocument = document; statusSaved = saved
+        statusLanguage = language; statusWidth = width; statusLines = lines
+        return lines
+    }
+
+    private data class PreviewLine(val text: String, val nodeId: Int, val color: Int)
+
+    /** An explicit, bounded explanation of the draft; never a live world query or a VM execution. */
+    private fun taskPreviewLines(): List<PreviewLine> {
+        val language = Language.getInstance()
+        val extensions = ProgramNodeExtensionIndex.snapshot(document.program().category())
+        val paletteRevision = ProgramNodePalette.registrationRevision()
+        val width = inspectorWidth() - 12
+        if (previewDocument === document && previewLanguage === language && previewWidth == width &&
+            previewExtensions === extensions && previewPaletteRevision == paletteRevision) return previewLines
+        val preview = ProgramTaskPreview.inspect(document.program(), definition, capabilities)
+        val lines = ArrayList<PreviewLine>()
+        fun add(text: String, nodeId: Int = -1, color: Int = DIM) {
+            for (part in ProgramUiGraphics.wrap(text, width.toFloat(), ProgramUiGraphics.BODY_FONT_SIZE))
+                lines.add(PreviewLine(part, nodeId, color))
+        }
+        for (notice in preview.notices()) {
+            val prefix = if (notice.nodeId() < 0) "" else "#${notice.nodeId()} "
+            add(prefix + Component.translatable(notice.translationKey(), *notice.arguments().toTypedArray()).string,
+                notice.nodeId())
+        }
+        val authored = document.program().graph().nodes().associateBy { it.id() }
+        for (item in preview.nodes()) {
+            add("#${item.nodeId()} ${Component.translatable(item.titleKey()).string}", item.nodeId(), TEXT)
+            val entry = catalog.entry(item.nodeType())
+            fun configuredValue(field: String, fallback: String): String {
+                val json = authored[item.nodeId()]?.configuration()
+                if (entry == null || json == null || !json.isJsonObject) return fallback
+                val raw = json.asJsonObject.get(field) ?: return fallback
+                val options = ProgramConfigurationOptions.options(entry, field, raw)
+                return if (options.isEmpty()) fallback else ProgramConfigurationOptions.selected(options, raw).label().string
+            }
+            for (input in item.inputs()) {
+                val port = if (entry == null) input.port() else portLabel(entry, input.port()).string
+                val source = Component.translatable("screen.academy.program.preview.source.${input.source().name.lowercase(Locale.ROOT)}").string
+                val detail = when (input.source()) {
+                    ProgramTaskPreview.Source.CONNECTED -> input.from().joinToString(", ") { "#${it.nodeId()}" }
+                    ProgramTaskPreview.Source.DEFAULT -> Component.translatable(input.defaultKey()).string +
+                        if (input.literal().isEmpty()) "" else " (${configuredValue(input.port(), input.literal())})"
+                    ProgramTaskPreview.Source.LITERAL -> input.literal()
+                    else -> ""
+                }
+                add("$port: $source${if (detail.isEmpty()) "" else " · $detail"}", item.nodeId())
+            }
+            for (parameter in item.configuration()) {
+                if (item.inputs().any { it.port() == parameter.name() && it.source() == ProgramTaskPreview.Source.DEFAULT }) continue
+                add("${configurationFieldLabel(parameter.name()).string}: ${configuredValue(parameter.name(), parameter.value())}", item.nodeId())
+            }
+        }
+        if (preview.omittedNodes() > 0) add(Component.translatable("screen.academy.program.preview.omitted", preview.omittedNodes()).string)
+        previewDocument = document
+        previewLanguage = language
+        previewExtensions = extensions
+        previewPaletteRevision = paletteRevision
+        previewWidth = width
+        previewLines = lines
+        return lines
+    }
+
+    private fun renderTaskPreview(graphics: ProgramUiGraphics, x: Int, width: Int) {
+        val lines = taskPreviewLines()
+        val rows = maxOf(1, (canvasH - 30) / 10)
+        previewScroll = previewScroll.coerceIn(0, maxOf(0, lines.size - rows))
+        lines.drop(previewScroll).take(rows).forEachIndexed { index, line ->
+            smallText(graphics, line.text, x + 5, canvasY + 23 + index * 10, line.color, width - 10)
+        }
+    }
 
     private fun renderRunTrace(graphics: ProgramUiGraphics, x: Int, width: Int,
                                mouseX: Int, mouseY: Int) {
+        runStatusLines().forEachIndexed { index, line ->
+            smallText(graphics, line, x + 5, canvasY + 23 + index * 10, DIM, width - 10)
+        }
+        val traceY = canvasY + runTraceOffset()
+        smallText(graphics, Component.translatable("screen.academy.program.run_trace.history").string,
+            x + 5, traceY - 11, DIM, width - 10)
         if (runTrace.isEmpty()) {
             smallText(graphics, Component.translatable("screen.academy.program.run_trace.empty").string,
-                x + 5, canvasY + 25, DIM, width - 10)
+                x + 5, traceY, DIM, width - 10)
             return
         }
         val rows = traceVisibleRows()
@@ -837,7 +994,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
             val index = runTraceScroll + row
             if (index >= runTrace.size) break
             val step = runTrace[index]
-            val y = canvasY + 23 + row * 25
+            val y = traceY + row * 25
             val hovered = inside(mouseX.toDouble(), mouseY.toDouble(),
                 (x + 3).toDouble(), y.toDouble(), (width - 6).toDouble(), 23.0)
             graphics.fill(x + 3, y, x + width - 3, y + 23,
@@ -1460,6 +1617,13 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         scrollX: Double,
         scrollY: Double
     ): Boolean {
+        if (showTaskPreview && inspectorVisible() && inside(mouseX, mouseY,
+                inspectorX().toDouble(), canvasY.toDouble(), inspectorWidth().toDouble(), canvasH.toDouble())) {
+            val rows = maxOf(1, (canvasH - 30) / 10)
+            previewScroll = (previewScroll - sign(scrollY).toInt() * 3)
+                .coerceIn(0, maxOf(0, taskPreviewLines().size - rows))
+            return true
+        }
         if (showRunTrace && inspectorVisible() && inside(mouseX, mouseY,
                 inspectorX().toDouble(), canvasY.toDouble(), inspectorWidth().toDouble(), canvasH.toDouble())) {
             runTraceScroll = (runTraceScroll - sign(scrollY).toInt())
@@ -1776,17 +1940,31 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         if (!inspectorVisible()) return false
         if (!inside(mouseX, mouseY, inspectorX().toDouble(), canvasY.toDouble(),
                 inspectorWidth().toDouble(), canvasH.toDouble())) return false
-        val traceWidth = minOf(70, inspectorWidth() / 2)
+        val tabWidth = (inspectorWidth() - 8) / 3
         if (!session.precisionRules() && inside(mouseX, mouseY,
-                (inspectorX() + inspectorWidth() - traceWidth - 4).toDouble(),
-                (canvasY + 2).toDouble(), traceWidth.toDouble(), 15.0)) {
-            showRunTrace = !showRunTrace
+                (inspectorX() + 4).toDouble(), (canvasY + 2).toDouble(), (tabWidth * 3).toDouble(), 15.0)) {
+            val tab = ((mouseX - inspectorX() - 4) / tabWidth).toInt()
+            showTaskPreview = tab == 1
+            showRunTrace = tab == 2
+            if (showTaskPreview) { previewDocument = null; previewScroll = 0 }
+            return true
+        }
+        if (showTaskPreview) {
+            val row = ((mouseY - canvasY - 23) / 10).toInt()
+            val lines = taskPreviewLines()
+            val index = previewScroll + row
+            if (mouseY >= canvasY + 23 && index in lines.indices && node(lines[index].nodeId) != null) {
+                selectNode(lines[index].nodeId)
+                showTaskPreview = false
+            }
             return true
         }
         if (showRunTrace) {
-            val row = ((mouseY - canvasY - 23) / 25).toInt()
+            val offset = runTraceOffset()
+            val row = ((mouseY - canvasY - offset) / 25).toInt()
             val index = runTraceScroll + row
-            if (mouseY >= canvasY + 23 && row < traceVisibleRows() && index in runTrace.indices) {
+            if (session.restoredProgram(slot) == document.program() && mouseY >= canvasY + offset &&
+                row < traceVisibleRows() && index in runTrace.indices) {
                 val traceNode = node(runTrace[index].nodeId())
                 if (traceNode != null) {
                     selectNode(traceNode.id())
@@ -2624,7 +2802,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private fun syncConfigurationInputs() {
         val selected = node(selectedNode)
         val fields = if (selected == null) emptyList() else configurationFields(selected)
-        val visible = inspectorVisible() && selected != null && fields.isNotEmpty()
+        val visible = inspectorVisible() && !showRunTrace && !showTaskPreview && selected != null && fields.isNotEmpty()
         if (!visible) {
             clearConfigurationInputs()
             return

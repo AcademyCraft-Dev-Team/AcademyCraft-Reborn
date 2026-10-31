@@ -3,6 +3,7 @@ package org.academy.internal.client.ability.mentalout;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramRunStatus;
 import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.ProgramRunTrace;
 import org.jspecify.annotations.Nullable;
@@ -37,6 +38,10 @@ public interface ModularProgramEditorSession {
     void saveProgram(int slot, @Nullable AbilityProgram program, long expectedRevision);
 
     void closed(ModularProgramScreen screen);
+
+    default void observeRunStatus(ModularProgramScreen screen, int slot, boolean visible) {}
+
+    default @Nullable ProgramRunStatus runStatus(int slot) { return null; }
 
     default boolean showStarter() {
         return true;

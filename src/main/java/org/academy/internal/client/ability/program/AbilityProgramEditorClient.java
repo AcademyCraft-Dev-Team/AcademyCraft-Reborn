@@ -48,6 +48,7 @@ public final class AbilityProgramEditorClient {
 
     private static Config config;
     private static ModularProgramScreen screen;
+    private static @Nullable Session activeSession;
     private static long executionSequence;
     private static boolean networkHandlersInitialized;
     // Connection-scoped cache; the preference itself belongs to the world's player data.
@@ -115,7 +116,8 @@ public final class AbilityProgramEditorClient {
         }
         if (AbilitySystemClient.getLevel().getLevelCode() < 5) return;
         var state = state(player.getUUID(), category.getKey());
-        screen = new ModularProgramScreen(new Session(category, state));
+        activeSession = new Session(category, state);
+        screen = new ModularProgramScreen(activeSession);
         minecraft.gui.setScreen(screen);
         ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.RequestPacket(category.getKey()));
     }
@@ -294,6 +296,7 @@ public final class AbilityProgramEditorClient {
         if (!decoded.valid() || !validBook(category, decoded.book())) return;
         var player = Minecraft.getInstance().player;
         if (player == null) return;
+        if (activeSession != null && activeSession.category.getKey().equals(category)) activeSession.stopObserving();
         // A reply sent before the dismiss click must not restore the prompt.
         starterDismissed = Boolean.TRUE.equals(starterDismissed) || dismissedStarter;
         var state = state(player.getUUID(), category);
@@ -498,6 +501,7 @@ public final class AbilityProgramEditorClient {
         STATES.clear();
         starterDismissed = null;
         screen = null;
+        activeSession = null;
         executionSequence = 0L;
     }
 
@@ -506,6 +510,8 @@ public final class AbilityProgramEditorClient {
         private final State state;
         private final UUID playerId;
         private final Set<Identifier> capabilities;
+        private @Nullable ProgramRunStatusSelection observation;
+        private int observationTicks;
 
         private Session(AbilityCategory category, State state) {
             this.category = category;
@@ -656,7 +662,44 @@ public final class AbilityProgramEditorClient {
 
         @Override
         public void closed(ModularProgramScreen closed) {
-            if (screen == closed) screen = null;
+            stopObserving();
+            if (screen == closed) {
+                screen = null;
+                if (activeSession == this) activeSession = null;
+            }
+        }
+
+        private void stopObserving() {
+            var previous = observation;
+            observation = null;
+            observationTicks = 0;
+            if (previous != null && Minecraft.getInstance().getConnection() != null)
+                ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.ObserveRunPacket(previous.token(), null));
+        }
+
+        @Override
+        public void observeRunStatus(ModularProgramScreen observingScreen, int slot, boolean visible) {
+            var client = Minecraft.getInstance();
+            if (!visible || observingScreen != screen || client.gui.screen() != screen || client.level == null
+                    || client.player == null || !state.serverSynchronized || !state.extensionCompatible
+                    || AbilitySystemClient.category != category || !playerId.equals(client.player.getUUID())) {
+                stopObserving(); return;
+            }
+            var saved = state.saved.slot(slot).program();
+            if (saved == null) { stopObserving(); return; }
+            var target = new ProgramRunStatus.Target(client.level.dimension().identifier(), category.getKey(),
+                    slot, saved.id(), state.saved.revision());
+            if (observation == null || !observation.target().equals(target)) {
+                stopObserving();
+                observation = new ProgramRunStatusSelection(UUID.randomUUID(), target);
+            }
+            if (observationTicks++ % 100 == 0)
+                ProgramNetworkMetrics.sendToServer(new AbilityProgramManager.ObserveRunPacket(observation.token(), target));
+        }
+
+        @Override
+        public @Nullable ProgramRunStatus runStatus(int slot) {
+            return observation != null && observation.target().slot() == slot ? observation.current() : null;
         }
 
     }
@@ -665,6 +708,19 @@ public final class AbilityProgramEditorClient {
             @Nullable ProgramDiagnosticCode diagnostic, int nodeId,
             ProgramVmDiagnostic vmDiagnostic, String port, String detail
     ) {
+    }
+
+    public static void handleRunStatus(ProgramRunStatus status) {
+        try (var scope = ProgramNetworkMetrics.begin(ProgramNetworkMetrics.Kind.RUN_STATUS,
+                ProgramNetworkMetrics.Phase.CLIENT_STATUS_APPLY)) {
+            var session = activeSession;
+            var client = Minecraft.getInstance();
+            if (session == null || screen == null || client.gui.screen() != screen || client.player == null
+                    || client.level == null || session.observation == null
+                    || !client.level.dimension().identifier().equals(status.target().dimension())) return;
+            session.observation.accept(status);
+            scope.succeeded(0);
+        }
     }
 
     private static final class State {

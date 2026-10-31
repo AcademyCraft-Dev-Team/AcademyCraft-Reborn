@@ -183,6 +183,8 @@ public final class ProgramEditorNodeCatalog implements ProgramNodeLookup {
             configuration.addProperty("value", "");
         } else if (id.equals(CommonProgramNodeIds.TAG_CONSTANT)) {
             configuration.addProperty("value", "minecraft:mineable/pickaxe");
+        } else if (id.equals(CommonProgramNodeIds.SAMPLE_VALUE)) {
+            return org.academy.internal.common.ability.program.ProgramSamplingNodes.defaults();
         } else if (id.equals(CommonProgramNodeIds.VARIABLE_GET)
                 || id.equals(CommonProgramNodeIds.VARIABLE_SET)) {
             configuration.addProperty("name", "value");

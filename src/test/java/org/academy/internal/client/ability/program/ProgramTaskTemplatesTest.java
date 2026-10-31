@@ -6,13 +6,17 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramEditorLayout;
 import org.academy.api.common.ability.program.ProgramGraph;
 import org.academy.api.common.ability.program.ProgramNodeRole;
+import org.academy.api.common.ability.program.ProgramValueTypes;
+import org.academy.api.common.entitycontrol.ControlCapability;
 import org.academy.internal.common.ability.SkillNames;
+import org.academy.internal.common.ability.mentalout.precision.PrecisionGraph;
 import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
 import org.academy.internal.common.ability.program.editor.ProgramEditorDocument;
 import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatalog;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinition;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeIds;
+import org.academy.internal.common.ability.program.registry.PrecisionProgramNodeIds;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -27,12 +31,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProgramTaskTemplatesTest {
     @Test
     void everyTaskIsAnEditableStandardGraphForItsActualCategory() {
-        assertEquals(10, ProgramTaskTemplates.Kind.values().length);
+        assertEquals(17, ProgramTaskTemplates.Kind.values().length);
         var categories = new HashSet<Identifier>();
         for (var kind : ProgramTaskTemplates.Kind.values()) {
             var definition = definition(kind);
             var capabilities = ProgramTaskTemplates.requiredCapabilities(definition, kind);
-            assertFalse(capabilities.isEmpty(), kind.name());
+            if (kind != ProgramTaskTemplates.Kind.MENTALOUT_ROSTER_GUARD) assertFalse(capabilities.isEmpty(), kind.name());
             var empty = empty(definition);
             var result = ProgramTaskTemplates.create(empty, definition, capabilities, kind);
             assertEquals(empty.id(), result.id());
@@ -71,11 +75,13 @@ class ProgramTaskTemplatesTest {
         for (var definition : AbilityProgramDefinitions.all()) {
             var kinds = ProgramTaskTemplates.forCategory(definition);
             assertFalse(kinds.isEmpty());
-            assertTrue(ProgramTaskTemplates.available(definition, Set.of()).isEmpty());
+            assertEquals(kinds.stream().filter(kind -> ProgramTaskTemplates.requiredCapabilities(definition, kind).isEmpty()).toList(),
+                    ProgramTaskTemplates.available(definition, Set.of()));
             var allRequired = kinds.stream().flatMap(kind ->
                     ProgramTaskTemplates.requiredCapabilities(definition, kind).stream()).collect(Collectors.toSet());
             assertEquals(kinds, ProgramTaskTemplates.available(definition, allRequired));
             for (var kind : kinds) {
+                if (ProgramTaskTemplates.requiredCapabilities(definition, kind).isEmpty()) continue;
                 var missing = new HashSet<>(allRequired);
                 missing.remove(ProgramTaskTemplates.requiredCapabilities(definition, kind).iterator().next());
                 assertFalse(ProgramTaskTemplates.available(definition, missing).contains(kind));
@@ -86,6 +92,65 @@ class ProgramTaskTemplatesTest {
         var mental = AbilityProgramDefinitions.mentalout();
         assertEquals(Set.of(AcademyCraft.academy(SkillNames.MENTAL_STUPOR)),
                 ProgramTaskTemplates.requiredCapabilities(mental, ProgramTaskTemplates.Kind.MENTALOUT_MENTAL_STUPOR));
+    }
+
+    @Test
+    void eachCategoryHasOneAdvancedSampledBranchAndBothExplicitExitPaths() {
+        var advanced = Arrays.stream(ProgramTaskTemplates.Kind.values()).filter(ProgramTaskTemplates.Kind::advanced).toList();
+        assertEquals(7, advanced.size());
+        assertEquals(7, advanced.stream().map(ProgramTaskTemplates.Kind::category).distinct().count());
+        for (var kind : advanced) {
+            var definition = definition(kind);
+            var program = ProgramTaskTemplates.create(empty(definition), definition,
+                    ProgramTaskTemplates.requiredCapabilities(definition, kind), kind);
+            assertEquals(1, program.graph().nodes().stream().filter(node -> node.type().equals(CommonProgramNodeIds.SAMPLE_VALUE)).count());
+            var branch = program.graph().nodes().stream().filter(node -> node.type().equals(CommonProgramNodeIds.BRANCH)).findFirst().orElseThrow();
+            assertEquals(2, program.graph().nodes().stream().filter(node -> node.type().equals(CommonProgramNodeIds.STOP)).count());
+            var falseEdge = program.graph().edges().stream().filter(edge -> edge.from().equals(
+                    new ProgramGraph.Endpoint(branch.id(), "false"))).findFirst().orElseThrow();
+            assertEquals(CommonProgramNodeIds.STOP, program.graph().nodes().stream().filter(node ->
+                    node.id() == falseEdge.to().nodeId()).findFirst().orElseThrow().type());
+            assertTrue(program.graph().nodes().size() < 32, kind.name());
+        }
+    }
+
+    @Test
+    void advancedFiltersAndBoundariesKeepTheirActualTypedConfiguration() {
+        var guard = advanced(ProgramTaskTemplates.Kind.MENTALOUT_ROSTER_GUARD);
+        var support = node(guard, PrecisionProgramNodeIds.id(PrecisionGraph.NodeKind.ABILITY_SUPPORTED));
+        assertEquals(ControlCapability.GUARD_CONTROL.ordinal(), support.configuration().getAsJsonObject().get("parameter").getAsInt());
+        assertEquals(10.0, node(guard, PrecisionProgramNodeIds.id(PrecisionGraph.NodeKind.GUARD_MODE))
+                .configuration().getAsJsonObject().get("parameter").getAsDouble());
+        assertTrue(ProgramTaskTemplates.requiredCapabilities(AbilityProgramDefinitions.mentalout(),
+                ProgramTaskTemplates.Kind.MENTALOUT_ROSTER_GUARD).isEmpty());
+        assertFalse(guard.graph().nodes().stream().anyMatch(node -> node.type().equals(CommonProgramNodeIds.ENTITIES_AROUND)));
+
+        var disassemble = advanced(ProgramTaskTemplates.Kind.DARKMATTER_FILTERED_BLOCK);
+        assertEquals("minecraft:stone", node(disassemble, CommonProgramNodeIds.FILTER_BLOCK_EXACT)
+                .configuration().getAsJsonObject().get("selectors").getAsString());
+        assertEquals(ProgramValueTypes.BLOCK_POSITION_SET.id().toString(), node(disassemble, CommonProgramNodeIds.SAMPLE_VALUE)
+                .configuration().getAsJsonObject().get("type").getAsString());
+        var get = node(disassemble, CommonProgramNodeIds.collection("block_position", "get"));
+        var index = disassemble.graph().edges().stream().filter(edge -> edge.to().equals(
+                new ProgramGraph.Endpoint(get.id(), "index"))).findFirst().orElseThrow();
+        assertEquals(1, disassemble.graph().nodes().stream().filter(source -> source.id() == index.from().nodeId())
+                .findFirst().orElseThrow().configuration().getAsJsonObject().get("value").getAsInt(),
+                "Collection positions are one-based; the guarded singleton must select its first item");
+        var mining = advanced(ProgramTaskTemplates.Kind.MELTDOWNER_LOCKED_MINING);
+        assertEquals("target", node(mining, AcademyCraft.academy("program/meltdowner/action/mining_beam"))
+                .configuration().getAsJsonObject().get("aim_mode").getAsString());
+        var charging = advanced(ProgramTaskTemplates.Kind.ELECTROMASTER_RECHARGE_LOW_BATTERY);
+        assertEquals("block", node(charging, AcademyCraft.academy("program/electromaster/action/current_recharge"))
+                .configuration().getAsJsonObject().get("target_type").getAsString());
+    }
+
+    private static AbilityProgram advanced(ProgramTaskTemplates.Kind kind) {
+        var definition = definition(kind);
+        return ProgramTaskTemplates.create(empty(definition), definition, ProgramTaskTemplates.requiredCapabilities(definition, kind), kind);
+    }
+
+    private static ProgramGraph.Node node(AbilityProgram program, Identifier type) {
+        return program.graph().nodes().stream().filter(node -> node.type().equals(type)).findFirst().orElseThrow();
     }
 
     @Test

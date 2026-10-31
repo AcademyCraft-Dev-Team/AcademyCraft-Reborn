@@ -4,6 +4,7 @@ import org.academy.internal.common.ability.program.registry.CommonProgramNodeCat
 
 
 import org.jspecify.annotations.Nullable;
+import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -30,6 +31,10 @@ public final class ProgramInvocationContext {
     private final @Nullable String chatMessage;
     private final ProgramRunTrace runTrace = new ProgramRunTrace();
     private @Nullable Consumer<ProgramVmResult> runCompletionListener;
+    @Nullable Identifier observationDimension;
+    @Nullable Identifier observationCategory;
+    long observationBookRevision = -1;
+    ProgramRunObservations.@Nullable Binding observation;
 
     public ProgramInvocationContext(
             UUID programId,

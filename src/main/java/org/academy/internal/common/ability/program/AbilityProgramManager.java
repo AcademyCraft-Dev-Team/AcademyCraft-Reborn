@@ -22,10 +22,12 @@ import net.minecraft.util.Mth;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
+import org.academy.api.common.ability.program.ProgramRunStatus;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.program.AbilityProgramService;
@@ -265,6 +267,7 @@ public final class AbilityProgramManager {
                         ? LOOP_EXECUTION_COUNTS.getOrDefault(loopKey, 0L) : 0L;
                 var invocation = AbilityProgramTriggerRuntime.invocation(
                         player, program.id(), slot, trigger, movement, loopIndex);
+                ProgramRunObservations.begin(player, category, slot, program.id(), current.revision(), invocation);
                 ExecutionOutcome outcome;
                 ProgramAutomaticMetrics.count(ProgramAutomaticMetrics.Counter.ADMISSION_ATTEMPT);
                 try (var ignored = ProgramAutomaticMetrics.stage(ProgramAutomaticMetrics.Stage.EXECUTE)) {
@@ -276,6 +279,8 @@ public final class AbilityProgramManager {
                         ? ProgramAutomaticMetrics.Counter.EXECUTION_REJECTED
                         : outcome.deferred() ? ProgramAutomaticMetrics.Counter.ACCEPTED_DEFERRED
                         : ProgramAutomaticMetrics.Counter.ACCEPTED_IMMEDIATE);
+                if (!outcome.successful()) ProgramRunObservations.rejected(invocation, outcome.nodeId(),
+                        outcome.vmDiagnostic(), outcome.port(), outcome.detail());
                 if (outcome.deferred()) {
                     var finalSlot = slot;
                     invocation.onRunComplete(result -> sendRunTrace(player, category, finalSlot,
@@ -336,6 +341,7 @@ public final class AbilityProgramManager {
     }
 
     public static void clear() {
+        ProgramRunObservations.clearAll();
         STORED_BOOKS.clear();
         LAST_EXECUTION_SEQUENCE.clear();
         LOOP_EXECUTION_COUNTS.clear();
@@ -358,9 +364,16 @@ public final class AbilityProgramManager {
         AUTOMATIC_RUN_BUDGETS.remove(event.getEntity().getUUID());
         NEXT_AUTOMATIC_SLOT.remove(event.getEntity().getUUID());
         if (event.getEntity() instanceof ServerPlayer player) {
+            ProgramRunObservations.invalidate(player);
             ServerProgramScheduler.cancelOwner(player.level().getServer(), player.getUUID());
             ServerElectromasterProgramRuntime.releaseControlled(player);
         }
+    }
+
+    @SubscribeEvent
+    public static void flushRunStatus(ServerTickEvent.Post event) {
+        ProgramRunObservations.flush(event.getServer(), (player, status) ->
+                ProgramNetworkMetrics.send(player, new RunStatusPacket(status)));
     }
 
     private static ProgramBook book(Player playerData, Identifier category, UUID ownerId) {
@@ -475,8 +488,14 @@ public final class AbilityProgramManager {
             return addonRejected("Program is already running");
         }
         var adapter = executionAdapter(program.category());
-        var result = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(compiled.program(), player, 1, slot,
-                new ProgramInvocationContext(program.id(), slot, null, null, 0, null, null, null)));
+        var invocation = new ProgramInvocationContext(program.id(), slot, null, null, 0, null, null, null);
+        var saved = book(data, program.category(), player.getUUID());
+        // Add-ons may execute an unsaved graph with the same UUID. Never label that as the saved revision.
+        if (program.equals(saved.slot(slot).program()))
+            ProgramRunObservations.begin(player, program.category(), slot, program.id(), saved.revision(), invocation);
+        var result = OutputControl.callWithoutOutputAdjustment(() -> adapter.execute(compiled.program(), player, 1, slot, invocation));
+        if (!result.successful()) ProgramRunObservations.rejected(invocation, result.nodeId(),
+                result.vmDiagnostic(), result.port(), result.detail());
         var status = !result.successful ? AbilityProgramService.Status.FAILED
                 : result.deferred ? AbilityProgramService.Status.DEFERRED
                 : AbilityProgramService.Status.COMPLETED;
@@ -503,6 +522,7 @@ public final class AbilityProgramManager {
     }
 
     private static void sync(ServerPlayer player, Identifier category, ProgramBook book) {
+        ProgramRunObservations.invalidate(player);
         ProgramNetworkMetrics.send(player, new SyncPacket(
                 category.toString(),
                 AbilityProgramDefinitions.require(category).extensionFingerprint(),
@@ -894,6 +914,25 @@ public final class AbilityProgramManager {
         }
 
         @SubscribePacket
+        public static void observe(ObserveRunPacket packet) {
+            var player = packet.getPacketListener().getPlayer();
+            if (packet.target == null) {
+                ProgramRunObservations.unsubscribe(player, packet.token);
+                return;
+            }
+            var target = packet.target;
+            if (!unlocked(player) || !player.isAlive() || player.isSpectator()
+                    || !isSupportedCategory(target.category()) || !ownsCategory(player, target.category())
+                    || !player.level().dimension().identifier().equals(target.dimension())) return;
+            var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
+            var current = book(data, target.category(), player.getUUID());
+            var program = current.slot(target.slot()).program();
+            if (program == null || current.revision() != target.bookRevision()
+                    || !program.id().equals(target.programId())) return;
+            ProgramRunObservations.subscribe(player, packet.token, target);
+        }
+
+        @SubscribePacket
         public static void dismissStarter(DismissStarterPacket packet) {
             var player = packet.getPacketListener().getPlayer();
             if (!unlocked(player)) return;
@@ -1133,6 +1172,7 @@ public final class AbilityProgramManager {
             var invocation = new ProgramInvocationContext(
                     program.id(), packet.slot, null, null, 0L,
                     null, null, null);
+            ProgramRunObservations.begin(player, category, packet.slot, program.id(), current.revision(), invocation);
             var outcome = OutputControl.callWithoutOutputAdjustment(
                     () -> adapter.execute(
                             compiled.program(),
@@ -1141,6 +1181,8 @@ public final class AbilityProgramManager {
                             packet.slot,
                             invocation
                     ));
+            if (!outcome.successful()) ProgramRunObservations.rejected(invocation, outcome.nodeId(),
+                    outcome.vmDiagnostic(), outcome.port(), outcome.detail());
             if (outcome.deferred()) {
                 invocation.onRunComplete(result -> sendRunTrace(player, category, packet.slot,
                         current.revision(), invocation, result));
@@ -1213,6 +1255,11 @@ public final class AbilityProgramManager {
         }
 
         @SubscribePacket
+        public static void runStatus(RunStatusPacket packet) {
+            AbilityProgramEditorClient.handleRunStatus(packet.status);
+        }
+
+        @SubscribePacket
         public static void sync(SyncPacket packet) {
             var category = parseCategory(packet.category);
             if (category == null) return;
@@ -1238,6 +1285,38 @@ public final class AbilityProgramManager {
                     packet.vmDiagnostic, packet.port, packet.detail,
                     packet.trace, packet.traceTruncated
             );
+        }
+    }
+
+    @PacketTarget(ThreadType.SERVER)
+    public static final class ObserveRunPacket extends Packet<ServerGamePacketListenerImpl, ObserveRunPacket> {
+        public static final StreamCodec<ByteBuf, ObserveRunPacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.OBSERVE_RUN, StreamCodec.of((buffer, packet) -> {
+                    ProgramRunStatusCodec.writeUuid(buffer, packet.token);
+                    buffer.writeBoolean(packet.target != null);
+                    if (packet.target != null) ProgramRunStatusCodec.writeTarget(buffer, packet.target);
+                }, buffer -> new ObserveRunPacket(ProgramRunStatusCodec.readUuid(buffer),
+                        buffer.readBoolean() ? ProgramRunStatusCodec.readTarget(buffer) : null)));
+        private final UUID token;
+        private final ProgramRunStatus.@Nullable Target target;
+
+        public ObserveRunPacket(UUID token, ProgramRunStatus.@Nullable Target target) {
+            this.token = Objects.requireNonNull(token); this.target = target;
+        }
+        @Override public PacketType<ServerGamePacketListenerImpl, ObserveRunPacket> getPacketType() {
+            return PacketTypes.ABILITY_PROGRAM_OBSERVE_RUN.get();
+        }
+    }
+
+    @PacketTarget(ThreadType.CLIENT)
+    public static final class RunStatusPacket extends Packet<ClientPacketListener, RunStatusPacket> {
+        public static final StreamCodec<ByteBuf, RunStatusPacket> CODEC = ProgramNetworkMetrics.instrument(
+                ProgramNetworkMetrics.Kind.RUN_STATUS, ProgramRunStatusCodec.CODEC.map(RunStatusPacket::new, packet -> packet.status));
+        private final ProgramRunStatus status;
+        public RunStatusPacket(ProgramRunStatus status) { this.status = Objects.requireNonNull(status); }
+        public ProgramRunStatus status() { return status; }
+        @Override public PacketType<ClientPacketListener, RunStatusPacket> getPacketType() {
+            return PacketTypes.ABILITY_PROGRAM_RUN_STATUS.get();
         }
     }
 

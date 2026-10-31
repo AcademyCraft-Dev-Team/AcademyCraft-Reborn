@@ -1,0 +1,65 @@
+{
+  "contract_version": 1,
+  "kind": "explicit_addition_contract",
+  "legacy_inventory": "validation/precision_nodes/node_inventory_2026_10_30.json",
+  "legacy_inventory_sha256": "C78157DC66C0885CBFC8012EA1CCDC4D2230A730E9E7F9ADAE8FF92BCC3A1A24",
+  "legacy_unique_registered_ids": 342,
+  "nodes": [
+    {
+      "id": "academy:program/core/state/sample_value",
+      "schema_version": 1,
+      "role": "CONTROL",
+      "purity": "STATE",
+      "visible": true,
+      "categories": [
+        "academy:accelerator",
+        "academy:aeromanip",
+        "academy:darkmatter",
+        "academy:electromaster",
+        "academy:meltdowner",
+        "academy:mentalout",
+        "academy:teleport"
+      ],
+      "allowed_categories": [],
+      "required_capabilities": [],
+      "default_configuration": {"type": "academy:program_type/entity_set"},
+      "configuration_ports": [],
+      "inputs": [
+        {"name": "flow", "type": "academy:program_type/flow", "required": true, "max_connections": 2147483647},
+        {"name": "value", "type": "$configured_type", "required": true, "max_connections": 1}
+      ],
+      "outputs": [
+        {"name": "value", "type": "$configured_type", "required": false, "max_connections": 2147483647},
+        {"name": "flow", "type": "academy:program_type/flow", "required": false, "max_connections": 1}
+      ],
+      "type_options": [
+        "academy:program_type/boolean",
+        "academy:program_type/integer",
+        "academy:program_type/big_integer",
+        "academy:program_type/float",
+        "academy:program_type/text",
+        "academy:program_type/tag",
+        "academy:program_type/identifier",
+        "academy:program_type/vector",
+        "academy:program_type/direction",
+        "academy:program_type/world_position",
+        "academy:program_type/block_position",
+        "academy:program_type/entity_reference",
+        "academy:program_type/living_entity_reference",
+        "academy:program_type/structure_reference",
+        "academy:program_type/structure_set",
+        "academy:program_type/structure_anchor",
+        "academy:program_type/structure_pose",
+        "academy:program_type/direction_set",
+        "academy:program_type/world_position_set",
+        "academy:program_type/block_position_set",
+        "academy:program_type/entity_set",
+        "academy:program_type/living_entity_set"
+      ],
+      "sampling_rule": "Read the input when flow executes; hold the value for this VM invocation until flow executes this node again. Respect upstream latches.",
+      "reference_rule": "Hold identity and collection membership only. Resolve live properties, validity and authorization downstream.",
+      "missing_value_rule": "A missing required input fails; an empty collection is a valid sample.",
+      "excluded_types": ["flow", "duration", "control_destination", "action_result", "structure_control", "structure_operation_result"]
+    }
+  ]
+}

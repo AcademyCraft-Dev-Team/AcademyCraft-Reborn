@@ -1,0 +1,509 @@
+{
+  "passed": true,
+  "language": "en_us",
+  "phase": 12,
+  "client_ticks": 326,
+  "checks": [
+    "Real request synchronized the saved manual WAIT100 -\u003e STOP program",
+    "Real task choices expanded a learned advanced template into an editable graph with a sample node",
+    "Structured preview and real scrolling preserved the draft and exposed the sample node explanation",
+    "Run tab subscribed through real packets to the saved revision and received IDLE",
+    "Real WAIT status identifies its waiting source node and logical wake time",
+    "Natural integrated server ticks completed WAIT and the real client received settled COMPLETED",
+    "Closing unsubscribed; a second WAIT execution completed with ordinary traces and zero new status sends/decodes"
+  ],
+  "screenshots": [
+    "screenshots/precision-query-play-en_us-templates.png",
+    "screenshots/precision-query-play-en_us-preview.png",
+    "screenshots/precision-query-play-en_us-preview-sample.png",
+    "screenshots/precision-query-play-en_us-wait.png",
+    "screenshots/precision-query-play-en_us-completed.png"
+  ],
+  "observations": {
+    "idle": {
+      "token": "01e3fe7a-1f3b-4b0a-969a-a7ca1ed1160d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "e044210a-ff92-372d-95a8-049ae5257e11",
+        "bookRevision": 1
+      },
+      "runSequence": 0,
+      "updateSequence": 1,
+      "phase": "IDLE",
+      "waitKind": "NONE",
+      "nodeId": -1,
+      "sourceNodeId": -1,
+      "logicalTick": -1,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 38791,
+      "observedServerTick": 45,
+      "diagnosticCode": "",
+      "port": "",
+      "reasonCode": "no_active_run",
+      "rollbackIncomplete": false
+    },
+    "waiting": {
+      "token": "01e3fe7a-1f3b-4b0a-969a-a7ca1ed1160d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "e044210a-ff92-372d-95a8-049ae5257e11",
+        "bookRevision": 1
+      },
+      "runSequence": 1,
+      "updateSequence": 7,
+      "phase": "WAITING",
+      "waitKind": "WAIT",
+      "nodeId": 3,
+      "sourceNodeId": 2,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/wait"
+      },
+      "logicalTick": 38797,
+      "wakeAtLogicalTick": 38893,
+      "worldGameTick": 38797,
+      "observedServerTick": 51,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "wait_logical_ticks",
+      "rollbackIncomplete": false
+    },
+    "completed": {
+      "token": "01e3fe7a-1f3b-4b0a-969a-a7ca1ed1160d",
+      "target": {
+        "dimension": {
+          "namespace": "minecraft",
+          "path": "overworld"
+        },
+        "category": {
+          "namespace": "academy",
+          "path": "accelerator"
+        },
+        "slot": 0,
+        "programId": "e044210a-ff92-372d-95a8-049ae5257e11",
+        "bookRevision": 1
+      },
+      "runSequence": 1,
+      "updateSequence": 104,
+      "phase": "COMPLETED",
+      "waitKind": "NONE",
+      "nodeId": 3,
+      "sourceNodeId": -1,
+      "nodeType": {
+        "namespace": "academy",
+        "path": "program/core/flow/stop"
+      },
+      "logicalTick": 38893,
+      "wakeAtLogicalTick": -1,
+      "worldGameTick": 38893,
+      "observedServerTick": 147,
+      "diagnosticCode": "NONE",
+      "port": "",
+      "reasonCode": "committed",
+      "rollbackIncomplete": false
+    },
+    "open_editor_network": {
+      "operations": [
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 3360,
+          "calls": 2,
+          "kind": "request",
+          "allocation_samples": 2,
+          "wall_nanos": 172800
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 40,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 528,
+          "calls": 2,
+          "kind": "request",
+          "allocation_samples": 2,
+          "wall_nanos": 29500
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 40,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 256,
+          "calls": 2,
+          "kind": "request",
+          "allocation_samples": 2,
+          "wall_nanos": 54900
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 1,
+          "cpu_samples": 1,
+          "allocated_bytes": 720,
+          "calls": 1,
+          "kind": "execute",
+          "allocation_samples": 1,
+          "wall_nanos": 61800
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 29,
+          "succeeded": 1,
+          "cpu_samples": 1,
+          "allocated_bytes": 264,
+          "calls": 1,
+          "kind": "execute",
+          "allocation_samples": 1,
+          "wall_nanos": 29600
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 29,
+          "succeeded": 1,
+          "cpu_samples": 1,
+          "allocated_bytes": 136,
+          "calls": 1,
+          "kind": "execute",
+          "allocation_samples": 1,
+          "wall_nanos": 44400
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 4080,
+          "calls": 2,
+          "kind": "sync",
+          "allocation_samples": 2,
+          "wall_nanos": 102800
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 1144,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 3168,
+          "calls": 2,
+          "kind": "sync",
+          "allocation_samples": 2,
+          "wall_nanos": 51000
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 1144,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 2688,
+          "calls": 2,
+          "kind": "sync",
+          "allocation_samples": 2,
+          "wall_nanos": 80400
+        },
+        {
+          "cpu_nanos": 15625000,
+          "phase": "client_sync_apply",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 4279136,
+          "calls": 2,
+          "kind": "sync",
+          "allocation_samples": 2,
+          "wall_nanos": 8454100
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 5200,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 395800
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 129,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 4288,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 327200
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 129,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 1896,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 108400
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "client_result_apply",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 1200,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 101300
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 1328,
+          "calls": 2,
+          "kind": "observe_run",
+          "allocation_samples": 2,
+          "wall_nanos": 107300
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 164,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 416,
+          "calls": 2,
+          "kind": "observe_run",
+          "allocation_samples": 2,
+          "wall_nanos": 52600
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 164,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 1456,
+          "calls": 2,
+          "kind": "observe_run",
+          "allocation_samples": 2,
+          "wall_nanos": 200400
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 22,
+          "cpu_samples": 22,
+          "allocated_bytes": 18864,
+          "calls": 22,
+          "kind": "run_status",
+          "allocation_samples": 22,
+          "wall_nanos": 645900
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 4285,
+          "succeeded": 22,
+          "cpu_samples": 22,
+          "allocated_bytes": 8832,
+          "calls": 22,
+          "kind": "run_status",
+          "allocation_samples": 22,
+          "wall_nanos": 281400
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 4285,
+          "succeeded": 22,
+          "cpu_samples": 22,
+          "allocated_bytes": 35520,
+          "calls": 22,
+          "kind": "run_status",
+          "allocation_samples": 22,
+          "wall_nanos": 931800
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "client_status_apply",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 22,
+          "cpu_samples": 22,
+          "allocated_bytes": 9304,
+          "calls": 22,
+          "kind": "run_status",
+          "allocation_samples": 22,
+          "wall_nanos": 472100
+        }
+      ],
+      "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+      "capture_enabled": true,
+      "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+      "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement"
+    },
+    "closed_editor_network": {
+      "operations": [
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 1,
+          "cpu_samples": 1,
+          "allocated_bytes": 720,
+          "calls": 1,
+          "kind": "execute",
+          "allocation_samples": 1,
+          "wall_nanos": 50000
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 29,
+          "succeeded": 1,
+          "cpu_samples": 1,
+          "allocated_bytes": 264,
+          "calls": 1,
+          "kind": "execute",
+          "allocation_samples": 1,
+          "wall_nanos": 33700
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 29,
+          "succeeded": 1,
+          "cpu_samples": 1,
+          "allocated_bytes": 136,
+          "calls": 1,
+          "kind": "execute",
+          "allocation_samples": 1,
+          "wall_nanos": 25600
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "send",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 5200,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 66200
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "encode",
+          "failed": 0,
+          "payload_bytes": 129,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 4288,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 40500
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "decode",
+          "failed": 0,
+          "payload_bytes": 129,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 1896,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 73800
+        },
+        {
+          "cpu_nanos": 0,
+          "phase": "client_result_apply",
+          "failed": 0,
+          "payload_bytes": 0,
+          "succeeded": 2,
+          "cpu_samples": 2,
+          "allocated_bytes": 728,
+          "calls": 2,
+          "kind": "result",
+          "allocation_samples": 2,
+          "wall_nanos": 67700
+        }
+      ],
+      "timing_scope": "nanoTime wall elapsed, optional current-thread CPU and heap allocation counters; nested send/encode times must not be summed",
+      "capture_enabled": true,
+      "payload_bytes_scope": "Application packet CODEC bytes only; excludes Misaka registry id, Minecraft framing/compression/encryption and TCP/IP",
+      "send_scope": "Calls to Misaka send, including synchronous wrapper construction/encoding and connection enqueue; not delivery acknowledgement"
+    }
+  },
+  "scope": [
+    "One real integrated client/server, saved revision and actual Misaka request/execute/observe/status handlers",
+    "Real template picker, editable sample graph, static preview and run monitor; no gameplay action executes in preview",
+    "Integrated local transport, not TCP/WAN or multiplayer throughput; source world remains untouched",
+    "Old-token/revision/dimension rejection is covered separately by unit tests, not simulated here"
+  ],
+  "error": ""
+}
