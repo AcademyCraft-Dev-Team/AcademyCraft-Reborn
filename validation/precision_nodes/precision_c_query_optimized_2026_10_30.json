@@ -1,0 +1,618 @@
+{
+  "passed": true,
+  "baseline": "0ad66ef7",
+  "stage": "optimized",
+  "source": "real isolated GameTest ServerLevel; production resolver and plot-backed structures",
+  "timing": "System.nanoTime wall-clock ns per unprofiled query, not thread CPU time; result checks excluded; 16-query batches across ticks",
+  "allocation": "ThreadMXBean current server-thread allocated bytes when supported; sampled outside the timing interval; result checks excluded",
+  "profile_scope": "separate 16 query pass per case; fixed zone/counter labels only",
+  "entity_fixture": "0/64/256/1024 non-player markers plus 8 AABB-only outside-sphere markers; UUID sort; maxResults\u003d128",
+  "structure_fixture": "2 actual physical captures: 1 cell and 46 connected iron cells in a 16x16x16 box",
+  "arena": [
+    128.5,
+    270.5,
+    128.5
+  ],
+  "limitations": "single-server-thread microbenchmark; not multiplayer TPS or PVP-player load measurement",
+  "assertions": {
+    "arena_entity_ticking_and_storage_ready": true,
+    "same_tick_entity_position": true,
+    "same_tick_content_change": true,
+    "range_and_origin_guards": true,
+    "inactive_and_stale_runtime_rejected": true,
+    "capture_on_off_equivalence": true
+  },
+  "cases": [
+    {
+      "name": "entities_0",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 6100,
+      "p95_ns": 30100,
+      "p99_ns": 124300,
+      "max_ns": 180000,
+      "total_ns": 1572300,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 1048,
+      "allocated_bytes_p95": 1048,
+      "allocated_bytes_p99": 1048,
+      "allocated_bytes_total": 134200,
+      "result_signature": "[]",
+      "zones": [
+        {
+          "name": "program.query.entities_around",
+          "path": "root\u001eprogram.query.entities_around",
+          "totalNs": 253000,
+          "selfNs": 253000,
+          "count": 16,
+          "maxNs": 86200,
+          "rootTotalNs": 0,
+          "color": -9550098,
+          "counters": {
+            "candidates": 128,
+            "calls": 16
+          }
+        }
+      ]
+    },
+    {
+      "name": "entities_64",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 12600,
+      "p95_ns": 61000,
+      "p99_ns": 326500,
+      "max_ns": 403100,
+      "total_ns": 3377500,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 9936,
+      "allocated_bytes_p95": 11664,
+      "allocated_bytes_p99": 11664,
+      "allocated_bytes_total": 1327104,
+      "result_signature": "[022a2e40-c6cd-3d7f-b090-b49c28670131, 03d8662c-ec0c-338a-a663-7c3ed0e6970b, 04783723-7493-3c3a-bf1d-7c3051436c24, 05be555e-1750-3977-94c0-296e853e6686, 154c2f2f-0d23-33b5-9daf-475c586347f4, 20a8a40d-4ad9-3c97-baae-9e41cb84f748, 240ffbb6-a6ab-3fcb-832c-b264cf4b353a, 252a1540-25c5-39c7-8821-cb41b8d19700, 264e35e7-92ca-3368-a67e-6065faa46f2d, 26925ff4-25a7-326b-aae8-31c406739512, 320825b0-fdf9-37cb-a109-1982d5430046, 374f9c29-3e09-3083-a05a-8a398830d017, 37579fa1-e47a-3c66-952e-444d8dd6d742, 38fb3eb1-3c1d-37a2-9d54-397096caa270, 42948d8c-6416-3db2-9546-98b0e4aa6ca9, 47f55413-742a-30a8-af55-e84577a6e1d0, 4c1475b3-af4a-3afa-a2c1-a1517b36752f, 4e361be4-1745-393c-88f6-f87306244e51, 4e3a0ae4-d590-3f10-90ad-9ed7b24884a2, 51fc7d46-c951-3ac7-90cd-99c4d256388d, 574abceb-306b-31a1-b7c5-49d1685cd97c, 5785d968-fbd9-38e7-a6ac-81c395c60d3f, 5c769d90-0bfb-3617-b0d2-200bf2d2237c, 5e71a2e3-7ddc-34a3-9d2b-fe31ec4bdf96, 693ff10b-2985-3d16-9acd-ef9a3e0cd99e, 69cc68c0-badb-3b5b-a483-314f4e423f97, 6c56fe38-9759-3c1a-b3ba-20dbff3aa4f8, 73a32dc8-1540-3954-9525-7eb4309b4e70, 74b37e27-5afb-3a86-93c0-19223d82201c, 7ae8bf53-0eed-32a3-b22b-871fa0735cbc, 7c402cb7-d036-3934-b7e6-c36d09cba340, 8359d969-2a96-3ecc-a1f0-fed7e5810313, 8452de35-7f78-3ab6-a21c-e1cf5a6e8f47, 8580080a-c6b2-31ea-bfdc-71588a32fd1c, 86d0781f-8f28-31e5-ab8f-88899364b4b6, 88b92880-7898-3490-b21b-7751453ffac4, 8b844bab-7b54-3dde-b744-15a7f7a6645c, 8e804185-25a9-3d70-a333-b3c3522d098e, 8e9429c2-7636-3e56-b8fd-e9589d6166a5, 955c9880-0d6a-3b86-acd2-e0b9120e8f10, 977fec80-631f-3269-8d8e-83d9f2c9dc4f, 9b63e148-98cf-3d37-9e67-b3b695c16a0e, 9ef91944-584a-306c-bcfc-dd0adbc0a511, a44ef4b1-d233-3325-98cc-cb3aedc49f9b, b09d1faa-1e6d-311f-8434-037cd9b226bf, b3b54687-299c-3d94-b950-a00f40d410d5, ba5cf2c9-d8b8-34ae-bfa3-859ed4c9b062, c2840698-dd11-307c-9947-158c2fc7e611, c58e60e9-ccc0-3ed7-9c46-9ed5ef8ade2e, c7629531-9f02-30e3-97c1-4d8d007cb4de, c91d8361-722d-316a-bc38-a37a0a7c1a40, d08d5f40-0141-3af9-aea9-cb6a3f3edd72, d354fbc1-4213-399e-9725-fbbd112c859d, d4c34b54-b7f9-30b0-953d-8f57826806f2, df461be3-5735-30b9-a9c9-771672991fad, e0e53cd9-5e85-35da-8ade-5ffa93b34f56, e49d2107-46f2-3c3c-a6e0-59c78a64ea56, eaf7725a-4130-3615-9aca-b8bb0e7eee88, eb040e1a-0325-378f-8e5d-16bf409ea9f3, f2e128f9-564b-30ab-8428-f225d95cb1a8, f72ea218-95e3-3c1b-836b-0f25e8e48647, fa70b8ff-b5a2-3570-aa58-222f759630d6, fdfb0f79-edaf-3a95-a386-a683e27c4a29, ff273604-c8c2-3f1e-90ae-c86fb06530be]",
+      "zones": [
+        {
+          "name": "program.query.entities_around",
+          "path": "root\u001eprogram.query.entities_around",
+          "totalNs": 501500,
+          "selfNs": 501500,
+          "count": 16,
+          "maxNs": 146400,
+          "rootTotalNs": 0,
+          "color": -9550098,
+          "counters": {
+            "candidates": 1152,
+            "calls": 16,
+            "accepted": 1024,
+            "results": 1024
+          }
+        }
+      ]
+    },
+    {
+      "name": "entities_256",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 31900,
+      "p95_ns": 52000,
+      "p99_ns": 76600,
+      "max_ns": 81600,
+      "total_ns": 4451600,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 34944,
+      "allocated_bytes_p95": 34944,
+      "allocated_bytes_p99": 34944,
+      "allocated_bytes_total": 4472832,
+      "result_signature": "[0167e471-263b-317e-9db8-6a3158de567f, 01e51a3d-fc99-3127-b06f-1fb1277d4f2a, 022a2e40-c6cd-3d7f-b090-b49c28670131, 02513e60-14d1-3f7f-9049-583b02fa7173, 02f4abb9-2b25-3d5b-ad2b-3c449dc9d641, 0388c8d9-0115-35c1-8b40-d44f6bd87cec, 03d8662c-ec0c-338a-a663-7c3ed0e6970b, 03e69bb0-65f6-313f-bd97-aaca26e948b5, 04783723-7493-3c3a-bf1d-7c3051436c24, 05281ffc-d263-3cb8-827e-d8942df58952, 05be555e-1750-3977-94c0-296e853e6686, 0733f543-5a34-38a7-9254-bfa47d0afac5, 086a29fc-80a5-3adc-9309-5847551a44a4, 0c42482f-d8e8-3925-b32a-e7afbdf49376, 0cd47d52-4db5-38d1-8139-387bc7aa5f32, 0eec7ce2-e364-3011-a1e8-bc969ec0d152, 1094247f-0abc-3ba3-81c0-a9700f7e81a8, 13bd66ae-9f7a-3d4e-84ba-118348848da2, 13ccbe42-80d2-3eb7-a9f3-34af01c7929f, 148ad235-4ae4-3e91-a519-d80b316664db, 14e2767c-7261-35bd-9b2b-bb238c68452c, 154c2f2f-0d23-33b5-9daf-475c586347f4, 1584b7dd-cc2c-3679-b4b5-f22b6702330b, 15f3def0-84a6-3173-a077-1bb0c65ee5da, 16b1df72-f972-39ed-b393-d403a00ff839, 17c89645-8b2c-3f56-a6f7-b84c6a9974f6, 19ee8c9f-94d3-3cec-971c-f48ffcbd6412, 1ab766c7-0574-322c-ac02-56f51f792124, 1bb504a6-3b7e-3654-8498-649e6dfeec3b, 1d69df6f-b18c-37d0-a4f3-a9ee07fc089a, 1d9cc5c9-d25c-33e7-80a5-3a660714b6f4, 1da3da29-dec4-3a1b-a0f6-abc7d6a20388, 1eb6cd94-6f0d-3d7d-866f-cdd52c67a41e, 20a8a40d-4ad9-3c97-baae-9e41cb84f748, 218597a2-f5f3-3025-8565-c54533cf48c7, 230b1e07-0d91-330a-bbf7-6e736b06c0e4, 240ffbb6-a6ab-3fcb-832c-b264cf4b353a, 252a1540-25c5-39c7-8821-cb41b8d19700, 264e35e7-92ca-3368-a67e-6065faa46f2d, 26925ff4-25a7-326b-aae8-31c406739512, 272bee7d-b53d-33f9-8c6e-d0105df92968, 276f247e-dafc-355f-aee2-19e30c3e0f57, 29c68e4f-41a9-3239-bb08-5af6e5d3fbea, 2e42d9bb-dcc3-3c1d-a09a-367a1d1e0911, 2ee2e367-7f1b-3181-b36c-72f30d5dd278, 2ef77018-515b-35d6-af85-e4021ce837eb, 320825b0-fdf9-37cb-a109-1982d5430046, 32ed1243-05f0-306c-800a-d1425be3aa76, 333db8ed-7d23-3754-a75e-eae127af59f6, 34036002-c159-3a16-8a25-5c40c9b14048, 374f9c29-3e09-3083-a05a-8a398830d017, 37579fa1-e47a-3c66-952e-444d8dd6d742, 38e65dcc-f858-3a17-8539-60290dc22291, 38fb3eb1-3c1d-37a2-9d54-397096caa270, 3a8e53da-de6a-3e12-a62e-47812f86b542, 3ae46b71-776b-3469-8379-5b3f54deb6c3, 3b5f9865-b632-3fa7-bf17-08914acc4f06, 3bcf9300-7e4f-3aa6-b951-52a61231b2bb, 3c65e326-0550-3313-8427-d9a3188dfde2, 3d08bb4f-38b1-3934-8c11-7ec4e32daa44, 3e5562c5-1262-3205-b07a-06f57bf2e610, 3e7c465a-3eaf-36c0-aae8-8cadd8ca2ba5, 42948d8c-6416-3db2-9546-98b0e4aa6ca9, 431ddfe0-0f1b-3db3-8a79-3b158f917ebd, 43c7fef8-7535-31a7-a69b-0a044dd5b5ac, 47f55413-742a-30a8-af55-e84577a6e1d0, 49ccb547-60aa-3b2e-be21-09a0e6d60888, 4c1475b3-af4a-3afa-a2c1-a1517b36752f, 4c2f3c03-9960-3eda-85de-bd07c49344af, 4ccac400-06d2-3e36-84e7-512ba6d206ab, 4d2b51a1-0c22-3192-acab-d36aa11bc2a5, 4d5361c5-051d-3975-9bf1-c26cae0897b5, 4e361be4-1745-393c-88f6-f87306244e51, 4e3a0ae4-d590-3f10-90ad-9ed7b24884a2, 4e3f64e2-940a-31ac-acd1-4cbad1c40991, 4ea77f35-ee83-3b58-a654-cd421fc66bec, 503284d9-01e9-304f-b011-e138caa5b52e, 512159ad-48a5-39ba-9ce4-ba83988038c2, 51fc7d46-c951-3ac7-90cd-99c4d256388d, 520c9856-4884-3803-9bc2-58d3f217423b, 528bbc21-794a-3ddd-a68b-32abbd6765f4, 5310892f-358d-3745-bd74-d0348cd6c639, 5512175a-cc5b-3a81-9120-0c583f8c7d3f, 559bbdb3-bb3e-356a-ad7e-033b5b273091, 56086981-29f8-3468-9106-cb36c8b53f8f, 56273d87-4777-3677-8382-d4705f13e22b, 574abceb-306b-31a1-b7c5-49d1685cd97c, 5785d968-fbd9-38e7-a6ac-81c395c60d3f, 57e33589-b933-3cdd-bb2c-31e62a25feed, 58e9ed41-fc60-3dab-bb67-0e445e5b1050, 5bfd45ee-b460-3e82-a61c-5221edab0886, 5c769d90-0bfb-3617-b0d2-200bf2d2237c, 5ccac01f-7c7c-3323-8bd3-9b4f7605fc0e, 5d72adc2-8639-3eed-9535-bdcbe240e52d, 5db3a0ae-4b80-318d-8af1-f167085cc213, 5e71a2e3-7ddc-34a3-9d2b-fe31ec4bdf96, 5f84948d-a481-37c1-a920-ee246025c210, 5fafc502-f75b-3b2d-adaa-47eacf171f50, 600cdb92-7730-3f13-86b6-195a339917c4, 61198689-c27b-306c-a59d-ba3f6cdcc6ba, 614a9c10-343c-383e-86c9-f1e8ee5518f3, 618d710a-5a4b-35af-b6a2-62c2be0f28bb, 636e16fc-b2a0-32d9-9848-58491001e964, 6416df0d-0059-3555-be43-452ac095e972, 6487a745-c45e-353c-b664-59021e19301a, 64e35643-547d-3e6a-85d1-03db30d567b9, 6548e61b-ed30-36c4-ac94-9eb1dc3943d6, 662c89ec-692e-343d-814c-b849c8f35c1c, 675f1af8-641a-36c8-9a71-eebff132db4c, 693ff10b-2985-3d16-9acd-ef9a3e0cd99e, 696dbf38-a8ea-3032-b545-9f8ea7399d75, 697f84af-230b-3c62-949c-cd5ef060870a, 69cc68c0-badb-3b5b-a483-314f4e423f97, 69dcb231-c82f-37e5-953e-33ef091f11e4, 6a8af330-3acf-396a-bf75-f10e2bdee48f, 6ab1358b-dbae-335a-889e-ca09c330c817, 6c56fe38-9759-3c1a-b3ba-20dbff3aa4f8, 6f253915-727a-3d95-8388-860d3b0d9750, 7043ce06-6b35-3f80-8e3e-05d1adbeb327, 707efe25-fe9a-3e42-87d1-b0ff03d7afb6, 710a936b-2f1c-37fa-ba9e-aa89a060c04a, 731363a3-0a38-37b5-9da8-7dda82dc00de, 73a32dc8-1540-3954-9525-7eb4309b4e70, 73bd0dea-5781-3c5e-a9db-d385c1d985c1, 7428b0e0-69f7-3cbd-bd85-226bc7282ec5, 74b37e27-5afb-3a86-93c0-19223d82201c, 76c34b5a-6bda-3bbd-acf6-f6828b6d4d2a, 795e2a32-7d45-367c-9117-1cb84aa217d7]",
+      "zones": [
+        {
+          "name": "program.query.entities_around",
+          "path": "root\u001eprogram.query.entities_around",
+          "totalNs": 726200,
+          "selfNs": 726200,
+          "count": 16,
+          "maxNs": 64300,
+          "rootTotalNs": 0,
+          "color": -9550098,
+          "counters": {
+            "candidates": 4224,
+            "calls": 16,
+            "accepted": 4096,
+            "truncated": 2048,
+            "results": 2048
+          }
+        }
+      ]
+    },
+    {
+      "name": "entities_1024",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 173100,
+      "p95_ns": 218000,
+      "p99_ns": 252800,
+      "max_ns": 331000,
+      "total_ns": 22874600,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 131184,
+      "allocated_bytes_p95": 131184,
+      "allocated_bytes_p99": 131184,
+      "allocated_bytes_total": 16791552,
+      "result_signature": "[0019c0e2-5ff7-3256-bf93-ba86125b6f6d, 0069db27-629e-36ce-9dbe-313e7179f6a9, 0076280e-78dc-3487-b3cc-78817ce0b3d4, 00b392da-46a0-31b3-813c-8c7a7e81a7dc, 00bd0517-804b-3cd7-8b5c-ef2339191110, 00e23d3d-a795-3bf2-87db-0d5bcde29045, 00efb438-0fae-38f9-90ce-c72efb0adb0e, 0165ecc4-7f0d-3cec-8abf-128c3a53c470, 0167e471-263b-317e-9db8-6a3158de567f, 016b5028-41c0-3967-876b-2b31283e470c, 0179f3f3-e218-3497-84e5-eb70b05f6afd, 01df30b0-ff9d-31e2-9f19-9e032300883f, 01e51a3d-fc99-3127-b06f-1fb1277d4f2a, 020ec509-2e11-3625-bbba-d88cc74152cb, 021e9f39-6847-3ea0-8d04-64843420c203, 022a2e40-c6cd-3d7f-b090-b49c28670131, 023437e3-9e51-307c-8b9a-6bd5041e89a6, 02513e60-14d1-3f7f-9049-583b02fa7173, 02555888-4b70-3179-be84-a4695979e8cd, 02f4abb9-2b25-3d5b-ad2b-3c449dc9d641, 034cbe18-2747-3e11-a81f-d4cdf8f8615e, 034e20ec-7579-3524-8015-e97dc91befe4, 0375ff1a-dd0a-374d-b41f-b9951e55b9c8, 0388c8d9-0115-35c1-8b40-d44f6bd87cec, 03b617b7-5b71-33ac-945f-42381f31f101, 03d8662c-ec0c-338a-a663-7c3ed0e6970b, 03dd5e56-f82f-3e57-8b0f-939f0b27ae4f, 03e69bb0-65f6-313f-bd97-aaca26e948b5, 04534bb0-b3b5-3bfe-9a38-7c5b5f4ca6bf, 0465c50b-e698-3c51-9e04-37841221ec41, 04783723-7493-3c3a-bf1d-7c3051436c24, 049377e5-8327-351d-870e-ffee9727b909, 05281ffc-d263-3cb8-827e-d8942df58952, 05b5c66d-a220-32b8-a8ef-e7a931727603, 05be555e-1750-3977-94c0-296e853e6686, 05e5f8d6-602d-36b9-8bbc-87b88b11810d, 0648d827-dd3e-3c42-bf88-0bf2a49b8b7a, 0733f543-5a34-38a7-9254-bfa47d0afac5, 07778a31-aeb2-301d-b769-09d3df673564, 078716d0-5880-3fa4-93c4-60c918490925, 07e1d502-c9b7-38c7-9383-8e90f7f1169f, 08101a3c-b274-3031-954f-c78027a77e29, 0852e13f-497d-37ee-ac24-6b1aa3657ffe, 086a29fc-80a5-3adc-9309-5847551a44a4, 0920ccf4-efc2-3157-adfe-d1bc21e6506e, 0a458e2c-78ac-36fc-8c6d-2e8b15642a9b, 0a5573ef-004e-3e6a-b420-bfd818992ae6, 0a76f9a5-0ce9-3749-846b-c23031f2a219, 0ab8367b-e4e3-3075-befc-c9165ac341ca, 0b0e097e-d56b-34d4-9ca0-e88691167be3, 0b73ac70-c806-3f34-86d4-bc850fc3dae8, 0b9aabaa-2d77-3b87-be37-c6dd1c8dd146, 0bc15fcd-d516-32fd-bb18-0506fff61a7a, 0bc1e5d1-a4b7-3526-b97a-a25de08ff9ba, 0bc2272b-a6ef-3c2d-8e68-fa68199b1a1d, 0bc3b2d8-da44-3f3e-b59e-a39a01d28330, 0be50a9c-9b5b-3e91-b8c9-8e54c795eb1e, 0bf07205-b699-3f7a-bf94-a1ea5836eb72, 0c42482f-d8e8-3925-b32a-e7afbdf49376, 0c4b5552-345e-3c4f-a6fa-062ff85de742, 0c9ab05a-a2a9-3ae4-9f95-89d1e8c3fef7, 0cb2b287-9ed8-3403-9bd9-c6246379dd79, 0cb92305-dd62-321d-acb7-fc6935cc8f7f, 0cd47d52-4db5-38d1-8139-387bc7aa5f32, 0d1b7e22-37f6-37b7-8b04-7d7a3f0f4450, 0d29e05f-8e55-392c-811f-953e2a15d454, 0d2ce37d-684b-31cf-94fa-97d98be6be3b, 0df9f56a-685a-30b9-a79b-f0e09914116a, 0e56d22b-0c8a-32e1-90ea-c4c78b5db0fc, 0eb19440-4069-3857-b588-d4dc8f1cdb1a, 0eec7ce2-e364-3011-a1e8-bc969ec0d152, 0f927ada-61e6-377c-b14c-b6a02bcb0fc7, 1094247f-0abc-3ba3-81c0-a9700f7e81a8, 1094f34c-449c-3eea-8bd6-29f1b90a830d, 10d3e81f-8806-37c4-8772-612f89a37bec, 1137b867-c83d-37a2-8bae-5f5c9bfd05f7, 118e7f8a-066b-32fb-a5e8-590bd9c584e4, 11d14b8f-a744-3e4e-91d0-5dbb2523adda, 125bb218-92fe-3a2a-8723-0750a044fa19, 127e4ba4-a7f8-35c7-9f30-6ee70c54137b, 1303ae0e-e2c9-3407-a31d-0dac06064dcf, 1317e69e-42f4-3443-b3d3-2d05a91d3f6e, 13bd66ae-9f7a-3d4e-84ba-118348848da2, 13ccbe42-80d2-3eb7-a9f3-34af01c7929f, 13fc3646-5192-3a82-840d-59b676438ac4, 140d75f2-987f-30ff-b7bb-47bce1c8aa9f, 1468a6d5-b085-3e1a-9eb5-a84443d8bc79, 147d713d-0b4f-3202-8b25-3f6c0c1199a4, 148ad235-4ae4-3e91-a519-d80b316664db, 149cb6c8-9018-3ad7-8b95-55c227a76b7d, 14ae757b-458c-3718-b89d-17492b6120d3, 14c3ee35-f33a-3866-b1ad-888e5c35a57b, 14e2767c-7261-35bd-9b2b-bb238c68452c, 14f30cd3-c432-3e71-9938-08d775386e06, 1511fb39-4206-3b4c-8cb4-4ef98294fd09, 152e0ecf-f19d-319e-98ac-ec752085d8ca, 154c2f2f-0d23-33b5-9daf-475c586347f4, 1584b7dd-cc2c-3679-b4b5-f22b6702330b, 15f3def0-84a6-3173-a077-1bb0c65ee5da, 164f9820-fd92-391a-8e7f-3713aefa46de, 1666c720-ec47-3dd8-bb10-b497d75843e8, 16b1df72-f972-39ed-b393-d403a00ff839, 16cf370d-4c86-3c22-81b6-f9be595addc5, 16ecde73-f6fc-316b-8549-7799f9cab665, 173e073a-a8ce-34a1-b505-25f1bdffc69a, 17bc190f-0b3d-3f0f-bf52-bb46935b363b, 17c89645-8b2c-3f56-a6f7-b84c6a9974f6, 17f3716f-0b85-35a3-aef7-dc9742e6d76c, 187c813d-6f39-3c50-b31b-2363f4e6680d, 187c8b6e-3271-30b8-b76b-3687a11794f1, 18807109-ef9f-3468-ae8a-affc24f25868, 18ae18c6-03fa-37a0-8ecc-4efc75dcf209, 18c5a928-94e2-3bbc-ae09-38dc4cf4330f, 1985f063-5a25-3d69-aa4e-1b066711e4f7, 19a4c179-ac5c-3fb3-80bf-1debba70b727, 19ee8c9f-94d3-3cec-971c-f48ffcbd6412, 1a1e3bdb-10af-3c37-8e6d-731211f6820c, 1a601168-fe56-34fa-ae05-845ee266aa8e, 1a9dc4e0-fd0c-3dc7-9069-34abc34ec719, 1ab766c7-0574-322c-ac02-56f51f792124, 1ad1cae0-1bb5-3c1b-aa30-c29a10f7493c, 1add9b8d-7bfd-3afb-9685-e55145307e3b, 1bb504a6-3b7e-3654-8498-649e6dfeec3b, 1c0bd3ae-6566-3cc5-9be0-76947b55fcd1, 1cb1ed8a-4d13-309a-b211-28142b7a7e9b, 1ccb5b3b-3edb-327b-af56-1f3842fe829e, 1ce68c0b-9090-354a-a865-d97daee28122, 1d26ba36-c7ef-355f-af4d-e84ee5cb46b2]",
+      "zones": [
+        {
+          "name": "program.query.entities_around",
+          "path": "root\u001eprogram.query.entities_around",
+          "totalNs": 3111500,
+          "selfNs": 3111500,
+          "count": 16,
+          "maxNs": 299200,
+          "rootTotalNs": 0,
+          "color": -9550098,
+          "counters": {
+            "candidates": 16512,
+            "calls": 16,
+            "accepted": 16384,
+            "truncated": 14336,
+            "results": 2048
+          }
+        }
+      ]
+    },
+    {
+      "name": "structures_around_2",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 22400,
+      "p95_ns": 116300,
+      "p99_ns": 182200,
+      "max_ns": 233400,
+      "total_ns": 4880000,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 6456,
+      "allocated_bytes_p95": 6456,
+      "allocated_bytes_p99": 6456,
+      "allocated_bytes_total": 826848,
+      "result_signature": "small,sparse4096",
+      "zones": [
+        {
+          "name": "program.query.structures_around",
+          "path": "root\u001eprogram.query.structures_around",
+          "totalNs": 419600,
+          "selfNs": 142000,
+          "count": 16,
+          "maxNs": 106400,
+          "rootTotalNs": 0,
+          "color": -10040212,
+          "counters": {
+            "candidates": 32,
+            "calls": 16,
+            "results": 32
+          }
+        },
+        {
+          "name": "structure.query.nearby",
+          "path": "root\u001eprogram.query.structures_around\u001estructure.query.nearby",
+          "totalNs": 172400,
+          "selfNs": 147700,
+          "count": 16,
+          "maxNs": 42000,
+          "rootTotalNs": 0,
+          "color": -3774908,
+          "counters": {
+            "calls": 16,
+            "bodies": 32,
+            "backends": 16,
+            "results": 32
+          }
+        },
+        {
+          "name": "structure.query.proximity",
+          "path": "root\u001eprogram.query.structures_around\u001estructure.query.proximity",
+          "totalNs": 105200,
+          "selfNs": 91200,
+          "count": 32,
+          "maxNs": 24700,
+          "rootTotalNs": 0,
+          "color": -12293042,
+          "counters": {
+            "calls": 32,
+            "results": 32
+          }
+        },
+        {
+          "name": "structure.query.measure",
+          "path": "root\u001eprogram.query.structures_around\u001estructure.query.nearby\u001estructure.query.measure",
+          "totalNs": 24700,
+          "selfNs": 24700,
+          "count": 32,
+          "maxNs": 12300,
+          "rootTotalNs": 0,
+          "color": -1643284,
+          "counters": {
+            "boxes": 64,
+            "calls": 32
+          }
+        },
+        {
+          "name": "structure.query.measure",
+          "path": "root\u001eprogram.query.structures_around\u001estructure.query.proximity\u001estructure.query.measure",
+          "totalNs": 14000,
+          "selfNs": 14000,
+          "count": 32,
+          "maxNs": 1300,
+          "rootTotalNs": 0,
+          "color": -1643284,
+          "counters": {
+            "boxes": 64,
+            "calls": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure_distance_sparse",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 3100,
+      "p95_ns": 25500,
+      "p99_ns": 61800,
+      "max_ns": 114300,
+      "total_ns": 981400,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 1960,
+      "allocated_bytes_p95": 1960,
+      "allocated_bytes_p99": 1960,
+      "allocated_bytes_total": 250880,
+      "result_signature": "present",
+      "zones": [
+        {
+          "name": "program.query.structure_distance",
+          "path": "root\u001eprogram.query.structure_distance",
+          "totalNs": 251600,
+          "selfNs": 175300,
+          "count": 16,
+          "maxNs": 135100,
+          "rootTotalNs": 0,
+          "color": -3388348,
+          "counters": {
+            "calls": 16,
+            "results": 16
+          }
+        },
+        {
+          "name": "structure.query.proximity",
+          "path": "root\u001eprogram.query.structure_distance\u001estructure.query.proximity",
+          "totalNs": 76300,
+          "selfNs": 62900,
+          "count": 32,
+          "maxNs": 13100,
+          "rootTotalNs": 0,
+          "color": -12293042,
+          "counters": {
+            "calls": 32,
+            "results": 32
+          }
+        },
+        {
+          "name": "structure.query.measure",
+          "path": "root\u001eprogram.query.structure_distance\u001estructure.query.proximity\u001estructure.query.measure",
+          "totalNs": 13400,
+          "selfNs": 13400,
+          "count": 32,
+          "maxNs": 1300,
+          "rootTotalNs": 0,
+          "color": -1643284,
+          "counters": {
+            "boxes": 96,
+            "calls": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure_contents_small",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 9700,
+      "p95_ns": 37200,
+      "p99_ns": 71500,
+      "max_ns": 94900,
+      "total_ns": 1818900,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 2688,
+      "allocated_bytes_p95": 2688,
+      "allocated_bytes_p99": 2688,
+      "allocated_bytes_total": 344712,
+      "result_signature": "1:iron\u003d1",
+      "zones": [
+        {
+          "name": "program.query.structure_contents",
+          "path": "root\u001eprogram.query.structure_contents",
+          "totalNs": 316900,
+          "selfNs": 140800,
+          "count": 16,
+          "maxNs": 174500,
+          "rootTotalNs": 0,
+          "color": -3258778,
+          "counters": {
+            "calls": 16,
+            "complete": 16
+          }
+        },
+        {
+          "name": "program.query.structure_distance",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance",
+          "totalNs": 113500,
+          "selfNs": 44500,
+          "count": 16,
+          "maxNs": 60100,
+          "rootTotalNs": 0,
+          "color": -3388348,
+          "counters": {
+            "calls": 16,
+            "results": 16
+          }
+        },
+        {
+          "name": "structure.query.proximity",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance\u001estructure.query.proximity",
+          "totalNs": 69000,
+          "selfNs": 51600,
+          "count": 32,
+          "maxNs": 17100,
+          "rootTotalNs": 0,
+          "color": -12293042,
+          "counters": {
+            "calls": 32,
+            "results": 32
+          }
+        },
+        {
+          "name": "structure.query.summary_scan",
+          "path": "root\u001eprogram.query.structure_contents\u001estructure.query.summary_scan",
+          "totalNs": 62600,
+          "selfNs": 62600,
+          "count": 16,
+          "maxNs": 37300,
+          "rootTotalNs": 0,
+          "color": -9648538,
+          "counters": {
+            "calls": 16,
+            "cells_read": 16,
+            "complete": 16
+          }
+        },
+        {
+          "name": "structure.query.measure",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance\u001estructure.query.proximity\u001estructure.query.measure",
+          "totalNs": 17400,
+          "selfNs": 17400,
+          "count": 32,
+          "maxNs": 7000,
+          "rootTotalNs": 0,
+          "color": -1643284,
+          "counters": {
+            "boxes": 32,
+            "calls": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure_contents_sparse4096",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 172700,
+      "p95_ns": 241800,
+      "p99_ns": 306800,
+      "max_ns": 322500,
+      "total_ns": 23690000,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 68344,
+      "allocated_bytes_p95": 142816,
+      "allocated_bytes_p99": 166648,
+      "allocated_bytes_total": 9414360,
+      "result_signature": "4096:iron\u003d46",
+      "zones": [
+        {
+          "name": "program.query.structure_contents",
+          "path": "root\u001eprogram.query.structure_contents",
+          "totalNs": 2171000,
+          "selfNs": 47100,
+          "count": 16,
+          "maxNs": 164100,
+          "rootTotalNs": 0,
+          "color": -3258778,
+          "counters": {
+            "calls": 16,
+            "complete": 16
+          }
+        },
+        {
+          "name": "structure.query.summary_scan",
+          "path": "root\u001eprogram.query.structure_contents\u001estructure.query.summary_scan",
+          "totalNs": 2059400,
+          "selfNs": 2059400,
+          "count": 16,
+          "maxNs": 151100,
+          "rootTotalNs": 0,
+          "color": -9648538,
+          "counters": {
+            "calls": 16,
+            "cells_read": 65536,
+            "complete": 16
+          }
+        },
+        {
+          "name": "program.query.structure_distance",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance",
+          "totalNs": 64500,
+          "selfNs": 20700,
+          "count": 16,
+          "maxNs": 7300,
+          "rootTotalNs": 0,
+          "color": -3388348,
+          "counters": {
+            "calls": 16,
+            "results": 16
+          }
+        },
+        {
+          "name": "structure.query.proximity",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance\u001estructure.query.proximity",
+          "totalNs": 43800,
+          "selfNs": 32600,
+          "count": 32,
+          "maxNs": 3800,
+          "rootTotalNs": 0,
+          "color": -12293042,
+          "counters": {
+            "calls": 32,
+            "results": 32
+          }
+        },
+        {
+          "name": "structure.query.measure",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance\u001estructure.query.proximity\u001estructure.query.measure",
+          "totalNs": 11200,
+          "selfNs": 11200,
+          "count": 32,
+          "maxNs": 1100,
+          "rootTotalNs": 0,
+          "color": -1643284,
+          "counters": {
+            "boxes": 96,
+            "calls": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "structure_contents_stale",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 1100,
+      "p95_ns": 5900,
+      "p99_ns": 10700,
+      "max_ns": 14800,
+      "total_ns": 209700,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 1064,
+      "allocated_bytes_p95": 1064,
+      "allocated_bytes_p99": 1064,
+      "allocated_bytes_total": 136192,
+      "result_signature": "unavailable",
+      "zones": [
+        {
+          "name": "program.query.structure_contents",
+          "path": "root\u001eprogram.query.structure_contents",
+          "totalNs": 58000,
+          "selfNs": 16500,
+          "count": 16,
+          "maxNs": 27500,
+          "rootTotalNs": 0,
+          "color": -3258778,
+          "counters": {
+            "calls": 16,
+            "unavailable": 16
+          }
+        },
+        {
+          "name": "program.query.structure_distance",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance",
+          "totalNs": 41500,
+          "selfNs": 22400,
+          "count": 16,
+          "maxNs": 16700,
+          "rootTotalNs": 0,
+          "color": -3388348,
+          "counters": {
+            "calls": 16,
+            "unavailable": 16
+          }
+        },
+        {
+          "name": "structure.query.proximity",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance\u001estructure.query.proximity",
+          "totalNs": 19100,
+          "selfNs": 14800,
+          "count": 16,
+          "maxNs": 3200,
+          "rootTotalNs": 0,
+          "color": -12293042,
+          "counters": {
+            "calls": 16,
+            "results": 16
+          }
+        },
+        {
+          "name": "structure.query.measure",
+          "path": "root\u001eprogram.query.structure_contents\u001eprogram.query.structure_distance\u001estructure.query.proximity\u001estructure.query.measure",
+          "totalNs": 4300,
+          "selfNs": 4300,
+          "count": 16,
+          "maxNs": 900,
+          "rootTotalNs": 0,
+          "color": -1643284,
+          "counters": {
+            "boxes": 48,
+            "calls": 16
+          }
+        }
+      ]
+    },
+    {
+      "name": "summary_budget_reject",
+      "warmup": 32,
+      "samples": 128,
+      "timing_capture_enabled": false,
+      "profile_queries": 16,
+      "p50_ns": 700,
+      "p95_ns": 5900,
+      "p99_ns": 23300,
+      "max_ns": 30500,
+      "total_ns": 193400,
+      "allocation_samples": 128,
+      "allocated_bytes_p50": 280,
+      "allocated_bytes_p95": 280,
+      "allocated_bytes_p99": 280,
+      "allocated_bytes_total": 35840,
+      "result_signature": "unavailable",
+      "zones": [
+        {
+          "name": "structure.query.summary_scan",
+          "path": "root\u001estructure.query.summary_scan",
+          "totalNs": 13700,
+          "selfNs": 13700,
+          "count": 16,
+          "maxNs": 11900,
+          "rootTotalNs": 0,
+          "color": -9648538,
+          "counters": {
+            "calls": 16,
+            "budget_rejected": 16
+          }
+        }
+      ]
+    }
+  ]
+}

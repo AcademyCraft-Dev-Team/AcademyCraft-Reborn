@@ -1,0 +1,37 @@
+// Opt-in real native/SubLevel query microbenchmark; each stage owns a fresh GameTest directory.
+// .\gradlew.bat runGameTestServer -DisDev=true -I validation/precision_nodes/precision_query_performance.init.gradle \
+//   -PacademyGameTests=academy:precision_query_benchmark -PacademyPrecisionQueryStage=baseline \
+//   -PacademyPrecisionQueryRun=r1-20261030
+allprojects {
+    afterEvaluate {
+        def stage = providers.gradleProperty('academyPrecisionQueryStage').getOrElse('baseline')
+        if (!(stage in ['baseline', 'optimized'])) {
+            throw new GradleException('Query performance stage must be baseline or optimized')
+        }
+        def runId = providers.gradleProperty('academyPrecisionQueryRun')
+                .getOrElse(new Date().format('yyyyMMdd-HHmmss'))
+        if (!(runId ==~ /[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}/)) {
+            throw new GradleException('Query performance run id must contain only letters, digits, _ and -')
+        }
+        def prefix = "native-structure-query-gametest-precision-c-${stage}-"
+        def directory = rootProject.file(providers.gradleProperty('academyPrecisionQueryDirectory')
+                .getOrElse("run/${prefix}${runId}")).canonicalFile
+        def runRoot = rootProject.file('run').canonicalFile
+        if (!directory.toPath().startsWith(runRoot.toPath()) || !directory.name.startsWith(prefix)) {
+            throw new GradleException("Query benchmark requires an isolated run/${prefix}* directory")
+        }
+        if (directory.exists() && directory.listFiles()?.length > 0) {
+            throw new GradleException('Query benchmark directory must be fresh; choose a new academyPrecisionQueryRun')
+        }
+        def selected = providers.gradleProperty('academyGameTests')
+        if (selected.isPresent() && selected.get() != 'academy:precision_query_benchmark') {
+            throw new GradleException('Query performance probe must select academy:precision_query_benchmark only')
+        }
+        neoForge.runs.named('gameTestServer') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionQueryBenchmark', 'true'
+            systemProperty 'academy.precisionQueryBenchmark.stage', stage
+            if (!selected.isPresent()) programArguments.addAll('--tests', 'academy:precision_query_benchmark')
+        }
+    }
+}

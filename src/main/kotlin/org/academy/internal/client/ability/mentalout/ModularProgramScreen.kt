@@ -10,6 +10,7 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
+import net.minecraft.locale.Language
 import org.academy.api.client.ability.program.ProgramNodePalette
 import org.academy.api.client.gui.environment.UiEnvironment
 import org.academy.api.client.gui.layout.Gravity
@@ -24,6 +25,9 @@ import org.academy.internal.client.ability.program.ProgramDiagnosticText
 import org.academy.internal.client.ability.program.ProgramStarterTemplates
 import org.academy.internal.client.ability.program.ProgramTaskTemplates
 import org.academy.internal.client.ability.program.ProgramPaletteCatalog
+import org.academy.internal.client.ability.program.ProgramEditorMetrics
+import org.academy.internal.client.ability.program.ProgramEditorCachePolicy
+import org.academy.api.common.profiler.AcademyProfiler
 import org.academy.internal.client.gui.layout.ProgramEditorLayout
 import org.academy.internal.client.gui.layout.ProgramEditorVariant
 import org.academy.internal.client.gui.layout.buildProgramEditorLayout
@@ -56,6 +60,20 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     private var document: ProgramEditorDocument
     private var revision: Long
     private var slot: Int
+    private val performanceMetrics = ProgramEditorMetrics()
+    // Screen-local semantic snapshots only: never retain Canvas, glyphs, textures or VM/world results.
+    private var cachedDocument: ProgramEditorDocument? = null
+    private var cachedLanguage: Language? = null
+    private var cachedExtensions: ProgramNodeExtensionIndex.Snapshot? = null
+    private var cachedPaletteRevision = -1L
+    private var semanticCacheAllowed = false
+    private var cachedNodes: List<NodeView>? = null
+    private var cachedNodesById: Map<Int, NodeView?> = emptyMap()
+    private var cachedValidation: ProgramValidationResult? = null
+    private var cachedPaletteEntries: List<ProgramEditorNodeCatalog.Entry>? = null
+    private var cachedRootCards: List<ProgramPaletteCatalog.Card>? = null
+    private var cachedCardQuery: String? = null
+    private var cachedCardLayer: ProgramPaletteCatalog.Layer? = null
     private val undo = ArrayDeque<AbilityProgram>()
     private val redo = ArrayDeque<AbilityProgram>()
     private var panelX = 0
@@ -133,6 +151,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     override fun onInit() {
+        cachedDocument = null
         val geometry = PrecisionEditorGeometry.layout(width, height)
         panelX = geometry.panelX()
         panelY = geometry.panelY()
@@ -313,22 +332,29 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
 
     private inner class EditorSurface : AbstractWidget() {
         override fun renderInternal(context: Canvas) {
-            super.renderInternal(context)
-            syncLayout()
-            val minecraft = Minecraft.getInstance()
-            val window = minecraft.window
-            val mouseX = renderMouseCoordinate(minecraft.mouseHandler.getScaledXPos(window))
-            val mouseY = renderMouseCoordinate(minecraft.mouseHandler.getScaledYPos(window))
-            val graphics = ProgramUiGraphics(context)
-            renderStructure(graphics)
-            renderTopBar(graphics, mouseX, mouseY)
-            renderCanvas(graphics, mouseX, mouseY)
-            renderDrawers(graphics)
-            renderRails(graphics, mouseX, mouseY)
-            if (paletteVisible()) renderPalette(graphics, mouseX, mouseY)
-            if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY)
-            renderStatus(graphics)
-            renderQuickInsert(graphics, mouseX, mouseY)
+            val started = performanceMetrics.beginFrame()
+            try {
+                profileEditor("precision.editor.render.surface") {
+                    super.renderInternal(context)
+                    syncLayout()
+                    val minecraft = Minecraft.getInstance()
+                    val window = minecraft.window
+                    val mouseX = renderMouseCoordinate(minecraft.mouseHandler.getScaledXPos(window))
+                    val mouseY = renderMouseCoordinate(minecraft.mouseHandler.getScaledYPos(window))
+                    val graphics = ProgramUiGraphics(context)
+                    renderStructure(graphics)
+                    renderTopBar(graphics, mouseX, mouseY)
+                    renderCanvas(graphics, mouseX, mouseY)
+                    renderDrawers(graphics)
+                    renderRails(graphics, mouseX, mouseY)
+                    if (paletteVisible()) renderPalette(graphics, mouseX, mouseY)
+                    if (inspectorVisible()) renderInspector(graphics, mouseX, mouseY)
+                    renderStatus(graphics)
+                    renderQuickInsert(graphics, mouseX, mouseY)
+                }
+            } finally {
+                performanceMetrics.endFrame(started)
+            }
         }
     }
 
@@ -380,7 +406,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         }
         var toolsX = panelX + panelW - TOOL_LABELS.size * (TOOL_SIZE + 2) - 2
         for (index in TOOL_LABELS.indices) {
-            val disabled = index == 9 && (!document.validation().valid() || !configurationInputsValid())
+            val disabled = index == 9 && (!editorValidation().valid() || !configurationInputsValid())
             iconButton(graphics, toolsX, panelY + 3, TOOL_GLYPHS[index], mouseX, mouseY, disabled)
             toolsX += TOOL_SIZE + 2
         }
@@ -477,25 +503,27 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun renderCanvas(graphics: ProgramUiGraphics, mouseX: Int, mouseY: Int) {
-        graphics.enableScissor(canvasX, canvasY, canvasX + canvasW, canvasY + canvasH)
-        renderCanvasGrid(graphics)
-        val pose = graphics.pose()
-        pose.pushPose()
-        pose.translate((canvasX + panX).toFloat(), (canvasY + panY).toFloat())
-        pose.scale(zoom.toFloat(), zoom.toFloat())
-        for (edge in document.program().graph().edges()) renderEdge(graphics, edge)
-        for (node in nodes()) renderNode(graphics, node)
-        pose.popPose()
-        if (showStarter()) {
-            renderStarterChoices(graphics, mouseX, mouseY)
+        profileEditor("precision.editor.render.canvas") {
+            graphics.enableScissor(canvasX, canvasY, canvasX + canvasW, canvasY + canvasH)
+            renderCanvasGrid(graphics)
+            val pose = graphics.pose()
+            pose.pushPose()
+            pose.translate((canvasX + panX).toFloat(), (canvasY + panY).toFloat())
+            pose.scale(zoom.toFloat(), zoom.toFloat())
+            for (edge in document.program().graph().edges()) renderEdge(graphics, edge)
+            for (node in nodes()) renderNode(graphics, node)
+            pose.popPose()
+            if (showStarter()) {
+                renderStarterChoices(graphics, mouseX, mouseY)
+            }
+            renderSelectionDrag(graphics)
+            renderConnectionPreview(graphics, mouseX, mouseY)
+            graphics.disableScissor()
+            smallText(
+                graphics, (zoom * 100.0).roundToLong().toString() + "%",
+                canvasX + 3, canvasY + canvasH - 10, DIM, 40
+            )
         }
-        renderSelectionDrag(graphics)
-        renderConnectionPreview(graphics, mouseX, mouseY)
-        graphics.disableScissor()
-        smallText(
-            graphics, (zoom * 100.0).roundToLong().toString() + "%",
-            canvasX + 3, canvasY + canvasH - 10, DIM, 40
-        )
     }
 
     private fun starterTasks(): List<ProgramTaskTemplates.Kind> =
@@ -608,6 +636,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         val fromIndex = portIndex(from.schema.outputs(), edge.from().port())
         val toIndex = portIndex(to.schema.inputs(), edge.to().port())
         if (fromIndex < 0 || toIndex < 0) return
+        countEditor(ProgramEditorMetrics.Counter.EDGES_DRAWN)
         val type = from.schema.outputs()[fromIndex].type()
         orthogonalLine(
             graphics,
@@ -620,6 +649,7 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
     }
 
     private fun renderNode(graphics: ProgramUiGraphics, node: NodeView) {
+        countEditor(ProgramEditorMetrics.Counter.NODES_DRAWN)
         val x = (node.x).roundToInt()
         val y = (node.y).roundToInt()
         val height = nodeHeight(node)
@@ -2349,17 +2379,24 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         return ProgramEditorDocument(program, definition, capabilities)
     }
 
-    private fun paletteEntries(): List<ProgramEditorNodeCatalog.Entry> = buildList {
-        for (entry in catalog.entries()) {
-            if (!ProgramNodePalette.hasProvider(entry.id())) {
-                add(entry)
-                continue
-            }
-            for (preset in ProgramNodePalette.presets(entry.id())) {
-                val schema = catalog.schema(entry.id(), preset.configuration()) ?: continue
-                add(presetEntry(entry, preset.configuration(), schema))
+    private fun paletteEntries(): List<ProgramEditorNodeCatalog.Entry> = profileEditor("precision.editor.palette.entries") {
+        val cache = refreshSemanticCaches()
+        if (cache) cachedPaletteEntries?.let { return@profileEditor it }
+        countEditor(ProgramEditorMetrics.Counter.PALETTE_REBUILT)
+        val entries = buildList {
+            for (entry in catalog.entries()) {
+                if (!ProgramNodePalette.hasProvider(entry.id())) {
+                    add(entry)
+                    continue
+                }
+                for (preset in ProgramNodePalette.presets(entry.id())) {
+                    val schema = catalog.schema(entry.id(), preset.configuration()) ?: continue
+                    add(presetEntry(entry, preset.configuration(), schema))
+                }
             }
         }
+        if (cache) cachedPaletteEntries = entries
+        entries
     }
 
     private fun presetEntry(
@@ -2372,13 +2409,30 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         entry.visible(), entry.metadata()
     )
 
-    private fun rootPaletteCards(): List<ProgramPaletteCatalog.Card> = ProgramPaletteCatalog.cards(
-        paletteEntries(), capabilities, nodes().any { it.entry.type().role() == ProgramNodeRole.ENTRY },
-        paletteLayer, search?.text ?: "",
-        { key -> Component.translatable(key).string },
-        { entry -> nodeLabel(entry).string + "\n" + nodeDescription(entry).string + "\n" +
-            categoryScopeLabel(entry).string + "\n" + Component.translatable(groupKey(entry.group())).string }
-    )
+    private fun rootPaletteCards(): List<ProgramPaletteCatalog.Card> = profileEditor("precision.editor.palette.cards") {
+        countEditor(ProgramEditorMetrics.Counter.PALETTE_REQUESTS)
+        val cache = refreshSemanticCaches()
+        val query = search?.text ?: ""
+        if (cache && cachedCardQuery == query && cachedCardLayer == paletteLayer) {
+            cachedRootCards?.let {
+                countEditor(ProgramEditorMetrics.Counter.PALETTE_CACHE_HITS)
+                return@profileEditor it
+            }
+        }
+        val cards = ProgramPaletteCatalog.cards(
+            paletteEntries(), capabilities, nodes().any { it.entry.type().role() == ProgramNodeRole.ENTRY },
+            paletteLayer, query,
+            { key -> Component.translatable(key).string },
+            { entry -> nodeLabel(entry).string + "\n" + nodeDescription(entry).string + "\n" +
+                categoryScopeLabel(entry).string + "\n" + Component.translatable(groupKey(entry.group())).string }
+        )
+        if (cache) {
+            cachedRootCards = cards
+            cachedCardQuery = query
+            cachedCardLayer = paletteLayer
+        }
+        cards
+    }
 
     private fun selectedPaletteFamily(): ProgramPaletteCatalog.Card? =
         paletteFamilyId?.let { id -> rootPaletteCards().firstOrNull { it.id() == id && it.family() } }
@@ -2714,27 +2768,108 @@ class ModularProgramScreen(private val session: ModularProgramEditorSession) :
         clearConfigurationInputs()
     }
 
-    private fun nodes(): List<NodeView> =
-        document.program().graph().nodes().mapNotNull { view(it) }
+    private fun nodes(): List<NodeView> = profileEditor("precision.editor.nodes") {
+        countEditor(ProgramEditorMetrics.Counter.NODES_REQUESTS)
+        val cache = refreshSemanticCaches()
+        if (cache) cachedNodes?.let {
+            countEditor(ProgramEditorMetrics.Counter.NODE_CACHE_HITS)
+            return@profileEditor it
+        }
+        val byId = if (cache) LinkedHashMap<Int, NodeView?>() else null
+        val result = document.program().graph().nodes().mapNotNull { source ->
+            val resolved = view(source)
+            // Preserve first-source lookup even for an invalid imported graph with duplicate IDs.
+            if (byId != null && !byId.containsKey(source.id())) byId[source.id()] = resolved
+            resolved
+        }
+        if (cache) {
+            cachedNodes = result
+            cachedNodesById = byId!!
+        }
+        result
+    }
 
     private fun node(id: Int): NodeView? {
+        if (refreshSemanticCaches()) {
+            if (cachedNodes == null) nodes()
+            return cachedNodesById[id]
+        }
         val source = document.program().graph().nodes().firstOrNull { it.id() == id }
         return source?.let { view(it) }
     }
 
-    private fun view(source: ProgramGraph.Node): NodeView? {
-        var entry = catalog.entry(source.type()) ?: return null
-        val schema = catalog.schema(source.type(), source.configuration()) ?: return null
+    private fun view(source: ProgramGraph.Node): NodeView? = profileEditor("precision.editor.view") {
+        var entry = catalog.entry(source.type()) ?: return@profileEditor null
+        countEditor(ProgramEditorMetrics.Counter.SCHEMA_DECODES)
+        val schema = catalog.schema(source.type(), source.configuration()) ?: return@profileEditor null
         val position = document.program().editorLayout().nodePositions()[source.id()]
         if (ProgramNodePalette.hasProvider(entry.id())) {
             entry = presetEntry(entry, source.configuration(), schema)
         }
-        return NodeView(source, entry, schema, position?.x() ?: 0.0, position?.y() ?: 0.0)
+        countEditor(ProgramEditorMetrics.Counter.NODE_VIEWS_REBUILT)
+        NodeView(source, entry, schema, position?.x() ?: 0.0, position?.y() ?: 0.0)
     }
 
-    private fun firstDiagnostic(): ProgramDiagnostic? {
-        val diagnostics = document.validation().diagnostics()
-        return diagnostics.firstOrNull()
+    private fun firstDiagnostic(): ProgramDiagnostic? = profileEditor("precision.editor.validation") {
+        editorValidation().diagnostics().firstOrNull()
+    }
+
+    private fun editorValidation(): ProgramValidationResult {
+        countEditor(ProgramEditorMetrics.Counter.VALIDATION_REQUESTS)
+        val cache = refreshSemanticCaches()
+        if (cache) cachedValidation?.let {
+            countEditor(ProgramEditorMetrics.Counter.VALIDATION_CACHE_HITS)
+            return it
+        }
+        countEditor(ProgramEditorMetrics.Counter.VALIDATION_REBUILT)
+        val result = document.validation()
+        if (cache) cachedValidation = result
+        return result
+    }
+
+    /** Immutable document replacement includes configuration, layout, import, undo and slot changes. */
+    private fun refreshSemanticCaches(): Boolean {
+        val language = Language.getInstance()
+        val extensions = ProgramNodeExtensionIndex.snapshot(document.program().category())
+        val paletteRevision = ProgramNodePalette.registrationRevision()
+        if (cachedDocument !== document || cachedLanguage !== language || cachedExtensions !== extensions ||
+            cachedPaletteRevision != paletteRevision) {
+            cachedNodes = null
+            cachedNodesById = emptyMap()
+            cachedValidation = null
+            cachedPaletteEntries = null
+            cachedRootCards = null
+            cachedCardQuery = null
+            cachedCardLayer = null
+            cachedDocument = document
+            cachedLanguage = language
+            cachedExtensions = extensions
+            cachedPaletteRevision = paletteRevision
+            // Extensions and preset suppliers may produce dynamic schemas or labels. Keep their live path.
+            semanticCacheAllowed = extensions.registrations().isEmpty() &&
+                catalog.entries().none { ProgramNodePalette.hasProvider(it.id()) } &&
+                ProgramEditorCachePolicy.stableGraph(document.program().graph())
+        }
+        return semanticCacheAllowed
+    }
+
+    private fun resetPerformanceCapture(enabled: Boolean) = performanceMetrics.reset(enabled)
+
+    private fun performanceSnapshot(): Map<String, Long> = performanceMetrics.snapshot()
+
+    private fun countEditor(counter: ProgramEditorMetrics.Counter) {
+        performanceMetrics.increment(counter)
+        AcademyProfiler.incrementCounter(counter.key())
+    }
+
+    private inline fun <T> profileEditor(name: String, block: () -> T): T {
+        if (!AcademyProfiler.isCapturingZones()) return block()
+        AcademyProfiler.push(name)
+        try {
+            return block()
+        } finally {
+            AcademyProfiler.pop()
+        }
     }
 
     private fun showTransient(diagnostic: ProgramDiagnostic?) {

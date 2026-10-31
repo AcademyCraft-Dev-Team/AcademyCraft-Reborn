@@ -5,6 +5,7 @@ import org.academy.internal.common.ability.program.registry.ProgramNodeLookup;
 
 import com.mojang.serialization.JsonOps;
 import org.academy.api.common.ability.program.*;
+import org.academy.api.common.profiler.AcademyProfiler;
 
 import java.util.*;
 
@@ -101,6 +102,7 @@ public final class ProgramGraphValidator {
             ProgramNodeType<C> type,
             ProgramGraph.Node node
     ) {
+        AcademyProfiler.incrementCounter("program.validation.node_decode_attempts");
         try {
             var configuration = type.configurationCodec()
                     .parse(JsonOps.INSTANCE, node.configuration())

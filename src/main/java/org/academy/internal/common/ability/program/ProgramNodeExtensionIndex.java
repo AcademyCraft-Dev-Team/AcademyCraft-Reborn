@@ -85,7 +85,8 @@ public final class ProgramNodeExtensionIndex {
         Objects.requireNonNull(category, "category");
         var frozen = frozenSnapshots;
         if (frozen != null) {
-            return frozen.getOrDefault(category, Snapshot.empty(category));
+            var snapshot = frozen.get(category);
+            return snapshot != null ? snapshot : Snapshot.empty(category);
         }
         return build(category, registryCandidates());
     }

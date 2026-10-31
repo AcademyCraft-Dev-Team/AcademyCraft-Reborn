@@ -1,0 +1,16 @@
+{
+  "baseline_commit": "0ad66ef7",
+  "measured_stage": "baseline",
+  "measured_run": "r3-20261030",
+  "captured_before_query_optimization": true,
+  "captured_utc": "2026-10-30T18:25:48.0957901Z",
+  "source_scope": "Query domain after fixed bounded arena and fully loaded entity-ticking tickets; no algorithm optimization yet",
+  "source_hashes": {
+    "src/main/java/org/academy/internal/common/ability/program/ServerProgramTargetResolver.java": "687BFD38FCE921046B86EDE61E8321499C36C3AC1DB773ED2970D0EFBCB66492",
+    "src/main/java/org/academy/internal/common/structure/space/LoadedStructureProximity.java": "29E7107824BCB7906E7DF35AFA0991369DC2694CF59EE42A62E7109D3D5286C6",
+    "src/main/java/org/academy/internal/common/structure/space/StructureBlockSummaries.java": "BBAF518A5856332DB0BF9AF9B9274EB0F9C963E4394BAA545C64FCD847D2E6A0",
+    "src/main/java/org/academy/internal/common/ability/program/ProgramQueryProfiling.java": "44F9023364393AE2B10A753431B92401DD7BC9EECDB04514C635CA226615D525",
+    "src/gametest/java/org/academy/internal/common/ability/program/ProgramQueryBenchmarkGameTests.java": "B84794D7B40CF80425829A09B08EAB79F5646915F847BF91311CCEFEA34BA010",
+    "validation/precision_nodes/precision_query_performance.init.gradle": "8C7E92487D0785A5FE460F6AAB8DF19EBC2B5CB3CF37E0390971F6D7393052DC"
+  }
+}

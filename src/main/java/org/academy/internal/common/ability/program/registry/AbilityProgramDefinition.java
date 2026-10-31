@@ -12,6 +12,7 @@ import org.academy.internal.common.ability.program.editor.ProgramEditorNodeCatal
 
 import net.minecraft.resources.Identifier;
 import org.academy.api.common.ability.program.*;
+import org.academy.api.common.profiler.AcademyProfiler;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ public final class AbilityProgramDefinition {
     private final ProgramEditorNodeCatalog editorCatalog;
     private final ProgramLimits limits;
     private final ProgramSpatialLimits spatialLimits;
+    private final ProgramCompilationCache compilationCache = new ProgramCompilationCache();
 
     public AbilityProgramDefinition(
             Identifier category,
@@ -142,23 +144,64 @@ public final class AbilityProgramDefinition {
     }
 
     public ProgramCompileResult compile(AbilityProgram program, Set<Identifier> capabilities) {
+        AcademyProfiler.push("academy.program.compile.total");
+        AcademyProfiler.incrementCounter("program.compile.definition_requests");
+        try {
+            return recordCompileResult(compileProgram(program, capabilities));
+        } finally {
+            AcademyProfiler.pop();
+        }
+    }
+
+    private ProgramCompileResult compileProgram(AbilityProgram program, Set<Identifier> capabilities) {
         Objects.requireNonNull(program, "program");
-        var migrated = ProgramGraphMigrations.migrate(program, nodeLookup).program();
+        AbilityProgram migrated;
+        AcademyProfiler.push("academy.program.compile.migrate");
+        try {
+            AcademyProfiler.incrementCounter("program.compile.migration_requests");
+            migrated = ProgramGraphMigrations.migrate(program, nodeLookup).program();
+        } finally {
+            AcademyProfiler.pop();
+        }
         if (migrated.schemaVersion() != AbilityProgram.CURRENT_SCHEMA_VERSION) {
             return failure(ProgramDiagnosticCode.INVALID_CONFIGURATION);
         }
         if (!migrated.category().equals(category)) {
             return failure(ProgramDiagnosticCode.CATEGORY_MISMATCH);
         }
-        return compile(migrated.graph(), capabilities);
+        return compileGraph(migrated.graph(), capabilities);
     }
 
     public ProgramCompileResult compile(ProgramGraph graph, Set<Identifier> capabilities) {
-        return ProgramCompiler.compile(
-                Objects.requireNonNull(graph, "graph"),
-                new ProgramCompileContext(category, capabilities, limits),
-                nodeLookup
-        );
+        AcademyProfiler.push("academy.program.compile.total");
+        AcademyProfiler.incrementCounter("program.compile.definition_requests");
+        try {
+            return recordCompileResult(compileGraph(graph, capabilities));
+        } finally {
+            AcademyProfiler.pop();
+        }
+    }
+
+    private ProgramCompileResult compileGraph(ProgramGraph graph, Set<Identifier> capabilities) {
+        Objects.requireNonNull(graph, "graph");
+        var context = new ProgramCompileContext(category, capabilities, limits);
+        // Custom definitions and extension configurations do not inherit built-in cache assumptions.
+        if (AbilityProgramDefinitions.find(category) != this) {
+            AcademyProfiler.incrementCounter("program.compile.cache_bypass");
+            return ProgramCompiler.compile(graph, context, nodeLookup);
+        }
+        return compilationCache.compile(graph, context, categoryNodeTypes,
+                () -> ProgramCompiler.compile(graph, context, nodeLookup));
+    }
+
+    void clearCompilationCache() { compilationCache.clear(); }
+
+    ProgramCompilationCache.Stats compilationCacheStats() { return compilationCache.stats(); }
+
+    private static ProgramCompileResult recordCompileResult(ProgramCompileResult result) {
+        AcademyProfiler.incrementCounter(result.valid()
+                ? "program.compile.definition_success" : "program.compile.definition_rejected");
+        return result;
     }
 
     private static ProgramCompileResult failure(ProgramDiagnosticCode code) {

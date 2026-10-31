@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.program;
 
 import org.academy.internal.common.ability.program.compile.CompiledProgram;
 import org.academy.internal.common.ability.program.compile.ProgramBookCodec;
+import org.academy.internal.common.ability.program.compile.ProgramCompileResult;
 import org.academy.internal.common.ability.program.migrate.ProgramGraphMigrations;
 import org.academy.internal.common.ability.program.registry.AbilityProgramDefinitions;
 import org.academy.internal.common.ability.program.registry.CommonProgramNodeCatalog;
@@ -25,6 +26,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
+import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.server.ability.AbilitySystemServer;
 import org.academy.api.server.ability.program.AbilityProgramService;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
@@ -209,13 +211,23 @@ public final class AbilityProgramManager {
                     player.getUUID(), category, program.id(), slot);
             if (ServerProgramScheduler.contains(
                     player.level().getServer(), sessionKey)) continue;
-            var compiled = definition.compile(program, capabilities);
+            ProgramCompileResult compiled;
+            AcademyProfiler.push("academy.program.trigger.compile");
+            try {
+                AcademyProfiler.incrementCounter("program.trigger.compile_candidates");
+                compiled = definition.compile(program, capabilities);
+            } finally {
+                AcademyProfiler.pop();
+            }
             var executionSlot = slot;
             if (!compiled.valid()) continue;
             var loopKey = new LoopExecutionKey(player.getUUID(), category, slot, program.id());
             if (trigger == ProgramTriggers.Type.LOOP
                     && gameTime < FAILED_LOOP_RETRY_AT.getOrDefault(loopKey, Long.MIN_VALUE)) continue;
-            if (!consumeAutomaticRunBudget(playerId, gameTime)) continue;
+            if (!consumeAutomaticRunBudget(playerId, gameTime)) {
+                AcademyProfiler.incrementCounter("program.trigger.budget_rejected_after_compile");
+                continue;
+            }
             NEXT_AUTOMATIC_SLOT.put(playerId, (slot + 1) % SLOT_COUNT);
             var loopIndex = trigger == ProgramTriggers.Type.LOOP
                     ? LOOP_EXECUTION_COUNTS.getOrDefault(loopKey, 0L) : 0L;

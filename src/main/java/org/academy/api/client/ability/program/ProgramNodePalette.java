@@ -8,17 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /** Player-specific named presets. A preset grants no authority and never registers a node type. */
 public final class ProgramNodePalette {
     private static final Map<Identifier, Supplier<List<Preset>>> PROVIDERS = new ConcurrentHashMap<>();
+    private static final AtomicLong REGISTRATION_REVISION = new AtomicLong();
     private ProgramNodePalette() { }
 
     public static void register(Identifier id, Supplier<List<Preset>> provider) {
         if (PROVIDERS.putIfAbsent(Objects.requireNonNull(id), Objects.requireNonNull(provider)) != null)
             throw new IllegalStateException("Duplicate palette provider " + id);
+        REGISTRATION_REVISION.incrementAndGet();
     }
+    /** Changes on registration only. Supplier results remain dynamic and must not be cached. */
+    public static long registrationRevision() { return REGISTRATION_REVISION.get(); }
     public static boolean hasProvider(Identifier id) { return PROVIDERS.containsKey(id); }
     public static List<Preset> presets(Identifier id) {
         var provider = PROVIDERS.get(id);

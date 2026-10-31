@@ -1,0 +1,2340 @@
+{
+  "passed": true,
+  "stage": "baseline",
+  "language": "zh_cn",
+  "warmup_iterations_per_method": 150,
+  "measured_iterations_per_method": 1000,
+  "allocation_counter_available": true,
+  "render_thread_cpu_counter_available": true,
+  "java": "25.0.3+1-b329.124",
+  "vm": "OpenJDK 64-Bit Server VM",
+  "os": "Windows 11 10.0",
+  "processors": 32,
+  "heap_max_bytes": 17129537536,
+  "gc": [
+    {
+      "milliseconds": 621,
+      "name": "G1 Young Generation",
+      "collections": 130
+    },
+    {
+      "milliseconds": 124,
+      "name": "G1 Concurrent GC",
+      "collections": 32
+    },
+    {
+      "milliseconds": 0,
+      "name": "G1 Old Generation",
+      "collections": 0
+    }
+  ],
+  "compile_benchmark_before_ui_capture": {
+    "scope": "single-thread compilation only; valid built-in graphs, no VM/world execution",
+    "jvm": "OpenJDK 64-Bit Server VM",
+    "java_version": "25.0.3+1-b329.124",
+    "warmup_iterations_per_case": 100,
+    "measured_iterations_per_case": 1000,
+    "percentile_method": "nearest rank, ceil(p*n)-1; warmup excluded",
+    "timing_profiler_enabled": false,
+    "allocation_scope": "current thread allocated bytes; excludes other threads and native allocations",
+    "profiling_scope": "separate capture pass; its counters/times are not mixed with latency samples",
+    "thread_allocation_supported": true,
+    "cases": [
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 8900,
+          "p50": 21300,
+          "p95": 53200,
+          "p99": 133200,
+          "max": 1443800,
+          "mean": 27364.8
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 17568,
+          "p50": 17616,
+          "p95": 17744,
+          "p99": 17744,
+          "max": 17880,
+          "mean": 17632.608
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "dense_data_dag",
+        "path": "definition_with_migration",
+        "nodes": 2,
+        "edges": 1,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.definition_requests": 128,
+            "program.compile.definition_success": 128,
+            "program.compile.migration_requests": 128,
+            "program.compile.node_decode_attempts": 256,
+            "program.validation.node_decode_attempts": 256
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.total",
+              "calls": 128,
+              "total_ns": 2437400,
+              "self_ns": 264800,
+              "max_ns": 276700
+            },
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 2066300,
+              "self_ns": 363100,
+              "max_ns": 185100
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 1112300,
+              "self_ns": 1112300,
+              "max_ns": 157300
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 391500,
+              "self_ns": 391500,
+              "max_ns": 15800
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 199400,
+              "self_ns": 199400,
+              "max_ns": 17800
+            },
+            {
+              "name": "academy.program.compile.migrate",
+              "calls": 128,
+              "total_ns": 106300,
+              "self_ns": 106300,
+              "max_ns": 19200
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 8000,
+          "p50": 13600,
+          "p95": 19600,
+          "p99": 33900,
+          "max": 296900,
+          "mean": 13964.1
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 16608,
+          "p50": 16864,
+          "p95": 16864,
+          "p99": 16864,
+          "max": 16944,
+          "mean": 16794.32
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "dense_data_dag",
+        "path": "direct_compiler",
+        "nodes": 2,
+        "edges": 1,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.node_decode_attempts": 256,
+            "program.validation.node_decode_attempts": 256
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 1393600,
+              "self_ns": 134300,
+              "max_ns": 81800
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 788000,
+              "self_ns": 788000,
+              "max_ns": 38000
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 328300,
+              "self_ns": 328300,
+              "max_ns": 13100
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 143000,
+              "self_ns": 143000,
+              "max_ns": 6800
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 147800,
+          "p50": 170200,
+          "p95": 265900,
+          "p99": 417600,
+          "max": 7766000,
+          "mean": 193094.8
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 278584,
+          "p50": 278584,
+          "p95": 282472,
+          "p99": 282472,
+          "max": 282720,
+          "mean": 278981.16
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 1,
+        "gc_collection_ms_during_measurement": 7,
+        "shape": "dense_data_dag",
+        "path": "definition_with_migration",
+        "nodes": 32,
+        "edges": 64,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.definition_requests": 128,
+            "program.compile.definition_success": 128,
+            "program.compile.migration_requests": 128,
+            "program.compile.node_decode_attempts": 4096,
+            "program.validation.node_decode_attempts": 4096
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.total",
+              "calls": 128,
+              "total_ns": 21180400,
+              "self_ns": 86500,
+              "max_ns": 286100
+            },
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 20859800,
+              "self_ns": 144300,
+              "max_ns": 283500
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 10652500,
+              "self_ns": 10652500,
+              "max_ns": 142400
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 8608100,
+              "self_ns": 8608100,
+              "max_ns": 172500
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 1454900,
+              "self_ns": 1454900,
+              "max_ns": 27100
+            },
+            {
+              "name": "academy.program.compile.migrate",
+              "calls": 128,
+              "total_ns": 234100,
+              "self_ns": 234100,
+              "max_ns": 6100
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 137500,
+          "p50": 151000,
+          "p95": 179900,
+          "p99": 261900,
+          "max": 7399600,
+          "mean": 162789.8
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 275488,
+          "p50": 275520,
+          "p95": 275696,
+          "p99": 275696,
+          "max": 275752,
+          "mean": 275593.08
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 1,
+        "gc_collection_ms_during_measurement": 7,
+        "shape": "dense_data_dag",
+        "path": "direct_compiler",
+        "nodes": 32,
+        "edges": 64,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.node_decode_attempts": 4096,
+            "program.validation.node_decode_attempts": 4096
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 20867400,
+              "self_ns": 140200,
+              "max_ns": 279700
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 10740800,
+              "self_ns": 10740800,
+              "max_ns": 169800
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 8289000,
+              "self_ns": 8289000,
+              "max_ns": 80800
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 1697400,
+              "self_ns": 1697400,
+              "max_ns": 42400
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 528700,
+          "p50": 584000,
+          "p95": 740400,
+          "p99": 919900,
+          "max": 7146600,
+          "mean": 626865.4
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 1099288,
+          "p50": 1099336,
+          "p95": 1099336,
+          "p99": 1099336,
+          "max": 1099440,
+          "mean": 1099319.032
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 2,
+        "gc_collection_ms_during_measurement": 12,
+        "shape": "dense_data_dag",
+        "path": "definition_with_migration",
+        "nodes": 128,
+        "edges": 256,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.definition_requests": 128,
+            "program.compile.definition_success": 128,
+            "program.compile.migration_requests": 128,
+            "program.compile.node_decode_attempts": 16384,
+            "program.validation.node_decode_attempts": 16384
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.total",
+              "calls": 128,
+              "total_ns": 79780500,
+              "self_ns": 257100,
+              "max_ns": 877200
+            },
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 78808100,
+              "self_ns": 227900,
+              "max_ns": 827600
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 41003000,
+              "self_ns": 41003000,
+              "max_ns": 518300
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 32282700,
+              "self_ns": 32282700,
+              "max_ns": 383900
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 5294500,
+              "self_ns": 5294500,
+              "max_ns": 163300
+            },
+            {
+              "name": "academy.program.compile.migrate",
+              "calls": 128,
+              "total_ns": 715300,
+              "self_ns": 715300,
+              "max_ns": 10900
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 526700,
+          "p50": 589200,
+          "p95": 1006500,
+          "p99": 1237000,
+          "max": 15462000,
+          "mean": 658782.9
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 1088688,
+          "p50": 1088688,
+          "p95": 1088688,
+          "p99": 1088688,
+          "max": 1088792,
+          "mean": 1088688.208
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 4,
+        "gc_collection_ms_during_measurement": 26,
+        "shape": "dense_data_dag",
+        "path": "direct_compiler",
+        "nodes": 128,
+        "edges": 256,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.node_decode_attempts": 16384,
+            "program.validation.node_decode_attempts": 16384
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 77313000,
+              "self_ns": 221900,
+              "max_ns": 1170700
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 40330800,
+              "self_ns": 40330800,
+              "max_ns": 650200
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 31739100,
+              "self_ns": 31739100,
+              "max_ns": 430700
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 5021200,
+              "self_ns": 5021200,
+              "max_ns": 83800
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 1800,
+          "p50": 2000,
+          "p95": 2400,
+          "p99": 3600,
+          "max": 135900,
+          "mean": 2233.8
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 10640,
+          "p50": 10640,
+          "p95": 10640,
+          "p99": 10640,
+          "max": 10640,
+          "mean": 10640.0
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "flow_state_chain",
+        "path": "definition_with_migration",
+        "nodes": 2,
+        "edges": 1,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.definition_requests": 128,
+            "program.compile.definition_success": 128,
+            "program.compile.migration_requests": 128,
+            "program.compile.node_decode_attempts": 256,
+            "program.validation.node_decode_attempts": 256
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.total",
+              "calls": 128,
+              "total_ns": 437500,
+              "self_ns": 63200,
+              "max_ns": 16500
+            },
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 338600,
+              "self_ns": 80000,
+              "max_ns": 9700
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 171600,
+              "self_ns": 171600,
+              "max_ns": 5100
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 46500,
+              "self_ns": 46500,
+              "max_ns": 1200
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 40500,
+              "self_ns": 40500,
+              "max_ns": 900
+            },
+            {
+              "name": "academy.program.compile.migrate",
+              "calls": 128,
+              "total_ns": 35700,
+              "self_ns": 35700,
+              "max_ns": 2200
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 1600,
+          "p50": 1700,
+          "p95": 1900,
+          "p99": 2300,
+          "max": 9100,
+          "mean": 1755.4
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 10352,
+          "p50": 10352,
+          "p95": 10352,
+          "p99": 10352,
+          "max": 10352,
+          "mean": 10352.0
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "flow_state_chain",
+        "path": "direct_compiler",
+        "nodes": 2,
+        "edges": 1,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.node_decode_attempts": 256,
+            "program.validation.node_decode_attempts": 256
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 400900,
+              "self_ns": 126800,
+              "max_ns": 40900
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 176100,
+              "self_ns": 176100,
+              "max_ns": 5200
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 54100,
+              "self_ns": 54100,
+              "max_ns": 5300
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 43900,
+              "self_ns": 43900,
+              "max_ns": 800
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 26200,
+          "p50": 28200,
+          "p95": 44000,
+          "p99": 63600,
+          "max": 247300,
+          "mean": 30872.5
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 117552,
+          "p50": 117584,
+          "p95": 117584,
+          "p99": 117584,
+          "max": 118168,
+          "mean": 117571.176
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "flow_state_chain",
+        "path": "definition_with_migration",
+        "nodes": 32,
+        "edges": 31,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.definition_requests": 128,
+            "program.compile.definition_success": 128,
+            "program.compile.migration_requests": 128,
+            "program.compile.node_decode_attempts": 4096,
+            "program.validation.node_decode_attempts": 4096
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.total",
+              "calls": 128,
+              "total_ns": 4260400,
+              "self_ns": 101400,
+              "max_ns": 88800
+            },
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 4033500,
+              "self_ns": 116700,
+              "max_ns": 56900
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 2209300,
+              "self_ns": 2209300,
+              "max_ns": 32500
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 1200300,
+              "self_ns": 1200300,
+              "max_ns": 19700
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 507200,
+              "self_ns": 507200,
+              "max_ns": 7800
+            },
+            {
+              "name": "academy.program.compile.migrate",
+              "calls": 128,
+              "total_ns": 125500,
+              "self_ns": 125500,
+              "max_ns": 19200
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 24600,
+          "p50": 26700,
+          "p95": 33900,
+          "p99": 42900,
+          "max": 51800,
+          "mean": 27577.0
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 116976,
+          "p50": 117056,
+          "p95": 117056,
+          "p99": 117056,
+          "max": 117056,
+          "mean": 117035.68
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "flow_state_chain",
+        "path": "direct_compiler",
+        "nodes": 32,
+        "edges": 31,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.node_decode_attempts": 4096,
+            "program.validation.node_decode_attempts": 4096
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 3525900,
+              "self_ns": 124300,
+              "max_ns": 55600
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 1867100,
+              "self_ns": 1867100,
+              "max_ns": 22700
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 1062400,
+              "self_ns": 1062400,
+              "max_ns": 37000
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 472100,
+              "self_ns": 472100,
+              "max_ns": 7600
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 74300,
+          "p50": 80400,
+          "p95": 104300,
+          "p99": 134100,
+          "max": 293500,
+          "mean": 86036.4
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 462384,
+          "p50": 462384,
+          "p95": 462464,
+          "p99": 462464,
+          "max": 462464,
+          "mean": 462404.08
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "flow_state_chain",
+        "path": "definition_with_migration",
+        "nodes": 128,
+        "edges": 127,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.definition_requests": 128,
+            "program.compile.definition_success": 128,
+            "program.compile.migration_requests": 128,
+            "program.compile.node_decode_attempts": 16384,
+            "program.validation.node_decode_attempts": 16384
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.total",
+              "calls": 128,
+              "total_ns": 16418300,
+              "self_ns": 47000,
+              "max_ns": 5577800
+            },
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 16027500,
+              "self_ns": 69300,
+              "max_ns": 5574500
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 12528700,
+              "self_ns": 12528700,
+              "max_ns": 5521500
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 1761500,
+              "self_ns": 1761500,
+              "max_ns": 22600
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 1668000,
+              "self_ns": 1668000,
+              "max_ns": 27900
+            },
+            {
+              "name": "academy.program.compile.migrate",
+              "calls": 128,
+              "total_ns": 343800,
+              "self_ns": 343800,
+              "max_ns": 11000
+            }
+          ]
+        }
+      },
+      {
+        "latency_ns": {
+          "samples": 1000,
+          "min": 70400,
+          "p50": 75700,
+          "p95": 128900,
+          "p99": 176300,
+          "max": 217500,
+          "mean": 81631.7
+        },
+        "allocated_bytes_per_request": {
+          "samples": 1000,
+          "min": 461176,
+          "p50": 461176,
+          "p95": 461176,
+          "p99": 461176,
+          "max": 461176,
+          "mean": 461176.0
+        },
+        "timed_request_calls": 1000,
+        "gc_collections_during_measurement": 0,
+        "gc_collection_ms_during_measurement": 0,
+        "shape": "flow_state_chain",
+        "path": "direct_compiler",
+        "nodes": 128,
+        "edges": 127,
+        "all_requests_valid": true,
+        "direct_context_note": "direct compiler context is constructed before measurement",
+        "instrumented_pass": {
+          "request_calls": 128,
+          "counters": {
+            "program.compile.actual_compilations": 128,
+            "program.compile.compiler_success": 128,
+            "program.compile.node_decode_attempts": 16384,
+            "program.validation.node_decode_attempts": 16384
+          },
+          "zones": [
+            {
+              "name": "academy.program.compile.compiler",
+              "calls": 128,
+              "total_ns": 10421900,
+              "self_ns": 49400,
+              "max_ns": 117800
+            },
+            {
+              "name": "academy.program.compile.validate",
+              "calls": 128,
+              "total_ns": 7005600,
+              "self_ns": 7005600,
+              "max_ns": 90400
+            },
+            {
+              "name": "academy.program.compile.decode_schema",
+              "calls": 128,
+              "total_ns": 1749900,
+              "self_ns": 1749900,
+              "max_ns": 23700
+            },
+            {
+              "name": "academy.program.compile.link",
+              "calls": 128,
+              "total_ns": 1617000,
+              "self_ns": 1617000,
+              "max_ns": 18500
+            }
+          ]
+        }
+      }
+    ],
+    "passed": true
+  },
+  "editor_cases": [
+    {
+      "nodes": 2,
+      "edges": 1,
+      "program_sha256": "86191a4ce0bea1922cb91e66ff3b12c79ed6a2d6827cc6fa4852662b6e0d6dda",
+      "category": "academy:accelerator",
+      "graph_compiled": true,
+      "codec_round_trip": true,
+      "gui_size": [
+        800,
+        450
+      ],
+      "window_size": [
+        1600,
+        900
+      ],
+      "initial_language": "zh_cn",
+      "graph_execution": false,
+      "reflection_microbenchmarks_profiler_disabled": {
+        "nodes": {
+          "allocated_bytes": {
+            "min": 7232,
+            "p99": 7264,
+            "p95": 7264,
+            "p50": 7232,
+            "available": true,
+            "samples": 1000,
+            "mean": 7244.0,
+            "max": 7264
+          },
+          "nanoseconds": {
+            "min": 2100,
+            "p99": 41600,
+            "p95": 7100,
+            "p50": 2600,
+            "available": true,
+            "samples": 1000,
+            "mean": 4520.8,
+            "max": 89500
+          }
+        },
+        "paletteCards": {
+          "allocated_bytes": {
+            "min": 326864,
+            "p99": 326928,
+            "p95": 326928,
+            "p50": 326896,
+            "available": true,
+            "samples": 1000,
+            "mean": 326903.288,
+            "max": 326984
+          },
+          "nanoseconds": {
+            "min": 88200,
+            "p99": 194600,
+            "p95": 173000,
+            "p50": 96300,
+            "available": true,
+            "samples": 1000,
+            "mean": 109006.7,
+            "max": 265600
+          }
+        },
+        "firstDiagnostic": {
+          "allocated_bytes": {
+            "min": 11168,
+            "p99": 11200,
+            "p95": 11200,
+            "p50": 11200,
+            "available": true,
+            "samples": 1000,
+            "mean": 11191.6,
+            "max": 12000
+          },
+          "nanoseconds": {
+            "min": 2900,
+            "p99": 34200,
+            "p95": 18600,
+            "p50": 4100,
+            "available": true,
+            "samples": 1000,
+            "mean": 6354.0,
+            "max": 54200
+          }
+        }
+      },
+      "real_render_profiler_disabled": {
+        "surface_render_elapsed_and_rebuild_counters": {
+          "frames": 712,
+          "schema_decodes": 5696,
+          "nodes_drawn": 1424,
+          "nodes_culled": 0,
+          "nodes_requests": 2136,
+          "frame_nanos_total": 220368500,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 712,
+          "node_views_rebuilt": 5696,
+          "palette_requests": 1424,
+          "palette_rebuilt": 1424,
+          "frame_p50_nanos": 295100,
+          "frame_samples": 712,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 2136,
+          "validation_requests": 2136,
+          "frame_p99_nanos": 473900,
+          "frame_p95_nanos": 382000
+        },
+        "render_event_wall_elapsed_nanos": {
+          "min": 1254900,
+          "p99": 2210400,
+          "p95": 1844400,
+          "p50": 1532500,
+          "available": true,
+          "samples": 712,
+          "mean": 1575265.168539326,
+          "max": 6043500
+        },
+        "render_event_thread_cpu_nanos": {
+          "min": 0,
+          "p99": 15625000,
+          "p95": 15625000,
+          "p50": 0,
+          "available": true,
+          "samples": 712,
+          "mean": 1689782.3033707866,
+          "max": 15625000
+        },
+        "render_thread_allocated_bytes_per_frame": {
+          "min": 565328,
+          "p99": 593600,
+          "p95": 592816,
+          "p50": 572136,
+          "available": true,
+          "samples": 712,
+          "mean": 574921.5168539326,
+          "max": 594136
+        },
+        "window_client_ticks": 120,
+        "profiler_enabled": false,
+        "render_event_scope": "Local Minecraft.renderFrame fires Pre immediately before GameRenderer.render and Post immediately after it. Window texture acquisition, update/extract happen before Pre; blit, command submission, surface.present and frame limiter happen after Post. Listener work and waits inside render may contribute. This is not a full frame interval or GPU timestamp.",
+        "surface_elapsed_scope": "EditorSurface.renderInternal wall elapsed only; excludes extractRenderState configuration sync, tooltip surface and explicit present. It is not a thread CPU or GPU-completion measurement."
+      },
+      "real_render_profiler_enabled": {
+        "surface_render_elapsed_and_rebuild_counters": {
+          "frames": 712,
+          "schema_decodes": 5696,
+          "nodes_drawn": 1424,
+          "nodes_culled": 0,
+          "nodes_requests": 2136,
+          "frame_nanos_total": 205872200,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 712,
+          "node_views_rebuilt": 5696,
+          "palette_requests": 1424,
+          "palette_rebuilt": 1424,
+          "frame_p50_nanos": 282300,
+          "frame_samples": 712,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 2136,
+          "validation_requests": 2136,
+          "frame_p99_nanos": 426300,
+          "frame_p95_nanos": 348200
+        },
+        "render_event_wall_elapsed_nanos": {
+          "min": 1244400,
+          "p99": 1743300,
+          "p95": 1571900,
+          "p50": 1378800,
+          "available": true,
+          "samples": 712,
+          "mean": 1405827.668539326,
+          "max": 3933500
+        },
+        "render_event_thread_cpu_nanos": {
+          "min": 0,
+          "p99": 15625000,
+          "p95": 15625000,
+          "p50": 0,
+          "available": true,
+          "samples": 712,
+          "mean": 1470330.0561797754,
+          "max": 15625000
+        },
+        "render_thread_allocated_bytes_per_frame": {
+          "min": 564472,
+          "p99": 566968,
+          "p95": 566936,
+          "p50": 566112,
+          "available": true,
+          "samples": 712,
+          "mean": 565855.6292134832,
+          "max": 569968
+        },
+        "window_client_ticks": 120,
+        "profiler_enabled": true,
+        "render_event_scope": "Local Minecraft.renderFrame fires Pre immediately before GameRenderer.render and Post immediately after it. Window texture acquisition, update/extract happen before Pre; blit, command submission, surface.present and frame limiter happen after Post. Listener work and waits inside render may contribute. This is not a full frame interval or GPU timestamp.",
+        "surface_elapsed_scope": "EditorSurface.renderInternal wall elapsed only; excludes extractRenderState configuration sync, tooltip surface and explicit present. It is not a thread CPU or GPU-completion measurement.",
+        "fixed_editor_profiler_zones": [
+          {
+            "maximum_nanos": 838900,
+            "count": 712,
+            "self_nanos": 58821100,
+            "name": "precision.editor.render.surface",
+            "thread": "Render thread",
+            "counters": {
+              "program.validation.node_decode_attempts": 1424
+            },
+            "path": "root\u001eprecision.editor.render.surface",
+            "total_nanos": 205022600
+          },
+          {
+            "maximum_nanos": 488000,
+            "count": 712,
+            "self_nanos": 84111300,
+            "name": "precision.editor.palette.cards",
+            "thread": "Render thread",
+            "counters": {
+              "palette_requests": 712
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards",
+            "total_nanos": 94748100
+          },
+          {
+            "maximum_nanos": 1563500,
+            "count": 712,
+            "self_nanos": 69425700,
+            "name": "precision.editor.palette.cards",
+            "thread": "Render thread",
+            "counters": {
+              "palette_requests": 712
+            },
+            "path": "root\u001eprecision.editor.palette.cards",
+            "total_nanos": 73795400
+          },
+          {
+            "maximum_nanos": 337600,
+            "count": 712,
+            "self_nanos": 33997600,
+            "name": "precision.editor.render.canvas",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_drawn": 1424,
+              "edges_drawn": 712
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas",
+            "total_nanos": 47110400
+          },
+          {
+            "maximum_nanos": 55200,
+            "count": 712,
+            "self_nanos": 7837200,
+            "name": "precision.editor.palette.entries",
+            "thread": "Render thread",
+            "counters": {
+              "palette_rebuilt": 712
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.palette.entries",
+            "total_nanos": 7837200
+          },
+          {
+            "maximum_nanos": 26900,
+            "count": 1424,
+            "self_nanos": 5943600,
+            "name": "precision.editor.validation",
+            "thread": "Render thread",
+            "counters": {
+              "validation_rebuilt": 1424,
+              "program.validation.node_decode_attempts": 2848,
+              "validation_requests": 1424
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.validation",
+            "total_nanos": 5943600
+          },
+          {
+            "maximum_nanos": 92100,
+            "count": 712,
+            "self_nanos": 4343000,
+            "name": "precision.editor.validation",
+            "thread": "Render thread",
+            "counters": {
+              "validation_rebuilt": 712,
+              "program.validation.node_decode_attempts": 1424,
+              "validation_requests": 712
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.validation",
+            "total_nanos": 4343000
+          },
+          {
+            "maximum_nanos": 50800,
+            "count": 1424,
+            "self_nanos": 4288100,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 1424,
+              "node_views_rebuilt": 1424
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.view",
+            "total_nanos": 4288100
+          },
+          {
+            "maximum_nanos": 80100,
+            "count": 712,
+            "self_nanos": 878300,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 712
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.nodes",
+            "total_nanos": 2881100
+          },
+          {
+            "maximum_nanos": 23300,
+            "count": 712,
+            "self_nanos": 399500,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 712
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes",
+            "total_nanos": 2799600
+          },
+          {
+            "maximum_nanos": 36400,
+            "count": 712,
+            "self_nanos": 419100,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 712
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes",
+            "total_nanos": 2510400
+          },
+          {
+            "maximum_nanos": 15500,
+            "count": 1424,
+            "self_nanos": 2400100,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 1424,
+              "node_views_rebuilt": 1424
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 2400100
+          },
+          {
+            "maximum_nanos": 15900,
+            "count": 1424,
+            "self_nanos": 2091300,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 1424,
+              "node_views_rebuilt": 1424
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 2091300
+          },
+          {
+            "maximum_nanos": 78000,
+            "count": 1424,
+            "self_nanos": 2002800,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 1424,
+              "node_views_rebuilt": 1424
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 2002800
+          },
+          {
+            "maximum_nanos": 77500,
+            "count": 712,
+            "self_nanos": 1859300,
+            "name": "precision.editor.palette.entries",
+            "thread": "Render thread",
+            "counters": {
+              "palette_rebuilt": 712
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.palette.entries",
+            "total_nanos": 1859300
+          }
+        ]
+      },
+      "edit_undo_redo_and_hash_restored": true,
+      "canvas_zoom_and_palette_scroll_preserve_graph": true,
+      "all_source_nodes_have_views": true
+    },
+    {
+      "nodes": 32,
+      "edges": 64,
+      "program_sha256": "c897d316d1ad4e1ed634cafdf5f553bf84ccd2a0873973da6a66170e607b6607",
+      "category": "academy:accelerator",
+      "graph_compiled": true,
+      "codec_round_trip": true,
+      "gui_size": [
+        800,
+        450
+      ],
+      "window_size": [
+        1600,
+        900
+      ],
+      "initial_language": "zh_cn",
+      "graph_execution": false,
+      "reflection_microbenchmarks_profiler_disabled": {
+        "nodes": {
+          "allocated_bytes": {
+            "min": 130168,
+            "p99": 130168,
+            "p95": 130168,
+            "p50": 130168,
+            "available": true,
+            "samples": 1000,
+            "mean": 130168.104,
+            "max": 130272
+          },
+          "nanoseconds": {
+            "min": 66400,
+            "p99": 147300,
+            "p95": 115500,
+            "p50": 68200,
+            "available": true,
+            "samples": 1000,
+            "mean": 73888.2,
+            "max": 514500
+          }
+        },
+        "paletteCards": {
+          "allocated_bytes": {
+            "min": 449768,
+            "p99": 449768,
+            "p95": 449768,
+            "p50": 449768,
+            "available": true,
+            "samples": 1000,
+            "mean": 449768.0,
+            "max": 449768
+          },
+          "nanoseconds": {
+            "min": 153200,
+            "p99": 252200,
+            "p95": 192700,
+            "p50": 158200,
+            "available": true,
+            "samples": 1000,
+            "mean": 166059.4,
+            "max": 1533600
+          }
+        },
+        "firstDiagnostic": {
+          "allocated_bytes": {
+            "min": 167416,
+            "p99": 167416,
+            "p95": 167416,
+            "p50": 167416,
+            "available": true,
+            "samples": 1000,
+            "mean": 167416.104,
+            "max": 167520
+          },
+          "nanoseconds": {
+            "min": 77500,
+            "p99": 171400,
+            "p95": 105200,
+            "p50": 80600,
+            "available": true,
+            "samples": 1000,
+            "mean": 87162.7,
+            "max": 1661600
+          }
+        }
+      },
+      "real_render_profiler_disabled": {
+        "surface_render_elapsed_and_rebuild_counters": {
+          "frames": 714,
+          "schema_decodes": 159936,
+          "nodes_drawn": 22848,
+          "nodes_culled": 0,
+          "nodes_requests": 2142,
+          "frame_nanos_total": 2648521700,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 45696,
+          "node_views_rebuilt": 159936,
+          "palette_requests": 1428,
+          "palette_rebuilt": 1428,
+          "frame_p50_nanos": 3658300,
+          "frame_samples": 714,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 23562,
+          "validation_requests": 23562,
+          "frame_p99_nanos": 4705700,
+          "frame_p95_nanos": 3987700
+        },
+        "render_event_wall_elapsed_nanos": {
+          "min": 1806600,
+          "p99": 2428900,
+          "p95": 2171700,
+          "p50": 1931200,
+          "available": true,
+          "samples": 714,
+          "mean": 1961671.4285714286,
+          "max": 3099600
+        },
+        "render_event_thread_cpu_nanos": {
+          "min": 0,
+          "p99": 15625000,
+          "p95": 15625000,
+          "p50": 0,
+          "available": true,
+          "samples": 714,
+          "mean": 1816351.5406162464,
+          "max": 15625000
+        },
+        "render_thread_allocated_bytes_per_frame": {
+          "min": 1301120,
+          "p99": 1318136,
+          "p95": 1301288,
+          "p50": 1301144,
+          "available": true,
+          "samples": 714,
+          "mean": 1301547.7422969188,
+          "max": 1318280
+        },
+        "window_client_ticks": 120,
+        "profiler_enabled": false,
+        "render_event_scope": "Local Minecraft.renderFrame fires Pre immediately before GameRenderer.render and Post immediately after it. Window texture acquisition, update/extract happen before Pre; blit, command submission, surface.present and frame limiter happen after Post. Listener work and waits inside render may contribute. This is not a full frame interval or GPU timestamp.",
+        "surface_elapsed_scope": "EditorSurface.renderInternal wall elapsed only; excludes extractRenderState configuration sync, tooltip surface and explicit present. It is not a thread CPU or GPU-completion measurement."
+      },
+      "real_render_profiler_enabled": {
+        "surface_render_elapsed_and_rebuild_counters": {
+          "frames": 715,
+          "schema_decodes": 160160,
+          "nodes_drawn": 22880,
+          "nodes_culled": 0,
+          "nodes_requests": 2145,
+          "frame_nanos_total": 2696398700,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 45760,
+          "node_views_rebuilt": 160160,
+          "palette_requests": 1430,
+          "palette_rebuilt": 1430,
+          "frame_p50_nanos": 3730700,
+          "frame_samples": 715,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 23595,
+          "validation_requests": 23595,
+          "frame_p99_nanos": 4527600,
+          "frame_p95_nanos": 3994400
+        },
+        "render_event_wall_elapsed_nanos": {
+          "min": 1778400,
+          "p99": 2204300,
+          "p95": 2070900,
+          "p50": 1907500,
+          "available": true,
+          "samples": 715,
+          "mean": 1922464.895104895,
+          "max": 2512600
+        },
+        "render_event_thread_cpu_nanos": {
+          "min": 0,
+          "p99": 15625000,
+          "p95": 15625000,
+          "p50": 0,
+          "available": true,
+          "samples": 715,
+          "mean": 1748251.7482517483,
+          "max": 15625000
+        },
+        "render_thread_allocated_bytes_per_frame": {
+          "min": 1301040,
+          "p99": 1318112,
+          "p95": 1301440,
+          "p50": 1301120,
+          "available": true,
+          "samples": 715,
+          "mean": 1301529.6559440559,
+          "max": 1318432
+        },
+        "window_client_ticks": 120,
+        "profiler_enabled": true,
+        "render_event_scope": "Local Minecraft.renderFrame fires Pre immediately before GameRenderer.render and Post immediately after it. Window texture acquisition, update/extract happen before Pre; blit, command submission, surface.present and frame limiter happen after Post. Listener work and waits inside render may contribute. This is not a full frame interval or GPU timestamp.",
+        "surface_elapsed_scope": "EditorSurface.renderInternal wall elapsed only; excludes extractRenderState configuration sync, tooltip surface and explicit present. It is not a thread CPU or GPU-completion measurement.",
+        "fixed_editor_profiler_zones": [
+          {
+            "maximum_nanos": 6030200,
+            "count": 715,
+            "self_nanos": 133924800,
+            "name": "precision.editor.render.surface",
+            "thread": "Render thread",
+            "counters": {
+              "program.validation.node_decode_attempts": 22880
+            },
+            "path": "root\u001eprecision.editor.render.surface",
+            "total_nanos": 2695617500
+          },
+          {
+            "maximum_nanos": 5510100,
+            "count": 715,
+            "self_nanos": 152363600,
+            "name": "precision.editor.render.canvas",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_drawn": 22880,
+              "edges_drawn": 45760
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas",
+            "total_nanos": 2358776900
+          },
+          {
+            "maximum_nanos": 1650100,
+            "count": 22880,
+            "self_nanos": 1891756700,
+            "name": "precision.editor.validation",
+            "thread": "Render thread",
+            "counters": {
+              "validation_rebuilt": 22880,
+              "program.validation.node_decode_attempts": 732160,
+              "validation_requests": 22880
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.validation",
+            "total_nanos": 1891756700
+          },
+          {
+            "maximum_nanos": 228300,
+            "count": 91520,
+            "self_nanos": 260265600,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 91520,
+              "node_views_rebuilt": 91520
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.view",
+            "total_nanos": 260265600
+          },
+          {
+            "maximum_nanos": 380800,
+            "count": 715,
+            "self_nanos": 78155200,
+            "name": "precision.editor.palette.cards",
+            "thread": "Render thread",
+            "counters": {
+              "palette_requests": 715
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards",
+            "total_nanos": 139887200
+          },
+          {
+            "maximum_nanos": 356900,
+            "count": 715,
+            "self_nanos": 69487600,
+            "name": "precision.editor.palette.cards",
+            "thread": "Render thread",
+            "counters": {
+              "palette_requests": 715
+            },
+            "path": "root\u001eprecision.editor.palette.cards",
+            "total_nanos": 126342100
+          },
+          {
+            "maximum_nanos": 207500,
+            "count": 715,
+            "self_nanos": 63028600,
+            "name": "precision.editor.validation",
+            "thread": "Render thread",
+            "counters": {
+              "validation_rebuilt": 715,
+              "program.validation.node_decode_attempts": 22880,
+              "validation_requests": 715
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.validation",
+            "total_nanos": 63028600
+          },
+          {
+            "maximum_nanos": 233800,
+            "count": 715,
+            "self_nanos": 2446100,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 715
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes",
+            "total_nanos": 55810000
+          },
+          {
+            "maximum_nanos": 233500,
+            "count": 715,
+            "self_nanos": 2215100,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 715
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes",
+            "total_nanos": 55076200
+          },
+          {
+            "maximum_nanos": 188500,
+            "count": 715,
+            "self_nanos": 2637500,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 715
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.nodes",
+            "total_nanos": 54391000
+          },
+          {
+            "maximum_nanos": 95500,
+            "count": 22880,
+            "self_nanos": 53363900,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 22880,
+              "node_views_rebuilt": 22880
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 53363900
+          },
+          {
+            "maximum_nanos": 125000,
+            "count": 22880,
+            "self_nanos": 52861100,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 22880,
+              "node_views_rebuilt": 22880
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 52861100
+          },
+          {
+            "maximum_nanos": 91400,
+            "count": 22880,
+            "self_nanos": 51753500,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 22880,
+              "node_views_rebuilt": 22880
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 51753500
+          },
+          {
+            "maximum_nanos": 121400,
+            "count": 715,
+            "self_nanos": 5922000,
+            "name": "precision.editor.palette.entries",
+            "thread": "Render thread",
+            "counters": {
+              "palette_rebuilt": 715
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.palette.entries",
+            "total_nanos": 5922000
+          },
+          {
+            "maximum_nanos": 14100,
+            "count": 715,
+            "self_nanos": 1778300,
+            "name": "precision.editor.palette.entries",
+            "thread": "Render thread",
+            "counters": {
+              "palette_rebuilt": 715
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.palette.entries",
+            "total_nanos": 1778300
+          }
+        ]
+      },
+      "edit_undo_redo_and_hash_restored": true,
+      "canvas_zoom_and_palette_scroll_preserve_graph": true,
+      "all_source_nodes_have_views": true,
+      "resource_reload_started_zh_cn_CAPTURE": true,
+      "same_language_resource_reload": {
+        "program_sha256": "c897d316d1ad4e1ed634cafdf5f553bf84ccd2a0873973da6a66170e607b6607",
+        "localized_search": "数值常量",
+        "language": "zh_cn",
+        "observed_surface_and_rebuild_counters": {
+          "frames": 0,
+          "schema_decodes": 64,
+          "nodes_drawn": 0,
+          "nodes_culled": 0,
+          "nodes_requests": 2,
+          "frame_nanos_total": 0,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 0,
+          "node_views_rebuilt": 64,
+          "palette_requests": 1,
+          "palette_rebuilt": 1,
+          "frame_p50_nanos": 0,
+          "frame_samples": 0,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 0,
+          "validation_requests": 0,
+          "frame_p99_nanos": 0,
+          "frame_p95_nanos": 0
+        },
+        "passed": true
+      },
+      "resource_reload_started_en_us_RESOURCE_WAIT": true,
+      "alternate_language_reload": {
+        "program_sha256": "c897d316d1ad4e1ed634cafdf5f553bf84ccd2a0873973da6a66170e607b6607",
+        "localized_search": "Scalar Constant",
+        "language": "en_us",
+        "observed_surface_and_rebuild_counters": {
+          "frames": 0,
+          "schema_decodes": 64,
+          "nodes_drawn": 0,
+          "nodes_culled": 0,
+          "nodes_requests": 2,
+          "frame_nanos_total": 0,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 0,
+          "node_views_rebuilt": 64,
+          "palette_requests": 1,
+          "palette_rebuilt": 1,
+          "frame_p50_nanos": 0,
+          "frame_samples": 0,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 0,
+          "validation_requests": 0,
+          "frame_p99_nanos": 0,
+          "frame_p95_nanos": 0
+        },
+        "passed": true
+      },
+      "resource_reload_started_zh_cn_LANGUAGE_WAIT": true,
+      "original_language_restored": {
+        "program_sha256": "c897d316d1ad4e1ed634cafdf5f553bf84ccd2a0873973da6a66170e607b6607",
+        "localized_search": "数值常量",
+        "language": "zh_cn",
+        "observed_surface_and_rebuild_counters": {
+          "frames": 0,
+          "schema_decodes": 64,
+          "nodes_drawn": 0,
+          "nodes_culled": 0,
+          "nodes_requests": 2,
+          "frame_nanos_total": 0,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 0,
+          "node_views_rebuilt": 64,
+          "palette_requests": 1,
+          "palette_rebuilt": 1,
+          "frame_p50_nanos": 0,
+          "frame_samples": 0,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 0,
+          "validation_requests": 0,
+          "frame_p99_nanos": 0,
+          "frame_p95_nanos": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "nodes": 128,
+      "edges": 256,
+      "program_sha256": "83a92c17f44e7c078debc32437841f2295d1c408bcbdb01683373e19d182ada6",
+      "category": "academy:accelerator",
+      "graph_compiled": true,
+      "codec_round_trip": true,
+      "gui_size": [
+        800,
+        450
+      ],
+      "window_size": [
+        1600,
+        900
+      ],
+      "initial_language": "zh_cn",
+      "graph_execution": false,
+      "reflection_microbenchmarks_profiler_disabled": {
+        "nodes": {
+          "allocated_bytes": {
+            "min": 516592,
+            "p99": 516592,
+            "p95": 516592,
+            "p50": 516592,
+            "available": true,
+            "samples": 1000,
+            "mean": 516592.0,
+            "max": 516592
+          },
+          "nanoseconds": {
+            "min": 262700,
+            "p99": 354700,
+            "p95": 320200,
+            "p50": 268800,
+            "available": true,
+            "samples": 1000,
+            "mean": 279310.9,
+            "max": 4924500
+          }
+        },
+        "paletteCards": {
+          "allocated_bytes": {
+            "min": 836192,
+            "p99": 836192,
+            "p95": 836192,
+            "p50": 836192,
+            "available": true,
+            "samples": 1000,
+            "mean": 836192.104,
+            "max": 836296
+          },
+          "nanoseconds": {
+            "min": 353200,
+            "p99": 468300,
+            "p95": 396500,
+            "p50": 362400,
+            "available": true,
+            "samples": 1000,
+            "mean": 372446.5,
+            "max": 5131300
+          }
+        },
+        "firstDiagnostic": {
+          "allocated_bytes": {
+            "min": 662464,
+            "p99": 662464,
+            "p95": 662464,
+            "p50": 662464,
+            "available": true,
+            "samples": 1000,
+            "mean": 662464.104,
+            "max": 662568
+          },
+          "nanoseconds": {
+            "min": 301100,
+            "p99": 401500,
+            "p95": 341200,
+            "p50": 310400,
+            "available": true,
+            "samples": 1000,
+            "mean": 315098.5,
+            "max": 514900
+          }
+        }
+      },
+      "real_render_profiler_disabled": {
+        "surface_render_elapsed_and_rebuild_counters": {
+          "frames": 123,
+          "schema_decodes": 110208,
+          "nodes_drawn": 15744,
+          "nodes_culled": 0,
+          "nodes_requests": 369,
+          "frame_nanos_total": 5407992700,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 31488,
+          "node_views_rebuilt": 110208,
+          "palette_requests": 246,
+          "palette_rebuilt": 246,
+          "frame_p50_nanos": 43635100,
+          "frame_samples": 123,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 15867,
+          "validation_requests": 15867,
+          "frame_p99_nanos": 48796600,
+          "frame_p95_nanos": 48225000
+        },
+        "render_event_wall_elapsed_nanos": {
+          "min": 3144100,
+          "p99": 3781200,
+          "p95": 3547600,
+          "p50": 3286200,
+          "available": true,
+          "samples": 123,
+          "mean": 3354098.37398374,
+          "max": 8307000
+        },
+        "render_event_thread_cpu_nanos": {
+          "min": 0,
+          "p99": 15625000,
+          "p95": 15625000,
+          "p50": 0,
+          "available": true,
+          "samples": 123,
+          "mean": 2667682.926829268,
+          "max": 15625000
+        },
+        "render_thread_allocated_bytes_per_frame": {
+          "min": 2330656,
+          "p99": 2353288,
+          "p95": 2330680,
+          "p50": 2330656,
+          "available": true,
+          "samples": 123,
+          "mean": 2331396.0975609757,
+          "max": 2353312
+        },
+        "window_client_ticks": 120,
+        "profiler_enabled": false,
+        "render_event_scope": "Local Minecraft.renderFrame fires Pre immediately before GameRenderer.render and Post immediately after it. Window texture acquisition, update/extract happen before Pre; blit, command submission, surface.present and frame limiter happen after Post. Listener work and waits inside render may contribute. This is not a full frame interval or GPU timestamp.",
+        "surface_elapsed_scope": "EditorSurface.renderInternal wall elapsed only; excludes extractRenderState configuration sync, tooltip surface and explicit present. It is not a thread CPU or GPU-completion measurement."
+      },
+      "real_render_profiler_enabled": {
+        "surface_render_elapsed_and_rebuild_counters": {
+          "frames": 120,
+          "schema_decodes": 107520,
+          "nodes_drawn": 15360,
+          "nodes_culled": 0,
+          "nodes_requests": 360,
+          "frame_nanos_total": 5398892100,
+          "edges_culled": 0,
+          "node_cache_hits": 0,
+          "edges_drawn": 30720,
+          "node_views_rebuilt": 107520,
+          "palette_requests": 240,
+          "palette_rebuilt": 240,
+          "frame_p50_nanos": 44281800,
+          "frame_samples": 120,
+          "palette_cache_hits": 0,
+          "frame_sample_capacity": 4096,
+          "validation_cache_hits": 0,
+          "validation_rebuilt": 15480,
+          "validation_requests": 15480,
+          "frame_p99_nanos": 57266300,
+          "frame_p95_nanos": 50414400
+        },
+        "render_event_wall_elapsed_nanos": {
+          "min": 3139000,
+          "p99": 5105100,
+          "p95": 3959200,
+          "p50": 3310200,
+          "available": true,
+          "samples": 120,
+          "mean": 3487110.8333333335,
+          "max": 17494300
+        },
+        "render_event_thread_cpu_nanos": {
+          "min": 0,
+          "p99": 15625000,
+          "p95": 15625000,
+          "p50": 0,
+          "available": true,
+          "samples": 120,
+          "mean": 3385416.6666666665,
+          "max": 15625000
+        },
+        "render_thread_allocated_bytes_per_frame": {
+          "min": 2328664,
+          "p99": 2353608,
+          "p95": 2331000,
+          "p50": 2330976,
+          "available": true,
+          "samples": 120,
+          "mean": 2331322.2,
+          "max": 2353608
+        },
+        "window_client_ticks": 120,
+        "profiler_enabled": true,
+        "render_event_scope": "Local Minecraft.renderFrame fires Pre immediately before GameRenderer.render and Post immediately after it. Window texture acquisition, update/extract happen before Pre; blit, command submission, surface.present and frame limiter happen after Post. Listener work and waits inside render may contribute. This is not a full frame interval or GPU timestamp.",
+        "surface_elapsed_scope": "EditorSurface.renderInternal wall elapsed only; excludes extractRenderState configuration sync, tooltip surface and explicit present. It is not a thread CPU or GPU-completion measurement.",
+        "fixed_editor_profiler_zones": [
+          {
+            "maximum_nanos": 74267400,
+            "count": 120,
+            "self_nanos": 55418600,
+            "name": "precision.editor.render.surface",
+            "thread": "Render thread",
+            "counters": {
+              "program.validation.node_decode_attempts": 15360
+            },
+            "path": "root\u001eprecision.editor.render.surface",
+            "total_nanos": 5398715100
+          },
+          {
+            "maximum_nanos": 72923800,
+            "count": 120,
+            "self_nanos": 107508000,
+            "name": "precision.editor.render.canvas",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_drawn": 15360,
+              "edges_drawn": 30720
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas",
+            "total_nanos": 5251164300
+          },
+          {
+            "maximum_nanos": 26336400,
+            "count": 15360,
+            "self_nanos": 4934561700,
+            "name": "precision.editor.validation",
+            "thread": "Render thread",
+            "counters": {
+              "validation_rebuilt": 15360,
+              "program.validation.node_decode_attempts": 1966080,
+              "validation_requests": 15360
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.validation",
+            "total_nanos": 4934561700
+          },
+          {
+            "maximum_nanos": 133700,
+            "count": 61440,
+            "self_nanos": 173219900,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 61440,
+              "node_views_rebuilt": 61440
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.view",
+            "total_nanos": 173219900
+          },
+          {
+            "maximum_nanos": 734100,
+            "count": 120,
+            "self_nanos": 14887200,
+            "name": "precision.editor.palette.cards",
+            "thread": "Render thread",
+            "counters": {
+              "palette_requests": 120
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards",
+            "total_nanos": 52612200
+          },
+          {
+            "maximum_nanos": 550200,
+            "count": 120,
+            "self_nanos": 12542300,
+            "name": "precision.editor.palette.cards",
+            "thread": "Render thread",
+            "counters": {
+              "palette_requests": 120
+            },
+            "path": "root\u001eprecision.editor.palette.cards",
+            "total_nanos": 48995300
+          },
+          {
+            "maximum_nanos": 458400,
+            "count": 120,
+            "self_nanos": 39520000,
+            "name": "precision.editor.validation",
+            "thread": "Render thread",
+            "counters": {
+              "validation_rebuilt": 120,
+              "program.validation.node_decode_attempts": 15360,
+              "validation_requests": 120
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.validation",
+            "total_nanos": 39520000
+          },
+          {
+            "maximum_nanos": 494200,
+            "count": 120,
+            "self_nanos": 1466400,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 120
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes",
+            "total_nanos": 36361700
+          },
+          {
+            "maximum_nanos": 427700,
+            "count": 120,
+            "self_nanos": 1326000,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 120
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes",
+            "total_nanos": 35900000
+          },
+          {
+            "maximum_nanos": 681300,
+            "count": 120,
+            "self_nanos": 1380300,
+            "name": "precision.editor.nodes",
+            "thread": "Render thread",
+            "counters": {
+              "nodes_requests": 120
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.nodes",
+            "total_nanos": 35874700
+          },
+          {
+            "maximum_nanos": 75300,
+            "count": 15360,
+            "self_nanos": 34895300,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 15360,
+              "node_views_rebuilt": 15360
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 34895300
+          },
+          {
+            "maximum_nanos": 73000,
+            "count": 15360,
+            "self_nanos": 34574000,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 15360,
+              "node_views_rebuilt": 15360
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 34574000
+          },
+          {
+            "maximum_nanos": 263200,
+            "count": 15360,
+            "self_nanos": 34494400,
+            "name": "precision.editor.view",
+            "thread": "Render thread",
+            "counters": {
+              "schema_decodes": 15360,
+              "node_views_rebuilt": 15360
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.render.canvas\u001eprecision.editor.nodes\u001eprecision.editor.view",
+            "total_nanos": 34494400
+          },
+          {
+            "maximum_nanos": 25400,
+            "count": 120,
+            "self_nanos": 1363300,
+            "name": "precision.editor.palette.entries",
+            "thread": "Render thread",
+            "counters": {
+              "palette_rebuilt": 120
+            },
+            "path": "root\u001eprecision.editor.render.surface\u001eprecision.editor.palette.cards\u001eprecision.editor.palette.entries",
+            "total_nanos": 1363300
+          },
+          {
+            "maximum_nanos": 10400,
+            "count": 120,
+            "self_nanos": 553000,
+            "name": "precision.editor.palette.entries",
+            "thread": "Render thread",
+            "counters": {
+              "palette_rebuilt": 120
+            },
+            "path": "root\u001eprecision.editor.palette.cards\u001eprecision.editor.palette.entries",
+            "total_nanos": 553000
+          }
+        ]
+      },
+      "edit_undo_redo_and_hash_restored": true,
+      "canvas_zoom_and_palette_scroll_preserve_graph": true,
+      "all_source_nodes_have_views": true
+    },
+    {
+      "nodes": 10,
+      "edges": 10,
+      "program_sha256": "6d17cb87de3f1fd8594f7607190c61af24a5afdbe047e274397364d1be4b2f35",
+      "category": "academy:aeromanip",
+      "graph_compiled": true,
+      "codec_round_trip": true,
+      "gui_size": [
+        800,
+        450
+      ],
+      "window_size": [
+        1600,
+        900
+      ],
+      "initial_language": "zh_cn",
+      "graph_execution": false,
+      "edit_undo_redo_and_hash_restored": true,
+      "canvas_zoom_and_palette_scroll_preserve_graph": true,
+      "all_source_nodes_have_views": true,
+      "real_window_resize_and_restore": true,
+      "window_iconify_restore_and_focus": true,
+      "visible_client_ticks": 1202,
+      "historical_graph_provenance": "StructureGroupSmoke.movementGraph before optional seconds source; ten-node topology reconstructed with deterministic point and UUID, not the original world coordinates",
+      "full_ten_minute_tick_stay": false
+    }
+  ],
+  "screenshots": [
+    {
+      "sha256": "b408223a8069ba81432f08effa07d202a7e44a894dad5527932a5e13d0900e86",
+      "path": "screenshots/precision-performance-baseline-zh_cn-editor-2.png",
+      "bytes": 224109,
+      "visible_tick": 325
+    },
+    {
+      "sha256": "6f7574d467545eb186341675ff1d0a3044862a65eaee768913494f3d2fec45e6",
+      "path": "screenshots/precision-performance-baseline-zh_cn-editor-32.png",
+      "bytes": 330339,
+      "visible_tick": 325
+    },
+    {
+      "sha256": "4f39c926effc42b26ad1ebe69e99f73f41b21055ae80c146d92e3db63c89102c",
+      "path": "screenshots/precision-performance-baseline-zh_cn-editor-32-after-resource-language-reloads.png",
+      "bytes": 75145,
+      "visible_tick": 483
+    },
+    {
+      "sha256": "3be479946b8213a036400cd7f1216351f0635c58f1b272bce8e3943c9e796420",
+      "path": "screenshots/precision-performance-baseline-zh_cn-editor-128.png",
+      "bytes": 384923,
+      "visible_tick": 325
+    },
+    {
+      "sha256": "5d25555ca365df16a71fea7befaa2a87d1c6cabf3ff0c4c15c0353825dade6f2",
+      "path": "screenshots/precision-performance-baseline-zh_cn-legacy-ten-tick-30.png",
+      "bytes": 264856,
+      "visible_tick": 30
+    },
+    {
+      "sha256": "830ad58288d65ca3c2fea8c2bc1fac8d61751206e49c576c65bc863eb87ce6ec",
+      "path": "screenshots/precision-performance-baseline-zh_cn-legacy-ten-tick-140.png",
+      "bytes": 264777,
+      "visible_tick": 140
+    },
+    {
+      "sha256": "9d11b6c039186f971414888e48e2ffe6708cf35559a2f1060d119bafbd7af1eb",
+      "path": "screenshots/precision-performance-baseline-zh_cn-legacy-ten-after-zoom-scroll-undo.png",
+      "bytes": 264959,
+      "visible_tick": 180
+    },
+    {
+      "sha256": "2925470de729eecbf0d2bef7ad09dae729ee9aa47a6f9d01322cca88eb289f99",
+      "path": "screenshots/precision-performance-baseline-zh_cn-legacy-ten-tick-1200.png",
+      "bytes": 264955,
+      "visible_tick": 1200
+    }
+  ],
+  "current_scene": 3,
+  "current_phase": "LEGACY",
+  "save_attempts": 0,
+  "world_mutation_or_runtime_execution": false,
+  "visual_review_required": true,
+  "measurement_limits": [
+    "Reflection microbenchmarks include cached Method.invoke overhead and do not predict whole-frame time",
+    "nanoTime surface/event timings are wall elapsed and may include waits inside their scopes; ThreadMXBean render-event CPU is reported separately when supported",
+    "RenderFrame Pre/Post encloses GameRenderer.render only in the local patched Minecraft; acquisition/extract and explicit submit/present/frame limiter are outside, and GPU completion is not measured",
+    "Synthetic editor capabilities are not learned-player or runtime admission acceptance",
+    "The historical ten-node topology is reconstructed; pixel review is required before closing the old glyph/background defect",
+    "1200 ticks is the default soak; 12000 ticks must be explicitly selected for the independent ten-minute run"
+  ],
+  "failure": ""
+}

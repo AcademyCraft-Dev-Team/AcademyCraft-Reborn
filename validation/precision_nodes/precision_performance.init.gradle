@@ -1,0 +1,25 @@
+// Opt-in same-scene elapsed/CPU/allocation probes; no graph saving or execution.
+// A disposable copy of test must already exist below the selected isolated run directory.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-direct-smoke-precision-performance-baseline')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-direct-smoke')) {
+            throw new GradleException('Performance check requires an isolated run/native-sublevel-direct-smoke* directory')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.precisionPerformanceSmoke', 'true'
+            systemProperty 'academy.precisionPerformanceStage', providers.gradleProperty('academyPrecisionPerformanceStage').getOrElse('baseline')
+            systemProperty 'academy.precisionPerformanceWarmup', providers.gradleProperty('academyPrecisionPerformanceWarmup').getOrElse('150')
+            systemProperty 'academy.precisionPerformanceSamples', providers.gradleProperty('academyPrecisionPerformanceSamples').getOrElse('1000')
+            systemProperty 'academy.precisionPerformanceFrameTicks', providers.gradleProperty('academyPrecisionPerformanceFrameTicks').getOrElse('120')
+            systemProperty 'academy.precisionPerformanceLongStayTicks', providers.gradleProperty('academyPrecisionPerformanceLongStayTicks').getOrElse('1200')
+            systemProperty 'academy.precisionLearningPathSmoke', 'false'
+            systemProperty 'academy.precisionPresentationSmoke', 'false'
+            systemProperty 'academy.precisionNodeCatalogAudit', 'false'
+            programArguments.addAll('--width', '1600', '--height', '900', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

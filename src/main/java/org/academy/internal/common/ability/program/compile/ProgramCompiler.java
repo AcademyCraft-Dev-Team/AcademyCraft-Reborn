@@ -5,6 +5,7 @@ import org.academy.internal.common.ability.program.registry.ProgramNodeLookup;
 
 import com.mojang.serialization.JsonOps;
 import org.academy.api.common.ability.program.*;
+import org.academy.api.common.profiler.AcademyProfiler;
 
 import java.util.*;
 
@@ -20,7 +21,28 @@ public final class ProgramCompiler {
             ProgramCompileContext context,
             ProgramNodeLookup lookup
     ) {
-        var validation = ProgramGraphValidator.validate(graph, context, lookup);
+        AcademyProfiler.push("academy.program.compile.compiler");
+        AcademyProfiler.incrementCounter("program.compile.actual_compilations");
+        try {
+            var result = compileInternal(graph, context, lookup);
+            AcademyProfiler.incrementCounter(result.valid()
+                    ? "program.compile.compiler_success" : "program.compile.compiler_rejected");
+            return result;
+        } finally {
+            AcademyProfiler.pop();
+        }
+    }
+
+    private static ProgramCompileResult compileInternal(
+            ProgramGraph graph, ProgramCompileContext context, ProgramNodeLookup lookup
+    ) {
+        ProgramValidationResult validation;
+        AcademyProfiler.push("academy.program.compile.validate");
+        try {
+            validation = ProgramGraphValidator.validate(graph, context, lookup);
+        } finally {
+            AcademyProfiler.pop();
+        }
         if (!validation.valid()) return new ProgramCompileResult(null, validation.diagnostics());
         if (graph.nodes().isEmpty()) {
             return new ProgramCompileResult(
@@ -32,26 +54,44 @@ public final class ProgramCompiler {
         var diagnostics = new ArrayList<ProgramDiagnostic>();
         var nodes = new HashMap<Integer, CompiledProgram.CompiledNode>();
         var entryNodeId = -1;
-        for (var node : graph.nodes()) {
-            var type = lookup.find(node.type());
-            if (type == null) {
-                diagnostics.add(ProgramDiagnostic.node(ProgramDiagnosticCode.UNKNOWN_NODE_TYPE, node.id()));
-                continue;
+        AcademyProfiler.push("academy.program.compile.decode_schema");
+        try {
+            for (var node : graph.nodes()) {
+                var type = lookup.find(node.type());
+                if (type == null) {
+                    diagnostics.add(ProgramDiagnostic.node(ProgramDiagnosticCode.UNKNOWN_NODE_TYPE, node.id()));
+                    continue;
+                }
+                var compiled = compileNode(type, node);
+                if (compiled == null) {
+                    diagnostics.add(ProgramDiagnostic.node(
+                            ProgramDiagnosticCode.INVALID_CONFIGURATION,
+                            node.id()
+                    ));
+                    continue;
+                }
+                nodes.put(node.id(), compiled);
+                if (compiled.role() == ProgramNodeRole.ENTRY) {
+                    entryNodeId = node.id();
+                }
             }
-            var compiled = compileNode(type, node);
-            if (compiled == null) {
-                diagnostics.add(ProgramDiagnostic.node(
-                        ProgramDiagnosticCode.INVALID_CONFIGURATION,
-                        node.id()
-                ));
-                continue;
-            }
-            nodes.put(node.id(), compiled);
-            if (compiled.role() == ProgramNodeRole.ENTRY) {
-                entryNodeId = node.id();
-            }
+        } finally {
+            AcademyProfiler.pop();
         }
         if (!diagnostics.isEmpty()) return new ProgramCompileResult(null, diagnostics);
+
+        AcademyProfiler.push("academy.program.compile.link");
+        try {
+            return link(graph, nodes, entryNodeId);
+        } finally {
+            AcademyProfiler.pop();
+        }
+    }
+
+    private static ProgramCompileResult link(
+            ProgramGraph graph, Map<Integer, CompiledProgram.CompiledNode> nodes, int entryNodeId
+    ) {
+        var diagnostics = new ArrayList<ProgramDiagnostic>();
 
         var inputs = new HashMap<CompiledProgram.InputKey, List<CompiledProgram.OutputKey>>();
         var flowTargets = new HashMap<CompiledProgram.FlowKey, Integer>();
@@ -120,6 +160,7 @@ public final class ProgramCompiler {
             ProgramNodeType<C> type,
             ProgramGraph.Node node
     ) {
+        AcademyProfiler.incrementCounter("program.compile.node_decode_attempts");
         try {
             var configuration = type.configurationCodec()
                     .parse(JsonOps.INSTANCE, node.configuration())

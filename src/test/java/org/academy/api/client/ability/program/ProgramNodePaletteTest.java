@@ -15,11 +15,16 @@ class ProgramNodePaletteTest {
         var config = new JsonObject(); config.addProperty("package_id", "one");
         var preset = new ProgramNodePalette.Preset(config, Component.literal("Named spell"));
         var current = new AtomicReference<>(List.of(preset));
+        long before = ProgramNodePalette.registrationRevision();
         ProgramNodePalette.register(id, current::get);
+        assertTrue(ProgramNodePalette.registrationRevision() > before);
+        long registered = ProgramNodePalette.registrationRevision();
         config.addProperty("package_id", "forged");
         assertEquals("one", ProgramNodePalette.presets(id).getFirst().configuration().getAsJsonObject().get("package_id").getAsString());
         assertEquals("Named spell", ProgramNodePalette.label(id, preset.configuration()).getString());
         current.set(List.of());
+        assertEquals(registered, ProgramNodePalette.registrationRevision(),
+                "A registration revision does not freeze the live supplier's values");
         assertTrue(ProgramNodePalette.presets(id).isEmpty());
         assertTrue(ProgramNodePalette.hasProvider(id));
         assertNull(ProgramNodePalette.label(id, preset.configuration()));
@@ -27,6 +32,8 @@ class ProgramNodePaletteTest {
     @Test void duplicateProvidersAreRejected() {
         var id = Identifier.fromNamespaceAndPath("test", UUID.randomUUID().toString());
         ProgramNodePalette.register(id, List::of);
+        long registered = ProgramNodePalette.registrationRevision();
         assertThrows(IllegalStateException.class, () -> ProgramNodePalette.register(id, List::of));
+        assertEquals(registered, ProgramNodePalette.registrationRevision());
     }
 }

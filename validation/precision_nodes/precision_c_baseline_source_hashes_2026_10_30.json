@@ -1,0 +1,77 @@
+{
+  "baseline_commit": "0ad66ef7",
+  "instrumented_sources": [
+    {
+      "path": "src/gametest/java/org/academy/internal/client/validation/PrecisionCompileBenchmark.java",
+      "sha256": "172058D9ADF8A1212AB216A378D876B7F252006E6ECC956AD3745A79B2A67B4C"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/client/validation/PrecisionPerformanceGraphs.java",
+      "sha256": "92925B0E1E36DBF55CBE8613738DD6809B3F1ECD6A7B5EFA8473E3051AB350F1"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/client/validation/PrecisionPerformanceSmoke.java",
+      "sha256": "FB27735C9B7A0A0E91E3203F180725830D8E3319CF4950D84163D5006AE8EDF4"
+    },
+    {
+      "path": "src/gametest/java/org/academy/internal/common/ability/program/ProgramQueryBenchmarkGameTests.java",
+      "sha256": "7AEF1A9521F0596C89330D72FA4D1FFF028E19E981FC6F027F07D0BF831DD2F9"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/client/ability/program/ProgramEditorMetrics.java",
+      "sha256": "F000673C43B08CAE3225A2D9DF684F59AF73360B2C17552FD914302FAF0E222F"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/AbilityProgramManager.java",
+      "sha256": "458C4F34C5EE2905EEEDCCCD6E169294FB91FDDF1CB89AFD2DC1AF5A32BBDEB4"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ProgramQueryProfiling.java",
+      "sha256": "44F9023364393AE2B10A753431B92401DD7BC9EECDB04514C635CA226615D525"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/ServerProgramTargetResolver.java",
+      "sha256": "687BFD38FCE921046B86EDE61E8321499C36C3AC1DB773ED2970D0EFBCB66492"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/compile/ProgramCompiler.java",
+      "sha256": "AF92CD39D9660A606790F77984AC067915EAA2DD3BDAAC91E08918824641BDFA"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/compile/ProgramGraphValidator.java",
+      "sha256": "2CE28054D04587530CA5749E47B3DF7FD151D6852705306A4EAD7D6BE1283569"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/ability/program/registry/AbilityProgramDefinition.java",
+      "sha256": "7EB3722AA8E1A8BF02BE84CE3D41239A7F13CBE33CC774AECF8D70B5ACE3E35A"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/structure/space/LoadedStructureProximity.java",
+      "sha256": "29E7107824BCB7906E7DF35AFA0991369DC2694CF59EE42A62E7109D3D5286C6"
+    },
+    {
+      "path": "src/main/java/org/academy/internal/common/structure/space/StructureBlockSummaries.java",
+      "sha256": "BBAF518A5856332DB0BF9AF9B9274EB0F9C963E4394BAA545C64FCD847D2E6A0"
+    },
+    {
+      "path": "src/main/kotlin/org/academy/internal/client/ability/mentalout/ModularProgramScreen.kt",
+      "sha256": "F9C0E93335169ECE141041A5D6038CDDE2907D5B4BE5F942D571C98440FED33A"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/client/validation/PrecisionCompileBenchmarkTest.java",
+      "sha256": "95B80F8E90E8946A6BE7FABD5060711DB5524C5F0AD5ABC7AF2F580168B3F402"
+    },
+    {
+      "path": "src/test/java/org/academy/internal/common/ability/program/ProgramQueryProfilingTest.java",
+      "sha256": "9F06AA6827F234C0E13BADB01E5574E914BF153F3E95A37061AEBE3E348EB610"
+    },
+    {
+      "path": "validation/precision_nodes/precision_performance.init.gradle",
+      "sha256": "35102C3D1E06CECE429B89CB082C311D7992CCDA86D5F71DC51DA4D1DA8E1267"
+    },
+    {
+      "path": "validation/precision_nodes/precision_query_performance.init.gradle",
+      "sha256": "8C7E92487D0785A5FE460F6AAB8DF19EBC2B5CB3CF37E0390971F6D7393052DC"
+    }
+  ]
+}

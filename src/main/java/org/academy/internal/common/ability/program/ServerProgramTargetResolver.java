@@ -24,11 +24,13 @@ import org.academy.api.common.structure.StructureQueries;
 import org.academy.api.common.structure.StructureSpaces;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
+
+import static org.academy.internal.common.ability.program.ProgramQueryProfiling.Counter.*;
+import static org.academy.internal.common.ability.program.ProgramQueryProfiling.Zone.*;
 
 /**
  * Shared bounded world-query implementation for server-owned ability program runtimes.
@@ -121,29 +123,45 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
 
     @Override
     public List<ProgramStructureReference> structuresAround(ProgramWorldPosition center, double radius) {
-        var point = requireLocalPosition(center);
-        var boundedRadius = requireRange(radius);
-        if (!player.isAlive() || player.isRemoved()) return List.of();
-        return StructureQueries.nearby(level(), point, boundedRadius).stream()
-                .filter(hit -> StructureQueries.proximity(level(), hit.reference(), player.position())
-                        .filter(actorDistance -> actorDistance.runtimeId().equals(hit.runtimeId())
-                                && actorDistance.distance() <= maximumRange).isPresent())
-                .limit(maximumResults)
-                .map(hit -> new ProgramStructureReference(hit.reference(), hit.runtimeId())).toList();
+        try (var profile = ProgramQueryProfiling.begin(STRUCTURES_AROUND)) {
+            var point = requireLocalPosition(center);
+            var boundedRadius = requireRange(radius);
+            if (!player.isAlive() || player.isRemoved()) {
+                profile.count(UNAVAILABLE, 1);
+                return List.of();
+            }
+            var candidates = StructureQueries.nearby(level(), point, boundedRadius);
+            profile.count(CANDIDATES, candidates.size());
+            var result = candidates.stream()
+                    .filter(hit -> StructureQueries.proximity(level(), hit.reference(), player.position())
+                            .filter(actorDistance -> actorDistance.runtimeId().equals(hit.runtimeId())
+                                    && actorDistance.distance() <= maximumRange).isPresent())
+                    .limit(maximumResults)
+                    .map(hit -> new ProgramStructureReference(hit.reference(), hit.runtimeId())).toList();
+            profile.count(RESULTS, result.size());
+            return result;
+        }
     }
 
     @Override
     public OptionalDouble structureDistanceTo(ProgramStructureReference reference, ProgramWorldPosition point) {
-        var origin = requireLocalPosition(point);
-        if (!player.isAlive() || player.isRemoved()
-                || !reference.reference().dimension().equals(point.dimension())) return OptionalDouble.empty();
-        var proximity = StructureQueries.proximity(level(), reference.reference(), origin)
-                .filter(hit -> hit.runtimeId().equals(reference.runtimeId()));
-        if (proximity.isEmpty() || StructureQueries.proximity(level(), reference.reference(), player.position())
-                .filter(hit -> hit.runtimeId().equals(reference.runtimeId()) && hit.distance() <= maximumRange).isEmpty()) {
-            return OptionalDouble.empty();
+        try (var profile = ProgramQueryProfiling.begin(STRUCTURE_DISTANCE)) {
+            var origin = requireLocalPosition(point);
+            if (!player.isAlive() || player.isRemoved()
+                    || !reference.reference().dimension().equals(point.dimension())) {
+                profile.count(UNAVAILABLE, 1);
+                return OptionalDouble.empty();
+            }
+            var proximity = StructureQueries.proximity(level(), reference.reference(), origin)
+                    .filter(hit -> hit.runtimeId().equals(reference.runtimeId()));
+            if (proximity.isEmpty() || StructureQueries.proximity(level(), reference.reference(), player.position())
+                    .filter(hit -> hit.runtimeId().equals(reference.runtimeId()) && hit.distance() <= maximumRange).isEmpty()) {
+                profile.count(UNAVAILABLE, 1);
+                return OptionalDouble.empty();
+            }
+            profile.count(RESULTS, 1);
+            return OptionalDouble.of(proximity.get().distance());
         }
-        return OptionalDouble.of(proximity.get().distance());
     }
 
     @Override public boolean isStructureValid(ProgramStructureReference reference) {
@@ -151,9 +169,13 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
     }
 
     @Override public Optional<org.academy.api.common.structure.StructureBlockSummary> structureContents(ProgramStructureReference reference) {
-        if (!isStructureValid(reference)) return Optional.empty();
-        return StructureSpaces.resolve(level().getServer(), reference.reference()).filter(reference::matches)
-                .flatMap(handle -> handle.world().summarize(4_096));
+        try (var profile = ProgramQueryProfiling.begin(STRUCTURE_CONTENTS)) {
+            if (!isStructureValid(reference)) { profile.count(UNAVAILABLE, 1); return Optional.empty(); }
+            var result = StructureSpaces.resolve(level().getServer(), reference.reference()).filter(reference::matches)
+                    .flatMap(handle -> handle.world().summarize(4_096));
+            profile.count(result.isPresent() ? COMPLETE : UNAVAILABLE, 1);
+            return result;
+        }
     }
 
     @Override public Optional<org.academy.api.common.ability.program.ProgramStructureSource> structureSource(ProgramStructureReference reference) {
@@ -183,20 +205,33 @@ public final class ServerProgramTargetResolver implements ProgramTargetResolver 
 
     @Override
     public List<?> entitiesAround(ProgramWorldPosition center, double radius) {
-        var origin = requireLocalPosition(center);
-        var boundedRadius = requireRange(radius);
-        return level().getEntities(
-                        player,
-                        new AABB(origin, origin).inflate(boundedRadius),
-                        entity -> entity.isAlive()
-                                && !entity.isRemoved()
-                                && !entity.isSpectator()
-                                && !PvpSetting.shouldPrevent(player, entity)
-                                && isWithinRadius(origin, entity.position(), boundedRadius)
-                ).stream()
-                .sorted(Comparator.comparing(entity -> entity.getUUID().toString()))
-                .limit(maximumResults)
-                .toList();
+        try (var profile = ProgramQueryProfiling.begin(ENTITIES_AROUND)) {
+            var origin = requireLocalPosition(center);
+            var boundedRadius = requireRange(radius);
+            int[] counts = profile.enabled() ? new int[2] : null;
+            var candidates = level().getEntities(
+                            player,
+                            new AABB(origin, origin).inflate(boundedRadius),
+                            entity -> {
+                                if (counts != null) counts[0]++;
+                                var accepted = entity.isAlive()
+                                    && !entity.isRemoved()
+                                    && !entity.isSpectator()
+                                    && !PvpSetting.shouldPrevent(player, entity)
+                                    && isWithinRadius(origin, entity.position(), boundedRadius);
+                                if (counts != null && accepted) counts[1]++;
+                                return accepted;
+                            }
+                    );
+            var result = ProgramEntityTargetOrder.sortedLimit(candidates, maximumResults, Entity::getUUID);
+            if (counts != null) {
+                profile.count(CANDIDATES, counts[0]);
+                profile.count(ACCEPTED, counts[1]);
+                profile.count(TRUNCATED, Math.max(0, counts[1] - result.size()));
+            }
+            profile.count(RESULTS, result.size());
+            return result;
+        }
     }
 
     @Override
