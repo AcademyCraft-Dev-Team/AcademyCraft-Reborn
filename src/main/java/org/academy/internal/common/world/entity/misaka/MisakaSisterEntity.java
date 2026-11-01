@@ -560,6 +560,11 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
         String name = serverPlayer.getGameProfile().name();
         ItemStack stack = player.getItemInHand(hand);
 
+        if (stack.getItem() instanceof org.academy.internal.common.world.item.FavorAdjustmentToolItem tool) {
+            tool.adjustFavor(serverPlayer, this, stack);
+            return handledWithoutItem();
+        }
+
         boolean downed = record.incapacitated || entityData.get(INCAPACITATED);
         if (MisakaFoodTraits.isTower(stack) && downed) {
             if (!InteractionGate.allow(record, name, InteractionGate.Intent.FEED_RECOVER, downed)) {
@@ -725,6 +730,9 @@ public class MisakaSisterEntity extends PathfinderMob implements GeoEntity {
     }
 
     private static boolean shouldClientRelayHandInteract(ItemStack stack) {
+        if (stack.getItem() instanceof org.academy.internal.common.world.item.FavorAdjustmentToolItem) {
+            return true;
+        }
         if (stack.isEmpty()) {
             return true;
         }

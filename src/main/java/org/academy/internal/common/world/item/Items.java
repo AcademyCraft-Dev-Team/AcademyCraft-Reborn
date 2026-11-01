@@ -174,6 +174,8 @@ public final class Items {
     public static final DeferredHolder<Item, SpawnEggItem> MISAKA_SISTER_SPAWN_EGG =
             ITEMS.registerItem("misaka_sister_spawn_egg", properties -> new SpawnEggItem(
                     properties.spawnEgg(EntityTypes.MISAKA_SISTER.get())));
+    public static final DeferredHolder<Item, FavorAdjustmentToolItem> FAVOR_ADJUSTMENT_TOOL =
+            ITEMS.registerItem("favor_adjustment_tool", FavorAdjustmentToolItem::new);
     public static final DeferredHolder<Item, GeoBlockItem> SATELLITE_LAUNCH_PAD =
             ITEMS.registerItem("satellite_launch_pad",
                     properties -> new GeoBlockItem(

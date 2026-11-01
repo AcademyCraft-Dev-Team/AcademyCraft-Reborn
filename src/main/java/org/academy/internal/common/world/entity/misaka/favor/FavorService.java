@@ -38,6 +38,24 @@ public final class FavorService {
     private FavorService() {
     }
 
+    /**
+     * Explicit single-record adjustment for debugging tools. Unlike ordinary favor events,
+     * this can recover a deadly-enemy relationship and never propagates through the LAN.
+     * Callers must check permissions, persist the roster, and refresh contribution state.
+     * Unawakened sisters and empty player names remain unchanged.
+     *
+     * @return the resulting favor value
+     */
+    public static int adjustFavorDirectly(MisakaSisterRecord record, String name, int delta) {
+        int current = record.favorByPlayerName.getOrDefault(name, 0);
+        if (!record.awakened || name == null || name.isEmpty()) {
+            return current;
+        }
+        int adjusted = Math.clamp((long) current + delta, -20, 20);
+        record.favorByPlayerName.put(name, adjusted);
+        return adjusted;
+    }
+
     /** Apply favor delta to a single record (no LAN flood). */
     public static void modifyFavor(MisakaSisterRecord record, String name, int delta) {
         if (!record.awakened || name == null || name.isEmpty()) {

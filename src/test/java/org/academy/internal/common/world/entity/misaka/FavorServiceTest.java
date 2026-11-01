@@ -46,6 +46,58 @@ class FavorServiceTest {
     }
 
     @Test
+    void directAdjustmentCanRecoverDeadlyEnemyWithoutChangingNormalRules() {
+        var record = awakenedRecord(100_001);
+        record.favorByPlayerName.put("player", -20);
+        assertEquals(-19, FavorService.adjustFavorDirectly(record, "player", 1));
+        assertEquals(MobRelation.HOSTILE, FavorService.relation(record, "player"));
+        FavorService.modifyFavor(record, "player", -1);
+        FavorService.modifyFavor(record, "player", 1);
+        assertEquals(-20, record.favorByPlayerName.get("player"));
+    }
+
+    @Test
+    void directAdjustmentClampsBothBoundsWithoutIntegerOverflow() {
+        var record = awakenedRecord(100_001);
+        assertEquals(20, FavorService.adjustFavorDirectly(record, "player", Integer.MAX_VALUE));
+        assertEquals(20, FavorService.adjustFavorDirectly(record, "player", 1));
+        assertEquals(-20, FavorService.adjustFavorDirectly(record, "player", Integer.MIN_VALUE));
+        assertEquals(-20, FavorService.adjustFavorDirectly(record, "player", -1));
+    }
+
+    @Test
+    void directAdjustmentChangesOnlyOnePlayerOnOneSister() {
+        var record = awakenedRecord(100_001);
+        var neighbor = awakenedRecord(100_002);
+        record.favorByPlayerName.put("other", 2);
+        record.lastInteractedBenevolentPlayerName = "other";
+        assertEquals(1, FavorService.adjustFavorDirectly(record, "player", 1));
+        assertEquals(2, record.favorByPlayerName.get("other"));
+        assertTrue(neighbor.favorByPlayerName.isEmpty());
+        assertEquals("other", record.lastInteractedBenevolentPlayerName);
+        assertEquals(MobRelation.DEFAULT, FavorService.relation(record, "player"));
+        assertEquals(2, FavorService.adjustFavorDirectly(record, "player", 1));
+        assertEquals(MobRelation.BENEVOLENT, FavorService.relation(record, "player"));
+        assertFalse(FavorService.isPrivilegePlayer(record, "player"));
+        InteractionGate.touchBenevolent(record, "player");
+        assertTrue(FavorService.isPrivilegePlayer(record, "player"));
+        FavorService.adjustFavorDirectly(record, "player", -1);
+        assertFalse(FavorService.isPrivilegePlayer(record, "player"));
+    }
+
+    @Test
+    void directAdjustmentRejectsUnawakenedSistersAndMissingPlayerNames() {
+        var record = new MisakaSisterRecord(UUID.randomUUID(), 100_001, MisakaPersonality.TIMID, 0);
+        assertEquals(0, FavorService.adjustFavorDirectly(record, "player", 1));
+        assertFalse(record.awakened);
+        assertTrue(record.favorByPlayerName.isEmpty());
+        record.awakened = true;
+        FavorService.adjustFavorDirectly(record, "", 1);
+        FavorService.adjustFavorDirectly(record, null, 1);
+        assertTrue(record.favorByPlayerName.isEmpty());
+    }
+
+    @Test
     void defaultVersusBenevolentWhenNotMaxFavor() {
         var record = awakenedRecord(100_001);
         record.favorByPlayerName.put("alice", 3);

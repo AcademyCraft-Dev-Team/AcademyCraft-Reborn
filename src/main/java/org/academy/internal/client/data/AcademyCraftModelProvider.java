@@ -360,6 +360,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
             ));
         }
 
+        itemModels.generateFlatItem(Items.FAVOR_ADJUSTMENT_TOOL.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(Items.WIND_GEN_FAN_ITEM.get(), ModelTemplates.FLAT_ITEM);
         itemModels.itemModelOutput.accept(
                 Items.WIRELESS_NODE.get(),
