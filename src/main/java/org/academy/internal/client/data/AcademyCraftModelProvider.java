@@ -264,8 +264,7 @@ public final class AcademyCraftModelProvider extends ModelProvider {
                         ModelLocationUtils.getModelLocation(Items.MISAKA_SISTER_SPAWN_EGG.get()),
                         new TextureMapping().put(
                                 TextureSlot.LAYER0,
-                                // Placeholder until a dedicated Misaka Sister egg texture exists.
-                                new Material(AcademyCraft.vanilla("villager_spawn_egg").withPrefix("item/"))
+                                new Material(academy("misaka_sister_spawn_egg").withPrefix("item/"))
                         ),
                         itemModels.modelOutput
                 )
