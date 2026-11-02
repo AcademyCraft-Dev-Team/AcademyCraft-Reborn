@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +28,14 @@ public final class VectorProjectileRedirects {
     public static VectorProjectileRedirectData mark(
             Projectile projectile,
             ServerPlayer redirector,
+            VectorRedirectKind kind
+    ) {
+        return mark(projectile, (LivingEntity) redirector, kind);
+    }
+
+    public static VectorProjectileRedirectData mark(
+            Projectile projectile,
+            LivingEntity redirector,
             VectorRedirectKind kind
     ) {
         var current = get(projectile);
@@ -75,6 +84,10 @@ public final class VectorProjectileRedirects {
     }
 
     static long fingerprint(Projectile projectile, UUID originalOwnerId, ServerPlayer redirector) {
+        return fingerprint(projectile, originalOwnerId, (LivingEntity) redirector);
+    }
+
+    static long fingerprint(Projectile projectile, UUID originalOwnerId, LivingEntity redirector) {
         var value = projectile.level().getGameTime();
         value = 31L * value + projectile.getId();
         value = 31L * value + redirector.getUUID().hashCode();

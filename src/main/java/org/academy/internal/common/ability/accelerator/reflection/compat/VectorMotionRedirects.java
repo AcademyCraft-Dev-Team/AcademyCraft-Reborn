@@ -2,6 +2,7 @@ package org.academy.internal.common.ability.accelerator.reflection.compat;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.api.common.structure.BlockStructure;
@@ -27,6 +28,16 @@ public final class VectorMotionRedirects {
             Entity entity,
             @Nullable UUID originalOwnerId,
             ServerPlayer redirector,
+            VectorRedirectKind kind,
+            long fingerprint
+    ) {
+        return mark(entity, originalOwnerId, (LivingEntity) redirector, kind, fingerprint);
+    }
+
+    public static VectorProjectileRedirectData mark(
+            Entity entity,
+            @Nullable UUID originalOwnerId,
+            LivingEntity redirector,
             VectorRedirectKind kind,
             long fingerprint
     ) {

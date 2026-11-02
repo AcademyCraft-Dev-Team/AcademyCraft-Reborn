@@ -6,6 +6,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.projectile.Projectile;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
+import org.academy.internal.common.ability.accelerator.vector.VectorOperationRuntime;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -52,7 +53,8 @@ public final class VectorProjectileTargeting {
 
     public static void maintainRedirectTarget(Projectile projectile) {
         if (projectile == null || projectile.level().isClientSide()
-                || !VectorProjectileRedirects.isRedirected(projectile)) return;
+                || !VectorProjectileRedirects.isRedirected(projectile)
+                || VectorOperationRuntime.isProviderControlled(projectile)) return;
         var data = VectorProjectileRedirects.get(projectile);
         Entity replacement = null;
         if (data.originalOwnerId() != null && projectile.level() instanceof ServerLevel level) {
@@ -63,6 +65,7 @@ public final class VectorProjectileTargeting {
 
     public static boolean blocksVectorDefenderHit(Projectile projectile, Entity candidate) {
         if (projectile == null || candidate == null) return false;
+        if (VectorOperationRuntime.blocksHit(projectile, candidate)) return true;
         if (candidate instanceof ServerPlayer player
                 && VectorReflection.Server.isVectorDefenseActive(player)
                 && ownedBy(projectile, player)) {

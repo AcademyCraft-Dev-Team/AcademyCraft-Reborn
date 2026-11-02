@@ -25,6 +25,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.program.AbilityProgram;
+import org.academy.api.common.ability.program.ProgramActionRejection;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
 import org.academy.api.common.ability.program.ProgramRunStatus;
@@ -717,6 +718,21 @@ public final class AbilityProgramManager {
     }
 
     static ProgramVmDiagnostic actionDiagnostic(@Nullable Throwable cause) {
+        var seen = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
+        for (var current = cause; current != null && seen.add(current); current = current.getCause()) {
+            if (current instanceof ProgramActionRejection rejection) {
+                return switch (rejection.reason()) {
+                    case PREPARING -> ProgramVmDiagnostic.ACTION_PREPARING;
+                    case STALE_BINDING -> ProgramVmDiagnostic.ACTION_BINDING_STALE;
+                    case CONFLICTING_INPUTS -> ProgramVmDiagnostic.ACTION_INPUT_CONFLICT;
+                    case INVALID_INPUT -> ProgramVmDiagnostic.ACTION_INPUT_INVALID;
+                    case TARGET_UNREACHABLE -> ProgramVmDiagnostic.ACTION_TARGET_UNREACHABLE;
+                    case ACTION_BUSY -> ProgramVmDiagnostic.ACTION_BUSY;
+                    case NATIVE_CAST_REJECTED -> ProgramVmDiagnostic.NATIVE_CAST_REJECTED;
+                    case UNAVAILABLE -> ProgramVmDiagnostic.ACTION_UNAVAILABLE;
+                };
+            }
+        }
         var message = failureMessage(cause);
         if (message.contains("zero")) return ProgramVmDiagnostic.DIVISION_BY_ZERO;
         if (message.contains("not finite")) return ProgramVmDiagnostic.NON_FINITE_RESULT;
@@ -833,7 +849,8 @@ public final class AbilityProgramManager {
 
     private static String failureMessage(@Nullable Throwable cause) {
         var result = new StringBuilder();
-        for (var current = cause; current != null; current = current.getCause()) {
+        var seen = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
+        for (var current = cause; current != null && seen.add(current); current = current.getCause()) {
             if (current.getMessage() == null || current.getMessage().isBlank()) continue;
             if (!result.isEmpty()) result.append(' ');
             result.append(current.getMessage().toLowerCase(Locale.ROOT));

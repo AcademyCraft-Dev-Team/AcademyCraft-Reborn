@@ -121,6 +121,42 @@ class ProgramVmTest {
     }
 
     @Test
+    void typedActionRejectionSurvivesSettlementWithoutExposingNativeExceptionDetails() {
+        var session = new ProgramVm.Session(compile(new ProgramGraph(
+                List.of(node(1, ENTRY), node(2, INCREMENT)),
+                List.of(edge(1, "flow", 2, "flow")))));
+        var transaction = ProgramActionTransaction.sequential();
+        var frame = new ProgramExecutionFrame(transaction, null);
+        var executors = executors();
+        executors.put(INCREMENT, (context, configuration, inputs) -> {
+            frame.stage(context, new ProgramActionTransaction.ProgramAction() {
+                @Override
+                public void validate() {
+                    throw new IllegalStateException("Internal extension bridge details",
+                            new ProgramActionRejection(ProgramActionRejection.Reason.CONFLICTING_INPUTS,
+                                    new IllegalArgumentException("Internal native implementation details")));
+                }
+
+                @Override
+                public ProgramActionTransaction.Undo apply() {
+                    throw new AssertionError("Rejected validation must not apply");
+                }
+            });
+            return ProgramNodeStep.next("flow");
+        });
+
+        var result = session.run(0, 10, executors::get, frame);
+
+        assertEquals(ProgramVmResult.Status.FAILED, result.status());
+        assertEquals(2, result.nodeId());
+        assertEquals(ProgramVmDiagnostic.ACTION_INPUT_CONFLICT, result.diagnostic());
+        assertEquals(ProgramVmDiagnostic.ACTION_INPUT_CONFLICT,
+                AbilityProgramManager.actionDiagnostic(transaction.abort().cause()));
+        assertNull(result.detail());
+        assertNull(result.port());
+    }
+
+    @Test
     void missingRequiredInputValueNamesThePortAndTheConsumingNode() {
         var sourceId = AcademyCraft.academy("test/starved_source");
         var consumerId = AcademyCraft.academy("test/starved_consumer");

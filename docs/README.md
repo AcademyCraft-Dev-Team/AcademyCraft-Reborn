@@ -93,6 +93,7 @@
 | --- | --- |
 | [`addon_api_guide.md`](addon_api_guide.md) | 附属模组接入指南（注册、伤害档案、程序节点、心理控制） |
 | [`addon_registration_api_design.md`](addon_registration_api_design.md) | 注册 API 的设计依据与初始化顺序 |
+| [`inverse_reasoning_redesign.zh-CN.md`](inverse_reasoning_redesign.zh-CN.md) | 逆推理重设计与首批实施边界：效果学习、自动投射物接管、公开矢量 API、原生能力复用及运行期挂钩 |
 
 ### VFX 与模型
 

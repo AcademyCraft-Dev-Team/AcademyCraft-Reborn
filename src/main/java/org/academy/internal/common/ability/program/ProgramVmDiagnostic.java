@@ -49,7 +49,14 @@ public enum ProgramVmDiagnostic {
     TARGET_PHYSICS_PREPARE_FAILED,
     TARGET_PHYSICS_FINALIZE_FAILED,
     NO_FREE_NATIVE_SLOT,
-    NOT_IN_PLAIN_BLOCK_WHITELIST;
+    NOT_IN_PLAIN_BLOCK_WHITELIST,
+    ACTION_PREPARING,
+    ACTION_BINDING_STALE,
+    ACTION_INPUT_CONFLICT,
+    ACTION_INPUT_INVALID,
+    ACTION_TARGET_UNREACHABLE,
+    ACTION_BUSY,
+    NATIVE_CAST_REJECTED;
 
     /** Capture services prefix stable reason tokens with their transaction status. */
     public static ProgramVmDiagnostic structureFailure(ProgramStructureOperationResult result) {

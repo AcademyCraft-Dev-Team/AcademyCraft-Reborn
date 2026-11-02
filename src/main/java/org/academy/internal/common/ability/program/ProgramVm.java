@@ -7,6 +7,7 @@ import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
 
 
 import org.academy.AcademyCraft;
+import org.academy.api.common.ability.program.ProgramActionRejection;
 import org.academy.api.common.ability.program.ProgramNodeRole;
 import org.academy.api.common.ability.program.ProgramInputView;
 import org.academy.api.common.ability.program.ProgramNodeStep;
@@ -22,6 +23,7 @@ import java.util.*;
 public final class ProgramVm {
     private static final long FAILURE_LOG_INTERVAL_TICKS = 1_200L;
     private static final int MAX_FAILURE_LOG_KEYS = 256;
+    private static final int MAX_FAILURE_REASON_LENGTH = 160;
     private static final Map<FailureKey, FailureWindow> FAILURE_LOGS = new LinkedHashMap<>();
 
     private ProgramVm() {
@@ -444,8 +446,8 @@ public final class ProgramVm {
                 var programId = context.attachment(ProgramExecutionFrame.class)
                         .flatMap(ProgramExecutionFrame::invocation)
                         .map(ProgramInvocationContext::programId).orElse(null);
-                var suppressed = recordFailure(new FailureKey(programId, node.id(), node.typeId(),
-                        exception.getClass()), context.gameTime());
+                var suppressed = recordFailure(programId, node.id(), node.typeId(),
+                        exception, context.gameTime());
                 if (suppressed >= 0) {
                     AcademyCraft.LOGGER.warn("Program node {} ({}) failed in program {} ({} repeats suppressed)",
                             node.id(), node.typeId(), programId, suppressed, exception);
@@ -456,7 +458,9 @@ public final class ProgramVm {
         }
     }
 
-    private static synchronized long recordFailure(FailureKey key, long tick) {
+    static synchronized long recordFailure(@Nullable UUID programId, int nodeId, Identifier nodeType,
+                                          Throwable failure, long tick) {
+        var key = FailureKey.from(programId, nodeId, nodeType, failure);
         var window = FAILURE_LOGS.get(key);
         if (window == null) {
             if (FAILURE_LOGS.size() >= MAX_FAILURE_LOG_KEYS) {
@@ -476,7 +480,25 @@ public final class ProgramVm {
     }
 
     private record FailureKey(@Nullable UUID programId, int nodeId, Identifier nodeType,
-                              Class<? extends RuntimeException> exceptionType) {
+                              Class<? extends Throwable> exceptionType, String reason) {
+        private static FailureKey from(@Nullable UUID programId, int nodeId, Identifier nodeType,
+                                       Throwable failure) {
+            var root = failure;
+            String reason = null;
+            var seen = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>());
+            for (var current = failure; current != null && seen.add(current); current = current.getCause()) {
+                root = current;
+                if (reason == null && current instanceof ProgramActionRejection rejection) {
+                    reason = rejection.reason().name();
+                }
+            }
+            if (reason == null) {
+                var message = root.getMessage();
+                reason = message == null ? "" : message.substring(0,
+                        Math.min(message.length(), MAX_FAILURE_REASON_LENGTH)).strip().toLowerCase(Locale.ROOT);
+            }
+            return new FailureKey(programId, nodeId, nodeType, root.getClass(), reason);
+        }
     }
 
     private static final class FailureWindow {
