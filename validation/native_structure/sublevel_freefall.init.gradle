@@ -1,0 +1,22 @@
+// Real skill capture/lift followed by release, with no projectile launch.
+allprojects {
+    afterEvaluate {
+        def directory = rootProject.file(providers.gradleProperty('academySubLevelSmokeDirectory')
+                .getOrElse('run/native-sublevel-freefall-default')).canonicalFile
+        if (!directory.toPath().startsWith(rootProject.file('run').canonicalFile.toPath())
+                || !directory.name.startsWith('native-sublevel-freefall-')) {
+            throw new GradleException('Freefall smoke requires an isolated run/native-sublevel-freefall-* directory')
+        }
+        if (!new File(directory, 'saves/test/level.dat').isFile()) {
+            throw new GradleException('Prepare an isolated test save before the freefall smoke')
+        }
+        neoForge.runs.named('clientDev') {
+            gameDirectory.set(directory)
+            systemProperty 'academy.sublevelFreefallSmoke', 'true'
+            if (providers.gradleProperty('academyNativePhysicsTrace').isPresent()) {
+                systemProperty 'academy.nativePhysics.trace', providers.gradleProperty('academyNativePhysicsTrace').get()
+            }
+            programArguments.addAll('--width', '1280', '--height', '720', '--quickPlaySingleplayer', 'test')
+        }
+    }
+}

@@ -30,6 +30,32 @@ impl Surface {
     fn new(half: Vector) -> Self {
         Self { half, faces: std::array::from_fn(|_| Vec::new()), neighbors: HashSet::new() }
     }
+
+    fn covered_interior(&self, axis: usize, positive: bool, point: Vector) -> bool {
+        let patches = &self.faces[axis * 2 + usize::from(positive)];
+        let contains = |patch: &CoveredFace, sample: Vector, margin: f64| {
+            (0..3).all(|tangent| tangent == axis
+                || (sample[tangent] > patch.min[tangent] + margin
+                    && sample[tangent] < patch.max[tangent] - margin))
+        };
+        if patches.iter().any(|patch| contains(patch, point, GEOMETRY_EPSILON)) { return true; }
+        if patches.is_empty() { return false; }
+        // A partial patch's boundary can be a real concave floor/wall edge. Keep
+        // its support normal unless the whole tangential neighborhood is covered.
+        // Testing the union also hides seams between adjacent covering patches.
+        let tangents = [(axis + 1) % 3, (axis + 2) % 3];
+        for first in [-1.0, 1.0] {
+            for second in [-1.0, 1.0] {
+                let mut sample = point;
+                sample[tangents[0]] += first * GEOMETRY_EPSILON * 4.0;
+                sample[tangents[1]] += second * GEOMETRY_EPSILON * 4.0;
+                if !patches.iter().any(|patch| contains(patch, sample, -GEOMETRY_EPSILON)) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
 }
 
 #[derive(Default)]
@@ -269,10 +295,7 @@ impl ContactSurfaces {
             if local_normal[axis].abs() < 1.0e-6 { continue; }
             let face_coordinate = surface.half[axis] * local_normal[axis].signum();
             if (local_point[axis] - face_coordinate).abs() > FACE_ANCHOR_TOLERANCE { continue; }
-            let face = &surface.faces[axis * 2 + usize::from(local_normal[axis] > 0.0)];
-            if face.iter().any(|patch| (0..3).all(|tangent| tangent == axis
-                || (point[tangent] >= patch.min[tangent] - GEOMETRY_EPSILON
-                    && point[tangent] <= patch.max[tangent] + GEOMETRY_EPSILON))) {
+            if surface.covered_interior(axis, local_normal[axis] > 0.0, point) {
                 local_normal[axis] = 0.0;
             }
         }
@@ -381,5 +404,40 @@ mod tests {
         let diagonal = Vector::new(1.0, 1.0, 0.0).normalize();
         assert_eq!(surfaces.exposed_normal(collider, &physics.colliders,
                                           Vector::new(0.5, 0.5, 0.0), diagonal), diagonal);
+    }
+
+    #[test]
+    fn partially_covered_floor_keeps_support_at_concave_edges() {
+        for rotation in [Rotation::IDENTITY, Rotation::from_rotation_z(0.35)] {
+            let mut physics = PhysicsWorld::new();
+            let floor = physics.insert_body(RigidBodyBuilder::fixed()
+                .pose(Pose::from_parts(rotation * Vector::new(0.0, -0.5, 0.0), rotation)));
+            physics.insert_collider(ColliderBuilder::cuboid(2.0, 0.5, 2.0), Some(floor));
+            let wall = fixed_cube(&mut physics, rotation * Vector::new(1.0, 0.5, 0.0), rotation);
+            let mut surfaces = ContactSurfaces::default();
+            for body in [floor, wall] { surfaces.insert_body(body, &physics.bodies, &physics.colliders); }
+            let collider = physics.bodies[floor].colliders()[0];
+            let normal = rotation * Vector::Y;
+            let edge = rotation * Vector::new(0.5, 0.0, 0.0);
+            assert!(surfaces.exposed_normal(collider, &physics.colliders, edge, normal)
+                .distance(normal) < 1.0e-8);
+            let interior = rotation * Vector::new(1.0, 0.0, 0.0);
+            assert!(surfaces.exposed_normal(collider, &physics.colliders, interior, normal)
+                .length_squared() < 1.0e-8);
+        }
+    }
+
+    #[test]
+    fn adjacent_covering_patches_still_hide_their_internal_seam() {
+        let mut physics = PhysicsWorld::new();
+        let floor = physics.insert_body(RigidBodyBuilder::fixed().translation(Vector::new(0.0, -0.5, 0.0)));
+        physics.insert_collider(ColliderBuilder::cuboid(2.0, 0.5, 2.0), Some(floor));
+        let left = fixed_cube(&mut physics, Vector::new(-0.5, 0.5, 0.0), Rotation::IDENTITY);
+        let right = fixed_cube(&mut physics, Vector::new(0.5, 0.5, 0.0), Rotation::IDENTITY);
+        let mut surfaces = ContactSurfaces::default();
+        for body in [floor, left, right] { surfaces.insert_body(body, &physics.bodies, &physics.colliders); }
+        let collider = physics.bodies[floor].colliders()[0];
+        assert!(surfaces.exposed_normal(collider, &physics.colliders, Vector::ZERO, Vector::Y)
+            .length_squared() < 1.0e-8);
     }
 }

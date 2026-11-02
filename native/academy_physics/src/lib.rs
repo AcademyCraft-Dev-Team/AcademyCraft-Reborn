@@ -3,6 +3,8 @@
 mod contact_surface;
 #[cfg(test)]
 mod trace_replay;
+#[cfg(test)]
+mod freefall_tests;
 
 use rapier3d_f64::prelude::*;
 use std::collections::HashMap;
@@ -37,6 +39,7 @@ struct BodyEntry {
     kind: i32,
     cuboids: usize,
     paused: Option<PausedMotion>,
+    elastic: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -52,6 +55,7 @@ struct World {
     bodies: HashMap<u64, BodyEntry>,
     cuboids: usize,
     failed: bool,
+    elastic_bodies: usize,
 }
 
 impl World {
@@ -59,7 +63,7 @@ impl World {
         let mut physics = PhysicsWorld::new();
         physics.gravity = gravity;
         Self { physics, surfaces: contact_surface::ContactSurfaces::default(),
-               bodies: HashMap::new(), cuboids: 0, failed: false }
+               bodies: HashMap::new(), cuboids: 0, failed: false, elastic_bodies: 0 }
     }
 
     fn body_handle(&self, body: u64) -> Result<RigidBodyHandle> {
@@ -118,6 +122,12 @@ impl World {
             return Err(INVALID_ARGUMENT);
         }
         self.physics.integration_parameters.dt = dt / f64::from(substeps);
+        // Converge inelastic touchdown without reducing the normal warm-start
+        // or contact friction needed by stacks. Extra unbiased sweeps damp the
+        // restitution pass too, so worlds containing elastic materials retain
+        // Rapier's default iteration count and requested bounce response.
+        self.physics.integration_parameters.num_internal_stabilization_iterations =
+            if self.elastic_bodies == 0 { 8 } else { 1 };
         for _ in 0..substeps {
             self.physics.step_with_events(&self.surfaces, &());
             self.check_output()?;
@@ -128,10 +138,12 @@ impl World {
     fn remove_body(&mut self, body: u64) -> Result<()> {
         let entry = self.bodies.get(&body).ok_or(INVALID_HANDLE)?;
         let count = entry.cuboids;
+        let elastic = entry.elastic;
         self.surfaces.remove_body(entry.handle, &self.physics.bodies, &self.physics.colliders);
         self.physics.remove_body(entry.handle).ok_or(WORLD_FAILED)?;
         self.bodies.remove(&body);
         self.cuboids -= count;
+        self.elastic_bodies -= usize::from(elastic);
         Ok(())
     }
 
@@ -230,6 +242,15 @@ impl Registry {
             1 => RigidBodyBuilder::dynamic(),
             _ => return Err(INVALID_ARGUMENT),
         };
+        // Cover inelastic motion below Rapier's hard-CCD activation threshold too.
+        // Prediction is bounded by the thinnest collider's half-extent without
+        // an unbounded broad-phase sweep.
+        // Elastic bodies keep their impact velocity for restitution instead of
+        // losing it to an earlier speculative constraint.
+        let prediction = if description.kind == 1 && description.restitution == 0.0 {
+            cuboids.iter().map(|cuboid| cuboid.half_extents.min_element())
+                .fold(f64::MAX, f64::min)
+        } else { 0.0 };
         let body = builder.pose(description.pose)
             .linvel(description.linear_velocity)
             .angvel(description.angular_velocity)
@@ -237,6 +258,7 @@ impl Registry {
             .angular_damping(description.angular_damping)
             .gravity_scale(description.gravity_scale)
             .ccd_enabled(description.ccd)
+            .soft_ccd_prediction(prediction)
             .can_sleep(description.can_sleep)
             .build();
         let handle = owner.physics.insert_body(body);
@@ -252,7 +274,9 @@ impl Registry {
         // Do not require a simulation step merely to obtain the initial mass/COM/inertia.
         owner.physics.bodies[handle].recompute_mass_properties_from_colliders(&owner.physics.colliders);
         owner.surfaces.insert_body(handle, &owner.physics.bodies, &owner.physics.colliders);
-        owner.bodies.insert(id, BodyEntry { handle, kind: description.kind, cuboids: cuboids.len(), paused: None });
+        let elastic = description.restitution > 0.0;
+        owner.bodies.insert(id, BodyEntry { handle, kind: description.kind, cuboids: cuboids.len(), paused: None, elastic });
+        owner.elastic_bodies += usize::from(elastic);
         owner.cuboids += cuboids.len();
         owner.snapshot(id)?;
         Ok(id)
@@ -756,8 +780,7 @@ mod tests {
         boxes
     }
 
-    #[test]
-    fn disturbed_step_socket_lifts_with_com_force() {
+    fn step_socket_fixture(merge: bool) -> (Registry, u64, u64, usize, usize) {
         let mut candidates = Vec::new();
         for x in -5_i32..=5 { for z in -5_i32..=5 {
             let top = if x > 0 { 2 } else { 0 };
@@ -782,68 +805,332 @@ mod tests {
                 if !selected.contains(&(x, y, z)) { terrain_cells.push((x, y, z)); }
             }
         }}
-        let mut failures = Vec::new();
-        for (label, merge, ccd, linear_disturb, angular_disturb) in [
-            ("merged-clean", true, true, false, false),
-            ("merged-both", true, true, true, true),
-            ("merged-linear", true, true, true, false),
-            ("merged-angular", true, true, false, true),
-            ("unmerged-linear", false, true, true, false),
-            ("unmerged-angular", false, true, false, true),
-            ("unmerged-both", false, true, true, true),
-        ] {
-            let mut registry = Registry::new();
-            let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
-            let terrain = merged_voxel_boxes(&terrain_cells, true);
-            for boxes in terrain.chunks(7 * CUBOID_LEN) {
-                insert(&mut registry, world, 0, [0.0; 3], boxes);
+        let mut registry = Registry::new();
+        let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
+        let terrain = merged_voxel_boxes(&terrain_cells, true);
+        for boxes in terrain.chunks(7 * CUBOID_LEN) {
+            insert(&mut registry, world, 0, [0.0; 3], boxes);
+        }
+        let mut desc = body_description([0.0; 3]);
+        desc[14] = 0.6;
+        desc[19] = 1.0;
+        let moving = merged_voxel_boxes(&selected, merge);
+        let body = registry.create_body(world, description(1, &desc).unwrap(),
+            cuboids(&moving, 1.0, true).unwrap()).unwrap();
+        (registry, world, body, moving.len() / CUBOID_LEN, terrain.len() / CUBOID_LEN)
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum StepSocketControl {
+        Immediate,
+        Settle10,
+        // The Java hold sets stabilizeUntil = creationTick + 10, then tests <=.
+        // If the first control is in creationTick, this means 11 clearing steps;
+        // if it is in creationTick + 1, it means 10. Report both instead of
+        // hiding this scheduling distinction behind a "10 ticks" label.
+        Production { first_control_game_tick: usize },
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum StepSocketDisturbance { None, Linear, Angular, Both }
+
+    #[derive(Debug)]
+    struct StepSocketResult {
+        label: String,
+        rise: f64,
+        maximum_horizontal_drift: f64,
+        maximum_angle: f64,
+        pose_initializations: usize,
+        velocity_clears: usize,
+        disturbance_entered_solver: bool,
+    }
+
+    #[derive(Default, Debug)]
+    struct StepSocketContacts {
+        pairs: usize,
+        narrow_manifolds: usize,
+        solver_manifolds: usize,
+        solver_clusters: usize,
+        solver_points: usize,
+        solver_points_beyond_kernel_limit: usize,
+        normal_impulse_sum: f64,
+        inactive_point_normal_impulse_sum: f64,
+        normal_warmstart_impulse_sum: f64,
+        // Legacy per-contact total. Simplified/twist does not write this field;
+        // zero under that model says nothing about whether friction was applied.
+        tangent_impulse_sum: f64,
+        simplified_patch_count: usize,
+        simplified_patch_tangent_warmstart_sum: f64,
+        simplified_patch_tangent_warmstart_abs_axes: Vector,
+        simplified_patch_twist_warmstart_sum: f64,
+        maximum_patch_copy_difference: f64,
+        friction_capacity_sum: f64,
+        warmstart_friction_capacity_sum: f64,
+        normal_impulse_abs_axes: Vector,
+        live_penetration_sum: f64,
+        maximum_live_penetration: f64,
+        cached_penetration_sum: f64,
+    }
+
+    // Last-substep observations, not the integrated impulse of an entire outer tick.
+    // In Rapier 0.36.1 the actual impulses may live in solver_clusters instead of
+    // the narrow-phase manifolds, and solver contact dist is cached. Resolve the
+    // anchors through current body poses for live penetration instead of treating
+    // that cached distance as a fresh measurement. Only the solver-contact indices
+    // identify active points: hook-filtered manifold points can retain old impulses.
+    // Simplified friction writes its one patch impulse into EVERY active point;
+    // count that patch once. It exposes the final warm-start snapshot, not a total
+    // friction impulse integrated over the outer tick (unlike Coulomb's field).
+    fn step_socket_contacts(owner: &World, handle: RigidBodyHandle) -> StepSocketContacts {
+        let mut result = StepSocketContacts::default();
+        for pair in owner.physics.contact_pairs() {
+            if owner.physics.colliders[pair.collider1].parent() != Some(handle)
+                && owner.physics.colliders[pair.collider2].parent() != Some(handle) { continue; }
+            result.pairs += 1;
+            result.narrow_manifolds += pair.manifolds().len();
+            if let Some(rigid) = pair.rigid() { result.solver_clusters += rigid.solver_clusters.len(); }
+            for manifold in pair.solver_manifolds() {
+                result.solver_manifolds += 1;
+                let active_points: Vec<_> = manifold.data.solver_contacts.iter()
+                    .take(rapier3d_f64::math::MAX_MANIFOLD_POINTS)
+                    .map(|point| point.contact_indices()[0] as usize).collect();
+                result.solver_points += active_points.len();
+                result.solver_points_beyond_kernel_limit += manifold.data.solver_contacts.len() - active_points.len();
+                let normal_impulse: f64 = active_points.iter()
+                    .map(|&index| manifold.points[index].data.impulse.abs()).sum();
+                let normal_warmstart: f64 = active_points.iter()
+                    .map(|&index| manifold.points[index].data.warmstart_impulse.abs()).sum();
+                result.normal_impulse_sum += normal_impulse;
+                result.normal_warmstart_impulse_sum += normal_warmstart;
+                result.inactive_point_normal_impulse_sum += manifold.points.iter().enumerate()
+                    .filter(|(index, _)| !active_points.contains(index))
+                    .map(|(_, point)| point.data.impulse.abs()).sum::<f64>();
+                result.tangent_impulse_sum += active_points.iter()
+                    .map(|&index| manifold.points[index].data.tangent_impulse.norm()).sum::<f64>();
+                if owner.physics.integration_parameters.friction_model
+                        == rapier3d_f64::dynamics::FrictionModel::Simplified
+                    && let Some(&first_index) = active_points.first() {
+                    let patch = &manifold.points[first_index].data;
+                    result.simplified_patch_count += 1;
+                    result.simplified_patch_tangent_warmstart_sum += patch.warmstart_tangent_world.length();
+                    result.simplified_patch_tangent_warmstart_abs_axes += patch.warmstart_tangent_world.abs();
+                    result.simplified_patch_twist_warmstart_sum += patch.warmstart_twist_impulse.abs();
+                    for &index in &active_points {
+                        let other = &manifold.points[index].data;
+                        result.maximum_patch_copy_difference = result.maximum_patch_copy_difference
+                            .max((other.warmstart_tangent_world - patch.warmstart_tangent_world).length())
+                            .max((other.warmstart_twist_impulse - patch.warmstart_twist_impulse).abs());
+                    }
+                }
+                result.friction_capacity_sum += normal_impulse * manifold.data.friction;
+                result.warmstart_friction_capacity_sum += normal_warmstart * manifold.data.friction;
+                result.normal_impulse_abs_axes += manifold.data.normal.abs() * normal_impulse;
+                for point in manifold.data.solver_contacts.iter().take(rapier3d_f64::math::MAX_MANIFOLD_POINTS) {
+                    let (first, second) = manifold.data.solver_contact_world_points(point, &owner.physics.bodies);
+                    let penetration = (-(second - first).dot(manifold.data.normal)).max(0.0);
+                    result.live_penetration_sum += penetration;
+                    result.maximum_live_penetration = result.maximum_live_penetration.max(penetration);
+                    result.cached_penetration_sum += (-point.dist).max(0.0);
+                }
             }
-            let mut desc = body_description([0.0; 3]);
-            desc[14] = 0.6;
-            desc[19] = if ccd { 1.0 } else { 0.0 };
-            let moving = merged_voxel_boxes(&selected, merge);
-            let body = registry.create_body(world, description(1, &desc).unwrap(),
-                cuboids(&moving, 1.0, true).unwrap()).unwrap();
-            let owner = registry.world(world).unwrap();
-            let handle = owner.body_handle(body).unwrap();
-            let source_com = owner.physics.bodies[handle].center_of_mass();
-            let source_translation = owner.physics.bodies[handle].translation();
-            let source_rotation = *owner.physics.bodies[handle].rotation();
-            let target = source_com + Vector::Y * (3.0 + 9.81 / 53.333333);
-            let stabilize = linear_disturb || angular_disturb;
-            for tick in 0..200 {
+        }
+        result
+    }
+
+    // Test-only single-factor overrides. Defaults are untouched; invalid or
+    // simultaneous overrides fail visibly instead of silently running a baseline.
+    fn step_socket_diagnostic_overrides(owner: &mut World) {
+        let friction = std::env::var("ACADEMY_STEP_SOCKET_FRICTION").ok();
+        let warmstart = std::env::var("ACADEMY_STEP_SOCKET_WARMSTART").ok();
+        assert!(friction.is_none() || warmstart.is_none(), "Change only one step-socket factor per diagnostic run");
+        if let Some(value) = friction {
+            assert_eq!(value, "coulomb", "Unsupported ACADEMY_STEP_SOCKET_FRICTION");
+            owner.physics.integration_parameters.friction_model = rapier3d_f64::dynamics::FrictionModel::Coulomb;
+        }
+        if let Some(value) = warmstart {
+            let coefficient = value.parse::<f64>().expect("Invalid ACADEMY_STEP_SOCKET_WARMSTART");
+            assert!(coefficient.is_finite() && (0.0..=1.0).contains(&coefficient),
+                "ACADEMY_STEP_SOCKET_WARMSTART must be in [0, 1]");
+            owner.physics.integration_parameters.warmstart_coefficient = coefficient;
+        }
+    }
+
+    // Mirrors SubLevelDirectControl.nextAngularVelocity, including the deadband,
+    // 6/4 gains, acceleration/speed caps and one 0.05-second outer-tick update.
+    // This is deliberately not a new controller or a per-substep servo.
+    fn step_socket_production_angular_velocity(target: Rotation, current: Rotation, omega: Vector) -> Vector {
+        let mut error = target * current.conjugate();
+        if error.w < 0.0 { error = -error; }
+        let w = error.w.clamp(-1.0, 1.0);
+        let sine = (1.0 - w * w).max(0.0).sqrt();
+        let angle = 2.0 * w.acos();
+        if angle < 0.003 && omega.length() < 0.02 { return Vector::ZERO; }
+        let error_vector = if sine < 1.0e-9 { Vector::ZERO }
+                           else { Vector::new(error.x, error.y, error.z) * (angle / sine) };
+        let acceleration = (error_vector * 6.0 - omega * 4.0).clamp_length_max(6.0);
+        (omega + acceleration * 0.05).clamp_length_max(1.0)
+    }
+
+    fn run_step_socket_case(label: &str, merge: bool, control: StepSocketControl,
+                            disturbance: StepSocketDisturbance, injection_tick: usize) -> StepSocketResult {
+        let label = format!("{}-{label}", if merge { "merged" } else { "unmerged" });
+        let (mut registry, world, body, body_boxes, terrain_boxes) = step_socket_fixture(merge);
+        let owner = registry.world(world).unwrap();
+        step_socket_diagnostic_overrides(owner);
+        let handle = owner.body_handle(body).unwrap();
+        let source_com = owner.physics.bodies[handle].center_of_mass();
+        let source_translation = owner.physics.bodies[handle].translation();
+        let source_rotation = *owner.physics.bodies[handle].rotation();
+        let target = source_com + Vector::Y * (3.0 + 9.81 / 53.333333);
+        let mut result = StepSocketResult { label, rise: 0.0, maximum_horizontal_drift: 0.0,
+            maximum_angle: 0.0, pose_initializations: 0, velocity_clears: 0,
+            disturbance_entered_solver: false };
+        if matches!(control, StepSocketControl::Production { .. }) {
+            let rigid = &mut owner.physics.bodies[handle];
+            rigid.set_translation(source_translation, true);
+            rigid.set_rotation(source_rotation, true);
+            rigid.set_linvel(Vector::ZERO, true);
+            rigid.set_angvel(Vector::ZERO, true);
+            result.pose_initializations += 1;
+        }
+        eprintln!("STEP_SOCKET_CASE label={} control={control:?} disturbance={disturbance:?} injection_tick={} \
+            injection_phase=after_controller_before_solver dt=0.05 substeps=2 ccd=true body_boxes={body_boxes} \
+            terrain_boxes={terrain_boxes} source_com={source_com:?} friction_model={:?} warmstart_coefficient={} \
+            tangent_impulse_field=coulomb_only simplified_friction_field=deduplicated_patch_warmstart_snapshot",
+            result.label, injection_tick, owner.physics.integration_parameters.friction_model,
+            owner.physics.integration_parameters.warmstart_coefficient);
+        for tick in 0..200 {
+            let stabilizing = match control {
+                StepSocketControl::Immediate => false,
+                StepSocketControl::Settle10 => tick < 10,
+                StepSocketControl::Production { first_control_game_tick } => first_control_game_tick + tick <= 10,
+            };
+            {
                 let rigid = &mut owner.physics.bodies[handle];
-                if tick == 1 && linear_disturb {
-                    rigid.set_linvel(rigid.linvel() + Vector::X * 0.2, true);
-                }
-                if tick == 1 && angular_disturb {
-                    rigid.set_angvel(rigid.angvel() + Vector::Z * 0.05, true);
-                }
-                if stabilize && tick < 10 {
-                    // Mirrors the skill startup: normalize to the source pose and clear the
-                    // injected velocity before the first lift force starts.
-                    rigid.set_translation(source_translation, true);
-                    rigid.set_rotation(source_rotation, true);
+                if stabilizing {
+                    // No setPose here: contact displacement accumulated during settling is real.
                     rigid.set_linvel(Vector::ZERO, true);
                     rigid.set_angvel(Vector::ZERO, true);
-                    owner.step(0.05, 2).unwrap();
-                    continue;
+                    result.velocity_clears += 1;
+                } else {
+                    let force = ((target - rigid.center_of_mass()) * (53.333333 * rigid.mass())
+                        - rigid.linvel() * (16.0 * rigid.mass())).clamp_length_max(2000.0);
+                    rigid.apply_impulse(force * 0.05, true);
+                    if matches!(control, StepSocketControl::Production { .. }) {
+                        let angular = step_socket_production_angular_velocity(
+                            source_rotation, *rigid.rotation(), rigid.angvel());
+                        rigid.set_angvel(angular, true);
+                    }
                 }
-                let force = ((target - rigid.center_of_mass()) * (53.333333 * rigid.mass())
-                    - rigid.linvel() * (16.0 * rigid.mass())).clamp_length_max(2000.0);
-                rigid.apply_impulse(force * 0.05, true);
-                owner.step(0.05, 2).unwrap();
-                if tick == 19 || tick == 199 {
-                    let rigid = &owner.physics.bodies[handle];
-                    eprintln!("STEP_SOCKET {label} tick={tick} origin={:?} rise={} lin={:?} ang={:?} q={:?}",
-                        rigid.translation(), rigid.center_of_mass().y - source_com.y,
-                        rigid.linvel(), rigid.angvel(), rigid.rotation());
+                if tick == injection_tick && !matches!(disturbance, StepSocketDisturbance::None) {
+                    let before_linear = rigid.linvel();
+                    let before_angular = rigid.angvel();
+                    let linear_delta = if matches!(disturbance, StepSocketDisturbance::Linear | StepSocketDisturbance::Both) {
+                        Vector::X * 0.2
+                    } else { Vector::ZERO };
+                    let angular_delta = if matches!(disturbance, StepSocketDisturbance::Angular | StepSocketDisturbance::Both) {
+                        Vector::Z * 0.05
+                    } else { Vector::ZERO };
+                    rigid.set_linvel(before_linear + linear_delta, true);
+                    rigid.set_angvel(before_angular + angular_delta, true);
+                    assert!((rigid.linvel() - before_linear - linear_delta).length() < 1.0e-12);
+                    assert!((rigid.angvel() - before_angular - angular_delta).length() < 1.0e-12);
+                    result.disturbance_entered_solver = true;
+                    eprintln!("STEP_SOCKET_INJECT label={} tick={tick} stabilizing={stabilizing} \
+                        linear_before={before_linear:?} linear_solver_input={:?} \
+                        angular_before={before_angular:?} angular_solver_input={:?}",
+                        result.label, rigid.linvel(), rigid.angvel());
                 }
             }
-            let rise = owner.physics.bodies[handle].center_of_mass().y - source_com.y;
-            if (rise - 3.0).abs() > 0.12 { failures.push((label, rise)); }
+            // Optional bounded hook tracing; defaults to compact statistics only. The
+            // existing surface hook remains unchanged, and no mutator runs after injection.
+            if (tick == injection_tick || tick == 19) && std::env::var("ACADEMY_STEP_SOCKET_TRACE_CONTACTS")
+                .is_ok_and(|value| value == "all" || value == result.label) {
+                owner.surfaces.diagnose_next_contacts(2);
+            }
+            owner.step(0.05, 2).unwrap();
+            let rigid = &owner.physics.bodies[handle];
+            let displacement = rigid.center_of_mass() - source_com;
+            result.rise = displacement.y;
+            result.maximum_horizontal_drift = result.maximum_horizontal_drift
+                .max(displacement.x.hypot(displacement.z));
+            result.maximum_angle = result.maximum_angle
+                .max(2.0 * source_rotation.dot(*rigid.rotation()).abs().min(1.0).acos());
+            if [0, 1, 9, 10, 11, 19, 59, 199].contains(&tick) {
+                eprintln!("STEP_SOCKET_STATE label={} tick={tick} stabilizing={stabilizing} origin={:?} \
+                    rise={} lin={:?} ang={:?} q={:?} contacts_last_substep={:?}",
+                    result.label, rigid.translation(), result.rise, rigid.linvel(), rigid.angvel(), rigid.rotation(),
+                    step_socket_contacts(owner, handle));
+            }
         }
-        assert!(failures.is_empty(), "step socket failed: {failures:?}");
+        assert_eq!(result.disturbance_entered_solver, !matches!(disturbance, StepSocketDisturbance::None));
+        assert_eq!(result.pose_initializations, usize::from(matches!(control, StepSocketControl::Production { .. })));
+        let expected_clears = match control {
+            StepSocketControl::Immediate => 0,
+            StepSocketControl::Settle10 => 10,
+            StepSocketControl::Production { first_control_game_tick } => 11 - first_control_game_tick,
+        };
+        assert_eq!(result.velocity_clears, expected_clears);
+        eprintln!("STEP_SOCKET_RESULT {result:?}");
+        result
+    }
+
+    // Keep the original full-lift requirement and 0.12 tolerance. A raw case may
+    // legitimately wedge after rotation; it stays visible as a failed acceptance
+    // condition until geometric/contact evidence explains it, rather than being
+    // reclassified as PASS by checking only finite motion or an expected stall.
+    fn assert_step_socket_full_lift(results: &[StepSocketResult]) {
+        let failures: Vec<_> = results.iter().filter(|result| (result.rise - 3.0).abs() > 0.12).collect();
+        assert!(failures.is_empty(), "step socket full-lift requirement failed: {failures:?}");
+    }
+
+    fn compare_step_socket_geometry(label: &str, control: StepSocketControl,
+                                     disturbance: StepSocketDisturbance, injection_tick: usize) {
+        let results: Vec<_> = [true, false].into_iter().map(|merge|
+            run_step_socket_case(label, merge, control, disturbance, injection_tick)).collect();
+        assert_step_socket_full_lift(&results);
+    }
+
+    #[test]
+    fn disturbed_step_socket_immediate_clean_lifts_with_com_force() {
+        compare_step_socket_geometry("immediate-clean", StepSocketControl::Immediate, StepSocketDisturbance::None, 1);
+    }
+
+    #[test]
+    fn disturbed_step_socket_settle10_clean_without_repeated_pose_reset_lifts_with_com_force() {
+        compare_step_socket_geometry("settle10-clean-no-reteleport", StepSocketControl::Settle10, StepSocketDisturbance::None, 1);
+    }
+
+    #[test]
+    fn disturbed_step_socket_raw_linear_reaches_solver_and_requires_full_lift() {
+        compare_step_socket_geometry("raw-linear", StepSocketControl::Immediate, StepSocketDisturbance::Linear, 1);
+    }
+
+    #[test]
+    fn disturbed_step_socket_raw_angular_reaches_solver_and_requires_full_lift() {
+        compare_step_socket_geometry("raw-angular", StepSocketControl::Immediate, StepSocketDisturbance::Angular, 1);
+    }
+
+    #[test]
+    fn disturbed_step_socket_raw_both_reach_solver_and_require_full_lift() {
+        compare_step_socket_geometry("raw-both", StepSocketControl::Immediate, StepSocketDisturbance::Both, 1);
+    }
+
+    #[test]
+    fn disturbed_step_socket_production_startup_and_angular_servo_require_full_lift() {
+        let mut results = Vec::new();
+        for merge in [true, false] {
+            for first_control_game_tick in [0, 1] {
+                let control = StepSocketControl::Production { first_control_game_tick };
+                let prefix = format!("production-first-control-{first_control_game_tick}");
+                results.push(run_step_socket_case(&format!("{prefix}-clean"), merge, control, StepSocketDisturbance::None, 1));
+                results.push(run_step_socket_case(&format!("{prefix}-both-during-settle"), merge, control,
+                    StepSocketDisturbance::Both, 1));
+                results.push(run_step_socket_case(&format!("{prefix}-both-first-lift"), merge, control,
+                    StepSocketDisturbance::Both, 11 - first_control_game_tick));
+            }
+        }
+        assert_step_socket_full_lift(&results);
     }
 
     #[test]
@@ -1213,5 +1500,60 @@ mod tests {
         assert_eq!(registry.create_world(Vector::ZERO), Err(LIMIT_EXCEEDED));
         assert!(registry.worlds.is_empty());
         assert_eq!(registry.next_handle, u64::MAX);
+    }
+
+    #[test]
+    fn eight_layer_stack_settles_and_contact_friction_still_stops_a_free_slider() {
+        let mut registry = Registry::new();
+        let world = registry.create_world(Vector::new(0.0, -9.81, 0.0)).unwrap();
+        step_socket_diagnostic_overrides(registry.world(world).unwrap());
+        insert(&mut registry, world, 0, [0.0, -0.5, 0.0], &box_data([0.0; 3], [6.0, 0.5, 6.0]));
+        let layers: Vec<_> = (0..8).map(|layer| insert(&mut registry, world, 1,
+            [0.0, 0.75 + layer as f64, 0.0], &box_data([0.0; 3], [0.5; 3]))).collect();
+
+        // Zero air damping: this body can stop only through contact, not by a
+        // damping override or an explicit sleep/velocity reset in the fixture.
+        let mut slider_description = body_description([-3.0, 0.5, 3.0]);
+        slider_description[7] = 1.0;
+        let slider_description = description(1, &slider_description).unwrap();
+        let slider_boxes = cuboids(&box_data([0.0; 3], [0.5; 3]), slider_description.density, true).unwrap();
+        let slider = registry.create_body(world, slider_description, slider_boxes).unwrap();
+        let owner = registry.world(world).unwrap();
+        owner.step(0.05, 2).unwrap();
+        let falling = owner.snapshot(layers[0]).unwrap();
+        assert!(falling[1] < 0.75 && falling[8] < 0.0, "stack never entered free fall: {falling:?}");
+        // Same ten-second settling window and 0.04 m / 0.02 m/s tolerances as
+        // gravity_contacts_and_sleep_are_real_solver_results. Use the current
+        // gameplay cadence (20 Hz, two external substeps), with no extra solves.
+        for _ in 1..200 { owner.step(0.05, 2).unwrap(); }
+
+        let states: Vec<_> = layers.iter().map(|&id| owner.snapshot(id).unwrap()).collect();
+        let slider_state = owner.snapshot(slider).unwrap();
+        eprintln!("STACK_FRICTION_REGRESSION warmstart_coefficient={} stack={states:?} slider={slider_state:?}",
+            owner.physics.integration_parameters.warmstart_coefficient);
+        for (layer, state) in states.iter().enumerate() {
+            near(state[1], 0.5 + layer as f64, 0.04);
+            if layer > 0 { near(state[1] - states[layer - 1][1], 1.0, 0.04); }
+            // A stack may settle laterally by at most one tenth of a block.
+            // The baseline top layer settles by ~0.066; the global 0.5 warm-start
+            // candidate topples several layers and must still fail this gate.
+            assert!(state[0].hypot(state[2]) <= 0.1, "stack layer {layer} drifted: {state:?}");
+            assert!(Vector::new(state[7], state[8], state[9]).length() <= 0.02,
+                "stack layer {layer} has not settled: {state:?}");
+            assert!(Vector::new(state[10], state[11], state[12]).length() <= 0.02,
+                "stack layer {layer} still rotates: {state:?}");
+            assert_eq!(state[24], 1.0, "stack layer {layer} did not naturally sleep");
+        }
+        let slide_distance = slider_state[0] + 3.0;
+        // Ideal Coulomb stopping distance is v^2/(2*mu*g), about 0.073 m.
+        // The bound allows discrete contact settling but rejects a frictionless
+        // ten-second coast, even if sleeping is accidentally used to hide it.
+        assert!(slide_distance > 0.01 && slide_distance < 0.3,
+            "contact friction did not stop the free slider: distance={slide_distance}, state={slider_state:?}");
+        near(slider_state[1], 0.5, 0.04);
+        near(slider_state[2], 3.0, 0.04);
+        assert!(Vector::new(slider_state[7], slider_state[8], slider_state[9]).length() <= 0.02);
+        assert!(Vector::new(slider_state[10], slider_state[11], slider_state[12]).length() <= 0.02);
+        assert_eq!(slider_state[24], 1.0, "slider did not naturally sleep");
     }
 }

@@ -188,11 +188,20 @@ removes its attached joints.
 times using `total_dt / substeps`. Wall-clock time and game tick rates are not read.
 The caller owns scheduling. Sleeping does not destroy a body or a world.
 
-The binding keeps Rapier 0.36.1's default solver protections. A CCD flag of 0
+The binding keeps Rapier 0.36.1's default CCD protections. A CCD flag of 0
 disables the explicit per-body CCD request; it does not disable the engine's
 automatic CCD for fast dynamic bodies against fixed colliders, nor speculative
 contacts. Therefore a body with this flag off can still be stopped by a thin
 fixed wall. The flag is not a report that all CCD mechanisms are disabled.
+
+Zero-restitution dynamic bodies additionally enable soft-CCD prediction, bounded by the thinnest
+collider's half-extent, so ordinary falling motion gets predictive contacts below
+the hard-CCD activation threshold. The unbiased contact stabilization pass uses
+eight iterations in worlds containing only inelastic materials to remove residual
+separating velocity on touchdown. Worlds with elastic materials keep the default
+iteration count to preserve restitution. Normal warm-starting and contact friction
+retain their defaults. Voxel face
+filtering preserves concave patch boundaries while removing fully covered seams.
 
 The default normalized maximum linear velocity is 400, and `length_unit` remains
 1, so the solver can limit linear speed to 400 units/second after a solver
