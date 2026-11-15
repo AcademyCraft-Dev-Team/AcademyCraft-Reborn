@@ -166,7 +166,7 @@ public final class MagneticHookItem extends Item {
 
     private static List<MagneticHook> findOwnedHooks(ServerPlayer player) {
         var hooks = new ArrayList<MagneticHook>();
-        for (ServerLevel level : player.level().getServer().getAllLevels()) {
+        for (var level : player.level().getServer().getAllLevels()) {
             for (var entity : level.getAllEntities()) {
                 if (entity instanceof MagneticHook hook && hook.isOwnedBy(player) && !hook.isRemoved()) {
                     hooks.add(hook);

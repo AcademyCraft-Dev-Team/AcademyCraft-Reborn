@@ -55,7 +55,7 @@ public final class SpatialStorageUnitItem extends Item {
         if (destination == null) return InteractionResult.PASS;
         if (player instanceof ServerPlayer serverPlayer) {
             var data = SpatialStorageSavedData.get(serverPlayer.level().getServer());
-            long moved = data.transfer(SpatialStorageService.id(stack), Integer.MAX_VALUE, (resource, count) -> {
+            var moved = data.transfer(SpatialStorageService.id(stack), Integer.MAX_VALUE, (resource, count) -> {
                 int accepted;
                 try (var transaction = Transaction.openRoot()) {
                     accepted = destination.insert(resource, (int) Math.min(count, Integer.MAX_VALUE), transaction);
@@ -85,7 +85,7 @@ public final class SpatialStorageUnitItem extends Item {
         tooltip.accept(Component.translatable(isEnabled(stack)
                         ? "item.academy.spatial_storage_unit.enabled" : "item.academy.spatial_storage_unit.disabled")
                 .withStyle(isEnabled(stack) ? ChatFormatting.GREEN : ChatFormatting.GRAY));
-        for (int line = 1; line <= 4; line++)
+        for (var line = 1; line <= 4; line++)
             tooltip.accept(Component.translatable(
                     "item.academy.spatial_storage_unit.tooltip." + line).withStyle(ChatFormatting.GRAY));
     }

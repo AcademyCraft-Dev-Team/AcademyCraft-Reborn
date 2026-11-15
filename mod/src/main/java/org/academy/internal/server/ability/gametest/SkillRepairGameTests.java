@@ -172,7 +172,7 @@ public final class SkillRepairGameTests {
         var inventory = player.getInventory();
         inventory.clearContent();
         if (full) {
-            for (int slot = 0; slot < inventory.getContainerSize(); slot++)
+            for (var slot = 0; slot < inventory.getContainerSize(); slot++)
                 inventory.setItem(slot, new ItemStack(Items.STONE, 64));
         }
         var runtime = new ServerTeleportProgramRuntime(player);
@@ -181,8 +181,8 @@ public final class SkillRepairGameTests {
         var action = runtime.teleportBlockOrItem(position, 0,
                 TeleportProgramNodeCatalog.BlockItemTeleportMode.COLLECT);
         if (full) {
-            for (int attempt = 0; attempt < 2; attempt++) {
-                boolean rejected = false;
+            for (var attempt = 0; attempt < 2; attempt++) {
+                var rejected = false;
                 try {
                     action.apply();
                 } catch (IllegalStateException exception) {
@@ -193,7 +193,7 @@ public final class SkillRepairGameTests {
                 helper.assertTrue(level.getBlockState(pos).is(Blocks.CHEST), "Failed collection must restore the chest");
                 var restored = (ChestBlockEntity) level.getBlockEntity(pos);
                 helper.assertTrue(restored.getItem(0).getCount() == 17, "Failed collection must restore exactly 17 diamonds");
-                for (int slot = 0; slot < inventory.getContainerSize(); slot++)
+                for (var slot = 0; slot < inventory.getContainerSize(); slot++)
                     helper.assertTrue(inventory.getItem(slot).is(Items.STONE)
                             && inventory.getItem(slot).getCount() == 64, "Failed collection must restore inventory");
             }
@@ -201,7 +201,7 @@ public final class SkillRepairGameTests {
             var undo = action.apply();
             helper.assertTrue(level.getBlockState(pos).isAir(), "Successful collection removes chest");
             int diamonds = 0, chests = 0;
-            for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            for (var slot = 0; slot < inventory.getContainerSize(); slot++) {
                 var stack = inventory.getItem(slot);
                 if (stack.is(Items.DIAMOND)) diamonds += stack.getCount();
                 if (stack.is(Items.CHEST)) chests += stack.getCount();

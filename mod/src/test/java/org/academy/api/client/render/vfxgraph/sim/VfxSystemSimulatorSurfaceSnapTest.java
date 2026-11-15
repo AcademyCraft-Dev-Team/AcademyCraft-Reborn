@@ -1,12 +1,13 @@
 package org.academy.api.client.render.vfxgraph.sim;
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcCurve;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
-import org.academy.api.client.render.vfxgraph.arc.SurfaceConstraint;
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer;
+import org.academy.internal.client.render.vfxgraph.arc.SurfaceConstraint;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
@@ -32,7 +33,7 @@ class VfxSystemSimulatorSurfaceSnapTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -65,7 +66,7 @@ class VfxSystemSimulatorSurfaceSnapTest {
         }
         var buf = sim.arcBuffer();
         for (var a = 0; a < buf.count(); a++) {
-            var arc = buf.arc(a);
+            var arc = ArcTestSupport.at(buf, a);
             if (!arc.hasSurface()) continue;
             assertEquals(0f, arc.y(0), 1e-3f, "endpoint should stay snapped to plane across frames");
             assertEquals(0f, arc.y(arc.size() - 1), 1e-3f);
@@ -76,8 +77,8 @@ class VfxSystemSimulatorSurfaceSnapTest {
     void arcsWithoutSurfaceStayFree() {
         // 手动构造无表面弧：噪声动画应让其漂移（不被吸附）
         var surface = MeshAssets.plane(2f);
-        var buf = new ArcBuffer();
-        var arc = buf.add();
+        var buf = new CurveBuffer();
+        var arc = ArcTestSupport.add(buf);
         arc.setLifetime(10f);
         arc.setSurface(surface); // 有表面
         for (var i = 0; i < 12; i++) {

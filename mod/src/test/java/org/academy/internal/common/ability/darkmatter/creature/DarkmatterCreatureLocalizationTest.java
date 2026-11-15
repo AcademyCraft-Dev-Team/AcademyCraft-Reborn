@@ -2,7 +2,7 @@ package org.academy.internal.common.ability.darkmatter.creature;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
+import org.academy.internal.common.ability.darkmatter.DarkmatterCreatureRegistries;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStreamReader;

@@ -118,7 +118,7 @@ public final class SpatialStorageGameTests {
                 data.store(secondId, new ItemStack(net.minecraft.world.item.Items.STONE, 12));
                 level.setBlockAndUpdate(barrelPos, Blocks.BARREL.defaultBlockState());
                 barrel = (Container) level.getBlockEntity(barrelPos);
-                for (int slot = 0; slot < barrel.getContainerSize(); slot++) {
+                for (var slot = 0; slot < barrel.getContainerSize(); slot++) {
                     barrel.setItem(slot, new ItemStack(net.minecraft.world.item.Items.STONE, slot == 0 ? 60 : 64));
                 }
                 player.setShiftKeyDown(true);
@@ -139,11 +139,11 @@ public final class SpatialStorageGameTests {
                 var loaded = SpatialStorageSavedData.CODEC.parse(ops, encoded).getOrThrow();
                 helper.assertTrue(loaded.count(secondId) == 11 && loaded.count(id) == 9,
                         "Server storage round-trip changed counts");
-                long namedCount = loaded.transfer(secondId, Integer.MAX_VALUE, (resource, count) ->
+                var namedCount = loaded.transfer(secondId, Integer.MAX_VALUE, (resource, count) ->
                         resource.get(DataComponents.CUSTOM_NAME) != null ? count : 0L);
                 helper.assertTrue(namedCount == 3 && loaded.count(secondId) == 8,
                         "Serialized item components were not preserved");
-                long refused = loaded.transfer(secondId, 1, (resource, count) -> 0L);
+                var refused = loaded.transfer(secondId, 1, (resource, count) -> 0L);
                 helper.assertTrue(refused == 0 && loaded.count(secondId) == 8, "Refusal discarded stored items");
                 try {
                     AbilityBlockDrops.run(player, () -> {

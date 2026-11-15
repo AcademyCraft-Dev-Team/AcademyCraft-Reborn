@@ -17,6 +17,7 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.data.SkillData;
 import org.academy.api.common.ability.event.*;
+import org.academy.api.common.ability.program.ProgramSharedVariables;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.registries.AcademyKeys;
@@ -27,14 +28,14 @@ import org.academy.api.server.ability.AbilityResourceLedger;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.api.server.world.level.storage.PlayerData;
-import org.academy.api.server.world.level.storage.WorldData;
 import org.academy.internal.common.ability.development.AbilityDevelopmentAccess;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.ability.proficiency.ProficiencyPolicy;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 import org.academy.internal.server.config.AbilityConfig;
+import org.academy.internal.server.world.level.storage.PlayerData;
+import org.academy.internal.server.world.level.storage.WorldData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.annotation.SubscribePacket;
@@ -48,11 +49,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-public final class AbilitySystemServer {
+public final class AbilitySystemServer implements SkillSystem {
     private static final Logger LOGGER = AcademyCraft.getLogger();
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
     );
+
+    static {
+        SkillSystems.register(AbilitySystemServer::getSystem);
+    }
     private static final ConcurrentHashMap<UUID, DevelopData> DEVELOP_DATA_MAP = new ConcurrentHashMap<>();
     private static volatile boolean DEV_MODE = false;
     private final Map<UUID, Set<ServerContext>> activeContexts;
@@ -565,6 +570,27 @@ public final class AbilitySystemServer {
 
     public boolean proficiencyEnabled(ServerPlayer player) {
         return ProficiencyPolicy.server(player).enabled();
+    }
+
+    @Override
+    public Map<String, ProgramSharedVariables.SavedValue> getProgramSharedVariables(UUID uuid, String category) {
+        return getPlayerData(uuid).getProgramSharedVariables(category);
+    }
+
+    @Override
+    public void setProgramSharedVariable(UUID uuid, String category, String name,
+                                         ProgramSharedVariables.SavedValue value) {
+        getPlayerData(uuid).setProgramSharedVariable(category, name, value);
+    }
+
+    @Override
+    public void removeProgramSharedVariable(UUID uuid, String category, String name) {
+        getPlayerData(uuid).removeProgramSharedVariable(category, name);
+    }
+
+    @Override
+    public void clearProgramSharedVariables(UUID uuid, String category) {
+        getPlayerData(uuid).clearProgramSharedVariables(category);
     }
 
     public boolean isSkillLearned(UUID uuid, String skillKey) {

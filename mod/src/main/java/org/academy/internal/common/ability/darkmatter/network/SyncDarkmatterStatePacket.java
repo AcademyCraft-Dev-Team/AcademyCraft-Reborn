@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import org.academy.api.common.network.PacketTypes;
+import org.academy.internal.common.network.PacketTypes;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
 import org.misaka.api.common.network.packet.Packet;

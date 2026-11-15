@@ -145,10 +145,6 @@ public final class GlowEffect {
         }
     }
 
-    public static void requestGlow() {
-        hasBeenUsed = true;
-    }
-
     public void captureDepth() {
         if (!hasBeenUsed && !VfxGraphManager.INSTANCE.hasGlowData()
                 && !VfxGlowHooks.hasGlowLines()) return;
@@ -178,6 +174,14 @@ public final class GlowEffect {
     }
 
     public void finish() {
+        finish(true);
+    }
+
+    public void finishHandGlow() {
+        finish(false);
+    }
+
+    private void finish(boolean renderWorldGlow) {
         var mainRenderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         var main = mainRenderTarget.getColorTextureView();
         var scene = PostEffect.MAIN_SCENE.getColorTextureView();
@@ -186,10 +190,12 @@ public final class GlowEffect {
             if (current == null || main == null) return;
             var inputView = current.getColorTextureView();
             if (inputView == null) return;
-            if (VfxGraphManager.INSTANCE.hasGlowData()) {
-                VfxGraphManager.INSTANCE.renderGlowFrame(inputView, current.getDepthTextureView());
+            if (renderWorldGlow) {
+                if (VfxGraphManager.INSTANCE.hasGlowData()) {
+                    VfxGraphManager.INSTANCE.renderGlowFrame(inputView, current.getDepthTextureView());
+                }
+                VfxGlowHooks.renderGlowLines(inputView, current.getDepthTextureView());
             }
-            VfxGlowHooks.renderGlowLines(inputView, current.getDepthTextureView());
             blurAndBlend(inputView, mainRenderTarget, main);
             if (scene != null) {
                 var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);

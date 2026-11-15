@@ -7,7 +7,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.input.TemporalInputAccess;
-import org.academy.api.client.input.UiInputContext;
 import org.academy.api.server.time.TemporalAccumulator;
 import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.internal.server.time.TemporalBoundaryProtection;
@@ -108,8 +107,7 @@ public final class TemporalClientRuntime {
             CallbackInfo callback) {
         var minecraft = Minecraft.getInstance();
         return TemporalBoundaryProtection.protectCallback(
-                callback, minecraft != null && minecraft.gui.screen() == null && isExternallyImmune(minecraft.player),
-                UiInputContext::isActive);
+                callback, minecraft != null && minecraft.gui.screen() == null && isExternallyImmune(minecraft.player));
     }
 
     public static boolean isLocalExternallyImmune() {

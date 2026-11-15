@@ -1,8 +1,8 @@
 package org.academy.internal.server.ability;
 
 import org.academy.api.common.data.AbilityData;
-import org.academy.api.server.world.level.storage.PlayerData;
-import org.academy.api.server.world.level.storage.WorldData;
+import org.academy.internal.server.world.level.storage.PlayerData;
+import org.academy.internal.server.world.level.storage.WorldData;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 

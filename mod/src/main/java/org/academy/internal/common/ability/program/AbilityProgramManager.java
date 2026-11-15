@@ -19,7 +19,6 @@ import org.academy.api.common.ability.program.AbilityProgram;
 import org.academy.api.common.ability.program.ProgramBook;
 import org.academy.api.common.ability.program.ProgramDiagnosticCode;
 import org.academy.api.server.ability.program.AbilityProgramService;
-import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.client.ability.program.AbilityProgramEditorClient;
 import org.academy.internal.common.ability.AbilityCategoryNames;
 import org.academy.internal.common.ability.accelerator.program.AcceleratorProgramExecutionBridge;
@@ -46,6 +45,7 @@ import org.academy.internal.common.ability.teleport.program.TeleportProgramExecu
 import org.academy.internal.common.ability.teleport.program.TeleportProgramNodeCatalog;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.world.level.storage.PlayerData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;

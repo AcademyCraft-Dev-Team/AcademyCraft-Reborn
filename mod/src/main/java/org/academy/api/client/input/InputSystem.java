@@ -117,8 +117,7 @@ public final class InputSystem {
     public static void addExclusiveKeyBinding(
             String keyName, KeyCombination combo, Consumer<BindingContext> handler, BooleanSupplier active
     ) {
-        addKeyBinding(keyName, withAction(combo, ANY_ACTION),
-                context -> UiInputContext.run(() -> handler.accept(context)));
+        addKeyBinding(keyName, withAction(combo, ANY_ACTION), handler);
         EXCLUSIVE_BINDINGS.put(keyName, active);
     }
 
@@ -231,7 +230,7 @@ public final class InputSystem {
     }
 
     private static @Nullable String modifierName(int modifiers, int combined, int left, String base) {
-        int held = modifiers & combined;
+        var held = modifiers & combined;
         if (held == 0) return null;
         if (held == combined) return base;
         if (held == left) return "L" + base;
@@ -342,7 +341,7 @@ public final class InputSystem {
     public static void setKeyBindingEnabled(String keyName, boolean enabled) {
         var current = KEY_BINDINGS.get(keyName);
         if (current == null) return;
-        if (!UiInputContext.isActive()
+        if (!isUiContext()
                 && TemporalInputAccess.isExternalControl()) {
             enabled = TemporalInputAccess.externalWrite(keyName, enabled, current.enabled,
                     TemporalInputAccess.isLocalExternallyImmune());
@@ -380,6 +379,11 @@ public final class InputSystem {
     public static boolean isKeyBindingEnabled(String keyName) {
         var binding = KEY_BINDINGS.get(keyName);
         return binding != null && binding.enabled;
+    }
+
+    static boolean isUiContext() {
+        var minecraft = Minecraft.getInstance();
+        return minecraft != null && minecraft.gui.screen() != null;
     }
 
     public static boolean isDown(InputType type, int key) {
@@ -467,9 +471,9 @@ public final class InputSystem {
     }
 
     public static int pinModifierSides(int modifiers, int side) {
-        int masked = normalizeModifiers(modifiers);
+        var masked = normalizeModifiers(modifiers);
         if (side != SIDE_LEFT && side != SIDE_RIGHT) return canonicalizeModifiers(masked);
-        int pinned = 0;
+        var pinned = 0;
         pinned |= pinModifierClass(masked, InputConstants.MOD_SHIFT, SDLKeycode.SDL_KMOD_LSHIFT, SDLKeycode.SDL_KMOD_RSHIFT, side);
         pinned |= pinModifierClass(masked, InputConstants.MOD_CONTROL, SDLKeycode.SDL_KMOD_LCTRL, SDLKeycode.SDL_KMOD_RCTRL, side);
         pinned |= pinModifierClass(masked, InputConstants.MOD_ALT, SDLKeycode.SDL_KMOD_LALT, SDLKeycode.SDL_KMOD_RALT, side);
@@ -484,8 +488,8 @@ public final class InputSystem {
 
     static boolean modifiersMatch(int comboModifiers, int eventModifiers) {
         if (comboModifiers == ANY_MODIFIER) return true;
-        int combo = normalizeModifiers(comboModifiers);
-        int event = normalizeModifiers(eventModifiers);
+        var combo = normalizeModifiers(comboModifiers);
+        var event = normalizeModifiers(eventModifiers);
         return matchModifierClass(combo, event, InputConstants.MOD_SHIFT)
                 && matchModifierClass(combo, event, InputConstants.MOD_CONTROL)
                 && matchModifierClass(combo, event, InputConstants.MOD_ALT)
@@ -493,8 +497,8 @@ public final class InputSystem {
     }
 
     private static boolean matchModifierClass(int combo, int event, int combined) {
-        int configured = combo & combined;
-        int pressed = event & combined;
+        var configured = combo & combined;
+        var pressed = event & combined;
         if (configured == combined) return pressed != 0;
         if (configured != 0) return (pressed & configured) == configured;
         return pressed == 0;
@@ -870,8 +874,8 @@ public final class InputSystem {
      */
     public static int canonicalizeModifiers(int modifiers) {
         if (modifiers == ANY_MODIFIER) return ANY_MODIFIER;
-        int masked = normalizeModifiers(modifiers);
-        int canonical = 0;
+        var masked = normalizeModifiers(modifiers);
+        var canonical = 0;
         if ((masked & InputConstants.MOD_SHIFT) != 0) canonical |= InputConstants.MOD_SHIFT;
         if ((masked & InputConstants.MOD_CONTROL) != 0) canonical |= InputConstants.MOD_CONTROL;
         if ((masked & InputConstants.MOD_ALT) != 0) canonical |= InputConstants.MOD_ALT;

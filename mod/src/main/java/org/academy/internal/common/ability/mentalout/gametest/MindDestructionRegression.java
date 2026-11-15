@@ -15,8 +15,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.entitycontrol.*;
 import org.academy.api.server.ability.AbilityResourceAccount;
-import org.academy.api.server.ability.electromaster.MagneticFieldEffects;
-import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.api.server.time.TemporalApi;
 import org.academy.api.server.time.TemporalChannel;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -27,6 +25,8 @@ import org.academy.internal.common.ability.mentalout.skills.lv5.MindDestruction;
 import org.academy.internal.common.skilldata.OutputControlData;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.electromaster.MagneticFieldEffects;
+import org.academy.internal.server.damage.HealthLossGuards;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -78,7 +78,7 @@ final class MindDestructionRegression {
                 "Stripping must release the cast's reaction slowdown");
         MentalControlApi.apply(ControlRequest.permanent(controller, immune, SOURCE, 100,
                 new ControlDirective.FreezeAi())).close();
-        for (int i = 0; i < 25; i++) MagneticFieldEffects.setPassives(immune, true);
+        for (var i = 0; i < 25; i++) MagneticFieldEffects.setPassives(immune, true);
         helper.assertTrue(!MentalImmunity.isImmune(immune), "Passive registration cannot restore stripped immunity");
         MagneticFieldEffects.setPassives(immune, false);
         MindDestruction.tick(server);
@@ -151,7 +151,7 @@ final class MindDestructionRegression {
         var startTime = level.getGameTime();
         MentalControlApi.restoreMentalProtection(resistant);
         // Build real automatic resistance, then prove restoration cannot revive its old timer.
-        for (int tick = 0; tick <= 401; tick++) {
+        for (var tick = 0; tick <= 401; tick++) {
             clock.setGameTime(startTime + tick);
             MentalResistanceManager.markTaggedAffected(controller, resistant);
             MentalResistanceManager.tick(server);
@@ -161,7 +161,7 @@ final class MindDestructionRegression {
         MentalControlApi.restoreMentalProtection(resistant);
         helper.assertValueEqual(MentalControlApi.resistanceRemainingTicks(resistant), 0L, "Old resistance timer must be deleted");
         MentalControlApi.suppressMentalProtection(resistant);
-        for (int tick = 402; tick <= 850; tick++) {
+        for (var tick = 402; tick <= 850; tick++) {
             clock.setGameTime(startTime + tick);
             MentalResistanceManager.markTaggedAffected(controller, resistant);
             MentalResistanceManager.tick(server);
@@ -178,7 +178,7 @@ final class MindDestructionRegression {
         helper.assertTrue(MentalResistanceManager.progress(player) > 0, "Player must have real break-free progress");
         MentalControlApi.suppressMentalProtection(player);
         helper.assertValueEqual(MentalResistanceManager.progress(player), 0, "Suppression clears player input progress");
-        for (int tick = 851; tick <= 900; tick++) {
+        for (var tick = 851; tick <= 900; tick++) {
             clock.setGameTime(startTime + tick);
             MentalResistanceManager.markAffected(controller, player, true);
             input(player, tick, MentalResistanceManager.INPUT_MASK);
@@ -187,7 +187,7 @@ final class MindDestructionRegression {
         helper.assertValueEqual(MentalResistanceManager.threshold(player), 1, "Suppression blocks new input challenges");
         MentalControlApi.restoreMentalProtection(player);
         helper.assertValueEqual(MentalControlApi.resistanceRemainingTicks(player), 0L, "No hidden player block may reappear");
-        for (int tick = 901; tick <= 920 && !MentalResistanceManager.isManuallyResistant(player); tick++) {
+        for (var tick = 901; tick <= 920 && !MentalResistanceManager.isManuallyResistant(player); tick++) {
             clock.setGameTime(startTime + tick);
             MentalResistanceManager.markAffected(controller, player, true);
             input(player, tick, MentalResistanceManager.INPUT_MASK);

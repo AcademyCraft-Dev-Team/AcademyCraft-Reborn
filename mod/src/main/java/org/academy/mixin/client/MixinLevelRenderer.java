@@ -15,7 +15,7 @@ import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.ability.aeromanip.HighSpeedJetHighlightClient;
 import org.academy.internal.client.ability.mentalout.MentaloutRosterClientState;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
+import org.academy.internal.client.render.effect.VfxContexts;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.joml.Vector3f;
 import org.joml.Vector4f;

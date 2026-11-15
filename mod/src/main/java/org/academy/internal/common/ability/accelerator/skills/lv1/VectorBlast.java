@@ -118,7 +118,7 @@ public final class VectorBlast extends Skill {
 
     static Vec3 blastImpulse(Vec3 direction, double distance, double range) {
         if (direction.lengthSqr() < 1.0e-8 || range <= 0) return Vec3.ZERO;
-        double strength = 3.2 * (1.0 - 0.55 * Math.clamp(distance / range, 0.0, 1.0));
+        var strength = 3.2 * (1.0 - 0.55 * Math.clamp(distance / range, 0.0, 1.0));
         return direction.normalize().scale(strength).add(0, 0.35, 0);
     }
 

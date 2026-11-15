@@ -2,7 +2,10 @@ package org.academy.desktop.platform
 
 import com.mojang.blaze3d.pipeline.TextureTarget
 import com.mojang.renderpearl.api.GpuFormat
-import org.academy.api.client.gui.event.*
+import org.academy.api.client.gui.event.CharTypedEvent
+import org.academy.api.client.gui.event.EventType
+import org.academy.api.client.gui.event.KeyEvent
+import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.frame.UiFrame
 import org.academy.api.client.gui.render.UiContext
 import org.academy.api.client.gui.widget.WidgetContainer
@@ -71,7 +74,7 @@ class DesktopUiHost(
                 SDL_EVENT_MOUSE_BUTTON_DOWN, SDL_EVENT_MOUSE_BUTTON_UP -> onMouseButton(sdlEvent)
                 SDL_EVENT_MOUSE_WHEEL -> {
                     val wheel = sdlEvent.wheel()
-                    onScroll(wheel.x().toDouble(), wheel.y().toDouble())
+                    onScroll(wheel.y().toDouble())
                 }
             }
             imGuiBackend?.onSdlEvent(sdlEvent)
@@ -145,8 +148,8 @@ class DesktopUiHost(
         }
     }
 
-    private fun onScroll(x: Double, y: Double) {
-        root.dispatchEvent(ScrollEvent(mouseX, mouseY, y, x, ctrlDown))
+    private fun onScroll(y: Double) {
+        root.dispatchEvent(MouseEvent.createScrollEvent(mouseX, mouseY, y))
     }
 
     private fun onKey(event: SDL_Event) {

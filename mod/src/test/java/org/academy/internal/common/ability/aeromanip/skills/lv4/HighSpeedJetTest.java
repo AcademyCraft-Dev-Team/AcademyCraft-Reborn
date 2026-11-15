@@ -71,7 +71,7 @@ class HighSpeedJetTest {
 
     @Test
     void activationPacketRetainsExplicitStructureLaunchMode() {
-        ByteBuf buffer = Unpooled.buffer();
+        var buffer = Unpooled.buffer();
         try {
             HighSpeedJet.ActivatePacket.CODEC.encode(
                     buffer, new HighSpeedJet.ActivatePacket(true));

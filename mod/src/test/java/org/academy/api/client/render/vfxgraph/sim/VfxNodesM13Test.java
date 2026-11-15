@@ -1,5 +1,6 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
@@ -23,6 +24,7 @@ class VfxNodesM13Test {
 
     @BeforeEach
     void setUp() {
+        VfxSeriesTestRegistration.install();
         vfxRegistry = new VfxNodeRegistry();
         VfxNodes.registerAll(new SimpleNodeRegistry(), vfxRegistry);
     }

@@ -5,7 +5,7 @@ import net.minecraft.world.entity.Entity;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.GraphEffect;
-import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
+import org.academy.api.client.render.vfxgraph.curve.EffectCurveSource;
 import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
 import org.academy.api.client.render.vfxgraph.block.EffectBlockGeometrySource;
 import org.academy.api.client.render.vfxgraph.instance.EffectInstanceGeometrySource;
@@ -30,13 +30,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-/**
- * 运行时 VFX 图效果实例（M15-03）：包装 [GraphEffect] + 世界变换 + 实体跟随 + 参数绑定 + 生命周期。
- *
- * <p>粒子在发射器局部坐标模拟，渲染时叠加 [WorldTransform]（位置/朝向/缩放）映射到世界。
- * 绑定经 [bind] 注入存活参数（M15-04），逐 tick 采样 Supplier，不重建模拟器。
- * M27 支持容器模型构造（[VfxSystem] → [VfxSystemSimulator]）。</p>
- */
 public final class ActiveEffect {
     private final String assetKey;
     private final VfxNodeRegistry registry;
@@ -46,31 +39,20 @@ public final class ActiveEffect {
     private final Quaternionf rotation = new Quaternionf();
     private final Map<String, Supplier<Value>> bindings = new LinkedHashMap<>();
     private final Map<String, SurfaceProjector> surfaces = new LinkedHashMap<>();
-    private final Map<String, EffectArcSource> arcSources = new LinkedHashMap<>();
+    private final Map<String, EffectCurveSource> arcSources = new LinkedHashMap<>();
     private @Nullable EffectInstanceGeometrySource instanceGeometrySource;
     private @Nullable EffectBlockGeometrySource blockGeometrySource;
 
-    /**
-     * Bind procedural local paths without rebuilding the graph or allocating an effect per stroke.
-     */
-    public void bindArcs(String name, EffectArcSource source) {
+    public void bindArcs(String name, EffectCurveSource source) {
         arcSources.put(name, Objects.requireNonNull(source));
         effect.setArcSource(name, source);
     }
 
-    /**
-     * Bind custom textured instanced geometry (E7); the source rewrites its
-     * buffers every simulation tick in effect-local coordinates.
-     */
     public void bindInstanceGeometry(EffectInstanceGeometrySource source) {
         instanceGeometrySource = Objects.requireNonNull(source);
         effect.setInstanceGeometrySource(source);
     }
 
-    /**
-     * Bind baked block-model geometry (E2); the source rewrites its
-     * per-layer buffers every simulation tick in world coordinates.
-     */
     public void bindBlockGeometry(EffectBlockGeometrySource source) {
         blockGeometrySource = Objects.requireNonNull(source);
         effect.setBlockGeometrySource(source);
@@ -82,9 +64,6 @@ public final class ActiveEffect {
 
     private final Map<String, SurfaceSampler> samplers = new LinkedHashMap<>();
 
-    /**
-     * A posed surface, including normals; retained through editor reload and simulation reset.
-     */
     public void bindSurfaceSampler(String name, SurfaceSampler sampler) {
         samplers.put(name, Objects.requireNonNull(sampler));
         effect.setSurfaceSampler(name, sampler);
@@ -100,9 +79,6 @@ public final class ActiveEffect {
         return refreshKey;
     }
 
-    /**
-     * Renew an analytic pulse without rebuilding its simulator or pooled arc buffers.
-     */
     public void refresh(String key) {
         refreshKey = Objects.requireNonNull(key);
         gameAgeSeconds = 0;
@@ -112,9 +88,6 @@ public final class ActiveEffect {
         frameBinding = Objects.requireNonNull(binding);
     }
 
-    /**
-     * A uniformly scaled attachment matrix, e.g. a hand, bone, camera, or non-player emitter.
-     */
     public void setTransform(Matrix4fc transform) {
         transform.getTranslation(position);
         transform.getUnnormalizedRotation(rotation).normalize();
@@ -129,9 +102,6 @@ public final class ActiveEffect {
         return gameAgeSeconds;
     }
 
-    /**
-     * The presentation clock advances even when the effect is offscreen, and freezes on pause.
-     */
     public void bindGameTime(String parameter) {
         bind(parameter, () -> Value.of(gameAgeSeconds));
     }
@@ -147,9 +117,6 @@ public final class ActiveEffect {
         return false;
     }
 
-    /**
-     * Bind a local projection surface; preserved through asset reloads, independent of player entities.
-     */
     public void bindSurface(String name, SurfaceProjector surface) {
         surfaces.put(name, Objects.requireNonNull(surface));
         effect.setSurfaceProjector(name, surface);
@@ -166,9 +133,6 @@ public final class ActiveEffect {
     private float renderDistance = -1f;
     private float hiddenElapsed;
 
-    /**
-     * Explicit conservative world-space bounds, independent of the graph emitter origin.
-     */
     public void setCullingSphere(Vector3f center, float radius) {
         if (!Float.isFinite(radius) || radius < 0 || !center.isFinite()) {
             throw new IllegalArgumentException("Invalid VFX bounds");
@@ -201,13 +165,10 @@ public final class ActiveEffect {
         renderVisible = visible;
     }
 
-    /**
-     * Coarse offscreen simulation preserves ageing without per-frame particle/arc work.
-     */
     float simulationStep(float dt, boolean visible) {
         hiddenElapsed += dt;
         if (!visible && hiddenElapsed < 0.2f) return 0f;
-        float step = Math.min(hiddenElapsed, 0.25f);
+        var step = Math.min(hiddenElapsed, 0.25f);
         hiddenElapsed = 0f;
         return step;
     }
@@ -224,9 +185,6 @@ public final class ActiveEffect {
         this.effect = new GraphEffect(graph, registry);
     }
 
-    /**
-     * 容器模型构造（M27）：VfxSystem → GraphEffect.container（批次 flow + 数据流算子）。
-     */
     ActiveEffect(String assetKey, VfxSystem system, VfxNodeRegistry registry,
                  VfxBlockRegistry blockRegistry, VfxOperatorRegistry operatorRegistry, Vector3f position) {
         this.assetKey = assetKey;
@@ -249,9 +207,6 @@ public final class ActiveEffect {
         return effect.spec();
     }
 
-    /**
-     * 全部输出规格（M21n 多输出，供渲染器池/glow 判定）。
-     */
     public List<RenderSpec> specs() {
         return effect.specs();
     }
@@ -280,10 +235,6 @@ public final class ActiveEffect {
         this.scale = scale;
     }
 
-    /**
-     * 为一次性效果设置真实时间寿命。使用单调时钟而不是累计模拟步长，避免管理器的
-     * tick 与逐帧模拟同时推进时把寿命重复扣除。
-     */
     public void setLifetimeSeconds(float lifetimeSeconds) {
         if (!Float.isFinite(lifetimeSeconds) || lifetimeSeconds <= 0f) {
             expiresAtNanos = Long.MAX_VALUE;
@@ -293,16 +244,10 @@ public final class ActiveEffect {
         expiresAtNanos = System.nanoTime() + Math.max(1L, durationNanos);
     }
 
-    /**
-     * 跳过管理器的距离与视锥剔除。适用于范围远大于发射器包围球、或本身输出屏幕空间画面的效果。
-     */
     public void setAlwaysVisible(boolean alwaysVisible) {
         this.alwaysVisible = alwaysVisible;
     }
 
-    /**
-     * External analytic effects may cull before simulation without freezing their presentation clock.
-     */
     public void setFrameVisible(boolean visible) {
         frameVisible = visible;
     }
@@ -319,9 +264,6 @@ public final class ActiveEffect {
         return alwaysVisible;
     }
 
-    /**
-     * 为超大世界空间效果提供独立的最小远裁剪面，不受客户端区块视距降低影响。
-     */
     public void setMinimumFarPlane(float minimumFarPlane) {
         this.minimumFarPlane = Math.max(0f, minimumFarPlane);
     }
@@ -330,13 +272,6 @@ public final class ActiveEffect {
         return minimumFarPlane;
     }
 
-    GraphCamera cameraForRendering(GraphCamera camera) {
-        return minimumFarPlane > 0f ? camera.withMinimumFarPlane(minimumFarPlane) : camera;
-    }
-
-    /**
-     * 跟随实体：每 tick 把发射器原点对齐实体位置。
-     */
     public void follow(@Nullable Entity entity) {
         this.followEntity = entity;
         if (entity != null) {
@@ -344,9 +279,6 @@ public final class ActiveEffect {
         }
     }
 
-    /**
-     * 绑定存活参数：每次 tick 采样 supplier 写入图参数（不重建模拟器，M15-04）。
-     */
     public void bind(String parameterId, Supplier<Value> supplier) {
         bindings.put(parameterId, supplier);
     }
@@ -359,9 +291,6 @@ public final class ActiveEffect {
         return stopped;
     }
 
-    /**
-     * tick 并返回是否应移除（显式 stop 或跟随实体已移除）。
-     */
     public boolean tick(float dt) {
         if (updateFrame(dt, null, 0)) return true;
         simulate(dt);
@@ -372,9 +301,6 @@ public final class ActiveEffect {
         if (dt > 0f) effect.tick(dt);
     }
 
-    /**
-     * Lifecycle and bindings must run even when simulation or drawing is budgeted out.
-     */
     boolean updateState() {
         if (isExpired()) {
             stopped = true;
@@ -417,9 +343,6 @@ public final class ActiveEffect {
         effect.render(target, depth, camera, renderer, clear, worldTransform(), bloomPass);
     }
 
-    /**
-     * 资产重载（M15-05）：用新解码的图重建效果，保留位置/绑定。
-     */
     void reload(Graph graph) {
         effect = new GraphEffect(graph, registry);
         surfaces.forEach(effect::setSurfaceProjector);
@@ -436,9 +359,6 @@ public final class ActiveEffect {
         }
     }
 
-    /**
-     * 容器资产重载（M27）：用新解码的 VfxSystem 重建效果，保留位置/绑定。
-     */
     void reload(VfxSystem system) {
         effect = GraphEffect.container(system, Objects.requireNonNull(blockRegistry),
                 Objects.requireNonNull(operatorRegistry), system.parameters());

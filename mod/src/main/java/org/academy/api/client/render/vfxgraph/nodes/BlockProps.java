@@ -6,31 +6,31 @@ import org.academy.api.client.render.vfxgraph.sim.SimContext;
 
 import java.util.Map;
 
-final class BlockProps {
+public final class BlockProps {
     private BlockProps() {
     }
 
-    static float getFloat(Map<String, String> properties, String id, float def) {
+    public static float getFloat(Map<String, String> properties, String id, float def) {
         var v = properties.get(id);
         return v == null ? def : Float.parseFloat(v);
     }
 
-    static int getInt(Map<String, String> properties, String id, int def) {
+    public static int getInt(Map<String, String> properties, String id, int def) {
         var v = properties.get(id);
         return v == null ? def : Integer.parseInt(v);
     }
 
-    static boolean getBool(Map<String, String> properties, String id, boolean def) {
+    public static boolean getBool(Map<String, String> properties, String id, boolean def) {
         var v = properties.get(id);
         return v == null ? def : Boolean.parseBoolean(v);
     }
 
-    static String getString(Map<String, String> properties, String id, String def) {
+    public static String getString(Map<String, String> properties, String id, String def) {
         return properties.getOrDefault(id, def);
     }
 
-    static float resolve(VfxBlock block, SimContext ctx, String id, float fallback, float min, float max) {
-        float property = Float.NaN;
+    public static float resolve(VfxBlock block, SimContext ctx, String id, float fallback, float min, float max) {
+        var property = Float.NaN;
         var text = block.properties().get(id);
         if (text != null) {
             try {
@@ -49,7 +49,7 @@ final class BlockProps {
         return Float.isFinite(value) ? Math.clamp(value, min, max) : fallback;
     }
 
-    static float[] getColor(Map<String, String> properties, String id) {
+    public static float[] getColor(Map<String, String> properties, String id) {
         var csv = properties.get(id);
         if (csv == null) return new float[]{1f, 1f, 1f, 1f};
         var parts = csv.split(",");
@@ -61,7 +61,7 @@ final class BlockProps {
         };
     }
 
-    static EmitterShape buildShape(Map<String, String> properties) {
+    public static EmitterShape buildShape(Map<String, String> properties) {
         var ox = getFloat(properties, "origin_x", 0f);
         var oy = getFloat(properties, "origin_y", 0f);
         var oz = getFloat(properties, "origin_z", 0f);

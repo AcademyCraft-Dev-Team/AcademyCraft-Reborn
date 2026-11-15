@@ -2,9 +2,6 @@ package org.academy.internal.common.ability.accelerator.skills.lv5.wing;
 
 import io.netty.buffer.Unpooled;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.ability.VortexAttackPattern;
-import org.academy.api.common.ability.VortexAttackSequence;
-import org.academy.api.common.ability.VortexAttackTargets;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -17,7 +14,7 @@ class BlackWingAttackPacketTest {
     void serverPatternTimeAndWorldTargetSurviveNetworkRoundTrip() {
         var pattern = VortexAttackPattern.RISE_SLAM;
         int[] order = {1, 4, 5, 2, 3};
-        for (int i = 0; i < 10; i++) {
+        for (var i = 0; i < 10; i++) {
             assertEquals(order[i % order.length], pattern.id());
             assertEquals(16, pattern.durationTicks());
             assertEquals(0.8f, pattern.durationSeconds(), 0.00001f);
@@ -48,12 +45,12 @@ class BlackWingAttackPacketTest {
     @Test
     void quadrilateralSurroundsTheCasterAtEveryHeading() {
         var center = new Vec3(103, 72, -245);
-        for (int yaw = 0; yaw < 360; yaw += 30) {
+        for (var yaw = 0; yaw < 360; yaw += 30) {
             var heading = Vec3.directionFromRotation(0f, yaw);
             var corners = VortexAttackTargets.quadrilateral(center, heading, 6, 6);
             var average = corners.stream().reduce(Vec3.ZERO, Vec3::add).scale(0.25);
             assertEquals(0, average.distanceTo(center), 1.0E-8);
-            for (int i = 0; i < 4; i++) {
+            for (var i = 0; i < 4; i++) {
                 var offset = corners.get(i).subtract(center);
                 assertEquals(72, offset.lengthSqr(), 1.0E-5);
                 assertEquals(i % 2 == 0 ? 6 : -6, offset.dot(heading), 1.0E-5);
@@ -70,7 +67,7 @@ class BlackWingAttackPacketTest {
             charged.incrementAndGet();
             return true;
         }));
-        for (int tick = 101; tick < 116; tick++) {
+        for (var tick = 101; tick < 116; tick++) {
             assertNull(sequence.tryBegin(tick, () -> {
                 charged.incrementAndGet();
                 return true;
@@ -85,13 +82,13 @@ class BlackWingAttackPacketTest {
 
     @Test
     void oldWorldsRetainSubTickAttackMotion() {
-        long start = 1L << 36;
+        var start = 1L << 36;
         for (var pattern : VortexAttackPattern.values()) {
-            float previous = -1f;
-            for (int frame = 0; frame <= 192; frame++) {
-                float elapsed = frame / 12f;
-                long wholeTicks = (long) elapsed;
-                float progress = pattern.progress(start, start + wholeTicks, elapsed - wholeTicks);
+            var previous = -1f;
+            for (var frame = 0; frame <= 192; frame++) {
+                var elapsed = frame / 12f;
+                var wholeTicks = (long) elapsed;
+                var progress = pattern.progress(start, start + wholeTicks, elapsed - wholeTicks);
                 assertEquals(elapsed / 16f, progress, 0.000001f);
                 assertTrue(progress > previous, "each rendered frame must advance even in old worlds");
                 previous = progress;

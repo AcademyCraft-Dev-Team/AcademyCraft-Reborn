@@ -59,11 +59,10 @@ import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.data.SkillData;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.ability.AreaEffectTargets;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.internal.client.ability.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -72,12 +71,13 @@ import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.ability.program.ProgramPowerScale;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.SkillVfxState;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.util.LevelUtil;
 import org.academy.internal.common.world.damagesource.*;
 import org.academy.internal.server.ability.AbilityEffectPolicy;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.vfx.SkillVfxService;
+import org.academy.internal.server.ability.SkillVfxService;
 import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -234,12 +234,12 @@ public class KineticEnergyApplied extends Skill {
         }
 
         private static void spawnShockwave(SkillVfxState.Burst burst) {
-            float lifetimeSeconds = Math.max(1, burst.lifetimeTicks()) / 20f;
+            var lifetimeSeconds = Math.max(1, burst.lifetimeTicks()) / 20f;
             var direction = burst.direction().normalize();
-            float yRot = (float) Math.toDegrees(Math.atan2(direction.z(), direction.x())) - 90f;
-            float xRot = (float) -Math.toDegrees(Math.atan2(direction.y(),
+            var yRot = (float) Math.toDegrees(Math.atan2(direction.z(), direction.x())) - 90f;
+            var xRot = (float) -Math.toDegrees(Math.atan2(direction.y(),
                     Math.sqrt(direction.x() * direction.x() + direction.z() * direction.z())));
-            long startedAt = System.nanoTime();
+            var startedAt = System.nanoTime();
             spawnShockwaveRing(burst, lifetimeSeconds, startedAt, 1f, 1f,
                     new Quaternionf().rotateX((float) Math.toRadians(-90f)));
             spawnShockwaveRing(burst, lifetimeSeconds, startedAt, 0.8f, 1f, new Quaternionf());
@@ -259,19 +259,19 @@ public class KineticEnergyApplied extends Skill {
             var effect = VfxGraphManager.INSTANCE.spawn(KINETIC_SHOCKWAVE_ASSET, burst.position().toVector3f());
             effect.setRotation(rotation);
             effect.setLifetimeSeconds(lifetimeSeconds);
-            float baseStrength = Math.clamp(0.018f + burst.intensity() * 0.006f, 0.02f, 0.055f);
-            float baseWidth = Math.clamp(0.18f + burst.intensity() * 0.035f, 0.2f, 0.42f);
+            var baseStrength = Math.clamp(0.018f + burst.intensity() * 0.006f, 0.02f, 0.055f);
+            var baseWidth = Math.clamp(0.18f + burst.intensity() * 0.035f, 0.2f, 0.42f);
             effect.bind("distortion_strength", () -> {
-                float progress = shockwaveProgress(startedAt, lifetimeSeconds);
+                var progress = shockwaveProgress(startedAt, lifetimeSeconds);
                 return Value.of(baseStrength * strengthScale * (1f - progress));
             });
             effect.bind("distortion_ring_width", () -> Value.of(baseWidth * widthScale));
             effect.bind("distortion_edge_blur", () -> {
-                float progress = shockwaveProgress(startedAt, lifetimeSeconds);
+                var progress = shockwaveProgress(startedAt, lifetimeSeconds);
                 return Value.of(0.055f + progress * 0.04f);
             });
             effect.bind("radius", () -> {
-                float progress = shockwaveProgress(startedAt, lifetimeSeconds);
+                var progress = shockwaveProgress(startedAt, lifetimeSeconds);
                 return Value.of(burst.radius() * progress);
             });
             effect.setCullingSphere(effect.position(), burst.radius() + 2f);

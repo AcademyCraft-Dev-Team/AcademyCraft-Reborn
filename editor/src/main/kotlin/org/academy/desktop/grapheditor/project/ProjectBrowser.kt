@@ -35,7 +35,7 @@ class ProjectBrowser(
             emptyList()
         } else {
             Files.list(dir).use { stream: Stream<Path> ->
-                stream.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".json") }
+                stream.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".json") && !it.fileName.toString().endsWith(".editor.json") }
                     .sorted()
                     .toList()
             }

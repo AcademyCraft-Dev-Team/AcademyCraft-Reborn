@@ -62,9 +62,9 @@ import org.academy.api.common.ability.event.SkillExecutionStartEvent;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.FrameProjectionContext;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
+import org.academy.internal.client.render.effect.FrameContext;
+import org.academy.internal.client.render.effect.FrameProjectionContext;
+import org.academy.internal.client.render.effect.VfxContexts;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -2932,7 +2932,7 @@ public final class SpacialExcision extends Skill {
         }
 
         private void broadcast(RecordedSegment segment, TeleportCompletedEvent event, SegmentPacket packet) {
-            ServerLevel sourceLevel = event.sourceLevel();
+            var sourceLevel = event.sourceLevel();
             var delta = segment.end().subtract(segment.start());
             var lengthSquared = delta.lengthSqr();
             if (!Double.isFinite(lengthSquared) || lengthSquared <= 0.0) return;

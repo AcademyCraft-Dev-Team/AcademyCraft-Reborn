@@ -35,7 +35,7 @@ class AbilityDataStatusProtectionTest {
 
     private static AbilityData protectedData(Class<?> owner) throws ReflectiveOperationException {
         var data = new AbilityData();
-        Field field = AbilityData.class.getDeclaredField("statusOwner");
+        var field = AbilityData.class.getDeclaredField("statusOwner");
         field.setAccessible(true);
         field.set(data, owner);
         return data;

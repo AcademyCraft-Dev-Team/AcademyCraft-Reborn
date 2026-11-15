@@ -14,10 +14,10 @@ public sealed interface DevelopmentSource
 
     StreamCodec<ByteBuf, DevelopmentSource> CODEC = StreamCodec.of(
             (buffer, source) -> {
-                if (source instanceof TabletDevelopmentSource(InteractionHand hand)) {
+                if (source instanceof TabletDevelopmentSource(var hand)) {
                     ByteBufCodecs.BOOL.encode(buffer, true);
                     ByteBufCodecs.VAR_INT.encode(buffer, hand.ordinal());
-                } else if (source instanceof BlockDevelopmentSource(BlockPos blockPos)) {
+                } else if (source instanceof BlockDevelopmentSource(var blockPos)) {
                     ByteBufCodecs.BOOL.encode(buffer, false);
                     BlockPos.STREAM_CODEC.encode(buffer, blockPos);
                 }

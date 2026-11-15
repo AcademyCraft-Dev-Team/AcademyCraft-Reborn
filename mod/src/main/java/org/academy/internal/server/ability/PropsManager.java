@@ -36,10 +36,10 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.attribute.AbilityFactor;
 import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.attribute.PropsMath;
-import org.academy.api.server.world.level.storage.PlayerData;
-import org.academy.api.server.world.level.storage.PropsData;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.attribute.PropsPackets;
+import org.academy.internal.server.world.level.storage.PlayerData;
+import org.academy.internal.server.world.level.storage.PropsData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 

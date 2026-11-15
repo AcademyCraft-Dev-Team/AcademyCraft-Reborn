@@ -26,10 +26,10 @@ import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.WingControlIntent;
-import org.academy.api.common.ability.WingFlightMotion;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.flight.WingControlIntent;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightMotion;
 import org.academy.internal.common.ability.accelerator.flight.WingFlightRuntime;
 import org.academy.internal.common.gametest.GameTestData;
 import org.academy.internal.server.ability.AbilitySystemServer;
@@ -77,12 +77,12 @@ public final class WingFlightNetworkGameTests {
             data.getCpData().setMaxCP(1_000_000);
             data.getCpData().setAvailableCP(1_000_000);
             if (!skill.isEnabled(player)) skill.toggle(player);
-            for (int buttons : new int[]{0, 1, 2, 4, 8, 5, 9, 6, 10, 16}) {
+            for (var buttons : new int[]{0, 1, 2, 4, 8, 5, 9, 6, 10, 16}) {
                 var input = new WingControlIntent(buttons, 123, 0);
                 var initial = new Vec3(.3, .1, -.7);
                 player.setDeltaMovement(initial);
                 WingFlightRuntime.clear(player, skill);
-                for (int packet = 0; packet < 100; packet++) {
+                for (var packet = 0; packet < 100; packet++) {
                     WingFlightRuntime.accept(player, skill, input);
                 }
                 helper.assertTrue(player.getDeltaMovement().equals(initial), "Packets must not apply movement");

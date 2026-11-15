@@ -5,7 +5,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
@@ -48,6 +47,12 @@ public final class MentalControlApi {
         ControlSnapshot snapshot(LivingEntity subject);
 
         boolean hasAiTakeover(LivingEntity subject);
+
+        boolean isProtectedTarget(LivingEntity subject);
+
+        void releaseBySubject(MinecraftServer server, UUID subjectId);
+
+        void clearResistance(LivingEntity subject);
 
         void releaseByControllerSourceAndSubject(
                 MinecraftServer server,
@@ -139,7 +144,7 @@ public final class MentalControlApi {
      */
     public static boolean hasMentalProtection(LivingEntity subject) {
         return subject != null && !MentalImmunity.isSuppressed(subject)
-                && (MentalControlRuntime.isProtectedTarget(subject)
+                && (requireBackend().isProtectedTarget(subject)
                 || subject.getType().builtInRegistryHolder().is(MentalControlTags.RESISTANCE));
     }
 
@@ -171,6 +176,14 @@ public final class MentalControlApi {
 
     public static boolean hasAiTakeover(LivingEntity subject) {
         return requireBackend().hasAiTakeover(subject);
+    }
+
+    public static void releaseBySubject(MinecraftServer server, UUID subjectId) {
+        requireBackend().releaseBySubject(server, subjectId);
+    }
+
+    public static void clearResistance(LivingEntity subject) {
+        requireBackend().clearResistance(subject);
     }
 
     public static void releaseByControllerSourceAndSubject(

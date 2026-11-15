@@ -1,6 +1,8 @@
-# Java 空值（null）书写规范
+# Java 书写规范
 
-本目录规范 Java 代码中 `null` 的使用：如何声明可空性、如何传递与返回空值、如何避免把 `null` 当作跨层通信的默认手段。
+本目录规范 Java 代码，如 `null` 的使用：如何声明可空性、如何传递与返回空值、如何避免把 `null` 当作跨层通信的默认手段。
+
+原则上不使用 Service Provider Interface。
 
 - 本目录适用于 `mod`、`editor`、`hack` 的全部 `src/main/java` 与 `src/test/java`。
 

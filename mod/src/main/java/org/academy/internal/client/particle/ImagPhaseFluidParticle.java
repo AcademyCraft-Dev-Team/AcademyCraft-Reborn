@@ -70,12 +70,12 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
 
     @Override
     public void extract(QuadParticleRenderState renderState, Camera camera, float partialTick) {
-        Vec3 cameraPos = camera.position();
-        float renderX = (float) (Mth.lerp(partialTick, xo, x) - cameraPos.x());
-        float renderY = (float) (Mth.lerp(partialTick, yo, y) - cameraPos.y());
-        float renderZ = (float) (Mth.lerp(partialTick, zo, z) - cameraPos.z());
-        float spin = (age + partialTick) * rotationSpeed;
-        Quaternionf rotation = new Quaternionf()
+        var cameraPos = camera.position();
+        var renderX = (float) (Mth.lerp(partialTick, xo, x) - cameraPos.x());
+        var renderY = (float) (Mth.lerp(partialTick, yo, y) - cameraPos.y());
+        var renderZ = (float) (Mth.lerp(partialTick, zo, z) - cameraPos.z());
+        var spin = (age + partialTick) * rotationSpeed;
+        var rotation = new Quaternionf()
                 .rotateX(baseRotationX + spin * 0.7F)
                 .rotateY(baseRotationY + spin);
 
@@ -107,7 +107,7 @@ public final class ImagPhaseFluidParticle extends SingleQuadParticle {
             float z,
             float partialTick
     ) {
-        float scale = getQuadSize(partialTick);
+        var scale = getQuadSize(partialTick);
         postVertex(output, rotation, x, y, z, 1.0F, -1.0F, scale, getU1(), getV1());
         postVertex(output, rotation, x, y, z, 1.0F, 1.0F, scale, getU1(), getV0());
         postVertex(output, rotation, x, y, z, -1.0F, 1.0F, scale, getU0(), getV0());

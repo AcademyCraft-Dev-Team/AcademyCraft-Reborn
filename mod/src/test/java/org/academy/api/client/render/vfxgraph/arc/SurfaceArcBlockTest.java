@@ -1,9 +1,11 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
+import org.academy.internal.client.render.vfxgraph.arc.SurfaceConstraint;
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
@@ -29,7 +31,7 @@ class SurfaceArcBlockTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -59,7 +61,7 @@ class SurfaceArcBlockTest {
         sim.step(1f / 60f);
 
         assertTrue(sim.arcBuffer().count() > 0, "arc_surface should spawn arcs on plane");
-        var arc = sim.arcBuffer().arc(0);
+        var arc = ArcTestSupport.at(sim.arcBuffer(), 0);
         assertTrue(arc.size() >= 3, "surface arc should have control points");
         assertTrue(arc.hasSurface(), "surface arc should carry its surface for endpoint snap");
         // 表面点在平面上（y=0 附近）
@@ -89,7 +91,7 @@ class SurfaceArcBlockTest {
         }
         var buf = sim.arcBuffer();
         for (var a = 0; a < buf.count(); a++) {
-            var arc = buf.arc(a);
+            var arc = ArcTestSupport.at(buf, a);
             if (!arc.hasSurface()) continue;
             assertEquals(0f, arc.y(0), 1e-3f, "first endpoint should snap to plane (y=0)");
             assertEquals(0f, arc.y(arc.size() - 1), 1e-3f, "last endpoint should snap to plane (y=0)");
@@ -119,7 +121,7 @@ class SurfaceArcBlockTest {
         simB.step(1f / 60f);
         assertEquals(simA.arcBuffer().count(), simB.arcBuffer().count());
         for (var i = 0; i < simA.arcBuffer().count(); i++) {
-            assertEquals(simA.arcBuffer().arc(i).size(), simB.arcBuffer().arc(i).size());
+            assertEquals(ArcTestSupport.at(simA.arcBuffer(), i).size(), ArcTestSupport.at(simB.arcBuffer(), i).size());
         }
     }
 }

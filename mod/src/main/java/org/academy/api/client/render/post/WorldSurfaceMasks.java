@@ -19,7 +19,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.vfx.DirectionalArea;
+import org.academy.api.common.util.DirectionalArea;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -171,8 +171,8 @@ public final class WorldSurfaceMasks {
             var score = state.scoreText;
             var leashes = state.leashStates;
             var shadows = List.copyOf(state.shadowPieces);
-            int outline = state.outlineColor;
-            boolean fire = state.displayFireAnimation;
+            var outline = state.outlineColor;
+            var fire = state.displayFireAnimation;
             try {
                 state.nameTag = null;
                 state.scoreText = null;

@@ -19,10 +19,9 @@ import net.minecraft.resources.Identifier;
 import org.academy.api.client.gui.environment.ResolvedTexture;
 import org.academy.api.client.gui.environment.UiEnvironment;
 import org.academy.api.client.render.post.PostEffect;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
-import org.academy.api.client.render.vfxgraph.arc.BlenderArcCurves;
-import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer;
+import org.academy.api.client.render.vfxgraph.curve.TubeCurve;
+import org.academy.api.client.render.vfxgraph.curve.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.block.BlockGeometryBuffer;
 import org.academy.api.client.render.vfxgraph.instance.InstanceGeometryBuffer;
 import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
@@ -168,7 +167,7 @@ public final class VfxGraphRenderer {
     private @Nullable ByteBuffer arcIndexStaging;
     private int arcTubeVertexCapacity;
     private int arcTubeIndexCapacity;
-    private @Nullable ArcBuffer arcBuffer;
+    private @Nullable CurveBuffer arcBuffer;
     private @Nullable InstanceGeometryBuffer instanceGeometry;
     private @Nullable BlockGeometryBuffer blockGeometry;
     private @Nullable GpuBuffer blockMeshVertexBuffer;
@@ -342,7 +341,7 @@ public final class VfxGraphRenderer {
         return builder.build();
     }
 
-    public void setArcBuffer(@Nullable ArcBuffer buffer) {
+    public void setArcBuffer(@Nullable CurveBuffer buffer) {
         this.arcBuffer = buffer;
     }
 
@@ -356,7 +355,7 @@ public final class VfxGraphRenderer {
 
     public void renderDistortionRings(GpuTextureView target, ParticleBuffer buffer, RenderSpec spec,
                                       RenderSpec.DistortionRing ring, WorldTransform transform, GraphCamera camera) {
-        int count = 0;
+        var count = 0;
         for (var i = 0; i < buffer.count(); i++) {
             if (spec.matchesLayer(buffer.layer(i))) count++;
         }
@@ -394,7 +393,7 @@ public final class VfxGraphRenderer {
 
     private int uploadDistortionVertices(ByteBuffer data) {
         var vertexSize = DISTORTION_FORMAT.getVertexSize();
-        int vertices = data.remaining() / vertexSize;
+        var vertices = data.remaining() / vertexSize;
         if (vertices == 0) return 0;
         var needed = (long) vertexSize * vertices;
         if (needed > distortionVertexBuffer.size()) {
@@ -414,16 +413,16 @@ public final class VfxGraphRenderer {
         distortionStaging.clear();
         for (var i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
-            float px = buffer.positionX(i);
-            float py = buffer.positionY(i);
-            float pz = buffer.positionZ(i);
+            var px = buffer.positionX(i);
+            var py = buffer.positionY(i);
+            var pz = buffer.positionZ(i);
             if (!identity) {
                 transform.apply(px, py, pz, worldScratch);
                 px = worldScratch[0];
                 py = worldScratch[1];
                 pz = worldScratch[2];
             }
-            float half = Math.abs(buffer.size(i) * transform.scale()) * 0.5f;
+            var half = Math.abs(buffer.size(i) * transform.scale()) * 0.5f;
             var u = new Vector3f(1f, 0f, 0f).rotate(transform.rotation());
             var v = new Vector3f(0f, 1f, 0f).rotate(transform.rotation());
             var roll = buffer.rotation(i);
@@ -436,9 +435,9 @@ public final class VfxGraphRenderer {
                 v.set(v.x * c - u.x * s, v.y * c - u.y * s, v.z * c - u.z * s);
                 u.set(nux, nuy, nuz);
             }
-            float rx = px - cam.x;
-            float ry = py - cam.y;
-            float rz = pz - cam.z;
+            var rx = px - cam.x;
+            var ry = py - cam.y;
+            var rz = pz - cam.z;
             putDistortionVertex(rx - u.x * half - v.x * half, ry - u.y * half - v.y * half, rz - u.z * half - v.z * half, 0f, 0f);
             putDistortionVertex(rx + u.x * half - v.x * half, ry + u.y * half - v.y * half, rz + u.z * half - v.z * half, 1f, 0f);
             putDistortionVertex(rx + u.x * half + v.x * half, ry + u.y * half + v.y * half, rz + u.z * half + v.z * half, 1f, 1f);
@@ -488,13 +487,13 @@ public final class VfxGraphRenderer {
      * 无深度测试（全屏覆盖层），颜色取首个匹配粒子的 RGB。
      */
     public void renderScreenFlash(GpuTextureView target, List<ScreenFlashSource> sources) {
-        float sum = 0f;
-        float cap = 1f;
-        float r = 0.80f;
-        float g = 0.93f;
-        float b = 1.0f;
+        var sum = 0f;
+        var cap = 1f;
+        var r = 0.80f;
+        var g = 0.93f;
+        var b = 1.0f;
         RenderSpec firstSpec = null;
-        boolean any = false;
+        var any = false;
         for (var source : sources) {
             var buffer = source.buffer();
             if (buffer.count() == 0) continue;
@@ -515,7 +514,7 @@ public final class VfxGraphRenderer {
             }
         }
         if (firstSpec == null) return;
-        float alpha = Math.min(sum, cap);
+        var alpha = Math.min(sum, cap);
         if (alpha <= 0.001f) return;
 
         var device = RenderSystem.getDevice();
@@ -665,7 +664,7 @@ public final class VfxGraphRenderer {
         }
     }
 
-    private @Nullable PreparedArc prepareArcPass(@Nullable ArcBuffer arcs, GraphCamera camera,
+    private @Nullable PreparedArc prepareArcPass(@Nullable CurveBuffer arcs, GraphCamera camera,
                                                  WorldTransform transform, boolean bloomPass,
                                                  List<RenderSpec> specs) {
         if (arcs == null || arcs.count() == 0) return null;
@@ -679,30 +678,13 @@ public final class VfxGraphRenderer {
     }
 
 
-    private static float[] arcLight(ArcCurve arc) {
-        var lifetime = Math.max(1e-3f, arc.lifetime());
-        var ageFrac = Math.clamp(arc.age() / lifetime, 0f, 1f);
-        if (arc.sparkVelocity() != null) {
-            var f = BlenderArcCurves.sample(
-                    BlenderArcCurves.PARTICLE_LIFE, ageFrac);
-            return new float[]{f, 1f};
-        }
-        if (arc.flatRadius()) {
-            var f = BlenderArcCurves.sample(
-                    BlenderArcCurves.CONTACT_RADIUS_AGE, ageFrac);
-            return new float[]{f, 1f};
-        }
-        if (arc.hasArchBase()) {
-            var f = BlenderArcCurves.sample(
-                    BlenderArcCurves.LIGHT, ageFrac) + 0.33f;
-            return new float[]{f, 1f};
-        }
-        var f = BlenderArcCurves.sample(BlenderArcCurves.FLICKER, ageFrac);
-        return new float[]{f, 1f};
+    private static float[] arcLight(TubeCurve arc) {
+        var light = CurveLightings.get().light(arc);
+        return new float[]{light.intensity(), light.alpha()};
     }
 
     private @Nullable PreparedArc prepareArcTubes(
-            ArcBuffer arcBuffer,
+            CurveBuffer arcBuffer,
             GraphCamera camera, WorldTransform transform, boolean bloomPass,
             RenderSpec spec
     ) {
@@ -712,24 +694,24 @@ public final class VfxGraphRenderer {
         var arcRender = spec.arc();
 
         int totalVerts = 0, totalIndices = 0;
-        int segRes = Math.clamp(arcRender.segments(), 3, 16);
-        for (int a = 0; a < arcBuffer.count(); a++) {
+        var segRes = Math.clamp(arcRender.segments(), 3, 16);
+        for (var a = 0; a < arcBuffer.count(); a++) {
             if (!spec.matchesArcLayer(arcBuffer.arc(a).layer())) continue;
             var size = CurveToMeshBuilder.measure(arcBuffer.arc(a), segRes);
             totalVerts += size.vertices();
             totalIndices += size.indices();
         }
         if (totalVerts == 0) return null;
-        long vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
-        long indexBytes = (long) totalIndices * 4;
+        var vertexBytes = (long) totalVerts * ARC_TUBE_FORMAT.getVertexSize();
+        var indexBytes = (long) totalIndices * 4;
         if (arcTubeVertexBuffer == null || vertexBytes > arcTubeVertexBuffer.size()) growArc2TubeBuffer(totalVerts);
         if (arcTubeIndexBuffer == null || indexBytes > arcTubeIndexBuffer.size()) growArc2TubeIndexBuffer(totalIndices);
         arcVertexStaging = ensureArcStaging(arcVertexStaging, Math.toIntExact(vertexBytes));
         arcIndexStaging = ensureArcStaging(arcIndexStaging, Math.toIntExact(indexBytes));
         var vertexData = arcVertexStaging;
         var indexData = arcIndexStaging;
-        int vertexOffset = 0;
-        for (int a = 0; a < arcBuffer.count(); a++) {
+        var vertexOffset = 0;
+        for (var a = 0; a < arcBuffer.count(); a++) {
             var arc = arcBuffer.arc(a);
             if (!spec.matchesArcLayer(arc.layer())) continue;
             var light = arcLight(arc);
@@ -763,7 +745,7 @@ public final class VfxGraphRenderer {
 
     private static ByteBuffer ensureArcStaging(@Nullable ByteBuffer buffer, int needed) {
         if (buffer == null || buffer.capacity() < needed) {
-            int capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
+            var capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
             var replacement = MemoryUtil.memAlloc(capacity);
             if (buffer != null) MemoryUtil.memFree(buffer);
             buffer = replacement;
@@ -973,7 +955,7 @@ public final class VfxGraphRenderer {
 
     private static ByteBuffer ensureInstancedTexStaging(@Nullable ByteBuffer buffer, int needed) {
         if (buffer == null || buffer.capacity() < needed) {
-            int capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
+            var capacity = Math.max(needed, buffer == null ? 65536 : Math.multiplyExact(buffer.capacity(), 2));
             var replacement = MemoryUtil.memAlloc(capacity);
             if (buffer != null) MemoryUtil.memFree(buffer);
             buffer = replacement;
@@ -1211,7 +1193,7 @@ public final class VfxGraphRenderer {
                                     WorldTransform transform, RenderSpec spec) {
         if (!(spec.particleBoundsScale() > 0f) || spec.geometry() != RenderSpec.Geometry.QUAD) return true;
         transform.apply(buffer.positionX(i), buffer.positionY(i), buffer.positionZ(i), worldScratch);
-        float radius = Math.abs(buffer.size(i)) * spec.particleBoundsScale()
+        var radius = Math.abs(buffer.size(i)) * spec.particleBoundsScale()
                 * Math.max(1f, Math.abs(transform.scale())) + 0.25f;
         var c = camera.position();
         return particleFrustum.testSphere(worldScratch[0] - c.x, worldScratch[1] - c.y,
@@ -1287,20 +1269,20 @@ public final class VfxGraphRenderer {
     }
 
     private static int countLineVertices(ParticleBuffer buffer, RenderSpec spec) {
-        int total = 0;
-        for (int i = 0; i < buffer.count(); i++) {
+        var total = 0;
+        for (var i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
-            int size = buffer.trailSize(i);
+            var size = buffer.trailSize(i);
             if (size >= 2) total += (size - 1) * 2;
         }
         return total;
     }
 
     private static int countRibbonVertices(ParticleBuffer buffer, RenderSpec spec) {
-        int total = 0;
-        for (int i = 0; i < buffer.count(); i++) {
+        var total = 0;
+        for (var i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
-            int size = buffer.trailSize(i);
+            var size = buffer.trailSize(i);
             if (size >= 2) total += (size - 1) * 4;
         }
         return total;
@@ -1310,16 +1292,16 @@ public final class VfxGraphRenderer {
                                    WorldTransform transform, RenderSpec spec) {
         var camPos = camera.position();
         var identity = transform.isIdentity();
-        for (int i = 0; i < buffer.count(); i++) {
+        for (var i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
-            int size = buffer.trailSize(i);
-            for (int k = 0; k < size - 1; k++) {
-                float ax = buffer.trailX(i, k);
-                float ay = buffer.trailY(i, k);
-                float az = buffer.trailZ(i, k);
-                float bx = buffer.trailX(i, k + 1);
-                float by = buffer.trailY(i, k + 1);
-                float bz = buffer.trailZ(i, k + 1);
+            var size = buffer.trailSize(i);
+            for (var k = 0; k < size - 1; k++) {
+                var ax = buffer.trailX(i, k);
+                var ay = buffer.trailY(i, k);
+                var az = buffer.trailZ(i, k);
+                var bx = buffer.trailX(i, k + 1);
+                var by = buffer.trailY(i, k + 1);
+                var bz = buffer.trailZ(i, k + 1);
                 if (!identity) {
                     transform.apply(ax, ay, az, worldScratch);
                     ax = worldScratch[0];
@@ -1342,20 +1324,20 @@ public final class VfxGraphRenderer {
                                      WorldTransform transform, RenderSpec spec) {
         var identity = transform.isIdentity();
         var view = camera.viewRotation();
-        float rx = view.m00();
-        float ry = view.m01();
-        float rz = view.m02();
-        for (int i = 0; i < buffer.count(); i++) {
+        var rx = view.m00();
+        var ry = view.m01();
+        var rz = view.m02();
+        for (var i = 0; i < buffer.count(); i++) {
             if (!spec.matchesLayer(buffer.layer(i))) continue;
-            int size = buffer.trailSize(i);
-            float half = buffer.size(i) * 0.5f;
-            for (int k = 0; k < size - 1; k++) {
-                float ax = buffer.trailX(i, k);
-                float ay = buffer.trailY(i, k);
-                float az = buffer.trailZ(i, k);
-                float bx = buffer.trailX(i, k + 1);
-                float by = buffer.trailY(i, k + 1);
-                float bz = buffer.trailZ(i, k + 1);
+            var size = buffer.trailSize(i);
+            var half = buffer.size(i) * 0.5f;
+            for (var k = 0; k < size - 1; k++) {
+                var ax = buffer.trailX(i, k);
+                var ay = buffer.trailY(i, k);
+                var az = buffer.trailZ(i, k);
+                var bx = buffer.trailX(i, k + 1);
+                var by = buffer.trailY(i, k + 1);
+                var bz = buffer.trailZ(i, k + 1);
                 if (!identity) {
                     transform.apply(ax, ay, az, worldScratch);
                     ax = worldScratch[0];

@@ -6,16 +6,14 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
-import org.academy.api.common.ability.pakcet.SyncAbilityCategoryPacket;
-import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
-import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
+import org.academy.api.common.ability.packet.SyncAbilityCategoryPacket;
+import org.academy.api.common.ability.packet.SyncAbilityDataPacket;
+import org.academy.api.common.ability.packet.SyncSkillDataPacket;
 import org.academy.api.common.sync.packet.SyncDataPacket;
 import org.academy.api.common.util.UncheckedUtil;
 import org.academy.api.common.vanilla.OpenScreenPacket;
 import org.academy.api.common.wireless.*;
 import org.academy.api.server.ability.SkillTuning;
-import org.academy.internal.common.ability.aeromanip.network.AirMobilitySyncPacket;
-import org.academy.internal.common.ability.darkmatter.network.SyncDarkmatterStatePacket;
 import org.misaka.api.common.network.packet.PacketType;
 import org.misaka.api.common.registries.MisakaNetworkRegistries;
 
@@ -31,14 +29,6 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SkillTuning.SyncPacket>>
             SKILL_TUNING_SYNC = PACKET_TYPES.register("skill_tuning_sync",
             () -> new PacketType<>(SkillTuning.SyncPacket.class, SkillTuning.SyncPacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncDarkmatterStatePacket>>
-            SYNC_DARKMATTER_STATE = PACKET_TYPES.register("sync_darkmatter_state",
-            () -> new PacketType<>(SyncDarkmatterStatePacket.class, SyncDarkmatterStatePacket.CODEC));
-
-    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AirMobilitySyncPacket>>
-            AIR_MOBILITY_SYNC = PACKET_TYPES.register("air_mobility_sync",
-            () -> new PacketType<>(AirMobilitySyncPacket.class, AirMobilitySyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncAbilityCategoryPacket>>
             SYNC_ABILITY_CATEGORY = PACKET_TYPES.register("sync_ability_category",

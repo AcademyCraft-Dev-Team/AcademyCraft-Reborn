@@ -7,9 +7,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterIntegrity;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShapingProfile;
 
 import java.util.UUID;
 

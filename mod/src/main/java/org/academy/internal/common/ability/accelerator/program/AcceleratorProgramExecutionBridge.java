@@ -3,7 +3,6 @@ package org.academy.internal.common.ability.accelerator.program;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.program.*;
-import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.program.*;
 import org.academy.internal.common.ability.program.compile.CompiledProgram;
@@ -12,6 +11,7 @@ import org.academy.internal.common.ability.program.registry.AbilityProgramDefini
 import org.academy.internal.common.ability.program.registry.ProgramExecutorLookup;
 import org.academy.internal.common.ability.program.registry.ProgramNodeExecutor;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.world.level.storage.PlayerData;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;

@@ -106,30 +106,30 @@ final class UpdateBlocks {
 
     static SimNode vortex(VfxBlock block, PortValueSource ports) {
         var properties = block.properties();
-        float cx = BlockProps.getFloat(properties, "cx", 0f);
-        float cy = BlockProps.getFloat(properties, "cy", 0f);
-        float cz = BlockProps.getFloat(properties, "cz", 0f);
-        float strength = BlockProps.getFloat(properties, "strength", 1f);
-        float pull = BlockProps.getFloat(properties, "pull", 0f);
-        float verticalPull = BlockProps.getFloat(properties, "vertical_pull", 0f);
-        byte filter = BlockSim.layerFilter(properties);
+        var cx = BlockProps.getFloat(properties, "cx", 0f);
+        var cy = BlockProps.getFloat(properties, "cy", 0f);
+        var cz = BlockProps.getFloat(properties, "cz", 0f);
+        var strength = BlockProps.getFloat(properties, "strength", 1f);
+        var pull = BlockProps.getFloat(properties, "pull", 0f);
+        var verticalPull = BlockProps.getFloat(properties, "vertical_pull", 0f);
+        var filter = BlockSim.layerFilter(properties);
         return (buf, ctx) -> {
-            float dt = ctx.dt();
-            for (int i = 0; i < buf.count(); i++) {
+            var dt = ctx.dt();
+            for (var i = 0; i < buf.count(); i++) {
                 if (filter >= 0 && buf.layer(i) != filter) continue;
-                float dx = buf.positionX(i) - cx;
-                float dz = buf.positionZ(i) - cz;
-                float r2 = dx * dx + dz * dz;
+                var dx = buf.positionX(i) - cx;
+                var dz = buf.positionZ(i) - cz;
+                var r2 = dx * dx + dz * dz;
                 if (r2 < 1e-6f) continue;
-                float inv = 1f / (float) Math.sqrt(r2);
-                float radialX = dx * inv;
-                float radialZ = dz * inv;
-                float vx = buf.velocityX(i);
-                float vz = buf.velocityZ(i);
-                float radialSpeed = vx * radialX + vz * radialZ;
-                float targetRadialSpeed = -pull;
+                var inv = 1f / (float) Math.sqrt(r2);
+                var radialX = dx * inv;
+                var radialZ = dz * inv;
+                var vx = buf.velocityX(i);
+                var vz = buf.velocityZ(i);
+                var radialSpeed = vx * radialX + vz * radialZ;
+                var targetRadialSpeed = -pull;
                 if (radialSpeed > targetRadialSpeed) {
-                    float correction = radialSpeed - targetRadialSpeed;
+                    var correction = radialSpeed - targetRadialSpeed;
                     vx -= radialX * correction;
                     vz -= radialZ * correction;
                 }
@@ -143,25 +143,25 @@ final class UpdateBlocks {
 
     static SimNode follow(VfxBlock block, PortValueSource ports) {
         var properties = block.properties();
-        String positionParam = BlockProps.getString(properties, "position_param", "projectile_position");
-        String directionParam = BlockProps.getString(properties, "direction_param", "projectile_direction");
-        byte filter = BlockSim.layerFilter(properties);
-        float orbitRadius = BlockProps.getFloat(properties, "orbit_radius", 0f);
-        float orbitSpeed = BlockProps.getFloat(properties, "orbit_speed", 0f);
-        float phase = BlockProps.getFloat(properties, "phase", 0f);
-        float backOffset = BlockProps.getFloat(properties, "back_offset", 0f);
-        String sizeParam = BlockProps.getString(properties, "size_param", "");
-        float sizeMin = BlockProps.getFloat(properties, "size_min", 1f);
-        float sizeMax = BlockProps.getFloat(properties, "size_max", sizeMin);
-        float sizePower = Math.max(0.05f, BlockProps.getFloat(properties, "size_power", 1f));
+        var positionParam = BlockProps.getString(properties, "position_param", "projectile_position");
+        var directionParam = BlockProps.getString(properties, "direction_param", "projectile_direction");
+        var filter = BlockSim.layerFilter(properties);
+        var orbitRadius = BlockProps.getFloat(properties, "orbit_radius", 0f);
+        var orbitSpeed = BlockProps.getFloat(properties, "orbit_speed", 0f);
+        var phase = BlockProps.getFloat(properties, "phase", 0f);
+        var backOffset = BlockProps.getFloat(properties, "back_offset", 0f);
+        var sizeParam = BlockProps.getString(properties, "size_param", "");
+        var sizeMin = BlockProps.getFloat(properties, "size_min", 1f);
+        var sizeMax = BlockProps.getFloat(properties, "size_max", sizeMin);
+        var sizePower = Math.max(0.05f, BlockProps.getFloat(properties, "size_power", 1f));
         return (buf, ctx) -> {
-            float px = ctx.paramVec3(positionParam, 0, 0f);
-            float py = ctx.paramVec3(positionParam, 1, 0f);
-            float pz = ctx.paramVec3(positionParam, 2, 0f);
-            float fx = ctx.paramVec3(directionParam, 0, 0f);
-            float fy = ctx.paramVec3(directionParam, 1, 0f);
-            float fz = ctx.paramVec3(directionParam, 2, 1f);
-            float fl = (float) Math.sqrt(fx * fx + fy * fy + fz * fz);
+            var px = ctx.paramVec3(positionParam, 0, 0f);
+            var py = ctx.paramVec3(positionParam, 1, 0f);
+            var pz = ctx.paramVec3(positionParam, 2, 0f);
+            var fx = ctx.paramVec3(directionParam, 0, 0f);
+            var fy = ctx.paramVec3(directionParam, 1, 0f);
+            var fz = ctx.paramVec3(directionParam, 2, 1f);
+            var fl = (float) Math.sqrt(fx * fx + fy * fy + fz * fz);
             if (fl < 1e-5f) {
                 fx = 0f;
                 fy = 0f;
@@ -172,10 +172,10 @@ final class UpdateBlocks {
                 fz /= fl;
             }
 
-            float rx = -fz;
-            float ry = 0f;
-            float rz = fx;
-            float rl = (float) Math.sqrt(rx * rx + rz * rz);
+            var rx = -fz;
+            var ry = 0f;
+            var rz = fx;
+            var rl = (float) Math.sqrt(rx * rx + rz * rz);
             if (rl < 1e-4f) {
                 rx = 1f;
                 rz = 0f;
@@ -183,16 +183,16 @@ final class UpdateBlocks {
                 rx /= rl;
                 rz /= rl;
             }
-            float ux = ry * fz - rz * fy;
-            float uy = rz * fx - rx * fz;
-            float uz = rx * fy - ry * fx;
-            float sizeT = (float) Math.pow(BlockSim.clamp01(ctx.paramFloat(sizeParam, 0f)), sizePower);
-            float liveSize = BlockSim.lerp(sizeMin, sizeMax, BlockSim.smoothstep(sizeT));
-            for (int i = 0; i < buf.count(); i++) {
+            var ux = ry * fz - rz * fy;
+            var uy = rz * fx - rx * fz;
+            var uz = rx * fy - ry * fx;
+            var sizeT = (float) Math.pow(BlockSim.clamp01(ctx.paramFloat(sizeParam, 0f)), sizePower);
+            var liveSize = BlockSim.lerp(sizeMin, sizeMax, BlockSim.smoothstep(sizeT));
+            for (var i = 0; i < buf.count(); i++) {
                 if (filter >= 0 && buf.layer(i) != filter) continue;
-                float angle = ctx.time() * orbitSpeed + phase + buf.seed(i) * 2.3999632f;
-                float cos = (float) Math.cos(angle);
-                float sin = (float) Math.sin(angle);
+                var angle = ctx.time() * orbitSpeed + phase + buf.seed(i) * 2.3999632f;
+                var cos = (float) Math.cos(angle);
+                var sin = (float) Math.sin(angle);
                 buf.setPosition(i,
                         px - fx * backOffset + orbitRadius * (rx * cos + ux * sin),
                         py - fy * backOffset + orbitRadius * (ry * cos + uy * sin),
@@ -206,18 +206,18 @@ final class UpdateBlocks {
 
     static SimNode live(VfxBlock block, PortValueSource ports) {
         var properties = block.properties();
-        byte filter = BlockSim.layerFilter(properties);
-        String sizeParam = BlockProps.getString(properties, "size_param", "");
-        float sizeScale = BlockProps.getFloat(properties, "size_scale", 1f);
-        String alphaParam = BlockProps.getString(properties, "alpha_param", "");
-        float alphaScale = BlockProps.getFloat(properties, "alpha_scale", 1f);
-        String rotationParam = BlockProps.getString(properties, "rotation_param", "");
-        float rotationScale = BlockProps.getFloat(properties, "rotation_scale", 1f);
+        var filter = BlockSim.layerFilter(properties);
+        var sizeParam = BlockProps.getString(properties, "size_param", "");
+        var sizeScale = BlockProps.getFloat(properties, "size_scale", 1f);
+        var alphaParam = BlockProps.getString(properties, "alpha_param", "");
+        var alphaScale = BlockProps.getFloat(properties, "alpha_scale", 1f);
+        var rotationParam = BlockProps.getString(properties, "rotation_param", "");
+        var rotationScale = BlockProps.getFloat(properties, "rotation_scale", 1f);
         return (buf, ctx) -> {
-            float liveSize = Math.max(0f, ctx.paramFloat(sizeParam, 1f) * sizeScale);
-            float liveAlpha = BlockSim.clamp01(ctx.paramFloat(alphaParam, 1f) * alphaScale);
-            float liveRotation = ctx.paramFloat(rotationParam, 0f) * rotationScale;
-            for (int i = 0; i < buf.count(); i++) {
+            var liveSize = Math.max(0f, ctx.paramFloat(sizeParam, 1f) * sizeScale);
+            var liveAlpha = BlockSim.clamp01(ctx.paramFloat(alphaParam, 1f) * alphaScale);
+            var liveRotation = ctx.paramFloat(rotationParam, 0f) * rotationScale;
+            for (var i = 0; i < buf.count(); i++) {
                 if (filter >= 0 && buf.layer(i) != filter) continue;
                 if (!sizeParam.isEmpty()) {
                     buf.setSize(i, liveSize);

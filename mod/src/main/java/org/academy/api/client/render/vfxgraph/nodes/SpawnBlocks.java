@@ -30,7 +30,7 @@ final class SpawnBlocks {
             var p = new float[3];
             for (var k = 0; k < n; k++) {
                 BlockSim.samplePosition(shape, p, positionParam, ctx);
-                int i = buf.spawn();
+                var i = buf.spawn();
                 BlockSim.writeParticle(buf, i, p[0], p[1], p[2], vx, vy, vz, size, color, lifetime, layer);
             }
             ctx.emitBatch(start, buf.count());
@@ -39,7 +39,7 @@ final class SpawnBlocks {
 
     static SimNode burst(VfxBlock block, PortValueSource ports) {
         var properties = block.properties();
-        int count = BlockProps.getInt(properties, "count", 10);
+        var count = BlockProps.getInt(properties, "count", 10);
         var lifetime = BlockProps.getFloat(properties, "lifetime", 1f);
         var size = BlockProps.getFloat(properties, "size", 0.1f);
         var color = BlockProps.getColor(properties, "color");
@@ -57,7 +57,7 @@ final class SpawnBlocks {
             var p = new float[3];
             for (var k = 0; k < count; k++) {
                 BlockSim.samplePosition(shape, p, positionParam, ctx);
-                int i = buf.spawn();
+                var i = buf.spawn();
                 BlockSim.writeParticle(buf, i, p[0], p[1], p[2], vx, vy, vz, size, color, lifetime, layer);
             }
             ctx.emitBatch(start, buf.count());
@@ -66,7 +66,7 @@ final class SpawnBlocks {
 
     static SimNode periodic(VfxBlock block, PortValueSource ports) {
         var properties = block.properties();
-        int count = BlockProps.getInt(properties, "count", 5);
+        var count = BlockProps.getInt(properties, "count", 5);
         var interval = BlockProps.getFloat(properties, "interval", 1f);
         var lifetime = BlockProps.getFloat(properties, "lifetime", 1f);
         var size = BlockProps.getFloat(properties, "size", 0.1f);
@@ -86,7 +86,7 @@ final class SpawnBlocks {
             var p = new float[3];
             for (var k = 0; k < count; k++) {
                 BlockSim.samplePosition(shape, p, positionParam, ctx);
-                int i = buf.spawn();
+                var i = buf.spawn();
                 BlockSim.writeParticle(buf, i, p[0], p[1], p[2], vx, vy, vz, size, color, lifetime, layer);
             }
             ctx.emitBatch(start, buf.count());
@@ -116,7 +116,7 @@ final class SpawnBlocks {
             var p = new float[3];
             for (var k = 0; k < n; k++) {
                 BlockSim.samplePosition(shape, p, positionParam, ctx);
-                int i = buf.spawn();
+                var i = buf.spawn();
                 BlockSim.writeParticle(buf, i, p[0], p[1], p[2], vx, vy, vz, size, color, lifetime, layer);
             }
             ctx.emitBatch(start, buf.count());

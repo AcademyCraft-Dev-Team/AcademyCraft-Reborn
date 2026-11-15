@@ -408,6 +408,7 @@ class VfxContainerModel(private val registry: NodeRegistry) {
         contexts.clear()
         operators.clear()
         flowEdges.clear()
+        blockFlows.clear()
         dataEdges.clear()
         parameters.clear()
         outputs.clear()

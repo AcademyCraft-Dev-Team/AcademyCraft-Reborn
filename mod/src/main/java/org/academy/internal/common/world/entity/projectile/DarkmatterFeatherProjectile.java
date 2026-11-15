@@ -18,12 +18,12 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.world.item.Items;
+import org.academy.internal.server.ability.DarkmatterGraphEffects;
 import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;

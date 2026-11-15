@@ -91,7 +91,7 @@ class PlaybackTimelineTest {
     @Test
     void codecRoundTrip() {
         var timeline = PlaybackTimeline.pausedAt(track(200), 12345L, 67.5f);
-        ByteBuf buf = Unpooled.buffer();
+        var buf = Unpooled.buffer();
         PlaybackTimeline.CODEC.encode(buf, timeline);
         var decoded = PlaybackTimeline.CODEC.decode(buf);
         assertEquals(timeline, decoded);

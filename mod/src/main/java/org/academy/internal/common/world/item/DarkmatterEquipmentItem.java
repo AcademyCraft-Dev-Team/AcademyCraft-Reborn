@@ -5,7 +5,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
 
 /**
  * Base item for the six native pieces whose structural integrity never breaks the stack.

@@ -23,18 +23,21 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.WingFlightConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.resources.R;
-import org.academy.api.common.ability.*;
+import org.academy.api.common.ability.AbilityLevel;
+import org.academy.api.common.ability.DevCondition;
+import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.WingFlightClient;
+import org.academy.internal.client.config.WingFlightConfig;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.Accelerator;
+import org.academy.internal.common.ability.accelerator.flight.WingControlIntent;
 import org.academy.internal.common.ability.accelerator.flight.WingFlightRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -115,7 +118,7 @@ public final class BlackWing extends Skill {
         @SubscribeEvent
         public static void tick(ClientTickEvent.Post event) {
             var player = Minecraft.getInstance().player;
-            long epoch = player == null ? -1 : Accelerator.Client.WingVfx.blackActivationEpoch(player.getId());
+            var epoch = player == null ? -1 : Accelerator.Client.WingVfx.blackActivationEpoch(player.getId());
             if (Minecraft.getInstance().isPaused()) {
                 // Pausing keeps the server activation and sequence alive; do not restart at sequence zero.
                 CONTROL_SENDER.reset();
@@ -194,7 +197,7 @@ public final class BlackWing extends Skill {
 
         private static @Nullable AttackSession refreshSession(ServerPlayer player) {
             var session = ATTACK_SESSIONS.get(player);
-            boolean active = isActive(player) && player.isAlive() && !player.hasDisconnected();
+            var active = isActive(player) && player.isAlive() && !player.hasDisconnected();
             if (session != null && (!active || session.level != player.level())) {
                 var ended = new BlackWingStatePacket(player.getId(), session.epoch, session.sequence, false);
                 sendObservers(player, observer -> MisakaNetworkServer.send(observer, ended));
@@ -215,8 +218,8 @@ public final class BlackWing extends Skill {
             var session = refreshSession(target);
             if (session == null) return;
             var last = session.lastAttack;
-            float progress = last == null ? 1f : last.pattern().progress(last.startTick(), target.level().getGameTime(), 0f);
-            boolean snapshot = progress >= 0f && progress < 1f;
+            var progress = last == null ? 1f : last.pattern().progress(last.startTick(), target.level().getGameTime(), 0f);
+            var snapshot = progress >= 0f && progress < 1f;
             MisakaNetworkServer.send(observer, new BlackWingStatePacket(target.getId(), session.epoch,
                     snapshot ? session.sequence - 1 : session.sequence, true));
             if (snapshot) MisakaNetworkServer.send(observer, new BlackWingAttackPacket(target.getId(), last.pattern(),
@@ -313,7 +316,7 @@ public final class BlackWing extends Skill {
             var hit = player.pick(
                     Skills.BLACK_WING.get().scaledRange(player, WingFlightSupport.ATTACK_RANGE), 1f, false);
             var target = hit.getLocation();
-            double distance = origin.distanceToSqr(target);
+            var distance = origin.distanceToSqr(target);
             // Use the nearest entity along the aim ray, stopping at the first block.
             var rayBounds = player.getBoundingBox().expandTowards(target.subtract(origin)).inflate(1.0);
             for (var entity : player.level().getEntitiesOfClass(LivingEntity.class, rayBounds,

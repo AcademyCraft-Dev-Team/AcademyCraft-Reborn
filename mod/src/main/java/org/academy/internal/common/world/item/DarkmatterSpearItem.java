@@ -1,6 +1,6 @@
 package org.academy.internal.common.world.item;
 
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
 
 /**
  * Native shaped spear using vanilla spear left-click attacks and held right-click thrusting.

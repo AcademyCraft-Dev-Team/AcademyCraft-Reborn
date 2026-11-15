@@ -29,7 +29,7 @@ class MentalResistanceTrackerTest {
         var tracker = new MentalResistanceTracker();
         var subject = UUID.randomUUID();
         for (long tick = 0; tick <= 401; tick++) {
-            for (int effect = 0; effect < 5; effect++) tracker.mark(subject, tick);
+            for (var effect = 0; effect < 5; effect++) tracker.mark(subject, tick);
             assertEquals(tick == 401 ? 1 : 0, tracker.tick(tick, _ -> true).size());
         }
     }

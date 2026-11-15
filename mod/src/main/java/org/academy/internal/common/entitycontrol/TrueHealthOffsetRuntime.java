@@ -13,11 +13,11 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.teleport.skills.lv5.Flashing;
 import org.academy.internal.common.world.damagesource.TrueDamageCompatibility;
+import org.academy.internal.server.damage.HealthLossGuards;
 import org.academy.internal.server.entity.SurvivalDefense;
 
 import java.util.Collections;
@@ -47,10 +47,10 @@ public final class TrueHealthOffsetRuntime {
     }
 
     public static float effectiveHealth(LivingEntity entity) {
-        float raw = EntityControlApi.getAuthoritativeHealth(entity);
+        var raw = EntityControlApi.getAuthoritativeHealth(entity);
         var state = ((HealthOffsetAccess) entity).academy$getHealthOffset();
         if (state == null) return raw;
-        double offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
+        var offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
         if (!Double.isFinite(offset) || offset < 0) return raw;
         return Math.min(raw, (float) Math.max(0, state.maximum - offset));
     }
@@ -86,7 +86,7 @@ public final class TrueHealthOffsetRuntime {
         var previous = access.academy$getHealthOffset();
         var state = new HealthOffsetState(maximum, expected, entity.level().getGameTime());
         access.academy$setHealthOffset(state);
-        float observed = entity.getHealth();
+        var observed = entity.getHealth();
         if (!Float.isFinite(observed) || Math.abs(observed - expected) > 0.05f) {
             access.academy$setHealthOffset(previous);
             return false;
@@ -118,8 +118,8 @@ public final class TrueHealthOffsetRuntime {
         var state = ((HealthOffsetAccess) entity).academy$getHealthOffset();
         if (state == null || state.dead
                 || TrueDamageCompatibility.isHurtNotification(entity)) return;
-        double offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
-        float observed = entity.getHealth();
+        var offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
+        var observed = entity.getHealth();
         if (Double.isFinite(offset) && Float.isFinite(observed)) {
             state.encodedOffset = Double.doubleToRawLongBits(Math.max(offset, state.maximum - observed)) ^ state.mask;
             persistAndSync(entity);
@@ -130,7 +130,7 @@ public final class TrueHealthOffsetRuntime {
         if (!(entity.level() instanceof ServerLevel)) return;
         var state = ((HealthOffsetAccess) entity).academy$getHealthOffset();
         if (state == null) return;
-        double offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
+        var offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
         if (!Double.isFinite(offset) || offset < 0) {
             clear(entity);
             return;
@@ -161,12 +161,12 @@ public final class TrueHealthOffsetRuntime {
             state.encodedOffset = Double.doubleToRawLongBits(state.maximum) ^ state.mask;
         }
         state.advance(entity.level().getGameTime(), EntityControlApi.getTrueMaxHealth(entity));
-        double offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
+        var offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
         if (!state.dead && offset <= 0) {
             clear(entity);
             return;
         }
-        float ceiling = (float) Math.max(0, state.maximum - offset);
+        var ceiling = (float) Math.max(0, state.maximum - offset);
         if (EntityControlApi.getAuthoritativeHealth(entity) > ceiling) {
             HealthLossGuards.maintenance(entity,
                     () -> EntityControlApi.forceSetTrueHealth(entity, ceiling));
@@ -192,10 +192,10 @@ public final class TrueHealthOffsetRuntime {
                 || !(event.getEntity() instanceof LivingEntity entity) || !supports(entity)) return;
         var saved = entity.getPersistentData().getCompound(SAVE_KEY).orElse(null);
         if (saved == null) return;
-        double maximum = saved.getDoubleOr("maximum", Double.NaN);
-        double offset = Double.longBitsToDouble(saved.getLongOr("value", 0) ^ saved.getLongOr("mask", 0));
-        long now = entity.level().getGameTime();
-        long hit = saved.getLongOr("hit", now - 400);
+        var maximum = saved.getDoubleOr("maximum", Double.NaN);
+        var offset = Double.longBitsToDouble(saved.getLongOr("value", 0) ^ saved.getLongOr("mask", 0));
+        var now = entity.level().getGameTime();
+        var hit = saved.getLongOr("hit", now - 400);
         if (!Double.isFinite(maximum) || maximum <= 0 || !Double.isFinite(offset)
                 || offset < 0 || offset > maximum || hit > now) {
             clear(entity);

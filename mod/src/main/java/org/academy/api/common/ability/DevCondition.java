@@ -6,7 +6,6 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.resources.R;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.common.wireless.WirelessUser;
-import org.academy.internal.server.ability.AbilitySystemServer;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
@@ -36,7 +35,7 @@ public interface DevCondition {
 
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
-            return AbilitySystemServer.getSystem(player).getPlayerLevel(player.getUUID()) >= requiredLevel.levelCode;
+            return SkillSystems.of(player).getPlayerLevel(player.getUUID()) >= requiredLevel.levelCode;
         }
 
         @Override
@@ -96,7 +95,7 @@ public interface DevCondition {
 
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
-            var access = AbilitySystemServer.getSystem(player);
+            var access = SkillSystems.of(player);
             return isSatisfied(depId, id -> access.isSkillLearned(player.getUUID(), id));
         }
 
@@ -125,7 +124,7 @@ public interface DevCondition {
 
         @Override
         public boolean accepts(ServerPlayer player, WirelessUser developer) {
-            var access = AbilitySystemServer.getSystem(player);
+            var access = SkillSystems.of(player);
             var uuid = player.getUUID();
             return Registries.SKILLS.stream()
                     .filter(LearningHelper::isSkillVisible)

@@ -3,8 +3,6 @@ package org.academy.api.common.entitycontrol;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
-import org.academy.internal.common.ability.mentalout.control.MentalControlRuntime;
-import org.academy.internal.common.ability.mentalout.resistance.MentalResistanceManager;
 
 import java.util.*;
 
@@ -24,7 +22,7 @@ public final class MentalImmunity {
         if (enabled) {
             if (values == null) values = SOURCES.computeIfAbsent(subject, _ -> new LinkedHashMap<>());
             var first = values.put(source, feedback.copy()) == null;
-            if (first) MentalControlRuntime.releaseBySubject(subject.level().getServer(), subject.getUUID());
+            if (first) MentalControlApi.releaseBySubject(subject.level().getServer(), subject.getUUID());
         } else if (values != null) {
             values.remove(source);
             if (values.isEmpty()) SOURCES.remove(subject);
@@ -51,8 +49,8 @@ public final class MentalImmunity {
         if (subject == null || subject.level().isClientSide()) return;
         SOURCES.remove(subject);
         SUPPRESSED.add(subject.getUUID());
-        MentalResistanceManager.clearProtection(subject);
-        MentalControlRuntime.releaseBySubject(subject.level().getServer(), subject.getUUID());
+        MentalControlApi.clearResistance(subject);
+        MentalControlApi.releaseBySubject(subject.level().getServer(), subject.getUUID());
     }
 
     public static boolean isSuppressed(LivingEntity subject) {

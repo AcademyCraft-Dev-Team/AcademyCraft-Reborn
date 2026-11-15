@@ -235,8 +235,8 @@ public final class MentaloutGameTests {
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
                 var workers = new ArrayList<LivingEntity>();
-                for (int x = 0; x < 10; x++) for (int z = 0; z < 10; z++) helper.setBlock(x, 1, z, Blocks.STONE);
-                for (int i = 0; i < 64; i++) {
+                for (var x = 0; x < 10; x++) for (var z = 0; z < 10; z++) helper.setBlock(x, 1, z, Blocks.STONE);
+                for (var i = 0; i < 64; i++) {
                     var worker = helper.spawn(EntityTypes.VILLAGER, i % 8 + 1, 2, i / 8 + 1);
                     workers.add(worker);
                 }
@@ -341,9 +341,9 @@ public final class MentaloutGameTests {
             @Override
             void run(GameTestHelper helper) {
                 var controller = createController(helper);
-                for (int x = 0; x <= 28; x++) for (int z = 0; z <= 18; z++) helper.setBlock(x, 1, z, Blocks.STONE);
+                for (var x = 0; x <= 28; x++) for (var z = 0; z <= 18; z++) helper.setBlock(x, 1, z, Blocks.STONE);
                 var workers = new ArrayList<LivingEntity>();
-                for (int i = 0; i < 64; i++) {
+                for (var i = 0; i < 64; i++) {
                     LivingEntity worker = i < 4 ? helper.spawn(EntityTypes.RAVAGER, i % 8 + 1, 2, i / 8 + 1)
                             : helper.spawn(EntityTypes.CREEPER, i % 8 + 1, 2, i / 8 + 1);
                     workers.add(worker);

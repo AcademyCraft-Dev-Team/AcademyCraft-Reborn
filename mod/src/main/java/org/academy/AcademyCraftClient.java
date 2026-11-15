@@ -80,7 +80,7 @@ import org.academy.internal.client.hud.HudManager;
 import org.academy.internal.client.particle.*;
 import org.academy.internal.client.profiler.ProfilerClientHooks;
 import org.academy.internal.client.render.fluid.ImagPhaseFluidRenderer;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
+import org.academy.internal.client.render.effect.VfxContexts;
 import org.academy.internal.client.renderer.blockentity.WindGenPillarRenderer;
 import org.academy.internal.client.renderer.entity.layers.CloudroomLayer;
 import org.academy.internal.client.renderer.entity.layers.quantum.QuantumInterferenceLayer;

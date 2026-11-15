@@ -166,7 +166,7 @@ public final class MentalDefenseGameTests {
             var start = level.getGameTime();
             // Advance the authoritative clock and invoke real runtimes without simulating physical input.
             // Repeated calls in one tick must neither speed up nor postpone automatic resistance.
-            for (int elapsed = 0; elapsed <= 501; elapsed++) {
+            for (var elapsed = 0; elapsed <= 501; elapsed++) {
                 ((ServerLevelData) level.getLevelData()).setGameTime(start + elapsed);
                 MentalControlRuntime.tick(server);
                 MentalPerceptionRuntime.tick(server);

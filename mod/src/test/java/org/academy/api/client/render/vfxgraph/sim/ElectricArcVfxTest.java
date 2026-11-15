@@ -1,22 +1,18 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
 import com.google.gson.JsonParser;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.render.RenderSpec;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
+import org.academy.internal.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStreamReader;
@@ -31,7 +27,7 @@ class ElectricArcVfxTest {
     @Test
     void novaRingSharesArcPaletteAndHasBoundedGeometryWithoutAccumulation() throws Exception {
         var sim = simulator("lightning_nova");
-        for (int frame = 0; frame < 1000; frame++) {
+        for (var frame = 0; frame < 1000; frame++) {
             at(sim, (frame % 50) / 100f);
             assertEquals(8, sim.arcBuffer().count());
             var rim = sim.arcBuffer().arc(0);
@@ -41,11 +37,11 @@ class ElectricArcVfxTest {
             assertEquals(rim.z(0), rim.z(rim.size() - 1));
             assertEquals(0.12f, rim.r());
             assertEquals(0.78f, sim.arcBuffer().arc(1).r());
-            float expected = 8 + (frame % 50) / 100f * 1.6f;
-            for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            var expected = 8 + (frame % 50) / 100f * 1.6f;
+            for (var i = 0; i < sim.arcBuffer().count(); i++) {
                 var arc = sim.arcBuffer().arc(i);
                 assertTrue(arc.size() <= 129);
-                for (int p = 0; p < arc.size(); p++) {
+                for (var p = 0; p < arc.size(); p++) {
                     assertEquals(expected, Math.hypot(arc.x(p), arc.z(p)), 0.18);
                     assertTrue(Float.isFinite(arc.width(p)));
                 }
@@ -67,7 +63,7 @@ class ElectricArcVfxTest {
         var a = first.arcBuffer().arc(0);
         var b = second.arcBuffer().arc(0);
         assertEquals(a.size(), b.size());
-        for (int p = 0; p < a.size(); p++) {
+        for (var p = 0; p < a.size(); p++) {
             assertEquals(a.x(p), b.x(p), 0.0001);
             assertEquals(a.y(p), b.y(p), 0.0001);
             assertEquals(a.z(p), b.z(p), 0.0001);
@@ -86,10 +82,10 @@ class ElectricArcVfxTest {
         var sim = simulator("electromagnetic_shield");
         at(sim, 0.12f);
         assertEquals(12, sim.arcBuffer().count());
-        for (int i = 0; i < 12; i++) {
+        for (var i = 0; i < 12; i++) {
             var arc = sim.arcBuffer().arc(i);
             assertEquals("electricity", arc.layer());
-            for (int p = 0; p < arc.size(); p++) {
+            for (var p = 0; p < arc.size(); p++) {
                 assertEquals(0.85, Math.hypot(arc.x(p), arc.z(p)), 0.06);
                 assertTrue(arc.y(p) > 0 && arc.y(p) < 1.9);
             }
@@ -108,12 +104,12 @@ class ElectricArcVfxTest {
     void boundPathsReplacePreviewPreserveEndpointsAndClearWithoutAccumulating() throws Exception {
         var sim = simulator("magnetic_weapon");
         sim.setArcSource("paths", (out, _) -> {
-            for (int i = 0; i < 40; i++) {
+            for (var i = 0; i < 40; i++) {
                 ArcCurveBuilder.blueWhiteLine(out, 2, 3, 4, 2, 25, 4,
                         0.01f, 8, 1f, 1f, i, 0, 0, 0, 0, 0);
             }
         });
-        for (int frame = 0; frame < 100; frame++) {
+        for (var frame = 0; frame < 100; frame++) {
             at(sim, frame * 0.016f);
             assertEquals(32, sim.arcBuffer().count());
             var arc = sim.arcBuffer().arc(0);
@@ -132,7 +128,7 @@ class ElectricArcVfxTest {
     private VfxSystemSimulator simulator(String asset) throws Exception {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + asset + ".json")) {
             assertNotNull(stream);
             var system = new JsonVfxGraphCodec(metadata).decode(JsonParser.parseReader(
@@ -150,7 +146,7 @@ class ElectricArcVfxTest {
     void boltsConnectActualEndpointsAtAllRangesAndKeepAnIndependentWidthBudget() throws Exception {
         for (var asset : new String[]{"vector_redirect_arc"}) {
             var sim = simulator(asset);
-            for (float length : new float[]{0.02f, 16, 20, 32, 48, 72, 512}) {
+            for (var length : new float[]{0.02f, 16, 20, 32, 48, 72, 512}) {
                 sim.setLiveParam("length", Value.of(length));
                 at(sim, 0.12f);
                 var core = sim.arcBuffer().arc(1);
@@ -159,10 +155,10 @@ class ElectricArcVfxTest {
                 assertEquals(0, core.x(core.size() - 1), 0.0001f);
                 assertEquals(0, core.z(core.size() - 1), 0.0001f);
                 assertTrue(sim.arcBuffer().count() <= 26);
-                for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                for (var i = 0; i < sim.arcBuffer().count(); i++) {
                     var arc = sim.arcBuffer().arc(i);
                     assertTrue(arc.size() <= 97);
-                    for (int p = 0; p < arc.size(); p++) {
+                    for (var p = 0; p < arc.size(); p++) {
                         assertTrue(arc.y(p) >= 0 && arc.y(p) <= length + 0.001f);
                         assertTrue(Float.isFinite(arc.width(p)));
                     }
@@ -178,18 +174,18 @@ class ElectricArcVfxTest {
     void electricTreesGrowForwardDeltasFromASingleRoot() throws Exception {
         for (var asset : new String[]{"arc_generate", "thunder_lance"}) {
             var sim = simulator(asset);
-            for (float length : new float[]{16, 20, 48}) {
+            for (var length : new float[]{16, 20, 48}) {
                 sim.setLiveParam("length", Value.of(length));
                 at(sim, 0.25f);
                 assertTrue(sim.arcBuffer().count() > 0);
                 assertTrue(sim.arcBuffer().count() <= 128, "the delta must stay bounded");
                 float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
-                int maxGeneration = 0;
-                for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                var maxGeneration = 0;
+                for (var i = 0; i < sim.arcBuffer().count(); i++) {
                     var arc = sim.arcBuffer().arc(i);
                     assertTrue(arc.size() <= 32);
-                    for (int p = 0; p < arc.size(); p++) {
-                        float y = arc.y(p);
+                    for (var p = 0; p < arc.size(); p++) {
+                        var y = arc.y(p);
                         assertTrue(y >= -0.001f && y <= length + 0.05f, "tree must advance forward from the root");
                         minY = Math.min(minY, y);
                         maxY = Math.max(maxY, y);
@@ -226,7 +222,7 @@ class ElectricArcVfxTest {
                 List.of("out"));
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         var sim = new VfxSystemSimulator(system, blocks, 42, system.parameters());
 
         at(sim, 0.1f);
@@ -243,9 +239,9 @@ class ElectricArcVfxTest {
 
     private static float maxY(VfxSystemSimulator sim) {
         var max = -Float.MAX_VALUE;
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
-            for (int p = 0; p < arc.size(); p++) {
+            for (var p = 0; p < arc.size(); p++) {
                 max = Math.max(max, arc.y(p));
             }
         }
@@ -257,17 +253,17 @@ class ElectricArcVfxTest {
         var sim = simulator("vector_redirect_arc");
         sim.setLiveParam("duration", Value.of(0.75f));
         at(sim, 0.12f);
-        int count = sim.arcBuffer().count();
+        var count = sim.arcBuffer().count();
         var outer = sim.arcBuffer().arc(0);
         var core = sim.arcBuffer().arc(1);
         assertEquals(0.12f, outer.r());
         assertEquals(0.78f, core.r());
-        for (int p = 0; p < outer.size(); p++) {
+        for (var p = 0; p < outer.size(); p++) {
             assertEquals(outer.x(p), core.x(p));
             assertEquals(outer.y(p), core.y(p));
             assertEquals(outer.width(p) * 0.7f / 2.5f, core.width(p), 0.00001f);
         }
-        for (int frame = 0; frame < 200; frame++) {
+        for (var frame = 0; frame < 200; frame++) {
             sim.step(frame % 2 == 0 ? 1f / 30 : 1f / 144);
             assertEquals(count, sim.arcBuffer().count());
         }
@@ -289,9 +285,9 @@ class ElectricArcVfxTest {
         assertEquals(loop.y(0), loop.y(loop.size() - 1), 0.00001f);
         assertTrue(sim.arcBuffer().arc(2).width(10) > loop.width(10) * 2);
         float minZ = 100, maxZ = -100;
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
-            for (int p = 0; p < arc.size(); p++) {
+            for (var p = 0; p < arc.size(); p++) {
                 minZ = Math.min(minZ, arc.z(p));
                 maxZ = Math.max(maxZ, arc.z(p));
                 assertTrue(Math.sqrt(arc.x(p) * arc.x(p) + arc.y(p) * arc.y(p) + arc.z(p) * arc.z(p)) < 0.75);
@@ -317,15 +313,15 @@ class ElectricArcVfxTest {
         assertTrue(Math.abs(loop.y(16) - y) + Math.abs(loop.z(16) - z) > 0.001f);
         sim.setLiveParam("motion_speed", Value.of(0f));
         at(sim, 10);
-        float[] frozen = new float[sim.arcBuffer().count()];
-        for (int i = 0; i < frozen.length; i++) frozen[i] = sim.arcBuffer().arc(i).x(5);
+        var frozen = new float[sim.arcBuffer().count()];
+        for (var i = 0; i < frozen.length; i++) frozen[i] = sim.arcBuffer().arc(i).x(5);
         at(sim, 30);
-        for (int i = 0; i < frozen.length; i++) assertEquals(frozen[i], sim.arcBuffer().arc(i).x(5));
+        for (var i = 0; i < frozen.length; i++) assertEquals(frozen[i], sim.arcBuffer().arc(i).x(5));
     }
 
     @Test
     void independentArcOutputsCannotDrawAnotherLayersGeometryOrInheritPoolLayers() {
-        var buffer = new ArcBuffer();
+        var buffer = new CurveBuffer();
         var arc = buffer.add();
         arc.setLayer("electrical_attachment");
         var current = RenderSpec.fromOutputNode(new GraphNode("out", "vfx.block.output_arc",

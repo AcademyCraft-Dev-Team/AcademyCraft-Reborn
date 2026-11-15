@@ -32,22 +32,22 @@ public record GraphCamera(Vector3f position, Matrix4f viewRotation, Matrix4f pro
         if (!(minimumFarPlane > 0f) || !Float.isFinite(minimumFarPlane)) {
             return this;
         }
-        float firstPlane = projection.perspectiveNear();
-        float secondPlane = projection.perspectiveFar();
+        var firstPlane = projection.perspectiveNear();
+        var secondPlane = projection.perspectiveFar();
         if (!(firstPlane > 0f) || !(secondPlane > 0f)
                 || !Float.isFinite(firstPlane) || !Float.isFinite(secondPlane)) {
             return this;
         }
 
-        boolean reversedZ = firstPlane > secondPlane;
-        float currentFarPlane = reversedZ ? firstPlane : secondPlane;
+        var reversedZ = firstPlane > secondPlane;
+        var currentFarPlane = reversedZ ? firstPlane : secondPlane;
         if (currentFarPlane >= minimumFarPlane) {
             return this;
         }
 
-        float nearPlane = reversedZ ? secondPlane : firstPlane;
-        float fov = projection.perspectiveFov();
-        float aspect = Math.abs(projection.m11() / projection.m00());
+        var nearPlane = reversedZ ? secondPlane : firstPlane;
+        var fov = projection.perspectiveFov();
+        var aspect = Math.abs(projection.m11() / projection.m00());
         if (!(fov > 0f) || !(aspect > 0f) || !Float.isFinite(fov) || !Float.isFinite(aspect)) {
             return this;
         }

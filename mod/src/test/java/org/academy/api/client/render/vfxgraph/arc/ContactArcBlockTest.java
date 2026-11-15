@@ -1,9 +1,10 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
@@ -29,7 +30,7 @@ class ContactArcBlockTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -67,7 +68,7 @@ class ContactArcBlockTest {
         var buf = sim.arcBuffer();
         assertTrue(buf.count() > 0, "contact_arc should spawn arcs");
         for (var a = 0; a < buf.count(); a++) {
-            var arc = buf.arc(a);
+            var arc = ArcTestSupport.at(buf, a);
             assertTrue(arc.hasSurface(), "contact arc should snap endpoints to contact mesh");
             // 末端（最后一个点）应被吸附到球面附近（原点半径为 1 的球平移到 (0.52,4.34,0.38)）
             // 起点（第一个点）固定在表面点，不吸附（Blender End Size=1）
@@ -130,7 +131,7 @@ class ContactArcBlockTest {
         simB.step(1f / 60f);
         assertEquals(simA.arcBuffer().count(), simB.arcBuffer().count());
         for (var i = 0; i < simA.arcBuffer().count(); i++) {
-            assertEquals(simA.arcBuffer().arc(i).size(), simB.arcBuffer().arc(i).size());
+            assertEquals(ArcTestSupport.at(simA.arcBuffer(), i).size(), ArcTestSupport.at(simB.arcBuffer(), i).size());
         }
     }
 }

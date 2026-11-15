@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class IronSandDefenseVisualPacketTest {
     @Test
     void directionsAndDistantWorldImpactCoordinatesRoundTrip() {
-        for (boolean intercept : new boolean[]{false, true}) {
+        for (var intercept : new boolean[]{false, true}) {
             var buffer = Unpooled.buffer();
             try {
                 var vector = intercept ? new Vec3(29999982.125, 65.4, -29999981.75) : new Vec3(-0.5, 0.4, 0.8);

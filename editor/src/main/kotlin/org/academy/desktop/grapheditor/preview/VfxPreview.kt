@@ -53,10 +53,11 @@ class VfxPreview(
 
     fun sync() {
         if (containerModel.contexts.isNotEmpty() || containerModel.operators.isNotEmpty()) {
-            if (containerModel === lastContainerModel && containerModel.simVersion == lastContainerSimVersion) {
+            if (containerModel === lastContainerModel && containerModel.simVersion == lastContainerSimVersion
+                && systemSimulator != null) {
                 return
             }
-        } else if (model === lastModel && model.version == lastVersion) {
+        } else if (model === lastModel && model.version == lastVersion && simulator != null) {
             return
         }
         error = null
@@ -71,6 +72,9 @@ class VfxPreview(
                 lastContainerModel = containerModel
                 lastContainerVersion = containerModel.version
                 lastContainerSimVersion = containerModel.simVersion
+                // 作废另一路径的缓存，避免切回时误用空模拟器
+                lastModel = null
+                lastVersion = -1
                 return
             }
             val graph = model.toGraph()
@@ -80,6 +84,9 @@ class VfxPreview(
                 .ifEmpty { listOf(RenderSpec.DEFAULT) }
             lastModel = model
             lastVersion = model.version
+            lastContainerModel = null
+            lastContainerVersion = -1
+            lastContainerSimVersion = -1
         } catch (e: Exception) {
             error = e.message ?: e.javaClass.simpleName
         }

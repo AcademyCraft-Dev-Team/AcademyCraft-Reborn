@@ -3,8 +3,8 @@ package org.academy.internal.common.network;
 import io.netty.buffer.Unpooled;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.vfx.DirectionalArea;
-import org.academy.api.common.vfx.RepairVisualParts;
+import org.academy.api.common.util.DirectionalArea;
+import org.academy.internal.common.ability.darkmatter.RepairVisualParts;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,7 +32,7 @@ class DarkmatterVisualPacketTest {
     @Test
     void everyKindAndTerminalStateSurvivesTheWire() {
         for (var kind : DarkmatterVisualPacket.Kind.values())
-            for (boolean active : new boolean[]{true, false}) {
+            for (var active : new boolean[]{true, false}) {
                 var packet = new DarkmatterVisualPacket(Identifier.withDefaultNamespace("overworld"), kind, 42, active,
                         new Vec3(-12, 81.5, 600), 0.6f, 1.8f, 18, RepairVisualParts.MAIN_HAND | RepairVisualParts.BODY, true, 42);
                 var buffer = Unpooled.buffer();
@@ -61,7 +61,7 @@ class DarkmatterVisualPacketTest {
     @Test
     void rejectsUnboundedOrNonFiniteVisualInputs() {
         var dimension = Identifier.withDefaultNamespace("overworld");
-        for (float width : new float[]{Float.NaN, Float.POSITIVE_INFINITY, -1, 100}) {
+        for (var width : new float[]{Float.NaN, Float.POSITIVE_INFINITY, -1, 100}) {
             assertThrows(IllegalArgumentException.class, () -> new DarkmatterVisualPacket(dimension,
                     DarkmatterVisualPacket.Kind.REPAIR, 0, true, Vec3.ZERO, width, 2, 16, 1, false, 42));
         }

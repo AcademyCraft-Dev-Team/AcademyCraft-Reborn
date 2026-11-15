@@ -3,10 +3,6 @@ package org.academy.api.client.gui.texture
 import com.mojang.renderpearl.api.textures.GpuSampler
 import com.mojang.renderpearl.api.textures.GpuTextureView
 
-/**
- * 直接持有已解析 GPU view 的源 (借用视图, close 空实现).
- * 用于现有 `setTexture(GpuTextureView)` 直接视图路径.
- */
 class GpuTextureViewSource(
     private val view: GpuTextureView,
     private val preferredSampler: GpuSampler? = null

@@ -6,9 +6,8 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.vfx.PlasmaChargeVisuals;
-import org.academy.api.common.vfx.SkillVfxState;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.internal.client.ability.SkillVfxStates;
+import org.academy.internal.common.ability.accelerator.PlasmaChargeVisuals;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.api.common.network.ThreadType;
 import org.misaka.api.common.network.annotation.PacketTarget;
@@ -137,7 +136,7 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                     }
                 }
                 float distance = 0, returnLength = 0;
-                Vec3 direction = Vec3.ZERO;
+                var direction = Vec3.ZERO;
                 if ((flags & 8) != 0) {
                     distance = range(b, 0, 4096);
                     returnLength = range(b, 0, 4096);
@@ -148,10 +147,10 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                         ownerEntityId, orbitIndex, orbitCount);
             }
             case 1 -> {
-                boolean launched = b.readBoolean();
+                var launched = b.readBoolean();
                 Vec3 origin = pos, target = pos;
                 float speed = 0, progress = 1, chargeRate = 0, launchScale = 0;
-                int delay = 0;
+                var delay = 0;
                 if (launched) {
                     target = vector(b);
                     speed = range(b, 0, 256);
@@ -167,7 +166,7 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
                         : PlasmaChargeVisuals.formation(progress));
             }
             case 2 -> {
-                boolean impact = b.readBoolean();
+                var impact = b.readBoolean();
                 var direction = impact ? Vec3.ZERO : vector(b);
                 yield new SkillVfxState.Burst(pos, direction, range(b, 0, 256), range(b, 0, 128), ticks(b), impact);
             }
@@ -211,13 +210,13 @@ public final class SkillVfxPacket extends Packet<ClientPacketListener, SkillVfxP
     }
 
     private static float finite(ByteBuf b) {
-        float value = b.readFloat();
+        var value = b.readFloat();
         if (!Float.isFinite(value)) throw new IllegalArgumentException("Non-finite VFX parameter");
         return value;
     }
 
     private static float range(ByteBuf b, float min, float max) {
-        float value = finite(b);
+        var value = finite(b);
         if (value < min || value > max) throw new IllegalArgumentException("Invalid VFX parameter");
         return value;
     }

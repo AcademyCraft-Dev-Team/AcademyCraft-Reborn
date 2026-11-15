@@ -29,7 +29,6 @@ import org.academy.api.common.registries.Registries;
 import org.academy.api.common.util.L10nUtil;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.server.ability.AbilitySystemServer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
@@ -45,21 +44,10 @@ public abstract class Skill {
     private static final StackWalker STATE_STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
     );
-    /**
-     * Keep disabled until the skill stack system is redesigned and verified.
-     */
     public static final boolean STACK_LIMITS_ENABLED = false;
     public static final Codec<Skill> CODEC =
             Codec.INT.xmap(Registries.SKILLS::byIdOrThrow, Registries.SKILLS::getId);
-    public static final Codec<Skill> ID_CODEC = Identifier.CODEC.flatXmap(
-            id -> Registries.SKILLS.get(id)
-                    .map(holder -> DataResult.success(holder.value()))
-                    .orElseGet(() -> DataResult.error(() -> "Unknown skill " + id)),
-            skill -> DataResult.success(skill.getKey()));
     public static final StreamCodec<ByteBuf, Skill> STREAM_CODEC = ByteBufCodecs.idMapper(Registries.SKILLS);
-    public static final StreamCodec<ByteBuf, Set<Skill>> STREAM_CODEC_SET = STREAM_CODEC.apply(
-            codec -> ByteBufCodecs.collection(HashSet::new, codec)
-    );
     private static final float TOGGLE_CP_EPSILON = 1.0E-4f;
     private final AbilityLevel recommendedLevel;
     private final int energyCostToLearn;
@@ -169,7 +157,7 @@ public abstract class Skill {
      * 重写时建议调用super.onKill()
      */
     public void onKill(ServerPlayer killer, LivingEntity target) {
-        AbilitySystemServer.getSystem(killer)
+        SkillSystems.of(killer)
                 .addPlayerSkillProficiency(killer.getUUID(), this, ProficiencyEvent.KILL_ENTITY);
     }
 
@@ -259,7 +247,7 @@ public abstract class Skill {
             }
         };
 
-        var system = AbilitySystemServer.getSystem(player);
+        var system = SkillSystems.of(player);
         if (resourceCalculator != null) {
             if (stackGroup.isBlank()) {
                 return system.castCpAndMpIfPossible(
@@ -290,7 +278,7 @@ public abstract class Skill {
         NeoForge.EVENT_BUS.post(preEvent);
         if (preEvent.isCanceled()) return false;
 
-        return AbilitySystemServer.getSystem(player)
+        return SkillSystems.of(player)
                 .castContinuousCpIfPossible(player, this, ctx -> {
                     var baseCost = calculator.calculate(ctx);
                     var proficiencyCost = resolvedProficiencyProfile().adjustCost(
@@ -339,7 +327,7 @@ public abstract class Skill {
         NeoForge.EVENT_BUS.post(preEvent);
         if (preEvent.isCanceled()) return false;
 
-        return AbilitySystemServer.getSystem(player)
+        return SkillSystems.of(player)
                 .castContinuousCpAndMpIfPossible(player, this, ctx -> {
                     var baseCost = cpCalculator.calculate(ctx);
                     var proficiencyCost = resolvedProficiencyProfile().adjustCost(
@@ -369,7 +357,7 @@ public abstract class Skill {
     }
 
     public final void reportActivity(ServerPlayer player, boolean effective) {
-        AbilitySystemServer.getSystem(player).reportSkillActivity(
+        SkillSystems.of(player).reportSkillActivity(
                 player.getUUID(),
                 this,
                 effective ? SkillActivity.EFFECTIVE : SkillActivity.ACTIVE
@@ -380,13 +368,13 @@ public abstract class Skill {
      * Records one server-confirmed successful activation.
      */
     public final void reportTrigger(ServerPlayer player) {
-        AbilitySystemServer.getSystem(player)
+        SkillSystems.of(player)
                 .addPlayerSkillProficiency(player.getUUID(), this, ProficiencyEvent.TRIGGER);
     }
 
     @SuppressWarnings("unchecked")
     public final <T extends SkillData> Optional<T> getRuntimeData(ServerPlayer player) {
-        var data = AbilitySystemServer.getSystem(player)
+        var data = SkillSystems.of(player)
                 .skillData(player.getUUID(), getKeyString()).orElse(null);
         return Optional.ofNullable((T) data);
     }
@@ -394,7 +382,7 @@ public abstract class Skill {
     public final void toggle(ServerPlayer player) {
         if (!isStateMutationCallerAllowed("toggle", getClass())) return;
         var uuid = player.getUUID();
-        var system = AbilitySystemServer.getSystem(player);
+        var system = SkillSystems.of(player);
         var runtimeData = getRuntimeData(player);
         if (runtimeData.isEmpty()) return;
         var goingToEnable = !runtimeData.get().isEnabled();
@@ -432,7 +420,7 @@ public abstract class Skill {
     }
 
     public final boolean isEnabled(ServerPlayer player) {
-        var system = AbilitySystemServer.getSystem(player);
+        var system = SkillSystems.of(player);
         return SkillTuning.isSkillEnabled(player, this)
                 && LearningHelper.isSkillAvailableForCategory(
                 system.getPlayerAbilityCategory(player.getUUID()), this
@@ -528,7 +516,7 @@ public abstract class Skill {
         var data = getRuntimeData(player).orElse(null);
         if (!(data instanceof CodecSkillData<?>)) return false;
         ((CodecSkillData<T>) data).value(value);
-        AbilitySystemServer.getSystem(player).markPlayerDirty(player.getUUID());
+        SkillSystems.of(player).markPlayerDirty(player.getUUID());
         return true;
     }
 
@@ -607,7 +595,7 @@ public abstract class Skill {
     }
 
     public final int getLevel(ServerPlayer player) {
-        return AbilitySystemServer.getSystem(player).getPlayerSkillLevel(player.getUUID(), getKeyString());
+        return SkillSystems.of(player).getPlayerSkillLevel(player.getUUID(), getKeyString());
     }
 
     public final float getProficiency(ServerPlayer player) {
@@ -619,7 +607,7 @@ public abstract class Skill {
     }
 
     public final int getEffectiveProficiencyMilestone(ServerPlayer player) {
-        return AbilitySystemServer.getSystem(player).proficiencyEnabled(player)
+        return SkillSystems.of(player).proficiencyEnabled(player)
                 ? getProficiencyMilestone(player) : 0;
     }
 
@@ -795,7 +783,7 @@ public abstract class Skill {
             float proficiency,
             int milestone,
             float availableCP,
-            AbilitySystemServer system
+            SkillSystem system
     ) {
     }
 

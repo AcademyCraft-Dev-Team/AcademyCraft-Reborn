@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.electromaster;
 
-import org.academy.internal.client.render.vfxgraph.CameraShakeManager;
+import org.academy.internal.client.render.camera.CameraShakeManager;
 import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProfile;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.common.profiler.AcademyProfiler;
 import org.academy.api.common.profiler.ProfileDump;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.internal.client.ability.SkillVfxStates;
 import org.jspecify.annotations.Nullable;
 
 import java.io.File;

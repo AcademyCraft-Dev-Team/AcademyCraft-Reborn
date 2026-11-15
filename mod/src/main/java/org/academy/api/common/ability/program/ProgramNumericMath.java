@@ -44,11 +44,11 @@ public final class ProgramNumericMath {
      */
     public static Object convert(Number value, ProgramValueType destination) {
         if (destination.equals(ProgramValueTypes.FLOAT)) {
-            double result = value.doubleValue();
+            var result = value.doubleValue();
             if (!Double.isFinite(result)) throw new ArithmeticException("Float conversion overflow");
             return result;
         }
-        BigInteger integer = value instanceof BigInteger big ? big
+        var integer = value instanceof BigInteger big ? big
                 : value instanceof Integer ? BigInteger.valueOf(value.longValue())
                 : BigDecimal.valueOf(truncate(value.doubleValue())).toBigInteger();
         if (destination.equals(ProgramValueTypes.INTEGER)) return integer.intValueExact();

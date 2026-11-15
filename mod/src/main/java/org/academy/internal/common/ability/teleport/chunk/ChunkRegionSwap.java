@@ -134,7 +134,7 @@ final class ChunkRegionSwap {
         //    bypasses the per-block notifications that normally keep the light engine's empty-section state
         //    in sync, so the old storage must be cleared before the new section layout is registered.
         var lightingA = refreshLighting(levelA, chunkA);
-        CompletableFuture<Void> lightingTask = lightingA;
+        var lightingTask = lightingA;
         if (!sameLevel || chunkA != chunkB) {
             var lightingB = refreshLighting(sameLevel ? levelA : levelB, chunkB);
             lightingTask = CompletableFuture.allOf(lightingA, lightingB);
@@ -178,8 +178,8 @@ final class ChunkRegionSwap {
      */
     private static void swapSectionArrays(ServerLevel levelA, LevelChunk chunkA, ServerLevel levelB,
                                           LevelChunk chunkB, ChunkVerticalBand band) {
-        LevelChunkSection[] sectionsA = chunkA.getSections();
-        LevelChunkSection[] sectionsB = chunkB.getSections();
+        var sectionsA = chunkA.getSections();
+        var sectionsB = chunkB.getSections();
         var count = Math.min(sectionsA.length, sectionsB.length);
         for (var i = 0; i < count; i++) {
             var swap = sectionsA[i];

@@ -1,10 +1,10 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
 import com.google.gson.JsonParser;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.junit.jupiter.api.Test;
 
@@ -17,11 +17,11 @@ class IronSandVfxTest {
     @Test
     void denseDefenseRemainsAtTheFeetOnACompactRingWithoutAccumulation() throws Exception {
         var sim = load("defense");
-        for (int frame = 0; frame < 150; frame++) {
+        for (var frame = 0; frame < 150; frame++) {
             at(sim, frame / 30f);
             assertEquals(2800, sim.buffer().count());
             assertEquals(16, sim.arcBuffer().count());
-            for (int i = 0; i < sim.buffer().count(); i++) {
+            for (var i = 0; i < sim.buffer().count(); i++) {
                 var b = sim.buffer();
                 assertEquals(1.2, Math.hypot(b.positionX(i), b.positionZ(i)), 0.21);
                 assertTrue(b.positionY(i) >= 0.05 && b.positionY(i) <= 0.37);
@@ -43,7 +43,7 @@ class IronSandVfxTest {
         assertTrue(maxHeight(sim) < 0.4);
         at(sim, 0.12f);
         assertTrue(maxHeight(sim) > 2);
-        for (int i = 0; i < sim.buffer().count(); i++) assertTrue(sim.buffer().positionZ(i) > 0.5);
+        for (var i = 0; i < sim.buffer().count(); i++) assertTrue(sim.buffer().positionZ(i) > 0.5);
         at(sim, 0.60f);
         assertTrue(maxHeight(sim) < 0.5);
         at(sim, 0.66f);
@@ -61,7 +61,7 @@ class IronSandVfxTest {
             at(sim, 0.16f);
             assertTrue(sim.buffer().count() >= 2600);
             double farthest = 0;
-            for (int i = 0; i < sim.buffer().count(); i++) {
+            for (var i = 0; i < sim.buffer().count(); i++) {
                 farthest = Math.max(farthest, Math.hypot(sim.buffer().positionX(i), sim.buffer().positionZ(i)));
             }
             assertTrue(farthest > 19 && farthest < 21);
@@ -85,7 +85,7 @@ class IronSandVfxTest {
         var sim = load("guard");
         sim.setLiveParam("source_elevation", Value.of(1f));
         at(sim, 0.12f);
-        for (int i = 0; i < sim.buffer().count(); i++) {
+        for (var i = 0; i < sim.buffer().count(); i++) {
             assertTrue(sim.buffer().positionY(i) > 1.6);
             assertTrue(Math.abs(sim.buffer().positionZ(i)) < 1.4);
         }
@@ -95,14 +95,14 @@ class IronSandVfxTest {
 
     private static float maxHeight(VfxSystemSimulator sim) {
         float y = 0;
-        for (int i = 0; i < sim.buffer().count(); i++) y = Math.max(y, sim.buffer().positionY(i));
+        for (var i = 0; i < sim.buffer().count(); i++) y = Math.max(y, sim.buffer().positionY(i));
         return y;
     }
 
     private VfxSystemSimulator load(String name) throws Exception {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/iron_sand_" + name + ".json")) {
             assertNotNull(stream);
             var system = new JsonVfxGraphCodec(metadata).decode(JsonParser.parseReader(

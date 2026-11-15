@@ -132,7 +132,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         workFilter.setHint("minecraft:iron_ore, #minecraft:logs");
         workFilter.setClearWhenEnter(false);
         getRoot().addChild("work_filter", workFilter);
-        for (int index = 0; index < workCoordinates.length; index++) {
+        for (var index = 0; index < workCoordinates.length; index++) {
             var field = new TextInputWidget(12);
             field.setBackground(null);
             field.setClearWhenEnter(false);
@@ -248,7 +248,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     .width(workPanel.width - inset * 2).height(scaled(22))
                     .marginLeft(workPanel.x + inset).marginTop(workPanel.y + scaled(80)));
         }
-        for (int index = 0; index < workCoordinates.length; index++) {
+        for (var index = 0; index < workCoordinates.length; index++) {
             var field = workCoordinates[index];
             if (field == null) continue;
             var editable = workOpen && WideAreaInterferenceClientState.isRtsView() && workPage == 1 && editingVertices;
@@ -637,8 +637,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         var buttons = new ArrayList<WorkButton>();
         var names = new String[]{"mode", "range", "tasks", "filter"};
         var tabWidth = (workPanel.width - inset * 2) / 4;
-        for (int i = 0; i < 4; i++) {
-            final int page = i;
+        for (var i = 0; i < 4; i++) {
+            final var page = i;
             buttons.add(new WorkButton(new Rect(workPanel.x + inset + i * tabWidth,
                     workPanel.y + scaled(23), tabWidth - gap, scaled(18)), workText(names[i]), () -> workPage = page));
         }
@@ -667,8 +667,8 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     fillVertexFields();
                     workError = "";
                 }));
-                for (int i = 0; i < workCoordinates.length; i++) {
-                    final int index = i;
+                for (var i = 0; i < workCoordinates.length; i++) {
+                    final var index = i;
                     var bounds = coordinateBounds(i);
                     buttons.add(new WorkButton(new Rect(bounds.right() + 1, bounds.y, scaled(16), scaled(9)), "+", () -> stepVertex(index, 1)));
                     buttons.add(new WorkButton(new Rect(bounds.right() + 1, bounds.y + scaled(10), scaled(16), scaled(9)), "−", () -> stepVertex(index, -1)));
@@ -751,7 +751,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     SECONDARY, captionFontSize, workPanel.width - inset * 2);
         }
         if (workPage == 1 && editingVertices) {
-            for (int index = 0; index < workCoordinates.length; index++) {
+            for (var index = 0; index < workCoordinates.length; index++) {
                 var bounds = coordinateBounds(index);
                 graphics.fill(bounds.x, bounds.y, bounds.right(), bounds.bottom(), ROW);
                 text(graphics, (index < 3 ? "A / " : "B / ") + "XYZ".charAt(index % 3), bounds.x,
@@ -797,7 +797,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
         if (workCoordinates[0] == null) return;
         fillingCoordinates = true;
         try {
-            for (int index = 0; index < 6; index++) {
+            for (var index = 0; index < 6; index++) {
                 var pos = index < 3 ? workFirst : workLast;
                 var value = pos == null ? "" : Integer.toString(index % 3 == 0 ? pos.getX() : index % 3 == 1 ? pos.getY() : pos.getZ());
                 workCoordinates[index].setText(value);
@@ -922,7 +922,7 @@ public final class WideAreaInterferenceScreen extends UiScreen {
                     return super.mouseClicked(event, doubleClick);
                 }
                 if (workPage == 1 && editingVertices) {
-                    for (int index = 0; index < workCoordinates.length; index++)
+                    for (var index = 0; index < workCoordinates.length; index++)
                         if (coordinateBounds(index).contains(x, y)) {
                             blurWorkInputs();
                             Arrays.fill(movementKeys, false);

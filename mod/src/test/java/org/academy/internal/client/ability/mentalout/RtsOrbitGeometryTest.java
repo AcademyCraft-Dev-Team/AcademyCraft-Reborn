@@ -14,9 +14,9 @@ class RtsOrbitGeometryTest {
         float fov = (float) Math.toRadians(60), aspect = 16f / 9;
         double ndcX = .32, ndcY = .18;
         var tangent = Math.tan(fov / 2);
-        for (float yaw : new float[]{-170, 0, 45, 170})
-            for (float pitch : new float[]{20, 62, 85}) {
-                for (double distance : new double[]{2, 24, 1024}) {
+        for (var yaw : new float[]{-170, 0, 45, 170})
+            for (var pitch : new float[]{20, 62, 85}) {
+                for (var distance : new double[]{2, 24, 1024}) {
                     var eye = RtsOrbitGeometry.cameraPosition(pivot, distance, pitch, yaw, ndcX * tangent * aspect, ndcY * tangent);
                     var look = eye.add(Vec3.directionFromRotation(pitch, yaw));
                     var view = new Matrix4f().lookAt((float) eye.x, (float) eye.y, (float) eye.z,

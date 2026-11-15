@@ -15,12 +15,12 @@ class SkyStrikeImpactRadiusTest {
     @Test
     void serverRadiusMatchesBothGraphImpactAndAttachmentDefaults() throws Exception {
         for (var profile : SkyStrikeProfile.values()) {
-            String asset = profile == SkyStrikeProfile.THUNDERCLAP ? "thunderclap" : "storm";
+            var asset = profile == SkyStrikeProfile.THUNDERCLAP ? "thunderclap" : "storm";
             assertEquals(profile == SkyStrikeProfile.THUNDERCLAP ? 14f : 6f, profile.ringEndRadius());
             try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/sky_strike_" + asset + ".json")) {
                 assertNotNull(stream);
                 var root = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
-                int matched = 0;
+                var matched = 0;
                 for (var context : root.getAsJsonArray("contexts")) {
                     for (var block : context.getAsJsonObject().getAsJsonArray("blocks")) {
                         var properties = block.getAsJsonObject().getAsJsonObject("properties");

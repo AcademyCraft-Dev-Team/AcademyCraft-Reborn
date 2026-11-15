@@ -7,10 +7,10 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import org.academy.api.common.ability.electromaster.LevitationTuning;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.registries.Registries;
 import org.academy.api.server.ability.SkillTuning;
+import org.academy.internal.common.ability.electromaster.LevitationTuning;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.jspecify.annotations.Nullable;
 

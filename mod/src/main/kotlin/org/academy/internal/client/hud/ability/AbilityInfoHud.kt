@@ -28,6 +28,7 @@ import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.resources.R
 import org.academy.api.common.ability.AbilityCategory
 import org.academy.api.common.util.L10n
+import org.academy.internal.client.ability.darkmatter.DarkmatterClientState
 import org.academy.internal.client.hud.HudLayout
 import org.academy.internal.common.ability.AbilityCategories
 import org.joml.Vector3f
@@ -140,8 +141,17 @@ class AbilityInfoHud private constructor() {
         context.rebuildLayout()
     }
 
+    private class CpBarBackgroundWidget(
+        private val hudAlpha: () -> Float,
+    ) : ImageWidget(IdentifierTextureSource(R.textures.hud.cp_bar_background)) {
+        override fun renderInternal(context: Canvas) {
+            val tint = autoLerpColor(hudAlpha())
+            setColor(tint.r / 255f, tint.g / 255f, tint.b / 255f)
+            super.renderInternal(context)
+        }
+    }
+
     private class CpBarWidget(
-        private val colorSetter: (Float, Float, Float) -> Unit,
         private val hudAlpha: () -> Float,
     ) : AbstractWidget() {
         private val controller = CpDisplayController()
@@ -160,7 +170,6 @@ class AbilityInfoHud private constructor() {
         override fun renderInternal(context: Canvas) {
             super.renderInternal(context)
             val tint = autoLerpColor(hudAlpha())
-            colorSetter(tint.r / 255f, tint.g / 255f, tint.b / 255f)
             val view = resolveTexture() ?: return
             controller.render(
                 context,
@@ -191,16 +200,16 @@ class AbilityInfoHud private constructor() {
 
     private class SpBarWidget(
         private val hudAlpha: () -> Float,
-    ) : ImageWidget(IdentifierTextureSource(R.textures.SP_BAR_VALUE)) {
+    ) : AbstractWidget() {
+        private var textureView: GpuTextureView? = null
+
         override fun renderInternal(context: Canvas) {
             super.renderInternal(context)
             val maximum = AbilitySystemClient.getMaxSP()
             if (maximum <= 0) return
             val progress = (AbilitySystemClient.getCurrSP().toFloat() / maximum).coerceIn(0f, 1f)
             if (progress <= 0f) return
-            val source = textureSource ?: return
-            val view = source.getTextureView()
-            if (view == null || view.isClosed) return
+            val view = resolveTexture() ?: return
             val tint = autoLerpColor(hudAlpha())
 
             val destLeft = SP_SOURCE_LEFT * SP_SOURCE_SCALE
@@ -260,6 +269,19 @@ class AbilityInfoHud private constructor() {
             })
             context.pose().popPose()
         }
+
+        private fun resolveTexture(): GpuTextureView? {
+            val current = textureView
+            if (current != null && !current.isClosed) return current
+            return try {
+                Minecraft.getInstance().textureManager
+                    .getTexture(R.textures.SP_BAR_VALUE)
+                    .getTextureView()
+                    .also { textureView = it }
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     private class Context : WidgetContext {
@@ -303,14 +325,12 @@ class AbilityInfoHud private constructor() {
                     Widget.Visibility.VISIBLE
                 }
 
-                val background = image(R.textures.hud.cp_bar_background) {
+                add("background", CpBarBackgroundWidget { root.alpha }) {
                     sizeMode(SizeMode.MATCH_PARENT)
                     sampler(FilterMode.LINEAR, false)
                 }
 
-                add("cp", CpBarWidget({ r, g, b ->
-                    background.setColor(r, g, b)
-                }) { root.alpha })
+                add("cp", CpBarWidget { root.alpha })
                 add("sp", SpBarWidget { root.alpha })
                 image(null) {
                     lp {
@@ -374,8 +394,8 @@ class AbilityInfoHud private constructor() {
                             Widget.Visibility.GONE
                         }
                         text = if (isDarkmatter) {
-                            val alphaValue = (AbilitySystemClient.getDarkmatterAlpha() * 100f).roundToInt()
-                            val betaValue = (AbilitySystemClient.getDarkmatterBeta() * 100f).roundToInt()
+                            val alphaValue = (DarkmatterClientState.alpha() * 100f).roundToInt()
+                            val betaValue = (DarkmatterClientState.beta() * 100f).roundToInt()
                             "α$alphaValue%  β$betaValue%"
                         } else {
                             ""

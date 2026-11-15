@@ -20,7 +20,6 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -36,6 +35,7 @@ import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.ElectromasterGraphEffects;
 import org.academy.internal.server.team.TeamRelations;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -49,7 +49,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public class ThunderLance extends Skill {
+public final class ThunderLance extends Skill {
     static final float QUICK_BASE_DAMAGE = 20.0f;
     static final float QUICK_RANGE = 32.0f;
     static final float QUICK_RADIUS = 2.0f;

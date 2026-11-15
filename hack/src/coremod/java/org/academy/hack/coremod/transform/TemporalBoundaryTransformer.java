@@ -46,7 +46,7 @@ public final class TemporalBoundaryTransformer {
             if (method.visibleAnnotations == null) continue;
             for (var annotation : method.visibleAnnotations) {
                 if (!annotation.desc.equals("Lorg/spongepowered/asm/mixin/transformer/meta/MixinMerged;")) continue;
-                for (int i = 0; i < annotation.values.size(); i += 2) {
+                for (var i = 0; i < annotation.values.size(); i += 2) {
                     if (annotation.values.get(i).equals("mixin")
                             && !annotation.values.get(i + 1).toString().startsWith("org.academy.")) {
                         foreignHandlers.add(method.name + method.desc);
@@ -54,7 +54,7 @@ public final class TemporalBoundaryTransformer {
                 }
             }
         }
-        int changed = 0;
+        var changed = 0;
         for (var method : owner.methods) {
             if (!boundary.test(method)) continue;
             for (var instruction : method.instructions.toArray()) {

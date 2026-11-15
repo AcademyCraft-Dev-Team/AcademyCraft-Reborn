@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
@@ -45,10 +46,6 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
-import org.academy.api.common.ability.electromaster.MagneticFieldTuning;
-import org.academy.api.common.ability.electromaster.MagneticMovement;
-import org.academy.api.common.ability.electromaster.MagneticTargets;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.GravityControl;
 import org.academy.api.server.ability.ServerContext;
@@ -56,9 +53,13 @@ import org.academy.api.server.ability.SkillAvailability;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
+import org.academy.internal.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.MagneticFieldTuning;
+import org.academy.internal.common.ability.electromaster.MagneticMovement;
+import org.academy.internal.common.ability.electromaster.MagneticTargets;
 import org.academy.internal.common.ability.electromaster.field.MagneticFieldRuntime;
 import org.academy.internal.common.ability.electromaster.skills.lv1.ArcGenerate;
 import org.academy.internal.common.attachment.AttachmentTypes;
@@ -81,7 +82,6 @@ import org.misaka.api.common.network.packet.PacketType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 
 public class MagnetManipulation extends Skill {
     static final double MOVE_RANGE = 48.0;
@@ -302,11 +302,13 @@ public class MagnetManipulation extends Skill {
                 Vec3 point;
                 @Nullable Vec3 origin;
                 @Nullable Vec3 end;
+                float smoothedYaw;
                 long updated;
 
                 SupportEffect(LivingEntity subject) {
                     this.subject = subject;
                     point = subject.position();
+                    smoothedYaw = subject.getYRot();
                     updated = subject.level().getGameTime();
                     effect = VfxGraphManager.INSTANCE.spawn(AcademyCraft.academy("vfxgraph/magnetic_levitation_support"),
                             subject.position().toVector3f());
@@ -314,21 +316,29 @@ public class MagnetManipulation extends Skill {
                     effect.bindGameTime("time");
                     effect.bindArcs("paths", (out, _) -> {
                         if (origin == null || end == null) return;
-                        double yaw = Math.toRadians(subject.getYRot());
+                        double yaw = Math.toRadians(smoothedYaw);
                         var right = new Vec3(Math.cos(yaw), 0, Math.sin(yaw)).scale(subject.getBbWidth() * 0.24);
                         for (int side : new int[]{-1, 1}) {
                             var start = right.scale(side).add(0, 0.18, 0);
-                            long seed = subject.getId() * 31L + side + (subject.tickCount / 2) * 101L;
-                            ArcCurveBuilder.blueWhiteLine(out,
+                            long seed = subject.getId() * 31L + side;
+                            var arc = ArcCurveBuilder.line(out,
                                     (float) start.x, (float) start.y, (float) start.z,
                                     (float) end.x, (float) end.y, (float) end.z,
-                                    0.024f, 12, 1f, 1f, seed, 2, 2, 1.2f, 0.35f, 0.4f);
+                                    0.024f * 0.7f, 12, 0.78f, 0.94f, 1f, 0.92f, 1f, seed + 1,
+                                    0, 0, 1.2f, 0.35f, 0.4f);
+                            if (arc != null) {
+                                arc.setNoiseStrength(0.5f);
+                                arc.setDriftSpeed(1.0f);
+                            }
                         }
                     });
                     effect.bindFrame((active, camera, partialTick) -> {
                         if (invalid()) return false;
                         origin = subject.getPosition(partialTick);
-                        end = point.subtract(origin);
+                        smoothedYaw = Mth.lerp(partialTick, subject.yRotO, subject.getYRot());
+                        var targetEnd = point.subtract(origin);
+                        if (end == null) end = targetEnd;
+                        else end = end.lerp(targetEnd, 0.35);
                         if (end.lengthSqr() > 64 * 64) return false;
                         active.setPosition(origin.toVector3f());
                         active.setCullingSphere(origin.add(point).scale(0.5).toVector3f(), (float) end.length() * 0.5f + 1f);

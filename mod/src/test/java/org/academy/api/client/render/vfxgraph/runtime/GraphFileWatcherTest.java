@@ -1,6 +1,7 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
 import net.minecraft.resources.Identifier;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
@@ -25,6 +26,7 @@ class GraphFileWatcherTest {
 
     @BeforeEach
     void setUp() {
+        VfxSeriesTestRegistration.install();
         var manager = VfxGraphManager.INSTANCE;
         manager.init();
         manager.clearEffects();

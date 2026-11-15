@@ -34,7 +34,6 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.GravityControl;
-import org.academy.api.server.ability.electromaster.MagneticLevitation;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.electromaster.arc.ElectromasterArcActions;
 import org.academy.internal.common.ability.meltdowner.beam.ContinuousBeamReflection;
@@ -46,6 +45,7 @@ import org.academy.internal.common.ability.shared.linear.LinearSegment;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.gametest.GameTestData;
 import org.academy.internal.common.world.entity.skill.HighSpeedElectronBeam;
+import org.academy.internal.server.ability.electromaster.MagneticLevitation;
 
 import java.util.List;
 import java.util.UUID;

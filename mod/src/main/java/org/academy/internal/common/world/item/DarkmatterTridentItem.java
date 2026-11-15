@@ -4,7 +4,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.enchantment.Enchantment;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
 
 public final class DarkmatterTridentItem extends TridentItem implements DarkmatterShapedItem {
     public DarkmatterTridentItem(Properties properties) {

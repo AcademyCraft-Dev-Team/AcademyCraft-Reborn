@@ -3,6 +3,7 @@ package org.academy.api.client.render.vfxgraph.nodes;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.type.CurveSampler;
 import org.academy.api.client.render.graph.type.GradientSampler;
+import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
 import org.academy.api.client.render.vfxgraph.sim.SimNode;
 
 import java.util.Map;
@@ -57,6 +58,6 @@ final class LifeNodes {
 
     @FunctionalInterface
     private interface CurveWriter {
-        void write(org.academy.api.client.render.vfxgraph.sim.ParticleBuffer buf, int i, float s);
+        void write(ParticleBuffer buf, int i, float s);
     }
 }

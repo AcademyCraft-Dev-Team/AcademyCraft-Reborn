@@ -32,7 +32,6 @@ import org.academy.api.common.damage.MaxHealthDamage;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AreaEffectTargets;
-import org.academy.api.server.damage.AbilityDamageService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -43,6 +42,7 @@ import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProf
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.damage.AbilityDamageService;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -101,7 +101,7 @@ public class Thunderclap extends Skill {
         InputSystem.addKeyBinding(Client.KEY, Client.CONFIG.getKeyBinding(Client.KEY,
                         InputSystem.combo(InputSystem.InputType.KEYBOARD, InputConstants.KEY_N,
                                 InputConstants.RELEASE, 0))
-                , ctx -> Client.onUse());
+                , _ -> Client.onUse());
     }
 
     @Override
@@ -211,7 +211,7 @@ public class Thunderclap extends Skill {
         @SubscribePacket
         public static void handle(UsePacket p) {
             var player = p.getPacketListener().getPlayer();
-            if (!(player.level() instanceof ServerLevel level)) return;
+            var level = player.level();
             var skill = Skills.THUNDERCLAP.get();
             var milestone = skill.getEffectiveProficiencyMilestone(player);
             var targetPos = resolveTarget(player, level, milestone);

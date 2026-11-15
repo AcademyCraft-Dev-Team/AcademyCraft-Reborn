@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component
 import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.widget.FrameLayoutWidget
 import org.academy.api.client.render.Render
@@ -96,7 +95,7 @@ abstract class UiScreen protected constructor(title: Component) : Screen(title),
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
         if (ImGuiUtilApi.wantCaptureMouse()) return true
 
-        val event = ScrollEvent(mouseX, mouseY, scrollY)
+        val event = MouseEvent.createScrollEvent(mouseX, mouseY, scrollY)
         root.dispatchEvent(event)
         return event.isConsumed || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY)
     }

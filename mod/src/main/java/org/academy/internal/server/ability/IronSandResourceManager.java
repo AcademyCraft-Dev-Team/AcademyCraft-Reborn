@@ -10,17 +10,17 @@ import org.academy.AcademyCraft;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.ability.SyncTypes;
-import org.academy.api.common.ability.electromaster.IronSandTuning;
 import org.academy.api.server.ability.AbilityResourceAccount;
 import org.academy.api.server.ability.SkillAvailability;
-import org.academy.api.server.ability.electromaster.IronSandResourceService;
-import org.academy.api.server.damage.DefenseFeedbackSuppression;
-import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.electromaster.IronSandTuning;
 import org.academy.internal.common.ability.electromaster.migration.ElectromasterSkillMigration;
 import org.academy.internal.common.ability.electromaster.skills.lv4.IronSandArsenal;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
+import org.academy.internal.server.ability.electromaster.IronSandResourceService;
+import org.academy.internal.server.damage.DefenseFeedbackSuppression;
+import org.academy.internal.server.damage.HealthLossGuards;
 
 import java.util.*;
 

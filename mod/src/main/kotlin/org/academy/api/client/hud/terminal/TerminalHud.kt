@@ -31,11 +31,11 @@ import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.KeyEvent
+import org.academy.api.client.gui.event.MouseEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createDragEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createMoveEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createPressEvent
 import org.academy.api.client.gui.event.MouseEvent.Companion.createReleaseEvent
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.render.Canvas
@@ -158,7 +158,6 @@ class TerminalHud private constructor() {
                         )
                     )
                 ) {
-                    // SDF 辉光会画到标称尺寸之外, 保守起见视为无界 (不参与合并).
                     override fun localBounds(): LocalBounds? = null
                 }
                 context.submit(glowCommand)
@@ -386,7 +385,7 @@ class TerminalHud private constructor() {
             val d0 = ((if (options.discreteMouseScroll().get()) sign(event.yOffset) else
                 event.yOffset
                     ) * options.mouseWheelSensitivity().get())
-            context.get().dispatchEvent(ScrollEvent(xPos, yPos, d0))
+            context.get().dispatchEvent(MouseEvent.createScrollEvent(xPos, yPos, d0))
             event.setCanceled(true)
         }
     }

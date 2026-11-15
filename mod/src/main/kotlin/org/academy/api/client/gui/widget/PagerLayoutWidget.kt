@@ -6,7 +6,6 @@ import org.academy.api.client.gui.animation.ObjectAnimator
 import org.academy.api.client.gui.animation.TimeInterpolator
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.render.Canvas
 
 open class PagerLayoutWidget : FrameLayoutWidget() {
@@ -81,7 +80,6 @@ open class PagerLayoutWidget : FrameLayoutWidget() {
 
     override fun dispatchEvent(event: InputEvent) {
         if (event is MouseEvent && !isWithinVisibleBounds(event.x, event.y)) return
-        if (event is ScrollEvent && !isWithinVisibleBounds(event.x, event.y)) return
         super.dispatchEvent(event)
     }
 

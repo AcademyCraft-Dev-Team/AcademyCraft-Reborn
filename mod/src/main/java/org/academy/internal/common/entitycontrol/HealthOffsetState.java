@@ -35,15 +35,15 @@ public final class HealthOffsetState {
      */
     public void advance(long now, double newMaximum) {
         if (dead) return;
-        double offset = Double.longBitsToDouble(encodedOffset ^ mask);
+        var offset = Double.longBitsToDouble(encodedOffset ^ mask);
         if (!Double.isFinite(offset) || offset < 0) offset = 0;
-        double ceiling = Math.max(0, maximum - offset);
+        var ceiling = Math.max(0, maximum - offset);
         if (Double.isFinite(newMaximum) && newMaximum > 0) {
             maximum = newMaximum;
             offset = Math.max(0, maximum - ceiling);
         }
-        long end = lastHit + 400;
-        long from = Math.max(lastHit + 200, advancedAt);
+        var end = lastHit + 400;
+        var from = Math.max(lastHit + 200, advancedAt);
         if (now >= end) offset = 0;
         else if (now > from) offset *= (double) (end - now) / (end - from);
         encodedOffset = Double.doubleToRawLongBits(offset) ^ mask;
@@ -52,7 +52,7 @@ public final class HealthOffsetState {
 
     public void heal(double amount) {
         if (dead || !Double.isFinite(amount) || amount <= 0) return;
-        double offset = Double.longBitsToDouble(encodedOffset ^ mask);
+        var offset = Double.longBitsToDouble(encodedOffset ^ mask);
         if (!Double.isFinite(offset) || offset < 0) return;
         encodedOffset = Double.doubleToRawLongBits(Math.max(0, offset - amount)) ^ mask;
     }

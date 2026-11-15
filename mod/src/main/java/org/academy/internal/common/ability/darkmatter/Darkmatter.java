@@ -30,9 +30,7 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityCategory;
 import org.academy.api.common.ability.AbilityResourceSpec;
 import org.academy.api.common.ability.SyncTypes;
-import org.academy.api.common.ability.darkmatter.DarkmatterResourceService;
-import org.academy.api.common.vfx.DirectionalArea;
-import org.academy.api.common.vfx.RepairVisualParts;
+import org.academy.api.common.util.DirectionalArea;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
@@ -48,7 +46,6 @@ import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
-
 
 public final class Darkmatter extends AbilityCategory {
     private static @Nullable DarkmatterResourceService resourceService;
@@ -95,9 +92,6 @@ public final class Darkmatter extends AbilityCategory {
         private Client() {
         }
 
-        /**
-         * One bounded graph per actor/target and kind, with explicit stop, leases and world identity checks.
-         */
         @EventBusSubscriber(Dist.CLIENT)
         public static final class DarkmatterVfxClient {
             private record Key(Kind kind, int entity, BlockPos block) {
@@ -145,13 +139,6 @@ public final class Darkmatter extends AbilityCategory {
                     }
                 }
                 current.refresh(packet);
-            }
-
-            /**
-             * Diagnostics used by the isolated client capture, including continuous-pulse deduplication.
-             */
-            public static int activeCount() {
-                return EFFECTS.size() + InterferenceFieldClient.activeCount();
             }
 
             @SubscribeEvent
@@ -209,7 +196,7 @@ public final class Darkmatter extends AbilityCategory {
                 void refresh(DarkmatterVisualPacket packet) {
                     state = packet;
                     updated = level.getGameTime();
-                    for (int i = 0; i < partTicks.length; i++)
+                    for (var i = 0; i < partTicks.length; i++)
                         if ((packet.parts & (1 << i)) != 0) partTicks[i] = updated;
                 }
 
@@ -220,7 +207,6 @@ public final class Darkmatter extends AbilityCategory {
                     if (subject.level() != world) return false;
                     var present = world.getEntity(subject.getId());
                     if (present != subject && !(present == null && state.finished)) return false;
-                    // Terminal erosion may finish on the death pose; maintained fields and repair stop immediately.
                     return (!subject.isRemoved() && subject.isAlive()) || state.finished && (state.kind == Kind.DISASSEMBLE || state.kind == Kind.CONTACT);
                 }
 
@@ -245,10 +231,10 @@ public final class Darkmatter extends AbilityCategory {
                         modelRoot.m31(modelRoot.m31() + camera.position().y - (float) origin.y);
                         modelRoot.m32(modelRoot.m32() + camera.position().z - (float) origin.z);
                     }
-                    float elapsed = (level.getGameTime() - updated + partialTick) / 20f;
-                    float progress = Math.clamp(elapsed / (state.kind == Kind.CONTACT ? 0.18f : state.kind == Kind.REPAIR ? 0.38f : 0.65f), 0, 1);
+                    var elapsed = (level.getGameTime() - updated + partialTick) / 20f;
+                    var progress = Math.clamp(elapsed / (state.kind == Kind.CONTACT ? 0.18f : state.kind == Kind.REPAIR ? 0.38f : 0.65f), 0, 1);
                     var pos = BlockPos.containing(origin.add(0, state.height * 0.6, 0));
-                    int brightness = Math.max(level.getBrightness(LightLayer.BLOCK, pos),
+                    var brightness = Math.max(level.getBrightness(LightLayer.BLOCK, pos),
                             Math.max(0, level.getBrightness(LightLayer.SKY, pos) - level.getSkyDarken()));
                     var graph = active.effect();
                     graph.setLiveParam("time", Value.of(active.gameAgeSeconds()));
@@ -259,7 +245,7 @@ public final class Darkmatter extends AbilityCategory {
                     graph.setLiveParam("range", Value.of(state.range));
                     graph.setLiveParam("seed", Value.of((float) (state.seed & 65535)));
                     graph.setLiveParam("light", Value.of(brightness / 15f));
-                    float sunAngle = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, origin, null)
+                    var sunAngle = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, origin, null)
                             * (float) (Math.PI / 180);
                     var sunlight = inverse.transform(new Vector3f((float) Math.sin(sunAngle), (float) Math.cos(sunAngle), 0));
                     graph.setLiveParam("sun_direction", Value.of(sunlight));
@@ -272,8 +258,8 @@ public final class Darkmatter extends AbilityCategory {
                 }
 
                 int parts() {
-                    int result = 0;
-                    for (int i = 0; i < partTicks.length; i++)
+                    var result = 0;
+                    for (var i = 0; i < partTicks.length; i++)
                         if (level.getGameTime() - partTicks[i] <= Kind.REPAIR.leaseTicks) result |= 1 << i;
                     return result;
                 }
@@ -282,11 +268,11 @@ public final class Darkmatter extends AbilityCategory {
                     if (state.kind == Kind.REPAIR && firstPerson) return sampleHand(index, u, v, p, n);
                     if (subject instanceof Player && bones != null && modelRoot != null) {
                         var choices = new ArrayList<Integer>(6);
-                        int parts = parts();
+                        var parts = parts();
                         if (state.kind != Kind.REPAIR || (parts & (RepairVisualParts.BODY | RepairVisualParts.CHEST)) != 0)
                             choices.add(0);
                         if (state.kind != Kind.REPAIR || (parts & RepairVisualParts.HEAD) != 0) choices.add(1);
-                        boolean rightMain = subject.getMainArm() == HumanoidArm.RIGHT;
+                        var rightMain = subject.getMainArm() == HumanoidArm.RIGHT;
                         if (state.kind != Kind.REPAIR || (parts & (RepairVisualParts.BODY | (rightMain ? RepairVisualParts.MAIN_HAND : RepairVisualParts.OFF_HAND))) != 0)
                             choices.add(2);
                         if (state.kind != Kind.REPAIR || (parts & (RepairVisualParts.BODY | (rightMain ? RepairVisualParts.OFF_HAND : RepairVisualParts.MAIN_HAND))) != 0)
@@ -320,12 +306,11 @@ public final class Darkmatter extends AbilityCategory {
                                 new Matrix4f(modelRoot).mul(bones[part]), p, n);
                         return true;
                     }
-                    int face = index % 6;
+                    var face = index % 6;
                     if (subject == null && state.parts != 0) {
-                        // Direction ordinals DOWN, UP, NORTH, SOUTH, WEST, EAST -> box face order.
                         int[] faceOrder = {2, 3, 4, 5, 0, 1};
                         var exposed = new ArrayList<Integer>(6);
-                        for (int i = 0; i < 6; i++) if ((state.parts & (1 << i)) != 0) exposed.add(faceOrder[i]);
+                        for (var i = 0; i < 6; i++) if ((state.parts & (1 << i)) != 0) exposed.add(faceOrder[i]);
                         if (exposed.isEmpty()) return false;
                         face = exposed.get(index % exposed.size());
                     }
@@ -336,11 +321,11 @@ public final class Darkmatter extends AbilityCategory {
 
                 boolean sampleHand(int index, float u, float v, Vector3f p, Vector3f n) {
                     if (subject == null || camera == null) return false;
-                    int parts = parts();
-                    boolean body = (parts & RepairVisualParts.BODY) != 0;
+                    var parts = parts();
+                    var body = (parts & RepairVisualParts.BODY) != 0;
                     boolean main = (parts & RepairVisualParts.MAIN_HAND) != 0, off = (parts & RepairVisualParts.OFF_HAND) != 0;
                     if (!body && !main && !off || index >= (main && off ? 4 : 2)) return false;
-                    boolean right = subject.getMainArm() == HumanoidArm.RIGHT;
+                    var right = subject.getMainArm() == HumanoidArm.RIGHT;
                     if (off && (!main || index % 2 != 0)) right = !right;
                     var transform = new Matrix4f(camera.viewRotation()).invert();
                     transform.setTranslation(new Vector3f(camera.position()).sub(origin.toVector3f()));
@@ -352,9 +337,6 @@ public final class Darkmatter extends AbilityCategory {
             }
         }
 
-        /**
-         * The same velocity-aligned material blade for pursuit modifiers and interference/six-wing feathers.
-         */
         @EventBusSubscriber(Dist.CLIENT)
         public static final class DarkmatterFeatherVfxClient {
             private static final Map<DarkmatterFeatherProjectile, ActiveEffect> BLADES = new IdentityHashMap<>();
@@ -396,9 +378,6 @@ public final class Darkmatter extends AbilityCategory {
             }
         }
 
-        /**
-         * Server-authoritative field snapshots; never infer a second combat region on the client.
-         */
         public static final class InterferenceFieldClient {
             private record Entry(@Nullable LivingEntity actor, DirectionalArea area, long tick) {
             }
@@ -449,10 +428,6 @@ public final class Darkmatter extends AbilityCategory {
                 return frame;
             }
 
-            public static int activeCount() {
-                return FIELDS.size();
-            }
-
             public static void close() {
                 FIELDS.clear();
                 frame = List.of();
@@ -460,6 +435,5 @@ public final class Darkmatter extends AbilityCategory {
                 DirectionalFieldRenderer.close();
             }
         }
-
     }
 }

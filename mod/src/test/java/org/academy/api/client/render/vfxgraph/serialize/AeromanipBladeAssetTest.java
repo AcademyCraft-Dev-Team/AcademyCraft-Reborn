@@ -64,7 +64,7 @@ class AeromanipBladeAssetTest {
     }
 
     private static JsonObject context(JsonObject graph, String type) {
-        JsonArray contexts = graph.getAsJsonArray("contexts");
+        var contexts = graph.getAsJsonArray("contexts");
         for (var element : contexts) {
             var context = element.getAsJsonObject();
             if (type.equals(context.get("type").getAsString())) return context;

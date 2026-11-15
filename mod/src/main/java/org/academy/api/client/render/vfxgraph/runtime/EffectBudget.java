@@ -4,9 +4,6 @@ import org.joml.FrustumIntersection;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
-/**
- * Particle limits and conservative camera-relative visibility without per-effect matrix allocation.
- */
 public final class EffectBudget {
     private int maxParticlesPerEffect = 10000;
     private float maxRenderDistance = 96f;
@@ -18,10 +15,6 @@ public final class EffectBudget {
     private final Matrix4f combined = new Matrix4f();
     private boolean prepared;
 
-    public int maxParticlesPerEffect() {
-        return maxParticlesPerEffect;
-    }
-
     public void setMaxParticlesPerEffect(int value) {
         maxParticlesPerEffect = Math.max(1, value);
     }
@@ -32,10 +25,6 @@ public final class EffectBudget {
 
     public void setMaxRenderDistance(float value) {
         maxRenderDistance = Math.max(0f, value);
-    }
-
-    public boolean frustumCullingEnabled() {
-        return frustumCullingEnabled;
     }
 
     public void setFrustumCullingEnabled(boolean value) {
@@ -58,9 +47,6 @@ public final class EffectBudget {
         return shouldRender(camera, center, 0f, maxRenderDistance);
     }
 
-    /**
-     * Distance is measured to the volume, not just its emitter/center.
-     */
     public boolean shouldRender(Vector3f camera, Vector3f center, float radius, float distance) {
         double dx = (double) center.x - camera.x, dy = (double) center.y - camera.y, dz = (double) center.z - camera.z;
         double range = Math.max(0, distance) + Math.max(0, radius);

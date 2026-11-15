@@ -39,12 +39,11 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.damage.TrueHealthDamageSource;
-import org.academy.api.server.ability.electromaster.IronSandResourceService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfxgraph.CameraShakeManager;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.TickingVfx;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
+import org.academy.internal.client.render.camera.CameraShakeManager;
+import org.academy.internal.client.render.effect.FrameContext;
+import org.academy.internal.client.render.effect.TickingVfx;
+import org.academy.internal.client.render.effect.VfxContexts;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 import org.academy.internal.common.ability.electromaster.skills.lv5.LightningStorm;
 import org.academy.internal.common.ability.electromaster.skills.lv5.Thunderclap;
@@ -57,6 +56,7 @@ import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.ability.IronSandResourceManager;
+import org.academy.internal.server.ability.electromaster.IronSandResourceService;
 import org.academy.internal.server.entity.SurvivalDefense;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -528,10 +528,10 @@ public final class Electromaster extends AbilityCategory {
             }
 
             private float flashCurve(float age) {
-                float initial = age < profile.flashDurationTicks()
+                var initial = age < profile.flashDurationTicks()
                         ? Mth.square(1f - age / profile.flashDurationTicks()) : 0;
                 if (!profile.restrike()) return initial;
-                float restrike = Math.max(0, 1f - Math.abs(age - 3f) / 0.65f) * 0.45f;
+                var restrike = Math.max(0, 1f - Math.abs(age - 3f) / 0.65f) * 0.45f;
                 return Math.min(1, initial + restrike);
             }
 
@@ -560,9 +560,9 @@ public final class Electromaster extends AbilityCategory {
 
             @Override
             public Vector3f project(float x, float y, float z, Vector3f destination) {
-                int blockX = (int) Math.floor(origin.x + x);
-                int blockZ = (int) Math.floor(origin.z + z);
-                long key = ((long) blockX << 32) ^ (blockZ & 0xFFFFFFFFL);
+                var blockX = (int) Math.floor(origin.x + x);
+                var blockZ = (int) Math.floor(origin.z + z);
+                var key = ((long) blockX << 32) ^ (blockZ & 0xFFFFFFFFL);
                 float ground = heights.computeIfAbsent(key, ignored -> sample(blockX, blockZ));
                 return destination.set(x, ground + 0.08f, z);
             }

@@ -24,7 +24,6 @@ import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.CharTypedEvent
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.imgui.ImGuiUtilApi
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.layout.SizeMode
@@ -260,7 +259,7 @@ abstract class ContainerUiScreen<T : AbstractContainerMenu> protected constructo
     override fun mouseScrolled(mouseX: Double, mouseY: Double, scrollX: Double, scrollY: Double): Boolean {
         if (ImGuiUtilApi.wantCaptureMouse()) return true
 
-        val event = ScrollEvent(mouseX, mouseY, scrollY)
+        val event = MouseEvent.createScrollEvent(mouseX, mouseY, scrollY)
         root.dispatchEvent(event)
         val rootResult = event.isConsumed
 

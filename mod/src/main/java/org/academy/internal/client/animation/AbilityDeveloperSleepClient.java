@@ -93,7 +93,7 @@ public final class AbilityDeveloperSleepClient {
     }
 
     private static Quaternionf rotation(PodPose podPose) {
-        Direction axis = podPose.facing().getCounterClockWise();
+        var axis = podPose.facing().getCounterClockWise();
         return new Quaternionf().rotationAxis(
                 podPose.angleDegrees() * ((float) Math.PI / 180.0f),
                 axis.getStepX(),

@@ -13,13 +13,13 @@ public final class HealthReadInliner {
         var body = owner.methods.stream().filter(method -> method.name.contains("academy$inlineOffsetRead")
                 && method.desc.equals("(F)F")).findFirst().orElseThrow();
         if (!body.tryCatchBlocks.isEmpty()) throw new IllegalStateException("Unexpected health hook handlers");
-        int replaced = 0;
+        var replaced = 0;
         for (var caller : owner.methods) {
             if (caller == body) continue;
             for (var instruction : caller.instructions.toArray()) {
                 if (!(instruction instanceof MethodInsnNode call) || !call.owner.equals(owner.name)
                         || !call.name.equals(body.name) || !call.desc.equals(body.desc)) continue;
-                int base = caller.maxLocals;
+                var base = caller.maxLocals;
                 caller.maxLocals += body.maxLocals;
                 var copy = new InsnList();
                 copy.add(new VarInsnNode(Opcodes.FSTORE, base + 1));

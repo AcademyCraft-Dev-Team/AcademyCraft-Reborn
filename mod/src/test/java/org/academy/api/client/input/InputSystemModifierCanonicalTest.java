@@ -251,7 +251,7 @@ class InputSystemModifierCanonicalTest {
     @SuppressWarnings("unchecked")
     private static Map<Integer, Integer> keyboardState() {
         try {
-            Field field = InputSystem.class.getDeclaredField("KEYBOARD_STATE");
+            var field = InputSystem.class.getDeclaredField("KEYBOARD_STATE");
             field.setAccessible(true);
             return (Map<Integer, Integer>) field.get(null);
         } catch (ReflectiveOperationException e) {

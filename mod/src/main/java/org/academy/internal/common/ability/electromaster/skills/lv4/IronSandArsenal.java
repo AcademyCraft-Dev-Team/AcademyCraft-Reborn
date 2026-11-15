@@ -38,12 +38,9 @@ import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.electromaster.IronSandTuning;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.AbilityActorContext;
-import org.academy.api.server.ability.HostileProjectiles;
 import org.academy.api.server.ability.ServerContext;
-import org.academy.api.server.ability.electromaster.IronSandActions;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -51,9 +48,12 @@ import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.ability.electromaster.Electromaster;
+import org.academy.internal.common.ability.electromaster.IronSandTuning;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.HostileProjectiles;
+import org.academy.internal.server.ability.electromaster.IronSandActions;
 import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -179,7 +179,7 @@ public class IronSandArsenal extends Skill {
                 effects.entrySet().removeIf(entry -> {
                     var entity = currentLevel.getEntity(entry.getKey());
                     var state = entity == null ? null : entity.getData(AttachmentTypes.IRON_SAND_DATA.get());
-                    boolean remove = entity == null || !entity.isAlive() || entity.isRemoved()
+                    var remove = entity == null || !entity.isAlive() || entity.isRemoved()
                             || (cloud ? state.cloudRadius() <= 0 : !state.defense());
                     if (remove) entry.getValue().stop();
                     return remove;
@@ -191,7 +191,7 @@ public class IronSandArsenal extends Skill {
                 effect.follow(entity);
                 effect.bindFrame((active, camera, partialTick) -> {
                     if (entity.level() != Minecraft.getInstance().level || !entity.isAlive()) return false;
-                    float radius = cloud ? entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).cloudRadius()
+                    var radius = cloud ? entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).cloudRadius()
                             : "defense".equals(name) ? 1.2f : 1.4f;
                     active.effect().setLiveParam("radius", Value.of(radius));
                     active.setCullingSphere(active.position(), radius + 3);
@@ -208,7 +208,7 @@ public class IronSandArsenal extends Skill {
                 var effect = attached("whip", entity, false);
                 effect.setRotation(new Quaternionf().rotationY((float) Math.toRadians(-entity.getYRot())));
                 effect.bindFrame((active, camera, partialTick) -> {
-                    float radius = entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).whipRange();
+                    var radius = entity.getData(AttachmentTypes.IRON_SAND_DATA.get()).whipRange();
                     active.effect().setLiveParam("radius", Value.of(radius));
                     active.effect().setLiveParam("detail", Value.of(detail(entity)));
                     active.setCullingSphere(active.position(), radius + 2);
@@ -251,7 +251,7 @@ public class IronSandArsenal extends Skill {
 
             private static float detail(Entity entity) {
                 var mc = Minecraft.getInstance();
-                float quality = mc.options.particles().get() == ParticleStatus.MINIMAL ? 0.35f
+                var quality = mc.options.particles().get() == ParticleStatus.MINIMAL ? 0.35f
                         : mc.options.particles().get() == ParticleStatus.DECREASED ? 0.65f : 1;
                 return mc.player != null && mc.player.distanceToSqr(entity) > 32 * 32 ? quality * 0.5f : quality;
             }

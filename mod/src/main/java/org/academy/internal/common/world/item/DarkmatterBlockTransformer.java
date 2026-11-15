@@ -35,17 +35,17 @@ final class DarkmatterBlockTransformer {
     );
 
     private static List<BlockTransformer.BlockTransformData> axeTransforms() {
-        RuleBasedStateProvider.Builder scrape = RuleBasedStateProvider.builder();
-        for (Map.Entry<Block, Block> entry : DataMapHooks.INVERSE_OXIDIZABLES_DATAMAP.entrySet()) {
+        var scrape = RuleBasedStateProvider.builder();
+        for (var entry : DataMapHooks.INVERSE_OXIDIZABLES_DATAMAP.entrySet()) {
             scrape.ifTrueThenProvide(BlockPredicate.matchesBlocks(entry.getKey()), new CopyPropertiesProvider(entry.getValue()));
         }
 
-        RuleBasedStateProvider.Builder unwax = RuleBasedStateProvider.builder();
-        for (Map.Entry<Block, Block> entry : DataMapHooks.INVERSE_WAXABLES_DATAMAP.entrySet()) {
+        var unwax = RuleBasedStateProvider.builder();
+        for (var entry : DataMapHooks.INVERSE_WAXABLES_DATAMAP.entrySet()) {
             unwax.ifTrueThenProvide(BlockPredicate.matchesBlocks(entry.getKey()), new CopyPropertiesProvider(entry.getValue()));
         }
 
-        RuleBasedStateProvider.Builder logs = RuleBasedStateProvider.builder();
+        var logs = RuleBasedStateProvider.builder();
         for (var log : BuiltInRegistries.BLOCK) {
             var key = BuiltInRegistries.BLOCK.getKey(log);
             if (key == null) continue;

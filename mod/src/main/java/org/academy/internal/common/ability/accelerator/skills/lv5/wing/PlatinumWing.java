@@ -33,7 +33,6 @@ import org.academy.AcademyCraft;
 import org.academy.AcademyCraftClient;
 import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
-import org.academy.api.client.config.WingFlightConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
@@ -42,16 +41,17 @@ import org.academy.api.client.resources.R;
 import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.WingControlIntent;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.ability.WingFlightClient;
+import org.academy.internal.client.config.WingFlightConfig;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.flight.WingControlIntent;
 import org.academy.internal.common.ability.accelerator.flight.WingFlightRuntime;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.aeromanip.targeting.AeromanipTargeting;
@@ -164,9 +164,9 @@ public final class PlatinumWing extends Skill {
                 if (previous != null) {
                     VfxGraphManager.INSTANCE.stop(previous.effect);
                 }
-                float safeWidth = Math.max(0.3f, width);
-                float safeHeight = Math.max(0.5f, height);
-                int safeDuration = Math.max(1, durationTicks);
+                var safeWidth = Math.max(0.3f, width);
+                var safeHeight = Math.max(0.5f, height);
+                var safeDuration = Math.max(1, durationTicks);
                 try {
                     var effect = VfxGraphManager.INSTANCE.spawn(
                             EXECUTION_ASSET, new Vector3f((float) x, (float) y, (float) z));
@@ -201,7 +201,7 @@ public final class PlatinumWing extends Skill {
                 var iterator = ACTIVE.entrySet().iterator();
                 while (iterator.hasNext()) {
                     var state = iterator.next().getValue();
-                    float progress = state.progress();
+                    var progress = state.progress();
                     if (!state.burstSpawned && progress >= 0.45f) {
                         state.burstSpawned = true;
                         spawnBurst(state);
@@ -216,13 +216,13 @@ public final class PlatinumWing extends Skill {
             private static void spawnBurst(ExecutionEffect state) {
                 var level = Minecraft.getInstance().level;
                 if (level == null) return;
-                for (int i = 0; i < 36; i++) {
-                    double x = state.position.x + (RANDOM.nextDouble() - 0.5) * state.width;
-                    double y = state.position.y + RANDOM.nextDouble() * state.height;
-                    double z = state.position.z + (RANDOM.nextDouble() - 0.5) * state.width;
-                    double vx = (RANDOM.nextDouble() - 0.5) * 0.22;
-                    double vy = 0.02 + RANDOM.nextDouble() * 0.18;
-                    double vz = (RANDOM.nextDouble() - 0.5) * 0.22;
+                for (var i = 0; i < 36; i++) {
+                    var x = state.position.x + (RANDOM.nextDouble() - 0.5) * state.width;
+                    var y = state.position.y + RANDOM.nextDouble() * state.height;
+                    var z = state.position.z + (RANDOM.nextDouble() - 0.5) * state.width;
+                    var vx = (RANDOM.nextDouble() - 0.5) * 0.22;
+                    var vy = 0.02 + RANDOM.nextDouble() * 0.18;
+                    var vz = (RANDOM.nextDouble() - 0.5) * 0.22;
                     level.addParticle(i % 3 == 0 ? ParticleTypes.END_ROD : ParticleTypes.PORTAL,
                             x, y, z, vx, vy, vz);
                 }
@@ -253,7 +253,7 @@ public final class PlatinumWing extends Skill {
                     var minecraft = Minecraft.getInstance();
                     var level = minecraft.level;
                     if (level == null) return 1f;
-                    float partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+                    var partialTick = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
                     return Mth.clamp(
                             (float) ((level.getGameTime() + partialTick - startTick) / durationTicks),
                             0f,

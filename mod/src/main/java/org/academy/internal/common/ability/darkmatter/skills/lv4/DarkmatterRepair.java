@@ -26,13 +26,12 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.vfx.RepairVisualParts;
-import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.darkmatter.RepairVisualParts;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterAbsorption;
 import org.academy.internal.common.ability.darkmatter.resource.DarkmatterPhase;
 import org.academy.internal.common.ability.darkmatter.skills.lv3.DarkmatterRadiation;
@@ -40,6 +39,7 @@ import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWi
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.DarkmatterGraphEffects;
 import org.academy.internal.server.entity.HealthRecovery;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -219,9 +219,9 @@ public final class DarkmatterRepair extends Skill {
                 }
                 var pulse = PRODUCTIVE_PULSES.getOrDefault(player.getUUID(), 0) + 1;
                 var changed = false;
-                int visualParts = 0;
+                var visualParts = 0;
                 if (missingHealth > 0.0f) {
-                    boolean healed = HealthRecovery.restore(player, healingAmount(
+                    var healed = HealthRecovery.restore(player, healingAmount(
                             snapshot.alphaRatio(), milestone, outputMultiplier, player.getMaxHealth())) > 0.0f;
                     changed |= healed;
                     if (healed) visualParts |= RepairVisualParts.BODY;
@@ -247,7 +247,7 @@ public final class DarkmatterRepair extends Skill {
                     changed |= player.getAbsorptionAmount() > before;
                 }
                 if (hasBetaWork && harmful != null) {
-                    boolean cleansed = removesHarmfulEffect(pulse, milestone)
+                    var cleansed = removesHarmfulEffect(pulse, milestone)
                             ? player.removeEffect(harmful.getEffect())
                             : shortenEffect(player, harmful, effectReductionTicks(phase.beta(), milestone));
                     changed |= cleansed;

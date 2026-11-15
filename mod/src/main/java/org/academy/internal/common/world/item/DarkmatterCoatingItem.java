@@ -1,8 +1,8 @@
 package org.academy.internal.common.world.item;
 
 import net.minecraft.world.item.Item;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShapingProfile;
 
 /**
  * Configured consumable that transfers its phase profile onto another item in crafting.

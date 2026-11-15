@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -147,13 +148,13 @@ public final class VfxGraphManager {
         if (!initialized) return;
         lastCamera = camera;
         frameCameras.clear();
-        boolean paused = Minecraft.getInstance().isPaused();
-        long now = System.nanoTime();
-        float elapsed = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f
+        var paused = Minecraft.getInstance().isPaused();
+        var now = System.nanoTime();
+        var elapsed = paused ? 0f : lastRenderNanos <= 0 ? 1f / 60f
                 : (now - lastRenderNanos) / 1e9f;
-        float dt = Math.min(elapsed, 0.1f);
+        var dt = Math.min(elapsed, 0.1f);
         lastRenderNanos = now;
-        float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        var partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         int visible = 0, culled = 0, simulated = 0;
         var iterator = effects.iterator();
         while (iterator.hasNext()) {
@@ -165,8 +166,8 @@ public final class VfxGraphManager {
             }
             var effectCamera = frameCameras.computeIfAbsent(effect.minimumFarPlane(),
                     camera::withMinimumFarPlane);
-            float radius = effect.cullingRadius(budget.effectRadius());
-            boolean draw = effect.frameVisible() && (effect.alwaysVisible()
+            var radius = effect.cullingRadius(budget.effectRadius());
+            var draw = effect.frameVisible() && (effect.alwaysVisible()
                     || (budget.shouldRender(effectCamera.position(), effect.cullingCenter(), radius,
                     effect.renderDistance(budget.maxRenderDistance()))
                     && budget.sphereInFrustum(effectCamera.projection(), effectCamera.viewRotation(),
@@ -174,7 +175,7 @@ public final class VfxGraphManager {
             effect.setRenderVisible(draw);
             // Analytic callers using frameVisible manage their own presentation clock.
             if (!paused && effect.frameVisible() && budget.canSpawnMore(effect.effect().buffer().count())) {
-                float step = effect.simulationStep(dt, draw);
+                var step = effect.simulationStep(dt, draw);
                 if (step > 0f) {
                     effect.simulate(step);
                     simulated++;
@@ -225,13 +226,13 @@ public final class VfxGraphManager {
         var d = spec.distortionRing();
         if (d == null) d = RenderSpec.DistortionRing.DEFAULT;
         var bound = effect.effect().liveParam("distortion_strength");
-        float strength = d.strength();
+        var strength = d.strength();
         if (bound != null && bound.type() == ValueType.FLOAT) strength = Math.max(0f, bound.asFloat());
         bound = effect.effect().liveParam("distortion_ring_width");
-        float width = d.width();
+        var width = d.width();
         if (bound != null && bound.type() == ValueType.FLOAT) width = Math.clamp(bound.asFloat(), 0.001f, 1f);
         bound = effect.effect().liveParam("distortion_edge_blur");
-        float blur = d.edgeBlur();
+        var blur = d.edgeBlur();
         if (bound != null && bound.type() == ValueType.FLOAT) blur = Math.clamp(bound.asFloat(), 0f, 1f);
         return new RenderSpec.DistortionRing(strength, width, blur);
     }
@@ -322,7 +323,7 @@ public final class VfxGraphManager {
     }
 
     private static void putShaderPackVertices(PoseStack.Pose pose, VertexConsumer output,
-                                              java.nio.ByteBuffer vertices, int vertexCount) {
+                                              ByteBuffer vertices, int vertexCount) {
         var stream = vertices.duplicate().order(vertices.order());
         stream.limit(stream.position() + vertexCount * BLOCK_VERTEX_STRIDE);
         for (var index = 0; index < vertexCount; index++) {

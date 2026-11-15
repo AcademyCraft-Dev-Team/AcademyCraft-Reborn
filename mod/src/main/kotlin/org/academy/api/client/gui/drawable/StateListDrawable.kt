@@ -6,15 +6,15 @@ import org.academy.api.client.gui.widget.Widget
 class StateListDrawable : Drawable {
     private data class StatePair(val mask: Int, val drawable: Drawable?)
 
-    private val stateList: MutableList<StatePair> = ArrayList<StatePair>()
+    private val stateList: MutableList<StatePair> = ArrayList()
     private var defaultDrawable: Drawable? = null
 
     override fun draw(context: Canvas, widget: Widget) {
         val currentState = widget.getWidgetState()
 
-        for (pair in stateList) {
-            if ((currentState and pair.mask) == pair.mask) {
-                pair.drawable?.draw(context, widget)
+        for ((mask, drawable) in stateList) {
+            if ((currentState and mask) == mask) {
+                drawable?.draw(context, widget)
                 return
             }
         }

@@ -1,0 +1,259 @@
+package org.academy.internal.client.render.vfxgraph.arc;
+
+import org.academy.api.client.render.graph.registry.PropertySpec;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.model.VfxBlock;
+import org.academy.api.client.render.vfxgraph.nodes.BlockProps;
+import org.academy.api.client.render.vfxgraph.nodes.PortValueSource;
+import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
+import org.academy.api.client.render.vfxgraph.sim.ParticleBuffer;
+import org.academy.api.client.render.vfxgraph.sim.SimContext;
+import org.academy.api.client.render.vfxgraph.sim.SimNode;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.academy.api.client.render.vfxgraph.VfxNoise.smooth;
+import static org.academy.api.client.render.vfxgraph.VfxNoise.unit;
+
+/**
+ * Independent, short surface traces with local forks. No common center or radial spokes.
+ */
+public final class SurfaceDischargeEmitter {
+    private SurfaceDischargeEmitter() {
+    }
+
+    public static List<PropertySpec> properties() {
+        return List.of(number("duration", 1.5f), number("fade", 0.45f), number("height", 72),
+                number("ground_radius", 14), number("ground_arcs", 8), number("cloud_radius", 20),
+                number("cloud_count", 44), number("cloud_arcs", 8), number("width", 0.055f),
+                number("crawl_rate", 5), number("surface_detail", 1));
+    }
+
+    public static SimNode create(VfxBlock block, PortValueSource ports) {
+        return new Emitter(block);
+    }
+
+    private record Layout(long seed, int frame, float height, float groundRadius, float cloudRadius,
+                          int cloudCount, int groundArcs, int cloudArcs, float width, int segments,
+                          boolean forks, SurfaceProjector ground) {
+    }
+
+    private static final class Trace {
+        final ArcCurve path = new ArcCurve();
+        boolean sky;
+        float brightness;
+        long seed;
+    }
+
+    private static final class Emitter implements SimNode {
+        private final VfxBlock block;
+        private final long group = SkyDischargeEmitter.newGroup();
+        private final List<Trace> traces = new ArrayList<>();
+        private final TraceShape shape = new TraceShape();
+        private Layout layout;
+        private float epoch = Float.NaN;
+        private int count;
+
+        private Emitter(VfxBlock block) {
+            this.block = block;
+        }
+
+        @Override
+        public void step(ParticleBuffer buffer, SimContext context) {
+            context.arcs().removeGroup(group);
+            if (!Float.isFinite(epoch)) epoch = context.time();
+            var override = context.paramFloat("time", -1);
+            var t = Math.max(0, Float.isFinite(override) && override >= 0 ? override : context.time() - epoch);
+            var duration = value(block, context, "duration", 1.5f, 0.1f, 20);
+            var fade = value(block, context, "fade", 0.45f, 0.01f, duration);
+            var alpha = smooth((t - 0.035f) / 0.10f)
+                    * (1f - smooth((t - duration + fade) / fade))
+                    * value(block, context, "opacity", 1, 0, 1);
+            var detail = value(block, context, "detail", 1, 0, 1);
+            var surfaceDetail = detail * value(block, context, "surface_detail", 1, 0, 1);
+            if (alpha < 0.002f || surfaceDetail <= 0) return;
+            var cloudAlpha = value(block, context, "cloud_opacity", 1, 0, 1);
+            var next = new Layout(
+                    (long) context.paramFloat("seed", 42),
+                    (int) (t * value(block, context, "crawl_rate", 5, 0, 15)),
+                    value(block, context, "height", 72, 1, 192),
+                    value(block, context, "ground_radius", 14, 1, 32),
+                    value(block, context, "cloud_radius", 20, 1, 48),
+                    Math.round(value(block, context, "cloud_count", 44, 6, 64) * (0.35f + detail * 0.65f)),
+                    Math.round(value(block, context, "ground_arcs", 8, 0, 12) * surfaceDetail),
+                    cloudAlpha < 0.002f ? 0 : Math.round(value(block, context, "cloud_arcs", 8, 0, 12) * surfaceDetail),
+                    value(block, context, "width", 0.055f, 0.005f, 0.25f),
+                    Math.round(10 + 10 * surfaceDetail), surfaceDetail >= 0.7f, context.surface("ground"));
+            // Reproject only on a crawl step or a live edit. Cloud paths stay in the billows' local frame.
+            if (!next.equals(layout)) {
+                rebuild(next);
+                layout = next;
+            }
+            var rotation = StormCloudShape.rotation(t);
+            var cos = (float) Math.cos(rotation);
+            var sin = (float) Math.sin(rotation);
+            for (var i = 0; i < count; i++) {
+                var trace = traces.get(i);
+                var opacity = alpha * trace.brightness * (trace.sky ? cloudAlpha : 1f);
+                if (opacity < 0.002f) continue;
+                var flicker = 0.78f + unit(trace.seed + (long) (t * 18) * 911, 55) * 0.22f;
+                for (var shell = 0; shell < 2; shell++) {
+                    var arc = BlueWhiteArcStyle.shell(context.arcs(), group, trace.seed,
+                            opacity * flicker, shell, "electrical_attachment");
+                    arc.setMaxTubeSegments(surfaceDetail < 0.55f || shell == 0 ? 4 : 6);
+                    var path = trace.path;
+                    for (var p = 0; p < path.size(); p++) {
+                        arc.addPoint(trace.sky ? path.x(p) * cos - path.z(p) * sin : path.x(p), path.y(p),
+                                trace.sky ? path.x(p) * sin + path.z(p) * cos : path.z(p),
+                                path.width(p) * BlueWhiteArcStyle.widthScale(shell), path.generation(p), path.segment(p));
+                    }
+                }
+            }
+        }
+
+        private void rebuild(Layout settings) {
+            count = 0;
+            var lobes = new Vector4f[settings.cloudArcs > 0 ? settings.cloudCount : 0];
+            for (var i = 0; i < lobes.length; i++) {
+                lobes[i] = StormCloudShape.lobe(i, lobes.length, 0, settings.seed,
+                        settings.height, settings.cloudRadius, new Vector4f());
+            }
+            SurfaceProjector cloud = (x, y, z, out) ->
+                    out.set(x, StormCloudShape.underside(x, z, lobes) - 0.07f, z);
+            for (var layer = 0; layer < 2; layer++) {
+                var sky = layer == 1;
+                var surface = sky ? cloud : settings.ground;
+                var reach = sky ? settings.cloudRadius : settings.groundRadius;
+                var patches = sky ? settings.cloudArcs : settings.groundArcs;
+                for (var patch = 0; patch < patches; patch++) {
+                    var seed = settings.seed + 3001 + layer * 9001L + patch * 137L;
+                    var angle = unit(seed, 0) * 6.283185f;
+                    float cx;
+                    float cz;
+                    if (sky) {
+                        var lobe = lobes[(patch * 7 + 3) % lobes.length];
+                        cx = lobe.x;
+                        cz = lobe.z;
+                    } else {
+                        var centerAngle = unit(seed, 4) * 6.283185f;
+                        var distance = reach * (float) Math.sqrt(unit(seed, 5)) * 0.74f;
+                        cx = (float) Math.cos(centerAngle) * distance;
+                        cz = (float) Math.sin(centerAngle) * distance;
+                    }
+                    if (count == traces.size()) traces.add(new Trace());
+                    var trace = traces.get(count++);
+                    trace.path.clearPoints();
+                    trace.sky = sky;
+                    trace.seed = seed;
+                    trace.brightness = 0.60f + unit(seed + settings.frame * 31L, 8) * 0.40f;
+                    var length = reach * (0.22f + unit(seed, 2) * 0.18f);
+                    append(trace.path, surface, cx, cz, angle, length, settings.width,
+                            seed, settings.frame, sky, settings.segments, 0, shape);
+                    // Sparse local forks share a mesh with their parent, but never connect across strokes.
+                    if (settings.forks && patch % 3 == 0 && trace.path.size() >= 4) {
+                        var at = Math.clamp(Math.round((trace.path.size() - 1)
+                                * (0.25f + unit(seed, 61) * 0.45f)), 1, trace.path.size() - 2);
+                        var before = trace.path.segment(at - 1) == trace.path.segment(at) ? at - 1 : at;
+                        var after = trace.path.segment(at + 1) == trace.path.segment(at) ? at + 1 : at;
+                        var dx = trace.path.x(after) - trace.path.x(before);
+                        var dz = trace.path.z(after) - trace.path.z(before);
+                        var tangent = dx * dx + dz * dz > 0.0001f ? (float) Math.atan2(dz, dx) : angle;
+                        var forkAngle = tangent + (unit(seed, 62) < 0.5f ? -1 : 1)
+                                * (0.55f + unit(seed, 63) * 0.95f);
+                        append(trace.path, surface, trace.path.x(at), trace.path.z(at), forkAngle,
+                                length * (0.28f + unit(seed, 64) * 0.20f),
+                                settings.width * (0.35f + unit(seed, 65) * 0.15f),
+                                seed + 99, settings.frame, sky, settings.segments, 1, shape);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void append(ArcCurve arc, SurfaceProjector surface,
+                               float cx, float cz, float angle, float length, float width,
+                               long seed, int frame, boolean sky, int limit, int generation, TraceShape shape) {
+        var point = new Vector3f();
+        var previous = new Vector3f();
+        var stroke = arc.size() == 0 ? 0 : arc.segment(arc.size() - 1) + 1;
+        var hasPrevious = false;
+        var segments = Math.clamp((int) Math.ceil(length * 3), 6, limit);
+        var cos = (float) Math.cos(angle);
+        var sin = (float) Math.sin(angle);
+        shape.configure(seed, frame);
+        for (var i = 0; i <= segments; i++) {
+            var u = (float) i / segments;
+            var bend = shape.sample(u) * length;
+            var x = cx + cos * length * u - sin * bend;
+            var z = cz + sin * length * u + cos * bend;
+            surface.project(x, 0.08f, z, point);
+            if (!Float.isFinite(point.y)) {
+                stroke++;
+                hasPrevious = false;
+                continue;
+            }
+            var thickness = width * (0.45f + 0.55f * (float) Math.sin(u * Math.PI));
+            // At block steps, follow the riser before the tread instead of cutting diagonally through blocks.
+            if (!sky && hasPrevious && Math.abs(point.y - previous.y) > 0.3f) {
+                if (point.y > previous.y) {
+                    arc.addPoint(previous.x, point.y, previous.z, thickness, generation, stroke);
+                } else {
+                    arc.addPoint(point.x, previous.y, point.z, thickness, generation, stroke);
+                }
+            }
+            arc.addPoint(point.x, point.y, point.z, thickness, generation, stroke);
+            previous.set(point);
+            hasPrevious = true;
+        }
+    }
+
+    /**
+     * Reused scratch spine: uneven corners, directional drift and fine nonperiodic crawl.
+     */
+    private static final class TraceShape {
+        private final float[] along = new float[8];
+        private final float[] across = new float[8];
+        private int spans;
+        private long crawlSeed;
+
+        void configure(long seed, int frame) {
+            spans = 3 + (int) (unit(seed, 71) * 5);
+            var roughness = 0.10f + unit(seed, 72) * 0.22f;
+            var drift = (unit(seed, 73) - 0.5f) * 0.32f;
+            crawlSeed = seed + frame * 617L;
+            along[0] = 0;
+            across[0] = 0;
+            for (var k = 1; k <= spans; k++) {
+                along[k] = k == spans ? 1 : (k + (unit(seed, k + 80) - 0.5f) * 0.6f) / spans;
+                // A short random walk produces hooks, zigzags and one-sided bends without a shared wave.
+                across[k] = Math.clamp(across[k - 1] * 0.3f
+                        + (unit(seed, k + 90) * 2f - 1f) * roughness + drift * along[k], -0.42f, 0.42f);
+            }
+        }
+
+        float sample(float u) {
+            var k = 1;
+            while (k < spans && u > along[k]) k++;
+            var blend = (u - along[k - 1]) / (along[k] - along[k - 1]);
+            var spine = across[k - 1] + (across[k] - across[k - 1]) * blend;
+            var cursor = u * 13;
+            var cell = (int) cursor;
+            var fine = (unit(crawlSeed, cell + 120) * 2f - 1f) * (1f - (cursor - cell))
+                    + (unit(crawlSeed, cell + 121) * 2f - 1f) * (cursor - cell);
+            return spine + fine * 0.025f * Math.min(1f, u * 12);
+        }
+    }
+
+    private static float value(VfxBlock block, SimContext context, String key, float fallback, float min, float max) {
+        return BlockProps.resolve(block, context, key, fallback, min, max);
+    }
+
+    private static PropertySpec number(String id, float value) {
+        return new PropertySpec(id, id.replace('_', ' '), ValueType.FLOAT, Value.of(value), Optional.empty());
+    }
+}

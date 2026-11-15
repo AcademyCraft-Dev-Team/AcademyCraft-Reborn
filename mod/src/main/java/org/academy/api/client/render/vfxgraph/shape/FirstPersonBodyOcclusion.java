@@ -12,19 +12,19 @@ public final class FirstPersonBodyOcclusion {
     public final Vector3f max = new Vector3f();
 
     public boolean occludes(Vector3fc point, float xOffset) {
-        float near = 0.0f;
-        float far = 1.0f;
-        for (int axis = 0; axis < 3; axis++) {
-            float origin = eye.get(axis);
-            float delta = point.get(axis) + (axis == 0 ? xOffset : 0.0f) - origin;
-            float lower = min.get(axis);
-            float upper = max.get(axis);
+        var near = 0.0f;
+        var far = 1.0f;
+        for (var axis = 0; axis < 3; axis++) {
+            var origin = eye.get(axis);
+            var delta = point.get(axis) + (axis == 0 ? xOffset : 0.0f) - origin;
+            var lower = min.get(axis);
+            var upper = max.get(axis);
             if (Math.abs(delta) < 1.0e-6f) {
                 if (origin < lower || origin > upper) return false;
                 continue;
             }
-            float first = (lower - origin) / delta;
-            float second = (upper - origin) / delta;
+            var first = (lower - origin) / delta;
+            var second = (upper - origin) / delta;
             near = Math.max(near, Math.min(first, second));
             far = Math.min(far, Math.max(first, second));
             if (near > far) return false;

@@ -14,7 +14,7 @@ import org.academy.api.client.render.TextureBinding
 import org.academy.api.client.render.UniformBinding
 import org.academy.api.client.render.post.BackdropBlur
 import org.academy.api.client.render.post.GlowEffect
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer
 import org.academy.api.client.render.vfxgraph.render.GraphCamera
 import org.academy.api.client.render.vfxgraph.render.RenderSpec
 import org.academy.api.client.render.vfxgraph.render.VfxGraphRenderer
@@ -50,7 +50,7 @@ class EditorGlow(
         viewport: GpuTextureView,
         depth: GpuTextureView?,
         buffer: ParticleBuffer,
-        arcBuffer: ArcBuffer?,
+        arcBuffer: CurveBuffer?,
         camera: GraphCamera,
         specs: List<RenderSpec>,
         viewportWidth: Int,

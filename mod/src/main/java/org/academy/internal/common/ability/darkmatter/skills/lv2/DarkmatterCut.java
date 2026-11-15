@@ -35,9 +35,8 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.internal.client.ability.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -49,8 +48,9 @@ import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWi
 import org.academy.internal.common.ability.darkmatter.targeting.DarkmatterTargeting;
 import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.SkillVfxState;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.vfx.SkillVfxService;
+import org.academy.internal.server.ability.SkillVfxService;
 import org.joml.Vector3f;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -145,9 +145,9 @@ public final class DarkmatterCut extends Skill {
 
         private static void spawnSlash(SkillVfxState.Slash state) {
             var effect = VfxGraphManager.INSTANCE.spawn(DARKMATTER_SLASH_ASSET, state.position().toVector3f());
-            float lifetimeSeconds = Math.max(1, state.lifetimeTicks()) / 20f;
+            var lifetimeSeconds = Math.max(1, state.lifetimeTicks()) / 20f;
             effect.setGameTimeLifetimeSeconds(lifetimeSeconds);
-            float mirrored = state.direction() < 0 ? 1f : 0f;
+            var mirrored = state.direction() < 0 ? 1f : 0f;
             effect.bind("slash_scale", () -> Value.of(state.scale()));
             effect.bind("slash_orientation", () -> Value.of(new Vector3f(state.yRot(), state.xRot(), 0f)));
             effect.bind("slash_roll_outer", () -> Value.of(slashProgress(effect, lifetimeSeconds) + 4f * mirrored));
@@ -435,8 +435,8 @@ public final class DarkmatterCut extends Skill {
         ) {
             var position = player.position().add(0, player.getBbHeight() * 0.3, 0)
                     .add(direction.scale(1.85));
-            float yRot = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
-            float xRot = (float) Math.toDegrees(-Math.asin(Math.clamp(direction.y, -1.0, 1.0)))
+            var yRot = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
+            var xRot = (float) Math.toDegrees(-Math.asin(Math.clamp(direction.y, -1.0, 1.0)))
                     + player.getRandom().nextFloat() * 60 - 30;
             SkillVfxService.slash(level, position, xRot, yRot, scale,
                     player.getRandom().nextBoolean() ? 1 : -1, 4);

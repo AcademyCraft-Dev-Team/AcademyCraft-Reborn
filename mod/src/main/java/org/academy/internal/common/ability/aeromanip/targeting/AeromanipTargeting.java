@@ -10,7 +10,7 @@ import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.ability.AirMobility;
+import org.academy.internal.common.ability.aeromanip.AirMobility;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.movement.AeromanipDisplacementTracker;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;

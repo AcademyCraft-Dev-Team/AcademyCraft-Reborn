@@ -575,7 +575,7 @@ public final class ShaderNodes {
         if (parsed.isEmpty()) {
             return new Expr("vec4(1.0)", ValueType.COLOR);
         }
-        StringBuilder expr = new StringBuilder(colorLiteral(parsed.getFirst()));
+        var expr = new StringBuilder(colorLiteral(parsed.getFirst()));
         for (var i = 1; i < parsed.size(); i++) {
             var prev = parsed.get(i - 1);
             var cur = parsed.get(i);

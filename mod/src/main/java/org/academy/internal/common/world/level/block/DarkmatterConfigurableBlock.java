@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.neoforged.neoforge.event.EventHooks;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterBlockProfile;
 import org.academy.internal.common.world.item.DarkmatterBlockItem;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.common.world.level.block.entity.DarkmatterBlockEntity;

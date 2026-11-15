@@ -91,7 +91,7 @@ public final class BackdropBlur {
             var uniforms = List.of(new UniformBinding("BlurInfo", blurUboSlice));
             var vec2 = new Vector2f(width, height);
 
-            RenderPipeline pipeline = depth != null
+            var pipeline = depth != null
                     ? Render.RenderPipelines.CUTOUT_GAUSSIAN_BLUR
                     : Render.RenderPipelines.GAUSSIAN_BLUR;
 

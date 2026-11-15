@@ -213,7 +213,7 @@ public final class EntityRadarThumbnailRenderer {
         @SuppressWarnings({"rawtypes", "unchecked"})
         private EntityRenderState extractRenderState(LivingEntity entity) {
             EntityRenderer renderer = dispatcher.getRenderer(entity);
-            EntityRenderState renderState = renderer.createRenderState(entity, 1.0f);
+            var renderState = renderer.createRenderState(entity, 1.0f);
             renderState.shadowPieces.clear();
             renderState.outlineColor = 0;
             renderState.lightCoords = LightCoordsUtil.FULL_BRIGHT;

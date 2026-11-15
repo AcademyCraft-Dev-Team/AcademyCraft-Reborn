@@ -121,7 +121,7 @@ public final class PresetPlaylistStore {
         cursor = 0;
         try {
             Files.createDirectories(FILE.getParent());
-            JsonObject root = new JsonObject();
+            var root = new JsonObject();
             root.addProperty("enabled", enabled);
             root.addProperty("mode", mode.name());
             root.add("tracks", GSON.toJsonTree(tracks));

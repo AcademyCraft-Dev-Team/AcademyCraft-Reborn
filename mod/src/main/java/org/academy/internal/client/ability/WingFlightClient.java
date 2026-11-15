@@ -10,9 +10,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.common.ability.WingControlIntent;
-import org.academy.api.common.ability.WingFlightMotion;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.flight.WingControlIntent;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightMotion;
 import org.academy.internal.common.ability.accelerator.flight.WingFlightPose;
 import org.academy.internal.common.ability.accelerator.skills.lv4.StormWing;
 import org.academy.internal.common.ability.accelerator.skills.lv5.wing.BlackWing;
@@ -35,7 +35,7 @@ public final class WingFlightClient {
         var mc = Minecraft.getInstance();
         var player = mc.player;
         if (player == null) return new WingControlIntent(0, 0, 0);
-        int buttons = 0;
+        var buttons = 0;
         if (mc.gui.screen() == null) {
             if (down(InputConstants.KEY_W)) buttons |= WingControlIntent.FRONT;
             if (down(InputConstants.KEY_S)) buttons |= WingControlIntent.BACK;
@@ -63,7 +63,7 @@ public final class WingFlightClient {
                 : player.getData(AttachmentTypes.ACTIVATED_BLACK_WING.get()) ? BlackWing.Client.CONFIG
                 : player.getData(AttachmentTypes.ACTIVATED_WHITE_WING.get()) ? WhiteWing.Client.CONFIG
                 : PlatinumWing.Client.CONFIG;
-        double scale = player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())
+        var scale = player.getData(AttachmentTypes.ACTIVATED_STORM_WING.get())
                 && AbilitySystemClient.getSkillProficiencyMilestone(Skills.STORM_WING.get()) >= 2 ? 1.15 : 1;
         player.setDeltaMovement(WingFlightMotion.step(player.getDeltaMovement(), input,
                 previousButtons, config.getRemainingMomentum(), scale));

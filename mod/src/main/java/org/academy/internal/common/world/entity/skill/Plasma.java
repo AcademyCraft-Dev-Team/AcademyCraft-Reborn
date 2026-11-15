@@ -14,16 +14,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.common.vfx.PlasmaChargeVisuals;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.PlasmaChargeVisuals;
 import org.academy.internal.common.ability.effect.TimedSkillEffectRuntime;
+import org.academy.internal.common.network.SkillVfxState;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.util.LevelUtil;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.common.world.damagesource.SkillDamageUtil;
 import org.academy.internal.common.world.entity.RenderOnlyEntity;
-import org.academy.internal.server.vfx.SkillVfxService;
+import org.academy.internal.server.ability.SkillVfxService;
 import org.jspecify.annotations.Nullable;
 
 import java.util.UUID;
@@ -244,7 +244,7 @@ public class Plasma extends RenderOnlyEntity {
     public Vec3 visualPosition() {
         var state = visualSnapshot;
         if (state == null) return position();
-        float elapsed = Math.min(25f, (System.nanoTime() - visualReceivedAt) / 50_000_000f);
+        var elapsed = Math.min(25f, (System.nanoTime() - visualReceivedAt) / 50_000_000f);
         // Charge/focus capture this position once, before the mirror has ever ticked.
         return state.positionAt(elapsed);
     }

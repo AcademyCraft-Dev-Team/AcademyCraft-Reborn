@@ -1,15 +1,15 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
 import com.google.gson.JsonParser;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
-import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
+import org.academy.api.client.render.vfxgraph.curve.TubeCurve;
+import org.academy.api.client.render.vfxgraph.curve.CurveToMeshBuilder;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
-import org.academy.api.client.render.vfxgraph.shape.SkyDischargeGeometry;
-import org.academy.api.client.render.vfxgraph.shape.StormCloudShape;
+import org.academy.internal.client.render.vfxgraph.arc.SkyDischargeGeometry;
+import org.academy.internal.client.render.vfxgraph.arc.StormCloudShape;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ class SkyDischargeVfxTest {
     private VfxSystemSimulator simulator(String name) throws Exception {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + name + ".json")) {
             assertNotNull(stream);
             var json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
@@ -36,23 +36,23 @@ class SkyDischargeVfxTest {
         }
     }
 
-    private ArcCurve core(VfxSystemSimulator sim) {
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+    private TubeCurve core(VfxSystemSimulator sim) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.r() == 0.91f) return arc;
         }
         throw new AssertionError("No white discharge core");
     }
 
-    private List<ArcCurve> channelPaths(VfxSystemSimulator sim) {
-        var paths = new ArrayList<ArcCurve>();
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+    private List<TubeCurve> channelPaths(VfxSystemSimulator sim) {
+        var paths = new ArrayList<TubeCurve>();
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.r() == 0.10f || arc.r() == 0.91f || arc.r() == 0.28f) paths.add(arc);
         }
         paths.sort(Comparator.comparingDouble(
-                ArcCurve::r).thenComparingLong(
-                ArcCurve::seed));
+                TubeCurve::r).thenComparingLong(
+                TubeCurve::seed));
         return paths;
     }
 
@@ -72,7 +72,7 @@ class SkyDischargeVfxTest {
         float extentX = 0;
         float extentZ = 0;
         var probe = new Vector3f();
-        for (int i = 1; i < 20; i++) {
+        for (var i = 1; i < 20; i++) {
             SkyDischargeGeometry.sample(i / 20f, 0.5f, 42, 40, 4.4f, probe);
             extentX = Math.max(extentX, Math.abs(probe.x));
             extentZ = Math.max(extentZ, Math.abs(probe.z));
@@ -87,25 +87,25 @@ class SkyDischargeVfxTest {
         for (var name : new String[]{"sky_strike_thunderclap", "sky_strike_storm"}) {
             var sim = simulator(name);
             sim.setLiveParam("time", Value.of(0.3f));
-            for (int frame = 0; frame < 400; frame++) {
+            for (var frame = 0; frame < 400; frame++) {
                 sim.step(frame % 2 == 0 ? 1f / 30 : 1f / 144);
                 assertTrue(sim.arcBuffer().count() >= 15 && sim.arcBuffer().count() <= 120);
                 assertTrue(sim.buffer().count() >= 20 && sim.buffer().count() <= 80);
-                for (int i = 0; i < sim.arcBuffer().count(); i++) {
+                for (var i = 0; i < sim.arcBuffer().count(); i++) {
                     var arc = sim.arcBuffer().arc(i);
-                    for (int p = 0; p < arc.size(); p++) {
+                    for (var p = 0; p < arc.size(); p++) {
                         assertTrue(Float.isFinite(arc.x(p)) && Float.isFinite(arc.y(p)) && Float.isFinite(arc.z(p)));
                         assertTrue(arc.width(p) >= 0);
                     }
                 }
             }
-            float fadeProbe = name.endsWith("storm") ? 0.425f : 0.6f;
+            var fadeProbe = name.endsWith("storm") ? 0.425f : 0.6f;
             sim.setLiveParam("time", Value.of(fadeProbe));
             sim.step(0);
             assertTrue(core(sim).a() < SkyDischargeGeometry.current(fadeProbe, 1, 1) * 0.6f,
                     "The column must already be fading before its previous fade window");
             assertEquals(0, core(sim).maxTubeSegments(), "Attachment LOD must not reduce the main column's mesh");
-            float columnEnd = name.endsWith("storm") ? 0.6f : 0.8f;
+            var columnEnd = name.endsWith("storm") ? 0.6f : 0.8f;
             sim.setLiveParam("time", Value.of(columnEnd - 0.03f));
             sim.step(0);
             assertFalse(channelPaths(sim).isEmpty());
@@ -151,27 +151,27 @@ class SkyDischargeVfxTest {
             var snapshots = new ArrayList<float[]>();
             // Identify the channel independently of other emitters' buffer ordering.
             var before = channelPaths(sim);
-            for (int i = 0; i < before.size(); i++) {
+            for (var i = 0; i < before.size(); i++) {
                 var arc = before.get(i);
                 var points = new float[arc.size() * 3];
-                for (int p = 0; p < arc.size(); p++) {
+                for (var p = 0; p < arc.size(); p++) {
                     points[p * 3] = arc.x(p);
                     points[p * 3 + 1] = arc.y(p);
                     points[p * 3 + 2] = arc.z(p);
                 }
                 snapshots.add(points);
             }
-            for (float time : new float[]{0.31f, 0.45f}) {
+            for (var time : new float[]{0.31f, 0.45f}) {
                 sim.setLiveParam("time", Value.of(time));
                 sim.step(0);
                 assertTrue(sim.arcBuffer().count() > 4, "Settling must not stop the discharge");
                 var after = channelPaths(sim);
                 assertEquals(snapshots.size(), after.size());
-                for (int i = 0; i < after.size(); i++) {
+                for (var i = 0; i < after.size(); i++) {
                     var arc = after.get(i);
                     var points = snapshots.get(i);
                     assertEquals(points.length, arc.size() * 3);
-                    for (int p = 0; p < arc.size(); p++) {
+                    for (var p = 0; p < arc.size(); p++) {
                         assertEquals(points[p * 3], arc.x(p));
                         assertEquals(points[p * 3 + 1], arc.y(p));
                         assertEquals(points[p * 3 + 2], arc.z(p));
@@ -185,11 +185,11 @@ class SkyDischargeVfxTest {
     void coreRemainsSlightlyWiderAtGroundThroughoutSustainAndDecay() throws Exception {
         for (var name : new String[]{"sky_strike_thunderclap", "sky_strike_storm"}) {
             var sim = simulator(name);
-            for (float t : new float[]{0.07f, 0.3f, name.endsWith("storm") ? 0.53f : 0.73f}) {
+            for (var t : new float[]{0.07f, 0.3f, name.endsWith("storm") ? 0.53f : 0.73f}) {
                 sim.setLiveParam("time", Value.of(t));
                 sim.step(0);
                 var core = core(sim);
-                float ratio = core.width(0) / core.width(core.size() - 1);
+                var ratio = core.width(0) / core.width(core.size() - 1);
                 assertTrue(ratio > 1.15f && ratio < 1.36f, "Taper should be subtle and ground-heavy");
             }
         }
@@ -203,24 +203,24 @@ class SkyDischargeVfxTest {
         sim.setLiveParam("time", Value.of(1f));
         sim.step(0);
         assertTrue(sim.arcBuffer().count() >= 12);
-        int ground = 0;
-        int cloud = 0;
-        int awayFromOrigin = 0;
+        var ground = 0;
+        var cloud = 0;
+        var awayFromOrigin = 0;
         var lobes = new Vector4f[44];
-        for (int i = 0; i < lobes.length; i++) {
+        for (var i = 0; i < lobes.length; i++) {
             lobes[i] = StormCloudShape.lobe(
                     i, 44, 1f, 42, 72, 20, new Vector4f());
         }
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.size() == 0) continue;
             assertEquals(1f, arc.b());
             assertTrue(arc.r() == 0.12f || arc.r() == 0.78f, "Attachment uses the railgun's blue shell and pale core");
-            boolean onGround = arc.y(0) < 20;
+            var onGround = arc.y(0) < 20;
             if (onGround) ground++;
             else cloud++;
             if (Math.hypot(arc.x(0), arc.z(0)) > 1) awayFromOrigin++;
-            for (int p = 0; p < arc.size(); p++) {
+            for (var p = 0; p < arc.size(); p++) {
                 if (onGround) {
                     assertEquals(arc.x(p) * 0.25f - arc.z(p) * 0.1f + 0.08f, arc.y(p), 0.0001f);
                 } else {
@@ -254,7 +254,7 @@ class SkyDischargeVfxTest {
         });
         sim.setLiveParam("time", Value.of(0.9f));
         sim.step(0);
-        int first = probes[0];
+        var first = probes[0];
         assertTrue(first > 0);
         sim.setLiveParam("time", Value.of(0.95f));
         sim.step(0);
@@ -262,13 +262,13 @@ class SkyDischargeVfxTest {
         sim.setLiveParam("time", Value.of(1.01f));
         sim.step(0);
         assertTrue(probes[0] > first);
-        int next = probes[0];
+        var next = probes[0];
         sim.setLiveParam("width", Value.of(0.1f));
         sim.step(0);
         assertTrue(probes[0] > next, "Live geometry edits must invalidate the cache");
         sim.setSurfaceProjector("ground", (x, y, z, out) -> out.set(x, 3f, z));
         sim.step(0);
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
             if (arc.size() > 0 && arc.y(0) < 20) assertEquals(3f, arc.y(0));
         }
@@ -280,9 +280,9 @@ class SkyDischargeVfxTest {
             var sim = simulator(name);
             sim.setLiveParam("time", Value.of(1f));
             sim.step(0);
-            int vertices = 0;
-            int points = 0;
-            for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            var vertices = 0;
+            var points = 0;
+            for (var i = 0; i < sim.arcBuffer().count(); i++) {
                 var arc = sim.arcBuffer().arc(i);
                 points += arc.size();
                 vertices += CurveToMeshBuilder.build(
@@ -291,11 +291,11 @@ class SkyDischargeVfxTest {
             assertTrue(vertices > 0 && vertices <= (name.endsWith("storm") ? 1700 : 4200));
             System.out.println(name + " attachment: arcs=" + sim.arcBuffer().count()
                     + " points=" + points + " vertices=" + vertices);
-            int full = sim.arcBuffer().count();
+            var full = sim.arcBuffer().count();
             sim.setLiveParam("surface_detail", Value.of(1f / 3f));
             sim.step(0);
             assertTrue(sim.arcBuffer().count() <= Math.ceil(full * 0.4f));
-            for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            for (var i = 0; i < sim.arcBuffer().count(); i++) {
                 assertEquals(4, sim.arcBuffer().arc(i).maxTubeSegments());
             }
             sim.setLiveParam("time", Value.of(1.5f));
@@ -310,26 +310,26 @@ class SkyDischargeVfxTest {
 
     @Test
     void attachmentSilhouettesIncludeOneSidedBendsAndAlternatingTurns() throws Exception {
-        int oneSided = 0;
-        int alternating = 0;
+        var oneSided = 0;
+        var alternating = 0;
         var silhouettes = new HashSet<String>();
-        for (int seed = 0; seed < 12; seed++) {
+        for (var seed = 0; seed < 12; seed++) {
             var sim = simulator("sky_strike_thunderclap");
             sim.setLiveParam("seed", Value.of((float) (42 + seed * 137)));
             sim.setLiveParam("time", Value.of(1f));
             sim.step(0);
-            for (int i = 0; i < sim.arcBuffer().count(); i++) {
+            for (var i = 0; i < sim.arcBuffer().count(); i++) {
                 var arc = sim.arcBuffer().arc(i);
                 if (arc.size() < 4 || arc.y(0) > 20) continue;
-                float first = lateralAt(arc, 0.25f);
-                float last = lateralAt(arc, 0.75f);
+                var first = lateralAt(arc, 0.25f);
+                var last = lateralAt(arc, 0.75f);
                 if (Math.abs(first) > 0.025f && Math.abs(last) > 0.025f) {
                     if (first * last > 0) oneSided++;
                     else alternating++;
                 }
                 var signature = new StringBuilder();
-                for (float fraction : new float[]{0.25f, 0.5f, 0.75f}) {
-                    float offset = lateralAt(arc, fraction);
+                for (var fraction : new float[]{0.25f, 0.5f, 0.75f}) {
+                    var offset = lateralAt(arc, fraction);
                     signature.append(offset > 0.03f ? '+' : offset < -0.03f ? '-' : '0');
                 }
                 silhouettes.add(signature.toString());
@@ -343,16 +343,16 @@ class SkyDischargeVfxTest {
     /**
      * Lateral deviation relative to the stroke's endpoint chord, independent of angle and scale.
      */
-    private float lateralAt(ArcCurve arc, float fraction) {
-        int count = 1;
+    private float lateralAt(TubeCurve arc, float fraction) {
+        var count = 1;
         while (count < arc.size() && arc.generation(count) == 0 && arc.segment(count) == arc.segment(0)) count++;
-        float dx = arc.x(count - 1) - arc.x(0);
-        float dz = arc.z(count - 1) - arc.z(0);
-        float cursor = (count - 1) * fraction;
-        int at = (int) cursor;
-        float blend = cursor - at;
-        float x = arc.x(at) + (arc.x(Math.min(at + 1, count - 1)) - arc.x(at)) * blend - arc.x(0);
-        float z = arc.z(at) + (arc.z(Math.min(at + 1, count - 1)) - arc.z(at)) * blend - arc.z(0);
+        var dx = arc.x(count - 1) - arc.x(0);
+        var dz = arc.z(count - 1) - arc.z(0);
+        var cursor = (count - 1) * fraction;
+        var at = (int) cursor;
+        var blend = cursor - at;
+        var x = arc.x(at) + (arc.x(Math.min(at + 1, count - 1)) - arc.x(at)) * blend - arc.x(0);
+        var z = arc.z(at) + (arc.z(Math.min(at + 1, count - 1)) - arc.z(at)) * blend - arc.z(0);
         return (dx * z - dz * x) / Math.max(0.0001f, dx * dx + dz * dz);
     }
 
@@ -368,7 +368,7 @@ class SkyDischargeVfxTest {
         sim.setTime(200f);
         sim.step(0.1f);
         assertTrue(sim.buffer().count() > 0);
-        for (int i = 0; i < 160; i++) {
+        for (var i = 0; i < 160; i++) {
             assertTrue(SkyDischargeGeometry.current(i / 100f, 1.65f, 0.5f) > 0.6f);
         }
         assertEquals(0, SkyDischargeGeometry.current(2.2f, 1.65f, 0.5f));

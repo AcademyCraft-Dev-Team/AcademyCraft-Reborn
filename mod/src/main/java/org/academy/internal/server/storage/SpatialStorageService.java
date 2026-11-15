@@ -30,7 +30,7 @@ public final class SpatialStorageService {
         addUnit(units, player.getMainHandItem());
         addUnit(units, player.getOffhandItem());
         var inventory = player.getInventory();
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) addUnit(units, inventory.getItem(slot));
+        for (var slot = 0; slot < inventory.getContainerSize(); slot++) addUnit(units, inventory.getItem(slot));
         if (ModList.get().isLoaded("curios")) units.addAll(SpatialStorageCuriosCompat.equipped(player));
         return units;
     }

@@ -4,7 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import org.academy.api.common.ability.Skill;
-import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.SkillSystems;
 
 import java.util.Objects;
 
@@ -30,7 +30,7 @@ public record AbilityActorContext(LivingEntity subject, Skill skill, double abil
     }
 
     public static AbilityActorContext of(ServerPlayer player, Skill skill, AbilityResourceAccount resource) {
-        var system = AbilitySystemServer.getSystem(player);
+        var system = SkillSystems.of(player);
         return new AbilityActorContext(player, skill, system.getPlayerAbilityPowerMultiplier(player.getUUID()),
                 system.getPlayerDamageMultiplier(player.getUUID()), skill.getEffectiveProficiencyMilestone(player), resource);
     }

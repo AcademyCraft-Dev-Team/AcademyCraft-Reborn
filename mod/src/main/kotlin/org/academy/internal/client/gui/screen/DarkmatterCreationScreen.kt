@@ -15,7 +15,7 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.widget.*
 import org.academy.api.client.resources.R
-import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries
+import org.academy.internal.common.ability.darkmatter.DarkmatterCreatureRegistries
 import org.academy.internal.common.ability.darkmatter.creature.DarkmatterCreatureBlueprint
 import org.academy.internal.common.ability.darkmatter.skills.lv4.DarkmatterCreation
 import org.academy.internal.common.world.entity.EntityTypes

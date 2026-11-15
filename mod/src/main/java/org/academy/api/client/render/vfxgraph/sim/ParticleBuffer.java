@@ -210,23 +210,7 @@ public final class ParticleBuffer {
      * 粒子层编码（单一映射源，spawn/over-life 过滤/渲染层过滤共用）。
      */
     public static byte layerByte(String layer) {
-        return switch (layer) {
-            case "smoke" -> 1;
-            case "plasma_core" -> 2;
-            case "plasma_halo" -> 3;
-            case "trail_white" -> 4;
-            case "trail_plasma" -> 5;
-            case "ion_spark" -> 6;
-            case "impact_core" -> 7;
-            case "plasma_mote" -> 8;
-            case "wind_volume" -> 9;
-            case "wind_dust" -> 10;
-            case "impact_mono" -> 11;
-            case "sky_cloud" -> 12;
-            case "sky_halo" -> 13;
-            case "iron_sand" -> 14;
-            default -> 0;
-        };
+        return VfxLayers.id(layer);
     }
 
     /**

@@ -258,7 +258,7 @@ abstract class AbstractWidget : Widget {
             EventType.MOUSE_PRESSED -> onMousePressed(event as MouseEvent)
             EventType.MOUSE_RELEASED -> onMouseReleased(event as MouseEvent)
             EventType.MOUSE_MOVED -> onMouseMoved(event as MouseEvent)
-            EventType.MOUSE_SCROLLED -> onMouseScrolled(event as ScrollEvent)
+            EventType.MOUSE_SCROLLED -> onMouseScrolled(event as MouseEvent)
             EventType.MOUSE_DRAGGED -> onMouseDragged(event as MouseEvent)
             EventType.KEY_PRESSED -> onKeyPressed(event as KeyEvent)
             EventType.KEY_RELEASED -> onKeyReleased(event as KeyEvent)
@@ -289,7 +289,7 @@ abstract class AbstractWidget : Widget {
     protected open fun onMouseMoved(event: MouseEvent) {
     }
 
-    protected open fun onMouseScrolled(event: ScrollEvent) {
+    protected open fun onMouseScrolled(event: MouseEvent) {
     }
 
     protected open fun onMouseDragged(event: MouseEvent) {

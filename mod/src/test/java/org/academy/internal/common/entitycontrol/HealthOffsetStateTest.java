@@ -25,7 +25,7 @@ class HealthOffsetStateTest {
     void denseAndSparseTicksProduceTheSameResult() {
         var dense = new HealthOffsetState(100, 70, 0);
         var sparse = new HealthOffsetState(100, 70, 0);
-        for (int tick = 0; tick <= 300; tick++) {
+        for (var tick = 0; tick <= 300; tick++) {
             dense.advance(tick, 100);
             dense.advance(tick, 100); // Time acceleration / two maintenance callbacks.
         }

@@ -28,7 +28,6 @@ import org.academy.AcademyCraftConfig;
 import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
-import org.academy.api.client.render.post.GlowEffect;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.FirstPersonVfxEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
@@ -42,7 +41,6 @@ import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.data.SkillData;
 import org.academy.api.common.ability.data.SkillDataSerializer;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.util.MathUtil;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -60,12 +58,7 @@ import org.misaka.api.common.network.annotation.SubscribePacket;
 import org.misaka.api.common.network.packet.Packet;
 import org.misaka.api.common.network.packet.PacketType;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.*;
 
 public final class BioelectricOperation extends Skill {
     private static final Identifier MODIFIER_ID = AcademyCraft.academy(SkillNames.BIOELECTRIC_OPERATION);
@@ -301,12 +294,10 @@ public final class BioelectricOperation extends Skill {
                 effect.renderGlow(glowTarget, glowDepth, state);
             }
 
-            public static void requestGlow() {
+            public static boolean hasGlow() {
                 var minecraft = Minecraft.getInstance();
-                if (enabled && minecraft.player != null
-                        && minecraft.options.getCameraType().isFirstPerson()) {
-                    GlowEffect.requestGlow();
-                }
+                return enabled && effect != null && minecraft.player != null
+                        && minecraft.options.getCameraType().isFirstPerson();
             }
         }
 

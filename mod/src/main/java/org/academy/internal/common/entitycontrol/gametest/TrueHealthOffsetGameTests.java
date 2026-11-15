@@ -145,7 +145,7 @@ public final class TrueHealthOffsetGameTests {
             NeoForge.EVENT_BUS.unregister(cancelDeath);
         }
 
-        long previousHit = ((HealthOffsetAccess) (Object) locked).academy$getHealthOffset().lastHit;
+        var previousHit = ((HealthOffsetAccess) (Object) locked).academy$getHealthOffset().lastHit;
         helper.assertTrue(!SkillDamageUtil.applyVerifiedTrueHealth(locked, cta, 0), "Zero damage is rejected");
         helper.assertTrue(((HealthOffsetAccess) (Object) locked).academy$getHealthOffset().lastHit == previousHit,
                 "Invalid damage cannot refresh the deadline");

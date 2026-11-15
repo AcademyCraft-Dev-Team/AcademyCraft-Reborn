@@ -35,7 +35,7 @@ public final class MusicProviders {
      * 按顺序尝试候选直链，全部失败时抛出携带各次失败原因（suppressed）的异常喵。
      */
     public static byte[] downloadFirstSupported(List<String> streamUrls, TrackDownloader downloader) throws IOException {
-        IOException failure = new IOException("No downloadable supported audio source");
+        var failure = new IOException("No downloadable supported audio source");
         for (var streamUrl : streamUrls) {
             try {
                 return downloader.download(streamUrl);

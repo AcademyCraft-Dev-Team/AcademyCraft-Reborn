@@ -51,10 +51,6 @@ public class DevelopData {
         return targetId;
     }
 
-    public @Nullable BlockPos getDeveloperPos() {
-        return developerSource instanceof DevelopmentSource.BlockDevelopmentSource(var pos) ? pos : null;
-    }
-
     public @Nullable DevelopmentSource getDeveloperSource() {
         return developerSource;
     }
@@ -72,9 +68,7 @@ public class DevelopData {
             DevelopmentSource developerSource,
             ResourceKey<Level> developerDimension
     ) {
-        if (isDeveloping() || action == null || developerSource == null
-                || developerDimension == null
-                || action.getTotalTicks() <= 0 || action.getEnergyCost() < 0) {
+        if (isDeveloping() || action.getTotalTicks() <= 0 || action.getEnergyCost() < 0) {
             return false;
         }
         this.action = action;
@@ -178,6 +172,6 @@ public class DevelopData {
         if (!isDeveloping()) return;
         action = null;
         state = DevState.FAILED;
-        message = reason == null || reason.isBlank() ? "Failed" : reason;
+        message = reason.isBlank() ? "Failed" : reason;
     }
 }

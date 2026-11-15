@@ -1,4 +1,4 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
 
 import org.academy.api.client.render.vfxgraph.shape.MeshAssets;
 import org.junit.jupiter.api.Test;

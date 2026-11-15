@@ -287,7 +287,7 @@ public final class MusicRoomManager {
         }
         switch (pending.kind()) {
             case APPLY -> {
-                ServerPlayer clicker = player;
+                var clicker = player;
                 if (!clicker.getUUID().equals(room.host)) {
                     sendError(clicker, "message.academy.music_room.not_host");
                     return;
@@ -348,7 +348,7 @@ public final class MusicRoomManager {
         var room = ROOMS.get(code);
         if (room == null) return;
         String newHostName = null;
-        boolean disbanded = false;
+        var disbanded = false;
         room.members.remove(player.getUUID());
         if (room.members.isEmpty()) {
             disbanded = true;
@@ -721,8 +721,8 @@ public final class MusicRoomManager {
         if (!roomEnabled) return;
         var snapshots = MusicRoomStore.load();
         if (snapshots.isEmpty()) return;
-        int restored = 0;
-        int skipped = 0;
+        var restored = 0;
+        var skipped = 0;
         for (var snapshot : snapshots) {
             if (restored >= maxRooms) {
                 skipped++;

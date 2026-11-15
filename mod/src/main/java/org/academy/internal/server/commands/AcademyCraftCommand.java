@@ -41,7 +41,7 @@ import org.academy.internal.common.ability.accelerator.reflection.compat.VectorC
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.vfx.SkillVfxRuntime;
+import org.academy.internal.server.ability.SkillVfxRuntime;
 import org.jspecify.annotations.Nullable;
 
 import java.io.File;

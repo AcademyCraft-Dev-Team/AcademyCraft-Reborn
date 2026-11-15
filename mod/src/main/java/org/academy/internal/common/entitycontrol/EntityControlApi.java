@@ -3,8 +3,8 @@ package org.academy.internal.common.entitycontrol;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
+import org.academy.internal.server.damage.HealthLossGuards;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Field;

@@ -9,12 +9,12 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.server.ability.SkillTuning;
-import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.level0.skills.OutputControl;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.TrueHealthOffsetRuntime;
+import org.academy.internal.server.damage.HealthLossGuards;
 
 /**
  * Applies an exact subtraction to the resolved combat-health pool after normal damage hooks run.

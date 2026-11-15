@@ -19,7 +19,6 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
@@ -28,6 +27,7 @@ import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.network.PacketTypes;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.ElectromasterGraphEffects;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
 import org.misaka.api.common.network.ThreadType;
@@ -190,7 +190,7 @@ public class LightningNova extends Skill {
             var outerRadius = echo ? currentRadius + 1.5f : currentRadius;
 
             if (ticks >= nextVisualTick) {
-                int visualTicks = Math.min(VISUAL_INTERVAL, outwardDuration - phaseTicks);
+                var visualTicks = Math.min(VISUAL_INTERVAL, outwardDuration - phaseTicks);
                 ElectromasterGraphEffects.spawnNovaRing(castLevel, player.position(), player.getId(), 1,
                         currentRadius, (echo ? -1 : 1) * maximumRadius * 20f / outwardDuration,
                         visualTicks / 20f, ticks / 20f, visualSeed, visualId);

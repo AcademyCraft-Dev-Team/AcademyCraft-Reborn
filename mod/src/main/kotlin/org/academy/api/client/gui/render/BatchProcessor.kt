@@ -24,14 +24,12 @@ object BatchProcessor {
     ): List<PendingBatch> {
         if (commands.isEmpty()) return mutableListOf()
 
-        // 空裁剪 (完全移出容器/屏幕) 的命令整体剔除, 对标 Skia quickReject: 录制照常, 光栅跳过.
         commands.removeAll { it.scissorRect?.isEmpty == true }
         if (commands.isEmpty()) return mutableListOf()
 
         expandCommands(commands)
         if (commands.isEmpty()) return mutableListOf()
 
-        // 对标 AOSP LayerBuilder: 按记录顺序 defer, 重叠感知地并入批次 (不再全局排序).
         val batches = ArrayList<DeferredBatch>()
         val lastByKey = HashMap<MergeKey, DeferredBatch>()
 
@@ -60,14 +58,8 @@ object BatchProcessor {
         return result
     }
 
-    /** 合并键: 渲染管线 + 资源 (textures/uniforms). 对标 AOSP (batchId, mergeId) 的等价物. */
     private data class MergeKey(val pipeline: RenderPipeline, val resourceKey: Long)
 
-    /**
-     * 解析后的绘制 op, 对标 AOSP `BakedOpState`:
-     * [clippedBounds] 为 pose 变换并与 clip 求交后的 gui 空间 AABB (null=无界);
-     * [clipFlags] 记录哪几边被 clip 切掉 (对标 `OpClipSideFlags`).
-     */
     private class ResolvedOp(
         val submitted: SubmittedCommand,
         val pipeline: RenderPipeline,
@@ -88,7 +80,6 @@ object BatchProcessor {
         var flags: Int
         var clipped: ScissorRect?
         if (local == null) {
-            // 无界命令: 以 clip 作为包围盒并标记四面全裁 (不可参与合并, 对标 tryConstructUnbounded).
             flags = CLIP_FULL
             clipped = scissor
         } else {
@@ -118,7 +109,6 @@ object BatchProcessor {
         )
     }
 
-    /** 对标 `computeClipSideFlags`: 记录 bounds 被 clip 切掉的那几边. */
     private fun computeClipSideFlags(clip: ScissorRect, bounds: ScissorRect): Int {
         var flags = 0
         if (clip.left > bounds.left) flags = flags or CLIP_LEFT
@@ -128,7 +118,6 @@ object BatchProcessor {
         return flags
     }
 
-    /** 对标 `MergingOpBatch::checkSide`. boundsDelta>0 表示新 op 这条边更小. */
     private fun checkSide(currentFlags: Int, newFlags: Int, side: Int, boundsDelta: Float): Boolean {
         val currentClip = currentFlags and side != 0
         val newClip = newFlags and side != 0
@@ -137,7 +126,6 @@ object BatchProcessor {
         return true
     }
 
-    /** 对标 `MergingOpBatch::canMergeWith` 的裁剪兼容检查. */
     private fun clipSidesCompatible(
         currentFlags: Int,
         newFlags: Int,
@@ -155,10 +143,6 @@ object BatchProcessor {
 
     private class InsertPlan(var target: DeferredBatch?, var index: Int)
 
-    /**
-     * 对标 AOSP `LayerBuilder::locateInsertIndex`: 从队尾朝目标回扫, 若目标之后有任何批次与新 op
-     * 包围盒相交则放弃并入目标; 新批次插到最后一个相交批次之后, 保证后记录者在上.
-     */
     private fun locateInsertIndex(
         batches: List<DeferredBatch>,
         bounds: ScissorRect?,
@@ -181,7 +165,6 @@ object BatchProcessor {
         return plan
     }
 
-    /** 一批可合并的 op, 对标 AOSP `MergingOpBatch`. 回放时按批次顺序统一生成顶点. */
     private class DeferredBatch(first: ResolvedOp, val key: MergeKey) {
         val pipeline: RenderPipeline = first.pipeline
         private val slotCount: Int = first.slotCount
@@ -203,7 +186,7 @@ object BatchProcessor {
                 bounds = null
             } else {
                 val current = bounds
-                bounds = if (current == null) opBound else current.union(opBound)
+                bounds = current?.union(opBound) ?: opBound
             }
         }
 
@@ -230,17 +213,11 @@ object BatchProcessor {
             for (op in ops) {
                 applyVertices(state, op.submitted)
             }
-            // 合并后以各 op clippedBounds 的并集作 scissor (有裁剪时), 对标 MergedBakedOpList.clip.
             val scissor = if (clipFlags != 0) bounds else null
             return finishBatch(state, scissor, uploader)
         }
     }
 
-    /**
-     * Replaces every [ExpandableDrawCommand] (device-independent text blobs) with the
-     * sub-commands produced by its [ExpandableDrawCommand.expand], using the canvas CTM
-     * snapshot stored on the submitted command. Non-expandable commands are kept as-is.
-     */
     private fun expandCommands(commands: MutableList<SubmittedCommand>) {
         var any = false
         for (c in commands) {
@@ -288,8 +265,6 @@ object BatchProcessor {
         }
 
         if (instancing) {
-            // A command appends all of its instances in one call and reports how many;
-            // a whole text run is therefore a single command contributing N instances.
             val count = command.instanceCount(pose, alphaMul).coerceAtLeast(0)
             for (i in 1 until state.builders.size) {
                 command.appendInstances(state.slotIndices[i], state.builders[i], pose, alphaMul)

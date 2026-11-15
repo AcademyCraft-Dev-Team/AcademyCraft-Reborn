@@ -13,7 +13,7 @@ class MagneticSupportPacketTest {
     @Test
     void supportFacesAndStopSurviveTheWire() {
         var dimension = Identifier.withDefaultNamespace("overworld");
-        for (boolean active : new boolean[]{true, false})
+        for (var active : new boolean[]{true, false})
             for (var face : Direction.values()) {
                 var point = new Vec3(10.5, 81.5, -25.25);
                 var buffer = Unpooled.buffer();

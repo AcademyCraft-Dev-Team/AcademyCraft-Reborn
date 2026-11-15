@@ -3,7 +3,6 @@ package org.academy.internal.common.network;
 import io.netty.buffer.Unpooled;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -90,12 +89,12 @@ class SkillVfxPacketTest {
 
     @Test
     void earlyLaunchAndLateSubscriptionsKeepTheReleaseSize() {
-        for (float scale : new float[]{0.4f, 0.62f, 1f}) {
+        for (var scale : new float[]{0.4f, 0.62f, 1f}) {
             var flight = new SkillVfxState.Plasma(Vec3.ZERO, Vec3.ZERO, new Vec3(80, 0, 0),
                     1, 2.5f, 4, true, 1, 0, scale);
             assertEquals(flight, roundTrip(flight));
         }
-        for (float scale : new float[]{-1, 1.01f, Float.NaN}) {
+        for (var scale : new float[]{-1, 1.01f, Float.NaN}) {
             var flight = new SkillVfxState.Plasma(Vec3.ZERO, Vec3.ZERO, Vec3.ZERO,
                     1, 2.5f, 0, true, 1, 0, scale);
             assertThrows(IllegalArgumentException.class, () -> roundTrip(flight));

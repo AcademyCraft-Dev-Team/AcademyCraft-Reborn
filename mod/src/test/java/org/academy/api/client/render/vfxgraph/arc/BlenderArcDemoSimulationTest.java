@@ -1,9 +1,10 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
 
 import com.google.gson.JsonParser;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
@@ -28,7 +29,7 @@ class BlenderArcDemoSimulationTest {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
         var ops = new VfxOperatorRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
         var codec = new JsonVfxGraphCodec(metadata);
 
@@ -47,7 +48,7 @@ class BlenderArcDemoSimulationTest {
         assertTrue(buf.count() > 0, "should spawn arcs");
         int surface = 0, contact = 0, spark = 0;
         for (var a = 0; a < buf.count(); a++) {
-            var arc = buf.arc(a);
+            var arc = ArcTestSupport.at(buf, a);
             if (arc.hasSurface() && arc.hasArchBase() && !arc.pinStart()) surface++;
             else if (arc.hasSurface() && arc.pinStart()) contact++;
             else if (arc.sparkVelocity() != null) spark++;

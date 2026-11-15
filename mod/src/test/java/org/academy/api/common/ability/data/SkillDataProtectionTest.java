@@ -53,7 +53,7 @@ class SkillDataProtectionTest {
 
     private static void setField(SkillData data, String name, Object value)
             throws ReflectiveOperationException {
-        Field field = SkillData.class.getDeclaredField(name);
+        var field = SkillData.class.getDeclaredField(name);
         field.setAccessible(true);
         field.set(data, value);
     }

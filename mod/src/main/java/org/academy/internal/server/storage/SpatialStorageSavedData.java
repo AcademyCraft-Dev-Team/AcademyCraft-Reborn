@@ -104,14 +104,14 @@ public final class SpatialStorageSavedData extends SavedData {
         long total = 0;
         try {
             var entries = new ArrayList<>(items.entrySet());
-            int visited = 0;
+            var visited = 0;
             for (var entry : entries) {
                 if (visited++ >= maxTypes) break;
                 long available = entry.getValue();
-                long accepted = destination.applyAsLong(entry.getKey(), available);
+                var accepted = destination.applyAsLong(entry.getKey(), available);
                 if (accepted < 0 || accepted > available) throw new IllegalStateException("Invalid accepted amount");
                 // Rotate rejected entries so a capped automatic pass cannot starve later resources.
-                long remaining = items.get(entry.getKey()) - accepted;
+                var remaining = items.get(entry.getKey()) - accepted;
                 items.remove(entry.getKey());
                 if (remaining > 0) items.put(entry.getKey(), remaining);
                 if (accepted > 0) {

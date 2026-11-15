@@ -7,9 +7,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.vfx.DirectionalArea;
-import org.academy.api.common.vfx.RepairVisualParts;
+import org.academy.api.common.util.DirectionalArea;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.darkmatter.RepairVisualParts;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -62,12 +62,12 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
         int kind = b.readUnsignedByte();
         if (kind >= Kind.values().length) throw new IllegalArgumentException("Invalid matter effect kind");
         int entity = ByteBufCodecs.VAR_INT.decode(b);
-        boolean active = b.readBoolean();
+        var active = b.readBoolean();
         var position = Vec3.STREAM_CODEC.decode(b);
         float width = b.readFloat(), height = b.readFloat(), range = b.readFloat();
         int parts = b.readUnsignedByte();
-        boolean finished = b.readBoolean();
-        long seed = b.readLong();
+        var finished = b.readBoolean();
+        var seed = b.readLong();
         var area = b.readBoolean() ? new DirectionalArea(position, Vec3.STREAM_CODEC.decode(b),
                 new DirectionalArea.Cone(b.readDouble(), b.readDouble()), new DirectionalArea.Cone(b.readDouble(), b.readDouble())) : null;
         return new DarkmatterVisualPacket(dimension, Kind.values()[kind], entity, active, position,
@@ -117,7 +117,7 @@ public final class DarkmatterVisualPacket extends Packet<ClientPacketListener, D
     }
 
     public void broadcast(ServerLevel level) {
-        double visibleDistance = 128 + (area == null ? 0 : area.radius());
+        var visibleDistance = 128 + (area == null ? 0 : area.radius());
         for (var observer : level.players()) {
             if (kind == Kind.INTERFERENCE && !active
                     || observer.position().distanceToSqr(position) <= visibleDistance * visibleDistance)

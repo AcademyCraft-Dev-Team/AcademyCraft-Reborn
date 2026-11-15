@@ -115,7 +115,12 @@ class GraphEditorApp(private val environment: DesktopEnvironment) : EditorApp {
         }
         ShaderNodes.registerAll(registry, glslRegistry)
         VfxNodes.registerAll(registry, vfxRegistry)
-        VfxBlocks.registerAll(registry, blockRegistry)
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.start()
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(org.academy.internal.client.render.vfxgraph.ParticleLayerCatalog::class.java)
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(org.academy.internal.client.render.vfxgraph.arc.ArcSeries::class.java)
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(org.academy.internal.client.render.vfxgraph.wind.WindSeries::class.java)
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(org.academy.internal.client.render.vfxgraph.particle.ParticleSeries::class.java)
+        org.academy.api.client.render.vfxgraph.nodes.VfxBlocks.registerAll(registry, blockRegistry)
         VfxOperators.registerAll(registry, operatorRegistry)
         codec = JsonGraphCodec(registry)
         containerCodec = JsonVfxGraphCodec(registry)

@@ -27,7 +27,7 @@ class SpacialExcisionPacketTest {
                 0x1234_5678_9ABCDEFL
         );
 
-        ByteBuf buffer = Unpooled.buffer();
+        var buffer = Unpooled.buffer();
         try {
             SpacialExcision.SegmentPacket.CODEC.encode(buffer, packet);
             var decoded = SpacialExcision.SegmentPacket.CODEC.decode(buffer);

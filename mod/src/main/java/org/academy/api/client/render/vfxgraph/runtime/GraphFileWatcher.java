@@ -12,12 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * dev 模式图资产文件监听（M15-05 第二通道）：WatchService 监听目录下 {@code vfxgraph/*.json}
- * 变更，映射为资产 id 后调用 {@link VfxGraphManager#reloadFromFile}。
- *
- * <p>仅在有显示环境的 dev 运行（{@code IS_DEV=true}）下由管理器启动，release 不启用。</p>
- */
 public final class GraphFileWatcher implements AutoCloseable {
     private static final Logger LOGGER = AcademyCraft.getLogger();
 
@@ -35,9 +29,6 @@ public final class GraphFileWatcher implements AutoCloseable {
         this.watchService = FileSystems.getDefault().newWatchService();
     }
 
-    /**
-     * 注册根目录及全部子目录（递归）。
-     */
     public void registerTree() throws IOException {
         registerTree(root);
     }
@@ -60,9 +51,6 @@ public final class GraphFileWatcher implements AutoCloseable {
         }
     }
 
-    /**
-     * 轮询一次事件并处理（供后台线程与测试调用）。
-     */
     public void pollOnce() {
         var key = watchService.poll();
         if (key == null) {
@@ -78,7 +66,6 @@ public final class GraphFileWatcher implements AutoCloseable {
                 try {
                     registerTree(dir);
                 } catch (IOException ignored) {
-                    // 新目录未注册成功则跳过
                 }
             }
             if (dir == null) {
@@ -93,14 +80,12 @@ public final class GraphFileWatcher implements AutoCloseable {
     }
 
     private void handleChange(Path file) {
-        // 文件名 → 资产 id（vfxgraph/demo_burst.json → academy:vfxgraph/demo_burst）
         var fileName = file.getFileName().toString();
         if (!fileName.endsWith(".json")) {
             return;
         }
         var assetName = fileName.substring(0, fileName.length() - ".json".length());
         var assetId = Identifier.fromNamespaceAndPath("academy", "vfxgraph/" + assetName);
-        // 后台线程读文件，排队到主线程执行 reload（管理器集合非线程安全，Bug 修复）
         try {
             var content = Files.readString(file);
             Minecraft.getInstance().execute(() -> {
@@ -116,9 +101,6 @@ public final class GraphFileWatcher implements AutoCloseable {
         }
     }
 
-    /**
-     * 后台常驻线程。
-     */
     public void startLoop() {
         executor.execute(() -> {
             while (!Thread.currentThread().isInterrupted()) {

@@ -44,7 +44,7 @@ public final class HumanoidSurfacePose {
     public static void capture(int entityId, HumanoidModel<?> model) {
         var parts = new ModelPart[]{model.body, model.head, model.rightArm, model.leftArm, model.rightLeg, model.leftLeg};
         var matrices = new Matrix4f[parts.length];
-        for (int i = 0; i < parts.length; i++) {
+        for (var i = 0; i < parts.length; i++) {
             var pose = new PoseStack();
             model.root().translateAndRotate(pose);
             parts[i].translateAndRotate(pose);

@@ -21,7 +21,7 @@ class AbilityDeveloperLayoutResourceTest {
         assertNotNull(input, "Missing developer skill layout resource");
 
         try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
-            String category = "<none>";
+            var category = "<none>";
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.strip();

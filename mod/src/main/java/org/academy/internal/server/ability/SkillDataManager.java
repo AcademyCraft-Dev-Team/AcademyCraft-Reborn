@@ -5,10 +5,10 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.AcademyCraft;
 import org.academy.api.common.ability.*;
 import org.academy.api.common.ability.data.SkillData;
-import org.academy.api.common.ability.pakcet.SyncSkillDataPacket;
+import org.academy.api.common.ability.packet.SyncSkillDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
-import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.internal.server.world.level.storage.PlayerData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 

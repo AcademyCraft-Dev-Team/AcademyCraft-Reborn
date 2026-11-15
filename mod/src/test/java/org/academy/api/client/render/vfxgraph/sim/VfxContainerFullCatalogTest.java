@@ -1,5 +1,6 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Curve;
@@ -8,7 +9,6 @@ import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +30,7 @@ class VfxContainerFullCatalogTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -302,7 +302,7 @@ class VfxContainerFullCatalogTest {
         sim.step(0.01f);
 
         assertEquals(12, sim.arcBuffer().count(), "wireframe box should have twelve edges");
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var edge = sim.arcBuffer().arc(i);
             assertEquals(2, edge.size());
             assertTrue(Float.isFinite(edge.x(0)) && Float.isFinite(edge.y(0)) && Float.isFinite(edge.z(0)));
@@ -346,10 +346,10 @@ class VfxContainerFullCatalogTest {
         sim.step(0.01f);
         assertTrue(sim.arcBuffer().count() > 0 && sim.arcBuffer().count() <= 32,
                 "only the current plasma-shell generation may remain alive");
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var arc = sim.arcBuffer().arc(i);
-            for (int point = 0; point < arc.size(); point++) {
-                float distance = (float) Math.sqrt(
+            for (var point = 0; point < arc.size(); point++) {
+                var distance = (float) Math.sqrt(
                         arc.x(point) * arc.x(point)
                                 + arc.y(point) * arc.y(point)
                                 + arc.z(point) * arc.z(point));

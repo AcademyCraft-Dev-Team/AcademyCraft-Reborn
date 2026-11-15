@@ -45,7 +45,6 @@ import org.academy.api.common.ability.SkillProficiencyProfile;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.common.util.ViewTargetScanner;
-import org.academy.api.server.ability.DarkmatterGraphEffects;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -60,6 +59,7 @@ import org.academy.internal.common.world.item.DarkmatterItemUtil;
 import org.academy.internal.common.world.item.Items;
 import org.academy.internal.server.ability.AbilityBlockDrops;
 import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.internal.server.ability.DarkmatterGraphEffects;
 import org.academy.internal.server.storage.SpatialStorageService;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
@@ -492,7 +492,7 @@ public final class DarkmatterDisassemble extends Skill {
                 var source = SkillDamageSource.of(player, skill);
                 for (var target : targets) {
                     var wasAlive = target.isAlive();
-                    float healthBefore = target.getHealth();
+                    var healthBefore = target.getHealth();
                     var detonation = DarkmatterLawMark.detonate(player, target);
                     if (detonation > 0.0f) {
                         target.setInvulnerableTime(0);

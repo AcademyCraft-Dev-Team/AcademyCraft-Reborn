@@ -21,7 +21,7 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.Render;
 import org.academy.api.client.render.TextureBinding;
-import org.academy.api.common.vfx.DirectionalArea;
+import org.academy.api.common.util.DirectionalArea;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
@@ -53,7 +53,7 @@ public final class DirectionalFieldRenderer {
 
     private static RenderPipeline pipeline(String shader, BlendFunction blend) {
         var layout = BindGroupLayout.builder().withUniform("DirectionalField", UniformType.UNIFORM_BUFFER);
-        for (String sampler : samplerNames(shader)) layout.withUniform(sampler, UniformType.COMBINED_IMAGE_SAMPLER);
+        for (var sampler : samplerNames(shader)) layout.withUniform(sampler, UniformType.COMBINED_IMAGE_SAMPLER);
         return RenderPipeline.builder().withLocation(AcademyCraft.academy("pipeline/" + shader))
                 .withVertexShader(AcademyCraft.academy("core/screen_blit"))
                 .withFragmentShader(AcademyCraft.academy("core/" + shader))
@@ -94,7 +94,7 @@ public final class DirectionalFieldRenderer {
         var encoder = RenderSystem.getDevice().createCommandEncoder();
         encoder.clearColorTexture(surface.getColorTexture(), new Vector4f(0));
         encoder.clearColorTexture(volume.getColorTexture(), new Vector4f(0));
-        for (int start = 0; start < areas.size(); start += BATCH_SIZE) {
+        for (var start = 0; start < areas.size(); start += BATCH_SIZE) {
             var batch = areas.subList(start, Math.min(start + BATCH_SIZE, areas.size()));
             writeUniforms(camera, inverse, batch);
             draw(surface.getColorTextureView(), SURFACE, null);
@@ -117,9 +117,9 @@ public final class DirectionalFieldRenderer {
     private static void writeUniforms(Vec3 camera, Matrix4fc inverse, List<DirectionalArea> areas) {
         var level = Minecraft.getInstance().level;
         var sample = BlockPos.containing(areas.getFirst().origin());
-        float light = Math.max(level.getBrightness(LightLayer.BLOCK, sample),
+        var light = Math.max(level.getBrightness(LightLayer.BLOCK, sample),
                 Math.max(0, level.getBrightness(LightLayer.SKY, sample) - level.getSkyDarken())) / 15f;
-        float sun = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, camera, null)
+        var sun = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, camera, null)
                 * (float) (Math.PI / 180);
         try (var stack = MemoryStack.stackPush()) {
             var b = Std140Builder.onStack(stack, UBO_SIZE);
@@ -129,22 +129,22 @@ public final class DirectionalFieldRenderer {
                     RenderSystem.getDevice().getDeviceInfo().isZZeroToOne() ? 1 : 0, 0);
             // A camera-relative noise anchor keeps the shafts stable as the observer moves.
             b.putVec4((float) (camera.x % 4096), (float) (camera.y % 4096), (float) (camera.z % 4096), 0);
-            for (int i = 0; i < BATCH_SIZE; i++) {
+            for (var i = 0; i < BATCH_SIZE; i++) {
                 if (i < areas.size()) {
                     var a = areas.get(i);
                     var p = a.origin().subtract(camera);
                     b.putVec4((float) p.x, (float) p.y, (float) p.z, (float) a.radius());
                 } else b.putVec4(0, 0, 0, 0);
             }
-            for (int i = 0; i < BATCH_SIZE; i++) {
+            for (var i = 0; i < BATCH_SIZE; i++) {
                 if (i < areas.size()) {
                     var a = areas.get(i);
                     var d = a.direction();
-                    float inside = a.airVisibility(camera);
+                    var inside = a.airVisibility(camera);
                     b.putVec4((float) d.x, (float) d.y, (float) d.z, inside);
                 } else b.putVec4(0, 0, 1, 1);
             }
-            for (int i = 0; i < BATCH_SIZE; i++) {
+            for (var i = 0; i < BATCH_SIZE; i++) {
                 if (i < areas.size()) {
                     var a = areas.get(i);
                     b.putVec4((float) a.first().radius(), (float) a.first().minimumDot(), (float) a.second().radius(), (float) a.second().minimumDot());
@@ -162,10 +162,10 @@ public final class DirectionalFieldRenderer {
         for (var area : batch) {
             var center = area.origin().subtract(camera);
             float l = Float.POSITIVE_INFINITY, b = l, r = Float.NEGATIVE_INFINITY, t = r;
-            int behind = 0;
-            for (int x = -1; x <= 1; x += 2)
-                for (int y = -1; y <= 1; y += 2)
-                    for (int z = -1; z <= 1; z += 2) {
+            var behind = 0;
+            for (var x = -1; x <= 1; x += 2)
+                for (var y = -1; y <= 1; y += 2)
+                    for (var z = -1; z <= 1; z += 2) {
                         var p = matrix.transform(new Vector4f((float) (center.x + x * area.radius()),
                                 (float) (center.y + y * area.radius()), (float) (center.z + z * area.radius()), 1));
                         if (p.w <= 0.001f) {
@@ -185,10 +185,10 @@ public final class DirectionalFieldRenderer {
             bottom = Math.min(bottom, b);
             top = Math.max(top, t);
         }
-        int x = Math.clamp((int) Math.floor((left + 1) * 0.5 * volume.width) - 1, 0, volume.width);
-        int y = Math.clamp((int) Math.floor((bottom + 1) * 0.5 * volume.height) - 1, 0, volume.height);
-        int x1 = Math.clamp((int) Math.ceil((right + 1) * 0.5 * volume.width) + 1, 0, volume.width);
-        int y1 = Math.clamp((int) Math.ceil((top + 1) * 0.5 * volume.height) + 1, 0, volume.height);
+        var x = Math.clamp((int) Math.floor((left + 1) * 0.5 * volume.width) - 1, 0, volume.width);
+        var y = Math.clamp((int) Math.floor((bottom + 1) * 0.5 * volume.height) - 1, 0, volume.height);
+        var x1 = Math.clamp((int) Math.ceil((right + 1) * 0.5 * volume.width) + 1, 0, volume.width);
+        var y1 = Math.clamp((int) Math.ceil((top + 1) * 0.5 * volume.height) + 1, 0, volume.height);
         return new ScreenRect(x, y, Math.max(0, x1 - x), Math.max(0, y1 - y));
     }
 

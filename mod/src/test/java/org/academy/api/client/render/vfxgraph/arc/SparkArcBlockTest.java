@@ -1,9 +1,10 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
@@ -29,7 +30,7 @@ class SparkArcBlockTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -69,7 +70,7 @@ class SparkArcBlockTest {
         // 表面弧 + 火花弧都入同一个 buffer；火花弧是无表面迷你 2 点弧
         var hasSpark = false;
         for (var a = 0; a < buf.count(); a++) {
-            var arc = buf.arc(a);
+            var arc = ArcTestSupport.at(buf, a);
             if (!arc.hasSurface()) {
                 hasSpark = true;
                 assertTrue(arc.size() >= 2, "spark should be a mini arc with >= 2 points");
@@ -87,7 +88,7 @@ class SparkArcBlockTest {
 
         var buf = sim.arcBuffer();
         for (var a = 0; a < buf.count(); a++) {
-            assertTrue(buf.arc(a).hasSurface(), "probability 0 → only surface arcs, no sparks");
+            assertTrue(ArcTestSupport.at(buf, a).hasSurface(), "probability 0 → only surface arcs, no sparks");
         }
     }
 
@@ -99,7 +100,7 @@ class SparkArcBlockTest {
 
         var buf = sim.arcBuffer();
         for (var a = 0; a < buf.count(); a++) {
-            var arc = buf.arc(a);
+            var arc = ArcTestSupport.at(buf, a);
             if (!arc.hasSurface()) {
                 // 火花弧：迷你管（Blender Curve Line 长度 = 实例 Scale 0.01~0.03 × 粒子缩放），
                 // 起点在源弧控制点，终点沿溅射方向延伸

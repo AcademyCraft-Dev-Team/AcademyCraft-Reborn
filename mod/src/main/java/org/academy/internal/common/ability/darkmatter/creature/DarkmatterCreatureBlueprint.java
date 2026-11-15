@@ -2,8 +2,8 @@ package org.academy.internal.common.ability.darkmatter.creature;
 
 import com.google.gson.annotations.SerializedName;
 import net.minecraft.resources.Identifier;
-import org.academy.api.common.ability.darkmatter.DarkmatterCreaturePartType;
-import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
+import org.academy.internal.common.ability.darkmatter.DarkmatterCreaturePartType;
+import org.academy.internal.common.ability.darkmatter.DarkmatterCreatureRegistries;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

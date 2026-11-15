@@ -1,10 +1,10 @@
 package org.academy.api.client.render.vfxgraph.sim;
 
 import com.google.gson.JsonParser;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +17,7 @@ class VectorRedirectGraphVfxTest {
     private VfxSystemSimulator simulator(String asset) throws Exception {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         try (var stream = getClass().getResourceAsStream("/assets/academy/vfxgraph/" + asset + ".json")) {
             assertNotNull(stream);
             var system = new JsonVfxGraphCodec(metadata).decode(JsonParser.parseReader(
@@ -44,13 +44,13 @@ class VectorRedirectGraphVfxTest {
         assertEquals(0.012f * 2.5f, arc.width(arc.size() / 2), 0.012f * 2.5f * 0.05f);
         assertEquals(0.012f * 0.7f, sim.arcBuffer().arc(1).width(sim.arcBuffer().arc(1).size() / 2),
                 0.012f * 0.7f * 0.05f);
-        for (int i = 0; i < sim.arcBuffer().count(); i++) {
+        for (var i = 0; i < sim.arcBuffer().count(); i++) {
             var path = sim.arcBuffer().arc(i);
-            for (int p = 0; p < path.size(); p++) {
+            for (var p = 0; p < path.size(); p++) {
                 assertTrue(Float.isFinite(path.x(p)) && Float.isFinite(path.y(p)) && Float.isFinite(path.z(p)));
             }
         }
-        float x = arc.x(arc.size() / 2);
+        var x = arc.x(arc.size() / 2);
         sim.setLiveParam("seed", Value.of(143f));
         at(sim, 0.1f);
         assertNotEquals(x, sim.arcBuffer().arc(0).x(sim.arcBuffer().arc(0).size() / 2));

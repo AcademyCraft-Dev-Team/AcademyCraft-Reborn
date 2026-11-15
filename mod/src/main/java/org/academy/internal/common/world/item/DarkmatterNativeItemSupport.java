@@ -9,8 +9,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
-import org.academy.api.common.ability.darkmatter.DarkmatterIntegrity;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterIntegrity;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShapingProfile;
 
 /**
  * Shared construction and durability behavior for vanilla-derived shaped item classes.

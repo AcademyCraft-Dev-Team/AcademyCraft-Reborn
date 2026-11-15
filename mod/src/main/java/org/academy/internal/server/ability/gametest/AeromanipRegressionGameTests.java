@@ -31,8 +31,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.AirMobility;
 import org.academy.api.server.world.WaterSuppression;
+import org.academy.internal.common.ability.aeromanip.AirMobility;
 import org.academy.internal.common.gametest.GameTestData;
 
 import java.util.List;

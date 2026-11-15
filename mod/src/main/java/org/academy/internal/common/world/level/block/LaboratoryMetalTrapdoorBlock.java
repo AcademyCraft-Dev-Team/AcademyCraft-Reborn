@@ -33,7 +33,7 @@ public final class LaboratoryMetalTrapdoorBlock extends TrapDoorBlock {
             return InteractionResult.FAIL;
         }
 
-        BlockState updatedState = state.cycle(OPEN);
+        var updatedState = state.cycle(OPEN);
         level.setBlock(pos, updatedState, Block.UPDATE_CLIENTS);
         if (updatedState.getValue(WATERLOGGED)) {
             level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
@@ -55,7 +55,7 @@ public final class LaboratoryMetalTrapdoorBlock extends TrapDoorBlock {
             return;
         }
 
-        boolean powered = level.hasNeighborSignal(pos);
+        var powered = level.hasNeighborSignal(pos);
         if (powered == state.getValue(POWERED)) {
             return;
         }

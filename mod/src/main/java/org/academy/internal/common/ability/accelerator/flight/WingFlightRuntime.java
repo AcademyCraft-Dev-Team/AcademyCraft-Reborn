@@ -7,8 +7,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.academy.api.common.ability.Skill;
-import org.academy.api.common.ability.WingControlIntent;
-import org.academy.api.common.ability.WingFlightMotion;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
 
@@ -69,7 +67,7 @@ public final class WingFlightRuntime {
         if (session.lastPlayerTick == player.tickCount) return;
         session.lastPlayerTick = player.tickCount;
         var input = session.controls.sample(System.nanoTime(), player.getYRot(), player.getXRot());
-        double scale = skill == Skills.STORM_WING.get() && skill.hasProficiencyMilestone(player, 2) ? 1.15 : 1;
+        var scale = skill == Skills.STORM_WING.get() && skill.hasProficiencyMilestone(player, 2) ? 1.15 : 1;
         EntityMotionGuard.runWithMotionSource(player, () -> player.setDeltaMovement(WingFlightMotion.step(
                 WingFlightMotion.afterMove(player.getDeltaMovement(), session.previousButtons), input,
                 session.previousButtons, input.remainingMomentum(), scale)));

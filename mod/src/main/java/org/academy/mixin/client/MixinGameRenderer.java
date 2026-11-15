@@ -30,15 +30,15 @@ import org.academy.api.client.render.post.PostEffect;
 import org.academy.api.client.render.post.WorldSurfaceMasks;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
+import org.academy.api.client.render.vfxgraph.shape.FirstPersonHandSurface;
+import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose;
+import org.academy.api.client.render.vfxgraph.shape.ThirdPersonItemSurface;
 import org.academy.api.client.vanilla.RenderLoopEvent;
 import org.academy.api.client.vanilla.WorldCompositeEvent;
 import org.academy.internal.client.ability.mentalout.WideAreaInterferenceClientState;
 import org.academy.internal.client.hud.HudManager;
-import org.academy.internal.client.render.vfxgraph.FrameProjectionContext;
-import org.academy.internal.client.render.vfxgraph.WorldLineOverlayPass;
-import org.academy.api.client.render.vfxgraph.shape.FirstPersonHandSurface;
-import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose;
-import org.academy.api.client.render.vfxgraph.shape.ThirdPersonItemSurface;
+import org.academy.internal.client.render.effect.FrameProjectionContext;
+import org.academy.internal.client.render.overlay.WorldLineOverlayPass;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
 import org.academy.internal.common.ability.electromaster.skills.lv4.BioelectricOperation;
 import org.academy.internal.common.ability.teleport.skills.lv5.SpacialExcision;
@@ -146,11 +146,12 @@ public abstract class MixinGameRenderer {
         if (target != null) {
             BioelectricOperation.Client.HandVisuals.render(target, depthTextureView, cameraState);
         }
-        GlowEffect.getInstance().begin();
-        var glowTarget = GlowEffect.glowTarget();
-        BioelectricOperation.Client.HandVisuals.renderGlow(
-                glowTarget.getColorTextureView(), depthTextureView, cameraState);
-        GlowEffect.getInstance().finish();
+        if (BioelectricOperation.Client.HandVisuals.hasGlow()) {
+            var glowTarget = GlowEffect.glowTarget();
+            BioelectricOperation.Client.HandVisuals.renderGlow(
+                    glowTarget.getColorTextureView(), depthTextureView, cameraState);
+            GlowEffect.getInstance().finishHandGlow();
+        }
     }
 
     @Inject(
@@ -187,8 +188,9 @@ public abstract class MixinGameRenderer {
         DirectionalFieldRenderer.render(cameraState.pos,
                 cameraState.viewRotationMatrix, cameraState.projectionMatrix,
                 Darkmatter.Client.InterferenceFieldClient.areas());
-        BioelectricOperation.Client.HandVisuals.requestGlow();
         GlowEffect.getInstance().captureDepth();
+        GlowEffect.getInstance().begin();
+        GlowEffect.getInstance().finish();
         PostEffect.post();
     }
 

@@ -1,19 +1,19 @@
 package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.google.gson.JsonParser;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxNodes;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.render.WorldTransform;
 import org.academy.api.client.render.vfxgraph.serialize.JsonVfxGraphCodec;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
+import org.academy.internal.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -33,7 +33,7 @@ class ActiveEffectTest {
     void proceduralPathBindingSurvivesContainerReloadAndHonorsEmptyInput() throws Exception {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         try (var stream = Objects.requireNonNull(
                 getClass().getResourceAsStream("/assets/academy/vfxgraph/magnetic_weapon.json"))) {
             var system = new JsonVfxGraphCodec(metadata).decode(
@@ -63,7 +63,7 @@ class ActiveEffectTest {
     void sampledSurfaceSurvivesReloadAndMissingSurfaceHidesPatches() throws Exception {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         try (var stream = Objects.requireNonNull(
                 getClass().getResourceAsStream("/assets/academy/vfxgraph/darkmatter_repair.json"))) {
             var system = new JsonVfxGraphCodec(metadata).decode(
@@ -130,7 +130,7 @@ class ActiveEffectTest {
         effect.setGameTimeLifetimeSeconds(0.5f);
         effect.setFrameVisible(false);
         assertFalse(effect.updateFrame(0.2f, null, 0));
-        for (int i = 0; i < 100; i++) assertFalse(effect.updateFrame(0, null, 0));
+        for (var i = 0; i < 100; i++) assertFalse(effect.updateFrame(0, null, 0));
         assertEquals(0.2f, effect.gameAgeSeconds(), 0.0001f);
         effect.reload(burstGraph("0"));
         assertTrue(effect.updateFrame(0.3f, null, 0), "Reloading or culling must not reset the game lifetime");

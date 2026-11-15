@@ -24,7 +24,6 @@ import org.academy.api.common.entitycontrol.*;
 import org.academy.api.common.registries.AcademyRegistrationsReadyEvent;
 import org.academy.api.server.ability.SkillTuning;
 import org.academy.api.server.ability.program.AbilityProgramService;
-import org.academy.api.server.damage.AbilityDamageService;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.skills.lv5.DarkmatterSixWings;
@@ -44,7 +43,6 @@ import org.academy.internal.common.network.syncher.EntityDataSerializers;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.sync.DataTypes;
 import org.academy.internal.common.sync.SyncKeys;
-import org.academy.internal.common.world.damagesource.AbilityDamageServiceBackend;
 import org.academy.internal.common.world.effect.StatusEffects;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.entity.ability.DarkmatterBeetle;
@@ -135,7 +133,6 @@ public final class AcademyCraftRegister {
             MentalPerceptionApi.registerBackend(new MentalPerceptionRuntimeBackend());
             GroupControlApi.registerBackend(new GroupControlRuntimeBackend());
             MentalControlRosterApi.registerBackend(new MentaloutControlRosterBackend());
-            AbilityDamageService.registerBackend(new AbilityDamageServiceBackend());
             AbilityProgramService.registerBackend(new AbilityProgramServiceBackend());
             SkillTuning.registerProvider(new SkillTuningCore());
             Skill.registerCastCostModifier((player, skill, baseCost, cost, _) ->

@@ -14,7 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.event.EventHooks;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
 import org.jspecify.annotations.Nullable;
 
 import java.util.function.Predicate;
@@ -61,7 +61,7 @@ public final class DarkmatterBowItem extends BowItem implements DarkmatterShaped
         }
         var timeHeld = getUseDuration(weapon, entity) - remainingTime;
         timeHeld = EventHooks.onArrowLoose(
-                weapon, level, player, timeHeld, true);
+                weapon, level, player, timeHeld);
         if (timeHeld < 0) return false;
         var power = getPowerForTime(timeHeld);
         if (power < 0.1f) return false;

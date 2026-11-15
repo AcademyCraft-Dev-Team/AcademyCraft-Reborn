@@ -16,14 +16,14 @@ import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.ability.event.AbilityOverloadEvent;
 import org.academy.api.common.ability.event.AbilityRecoveryEvent;
-import org.academy.api.common.ability.pakcet.SyncAbilityDataPacket;
+import org.academy.api.common.ability.packet.SyncAbilityDataPacket;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.registries.Registries;
-import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.world.level.block.AbilityDeveloperSleep;
 import org.academy.internal.server.config.AbilityConfig;
+import org.academy.internal.server.world.level.storage.PlayerData;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkServer;
 
@@ -1154,7 +1154,7 @@ public class PlayerCPManager implements AbilitySubsystem {
             Predicate<String> availableSkill, float maximum
     ) {
         var changed = false;
-        double released = 0.0;
+        var released = 0.0;
         var iterator = occupations.iterator();
         while (iterator.hasNext()) {
             var occupation = iterator.next();

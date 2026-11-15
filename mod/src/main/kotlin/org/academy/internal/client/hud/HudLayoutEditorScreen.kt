@@ -10,7 +10,6 @@ import org.academy.api.client.gui.drawable.Drawable
 import org.academy.api.client.gui.drawable.StateListDrawable
 import org.academy.api.client.gui.dsl.*
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.layout.Gravity
 import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.UiScreen
@@ -252,7 +251,7 @@ class HudLayoutEditorScreen(
             event.consume()
         }
 
-        override fun onMouseScrolled(event: ScrollEvent) {
+        override fun onMouseScrolled(event: MouseEvent) {
             if (!isMouseOver(event.x, event.y) || event.delta == 0.0) return
             region.scaleXY += if (event.delta > 0.0) SCALE_STEP else -SCALE_STEP
             saveAndRebuild()

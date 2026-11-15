@@ -17,14 +17,18 @@ import org.academy.api.client.render.vfxgraph.instance.EffectInstanceGeometrySou
 import org.academy.api.client.render.vfxgraph.instance.InstanceGeometryFrame;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
-import org.academy.api.client.render.vfxgraph.runtime.VortexRenderBudget;
 import org.academy.api.client.render.vfxgraph.shape.HumanoidSurfacePose;
 import org.academy.api.client.resources.R;
 import org.academy.api.client.util.VertexUtil;
 import org.academy.api.common.ability.AbilityCategory;
-import org.academy.api.common.ability.VortexAttackPattern;
 import org.academy.api.common.util.ImprovedNoise;
-import org.academy.internal.client.render.vfxgraph.*;
+import org.academy.internal.client.animation.BoundedAnimationTimeline;
+import org.academy.internal.client.animation.SweepAnimationTimeline;
+import org.academy.internal.client.render.effect.FrameContext;
+import org.academy.internal.client.render.effect.TickingVfx;
+import org.academy.internal.client.render.effect.VfxContexts;
+import org.academy.internal.client.render.vfxgraph.wind.VortexRenderBudget;
+import org.academy.internal.common.ability.accelerator.skills.lv5.wing.VortexAttackPattern;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.joml.FrustumIntersection;
@@ -220,7 +224,7 @@ public final class Accelerator extends AbilityCategory {
             }
 
             private static double blackVisualTime() {
-                long now = System.nanoTime();
+                var now = System.nanoTime();
                 if (blackClockNanos != 0 && !Minecraft.getInstance().isPaused())
                     blackTime += Math.max(0, (now - blackClockNanos) / 1e9);
                 blackClockNanos = now;
@@ -274,7 +278,7 @@ public final class Accelerator extends AbilityCategory {
                     clearSweeps();
                     animationLevel = minecraft.level;
                 }
-                double now = blackVisualTime();
+                var now = blackVisualTime();
                 var playback = BLACK_ATTACKS.get(entityId);
                 if (playback == null || playback.epoch < epoch) {
                     syncBlackState(entityId, epoch, 0, true);
@@ -312,7 +316,7 @@ public final class Accelerator extends AbilityCategory {
                     return;
                 }
                 var currentTick = minecraft.level.getGameTime();
-                double now = blackVisualTime();
+                var now = blackVisualTime();
                 BLACK_ATTACKS.entrySet().removeIf(entry -> {
                     var playback = entry.getValue();
                     playback.timeline.advance(now);
@@ -389,7 +393,7 @@ public final class Accelerator extends AbilityCategory {
                 var level = minecraft.level;
                 var manager = VfxGraphManager.INSTANCE;
                 if (level == null || !manager.isInitialized()) return;
-                double now = blackVisualTime();
+                var now = blackVisualTime();
                 var camera = ctx.cameraPos();
                 var frustum = new FrustumIntersection(new Matrix4f(ctx.projectionMatrix())
                         .mul(ctx.viewRotationMatrix()));
@@ -404,14 +408,14 @@ public final class Accelerator extends AbilityCategory {
                 var retained = new HashSet<Integer>();
                 for (var player : players) {
                     var transition = transitionProjection(player.getId(), ctx.gameTime());
-                    boolean active = isActive(player, WingKind.BLACK);
+                    var active = isActive(player, WingKind.BLACK);
                     if ((!active && transition == null) || !player.isAlive()) continue;
                     var pose = transition == null ? null : transition.blackWing();
                     if (pose != null && !pose.visible()) continue;
                     retained.add(player.getId());
                     var visual = BLACK_VISUALS.computeIfAbsent(player.getId(), _ -> new BlackVisual());
                     var position = player.getPosition(ctx.partialTick());
-                    float yaw = Mth.rotLerp(ctx.partialTick(), player.yBodyRotO, player.yBodyRot);
+                    var yaw = Mth.rotLerp(ctx.partialTick(), player.yBodyRotO, player.yBodyRot);
                     var captured = capturedRoots.get(player.getId());
                     if (captured != null) {
                         visual.relativeRoot.translation((float) (camera.x - position.x), (float) (camera.y - position.y),
@@ -423,17 +427,17 @@ public final class Accelerator extends AbilityCategory {
                     if (playback != null) playback.timeline.advance(now);
                     var current = playback == null || !playback.active ? null : playback.timeline.currentValue();
                     var pending = playback == null || !playback.active ? null : playback.timeline.pendingValue();
-                    boolean fourfold = current != null && current.pattern == VortexAttackPattern.FOURFOLD_SLAM
+                    var fourfold = current != null && current.pattern == VortexAttackPattern.FOURFOLD_SLAM
                             || pending != null && pending.pattern == VortexAttackPattern.FOURFOLD_SLAM;
-                    double radius = Math.max(blackBoundsRadius(current, position), blackBoundsRadius(pending, position));
-                    double distance = position.distanceTo(new Vec3(camera.x, camera.y, camera.z));
+                    var radius = Math.max(blackBoundsRadius(current, position), blackBoundsRadius(pending, position));
+                    var distance = position.distanceTo(new Vec3(camera.x, camera.y, camera.z));
                     if (distance - radius > 128 || !frustum.testSphere((float) (position.x - camera.x),
                             (float) (position.y - camera.y + 1.4), (float) (position.z - camera.z), (float) radius))
                         continue;
-                    double projectedDistance = distance * 1.428 / Math.max(0.1, Math.abs(ctx.projectionMatrix().m11()));
+                    var projectedDistance = distance * 1.428 / Math.max(0.1, Math.abs(ctx.projectionMatrix().m11()));
                     visual.requestedTier = player == minecraft.player ? 0
                             : VortexRenderBudget.preferred(projectedDistance, visual.requestedTier);
-                    int tier = BLACK_BUDGET.allocate(visual.requestedTier, fourfold);
+                    var tier = BLACK_BUDGET.allocate(visual.requestedTier, fourfold);
                     if (tier < 0) continue;
                     var detail = VortexRenderBudget.DETAILS.get(tier);
                     visual.lastVisible = now;
@@ -459,7 +463,7 @@ public final class Accelerator extends AbilityCategory {
                     effect.setRotation(transform.getUnnormalizedRotation(new Quaternionf()));
                     effect.setScale(transform.getScale(new Vector3f()).x);
                     var graph = effect.effect();
-                    boolean clipBody = player == minecraft.player && minecraft.options.getCameraType().isFirstPerson()
+                    var clipBody = player == minecraft.player && minecraft.options.getCameraType().isFirstPerson()
                             && minecraft.getCameraEntity() == player;
                     graph.setLiveParam("first_person_body_clip", Value.of(clipBody ? 1f : 0f));
                     if (clipBody) {
@@ -467,9 +471,9 @@ public final class Accelerator extends AbilityCategory {
                         var eye = inverse.transformPosition(new Vector3f());
                         var minimum = new Vector3f(Float.POSITIVE_INFINITY);
                         var maximum = new Vector3f(Float.NEGATIVE_INFINITY);
-                        float halfWidth = player.getBbWidth() * 0.4f;
-                        float top = (float) (camera.y - position.y) - 0.18f;
-                        for (int corner = 0; corner < 8; corner++) {
+                        var halfWidth = player.getBbWidth() * 0.4f;
+                        var top = (float) (camera.y - position.y) - 0.18f;
+                        for (var corner = 0; corner < 8; corner++) {
                             var point = new Vector3f((float) (position.x - camera.x) + ((corner & 1) == 0 ? -halfWidth : halfWidth),
                                     (float) (position.y - camera.y) + ((corner & 2) == 0 ? 0f : top),
                                     (float) (position.z - camera.z) + ((corner & 4) == 0 ? -halfWidth : halfWidth));
@@ -502,7 +506,7 @@ public final class Accelerator extends AbilityCategory {
                     graph.setLiveParam("attack_mode", Value.of((float) attack.pattern.id()));
                     graph.setLiveParam("attack_progress", Value.of(frame.progress()));
                     var inverseRotation = new Quaternionf(effect.rotation()).conjugate();
-                    for (int i = 0; i < attack.targets.size(); i++) {
+                    for (var i = 0; i < attack.targets.size(); i++) {
                         var worldTarget = attack.targets.get(i);
                         var target = new Vector3f((float) (worldTarget.x - effect.position().x),
                                 (float) (worldTarget.y - effect.position().y), (float) (worldTarget.z - effect.position().z));

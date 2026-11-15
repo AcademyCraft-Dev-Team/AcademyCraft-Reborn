@@ -22,6 +22,7 @@ import org.academy.internal.common.ability.accelerator.skills.lv5.PlasmaGenerati
 import org.academy.internal.common.ability.accelerator.skills.lv5.wing.*;
 import org.academy.internal.common.ability.aeromanip.charge.AeromanipChargeSync;
 import org.academy.internal.common.ability.aeromanip.field.AeromanipFieldSyncPacket;
+import org.academy.internal.common.ability.aeromanip.network.AirMobilitySyncPacket;
 import org.academy.internal.common.ability.aeromanip.network.FlowSensePacket;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.AirflowJet;
 import org.academy.internal.common.ability.aeromanip.skills.lv1.LaminarBuffer;
@@ -38,6 +39,7 @@ import org.academy.internal.common.ability.aeromanip.skills.lv4.HighSpeedJet;
 import org.academy.internal.common.ability.aeromanip.skills.lv4.VortexPull;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.AdiabaticCompression;
 import org.academy.internal.common.ability.aeromanip.skills.lv5.VacuumDomain;
+import org.academy.internal.common.ability.darkmatter.network.SyncDarkmatterStatePacket;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterGeneration;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping;
@@ -239,6 +241,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AeromanipFieldSyncPacket>>
             AEROMANIP_FIELD_SYNC = PACKET_TYPES.register("aeromanip_field_sync",
             () -> new PacketType<>(AeromanipFieldSyncPacket.class, AeromanipFieldSyncPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, AirMobilitySyncPacket>>
+            AIR_MOBILITY_SYNC = PACKET_TYPES.register("air_mobility_sync",
+            () -> new PacketType<>(AirMobilitySyncPacket.class, AirMobilitySyncPacket.CODEC));
 
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, PneumaticGrasp.StartPacket>>
             PNEUMATIC_GRASP_START = PACKET_TYPES.register("pneumatic_grasp_start",
@@ -481,6 +486,9 @@ public final class PacketTypes {
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, DarkmatterShaping.ResultPacket>>
             DARKMATTER_SHAPING_RESULT = PACKET_TYPES.register("darkmatter_shaping_result",
             () -> new PacketType<>(DarkmatterShaping.ResultPacket.class, DarkmatterShaping.ResultPacket.CODEC));
+    public static final DeferredHolder<PacketType<?, ?>, PacketType<ClientPacketListener, SyncDarkmatterStatePacket>>
+            SYNC_DARKMATTER_STATE = PACKET_TYPES.register("sync_darkmatter_state",
+            () -> new PacketType<>(SyncDarkmatterStatePacket.class, SyncDarkmatterStatePacket.CODEC));
     public static final DeferredHolder<PacketType<?, ?>, PacketType<ServerGamePacketListenerImpl, DarkmatterGeneration.ControlPacket>>
             DARKMATTER_GENERATION_CONTROL = PACKET_TYPES.register("darkmatter_generation_control",
             () -> new PacketType<>(DarkmatterGeneration.ControlPacket.class, DarkmatterGeneration.ControlPacket.CODEC));

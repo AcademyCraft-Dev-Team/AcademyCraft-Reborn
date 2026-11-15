@@ -271,8 +271,8 @@ public final class SurvivalDefenseRuntime {
     private static boolean sameCodeSource(Class<?> left, Class<?> right) {
         if (left == null || right == null) return false;
         try {
-            CodeSource leftSource = left.getProtectionDomain().getCodeSource();
-            CodeSource rightSource = right.getProtectionDomain().getCodeSource();
+            var leftSource = left.getProtectionDomain().getCodeSource();
+            var rightSource = right.getProtectionDomain().getCodeSource();
             return leftSource != null && rightSource != null
                     && Objects.equals(leftSource.getLocation(), rightSource.getLocation());
         } catch (SecurityException ignored) {

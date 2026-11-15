@@ -2,6 +2,7 @@ package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.google.gson.JsonParser;
 import net.minecraft.resources.Identifier;
+import org.academy.VfxSeriesTestRegistration;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class FirePauseTest {
     @BeforeEach
     void setUp() {
+        VfxSeriesTestRegistration.install();
         var m = VfxGraphManager.INSTANCE;
         m.init();
         m.clearEffects();

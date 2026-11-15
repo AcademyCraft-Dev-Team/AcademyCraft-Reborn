@@ -4,9 +4,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.server.ability.ElectromasterGraphEffects;
 import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeProfile;
 import org.academy.internal.common.ability.electromaster.skystrike.SkyStrikeVisualPacket;
+import org.academy.internal.server.ability.ElectromasterGraphEffects;
 
 public final class ElectromasterArcEffects {
     private ElectromasterArcEffects() {

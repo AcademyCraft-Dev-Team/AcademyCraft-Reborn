@@ -1,7 +1,7 @@
 package org.academy.api.client.render.vfxgraph.shape;
 
 import net.minecraft.client.Minecraft;
-import org.academy.api.client.render.vfxgraph.arc.MeshDistance;
+import org.academy.api.client.render.vfxgraph.curve.MeshDistance;
 import org.joml.Vector3f;
 
 public final class FirstPersonHandSurfaceSampler implements SurfaceSampler {

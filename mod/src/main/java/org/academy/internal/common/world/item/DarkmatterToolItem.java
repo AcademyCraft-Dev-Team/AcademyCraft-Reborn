@@ -3,7 +3,7 @@ package org.academy.internal.common.world.item;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
 
 import static net.minecraft.core.registries.Registries.BLOCK;
 

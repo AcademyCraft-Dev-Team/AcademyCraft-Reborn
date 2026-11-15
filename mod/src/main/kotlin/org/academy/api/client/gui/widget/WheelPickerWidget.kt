@@ -450,7 +450,7 @@ open class WheelPickerWidget : AbstractWidgetContainer() {
         event.consume()
     }
 
-    override fun onMouseScrolled(event: ScrollEvent) {
+    override fun onMouseScrolled(event: MouseEvent) {
         if (isMouseOver(event.x, event.y)) {
             event.consume()
             scrollByItems(if (event.delta > 0) -1 else 1)

@@ -22,7 +22,7 @@ class HealthReadInlinerTest {
         HealthReadInliner.apply(node);
         assertTrue(node.methods.stream().noneMatch(m -> m.name.contains("academy$inlineOffsetRead")));
         var getter = node.methods.stream().filter(m -> m.name.equals("getHealth")).findFirst().orElseThrow();
-        boolean xor = false;
+        var xor = false;
         for (var instruction : getter.instructions) {
             if (instruction.getOpcode() == Opcodes.LXOR) xor = true;
             assertFalse(instruction instanceof MethodInsnNode call && call.name.contains("academy$inlineOffsetRead"));
@@ -51,7 +51,7 @@ class HealthReadInlinerTest {
 
         private float academy$inlineOffsetRead(float raw) {
             if (raw < 0) return raw;
-            double offset = Double.longBitsToDouble(encoded ^ 0x234ABCL);
+            var offset = Double.longBitsToDouble(encoded ^ 0x234ABCL);
             if (!Double.isFinite(offset)) return raw;
             return Math.min(raw, (float) Math.max(0, 100 - offset));
         }

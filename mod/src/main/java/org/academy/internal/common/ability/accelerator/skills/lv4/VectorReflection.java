@@ -37,9 +37,8 @@ import org.academy.api.common.ability.*;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.api.common.data.AbilityData;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.internal.client.ability.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -51,10 +50,11 @@ import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviatio
 import org.academy.internal.common.attribute.PlayerAttributeRuntime;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.SkillVfxState;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.ReflectedSkillDamageSource;
 import org.academy.internal.server.ability.AbilitySystemServer;
-import org.academy.internal.server.vfx.SkillVfxService;
+import org.academy.internal.server.ability.SkillVfxService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.joml.Quaternionf;
 import org.misaka.MisakaNetworkClient;
@@ -129,16 +129,16 @@ public class VectorReflection extends Skill {
 
         private static void spawnDistortionRing(SkillVfxState.DistortionRing state) {
             if (!distortionRingVisibleForCamera(state.ownerEntityId())) return;
-            float lifetimeSeconds = Math.max(1, state.lifetimeTicks()) / 20f;
+            var lifetimeSeconds = Math.max(1, state.lifetimeTicks()) / 20f;
             var effect = VfxGraphManager.INSTANCE.spawn(DISTORTION_RING_ASSET, state.position().toVector3f());
             effect.setRotation(new Quaternionf()
                     .rotateY((float) Math.toRadians(180 - state.yRot()))
                     .rotateZ((float) Math.toRadians(90 + state.xRot()))
                     .rotateX((float) Math.toRadians(180)));
             effect.setLifetimeSeconds(lifetimeSeconds);
-            long startedAt = System.nanoTime();
+            var startedAt = System.nanoTime();
             effect.bind("radius", () -> {
-                float progress = Math.clamp((System.nanoTime() - startedAt) / (lifetimeSeconds * 1e9f), 0f, 1f);
+                var progress = Math.clamp((System.nanoTime() - startedAt) / (lifetimeSeconds * 1e9f), 0f, 1f);
                 return Value.of(DISTORTION_RING_MAX_RADIUS * (float) Math.sin(progress * Math.PI));
             });
             effect.setCullingSphere(effect.position(), DISTORTION_RING_MAX_RADIUS);
@@ -737,8 +737,8 @@ public class VectorReflection extends Skill {
             if (caller == Server.class) return true;
             try {
                 var callerDomain = Objects.requireNonNull(caller).getProtectionDomain();
-                CodeSource callerSource = callerDomain == null ? null : callerDomain.getCodeSource();
-                CodeSource academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
+                var callerSource = callerDomain == null ? null : callerDomain.getCodeSource();
+                var academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
                 return callerSource != null && academySource != null
                         && Objects.equals(callerSource.getLocation(), academySource.getLocation());
             } catch (SecurityException ignored) {

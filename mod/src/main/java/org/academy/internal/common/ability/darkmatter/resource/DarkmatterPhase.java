@@ -1,8 +1,8 @@
 package org.academy.internal.common.ability.darkmatter.resource;
 
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.common.ability.darkmatter.DarkmatterPhaseSnapshot;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.darkmatter.DarkmatterPhaseSnapshot;
 
 public final class DarkmatterPhase {
     private DarkmatterPhase() {

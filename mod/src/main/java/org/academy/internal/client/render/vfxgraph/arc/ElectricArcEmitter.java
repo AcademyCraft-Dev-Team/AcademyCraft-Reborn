@@ -1,0 +1,365 @@
+package org.academy.internal.client.render.vfxgraph.arc;
+
+import org.academy.api.client.render.graph.registry.PropertySpec;
+import org.academy.api.client.render.graph.type.Value;
+import org.academy.api.client.render.graph.type.ValueType;
+import org.academy.api.client.render.vfxgraph.model.VfxBlock;
+import org.academy.api.client.render.vfxgraph.nodes.BlockProps;
+import org.academy.api.client.render.vfxgraph.nodes.PortValueSource;
+import org.academy.api.client.render.vfxgraph.sim.SimContext;
+import org.academy.api.client.render.vfxgraph.sim.SimNode;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import java.util.List;
+import java.util.Optional;
+
+import static org.academy.api.client.render.vfxgraph.VfxNoise.unit;
+
+public final class ElectricArcEmitter {
+    private ElectricArcEmitter() {
+    }
+
+    public static List<PropertySpec> boltProperties() {
+        return List.of(number("length", 10), number("width", 0.065f), number("spread", 0.65f),
+                number("strands", 3), number("forks", 2), number("duration", 1),
+                number("flicker_rate", 18), number("opacity", 1), number("density", 1), number("detail", 1),
+                number("growth_time", 0), number("downward", 0), number("origin_y", 0));
+    }
+
+    public static List<PropertySpec> treeProperties() {
+        return List.of(number("length", 10), number("width", 0.065f), number("spread", 1.1f),
+                number("strands", 2), number("depth", 3), number("split", 2), number("duration", 1),
+                number("opacity", 1), number("density", 1), number("detail", 1),
+                number("growth_time", 0), number("downward", 0), number("origin_y", 0));
+    }
+
+    public static List<PropertySpec> orbitProperties() {
+        return List.of(number("radius", 0.30f), number("width", 0.014f), number("rim_width", 0.0055f), number("strength", 1),
+                number("filaments", 4), number("filament_reach", 1.15f),
+                number("motion_speed", 1), number("motion_strength", 1),
+                number("hint", 0), number("flicker_rate", 18), number("opacity", 1));
+    }
+
+    public static SimNode bolt(VfxBlock block, PortValueSource ports) {
+        var group = SkyDischargeEmitter.newGroup();
+        float[] epoch = {Float.NaN};
+        var path = new ArcCurve();
+        var fork = new ArcCurve();
+        return (buffer, ctx) -> {
+            ctx.arcs().removeGroup(group);
+            var time = time(ctx, epoch);
+            var duration = value(block, ctx, "duration", 1, 0.05f, 20);
+            var length = value(block, ctx, "length", 10, 0, 4096);
+            var growth = value(block, ctx, "growth_time", 0, 0, 2);
+            if (growth > 0) length *= smooth(time / growth);
+            if (time >= duration || length <= 0) return;
+            float direction = value(block, ctx, "downward", 0, 0, 1) > 0.5f ? -1 : 1;
+            var originY = value(block, ctx, "origin_y", 0, -4096, 4096);
+            var opacity = value(block, ctx, "opacity", 1, 0, 1)
+                    * value(block, ctx, "density", 1, 0, 2)
+                    * (1 - smooth((time / duration - 0.35f) / 0.65f));
+            if (opacity <= 0.001f) return;
+            var detail = value(block, ctx, "detail", 1, 0, 1);
+            var width = value(block, ctx, "width", 0.065f, 0.001f, 2);
+            var spread = Math.min(length * 0.12f, value(block, ctx, "spread", 0.65f, 0, 8));
+            var count = Math.max(1, Math.round(value(block, ctx, "strands", 3, 1, 8) * detail));
+            var forks = Math.round(value(block, ctx, "forks", 2, 0, 5) * detail);
+            var frame = (int) (time * value(block, ctx, "flicker_rate", 18, 1, 40));
+            var segments = Math.clamp((int) Math.ceil(length * 2), 24, 96);
+            var seed = (long) ctx.paramFloat("seed", 42);
+            for (var strand = 0; strand < count; strand++) {
+                var random = seed + strand * 317L + frame * 911L;
+                var angle = strand * 2.399963f;
+                path.clearPoints();
+                for (var i = 0; i <= segments; i++) {
+                    var u = (float) i / segments;
+                    var envelope = (float) Math.sin(u * Math.PI);
+                    var bow = strand == 0 ? 0.18f : 0.45f + strand * 0.12f;
+                    var x = spread * envelope * ((float) Math.cos(angle) * bow + noise(random, u, 13) * 0.42f);
+                    var z = spread * envelope * ((float) Math.sin(angle) * bow + noise(random + 53, u, 11) * 0.42f);
+                    var taper = (0.18f + 0.82f * smooth(u * 12)) * (0.08f + 0.92f * smooth((1 - u) * 10));
+                    path.addPoint(x, originY + direction * u * length, z, width * (strand == 0 ? 1 : 0.6f) * taper, 0);
+                }
+                var flicker = 0.82f + unit(random, 51) * 0.18f;
+                emit(ctx, path, group, random, opacity * flicker, "electricity");
+                if (strand != 0) continue;
+                for (var branch = 0; branch < forks; branch++) {
+                    var at = Math.clamp(Math.round(segments * (0.2f + unit(random, branch + 70) * 0.55f)), 1, segments - 1);
+                    fork.clearPoints();
+                    var branchAngle = angle + branch * 2.399963f + unit(random, branch + 90) * 3;
+                    var reach = Math.min(length * (1 - (float) at / segments), Math.max(0.2f, spread * 2.5f));
+                    for (var p = 0; p <= 12; p++) {
+                        var u = p / 12f;
+                        var lateral = spread * u * (0.75f + 0.20f * noise(random + branch, u, 7));
+                        fork.addPoint(path.x(at) + (float) Math.cos(branchAngle) * lateral,
+                                path.y(at) + direction * u * reach, path.z(at) + (float) Math.sin(branchAngle) * lateral,
+                                width * 0.42f * (1 - u), 1);
+                    }
+                    emit(ctx, fork, group, random + branch + 100, opacity * 0.72f, "electricity");
+                }
+            }
+        };
+    }
+
+    /**
+     * A forward delta: a single root point at the caster that grows along +Y and fans into more,
+     * thinner branches the further it advances, instead of a trunk spanning two endpoints.
+     */
+    public static SimNode tree(VfxBlock block, PortValueSource ports) {
+        var group = SkyDischargeEmitter.newGroup();
+        float[] epoch = {Float.NaN};
+        var path = new ArcCurve();
+        int[] budget = {0};
+        return (buffer, ctx) -> {
+            ctx.arcs().removeGroup(group);
+            var time = time(ctx, epoch);
+            var duration = value(block, ctx, "duration", 1, 0.05f, 20);
+            var length = value(block, ctx, "length", 10, 0, 4096);
+            var growth = value(block, ctx, "growth_time", 0, 0, 2);
+            var growWindow = growth > 0f ? Math.max(0.05f, growth * 0.5f) : 0f;
+            if (time >= duration || length <= 0.001f) return;
+            var life = Math.clamp(time / duration, 0f, 1f);
+            var phase = 0.15f * (1f - (1f - life) * (1f - life));
+            float direction = value(block, ctx, "downward", 0, 0, 1) > 0.5f ? -1 : 1;
+            var originY = value(block, ctx, "origin_y", 0, -4096, 4096);
+            var opacity = value(block, ctx, "opacity", 1, 0, 1)
+                    * value(block, ctx, "density", 1, 0, 2)
+                    * (1 - smooth((life - 0.15f) / 0.85f));
+            if (opacity <= 0.001f) return;
+            var detail = value(block, ctx, "detail", 1, 0, 1);
+            var width = value(block, ctx, "width", 0.065f, 0.001f, 2);
+            var spread = value(block, ctx, "spread", 1.1f, 0, 8);
+            var roots = Math.clamp(Math.round(value(block, ctx, "strands", 2, 1, 8) * detail), 1, 8);
+            var depth = Math.clamp(Math.round(value(block, ctx, "depth", 3, 1, 6)), 1, 6);
+            var split = Math.clamp(Math.round(value(block, ctx, "split", 2, 1, 4)), 1, 4);
+            var seed = (long) ctx.paramFloat("seed", 42);
+            budget[0] = 64;
+            var baseRandom = seed;
+            for (var s = 0; s < roots && budget[0] > 0; s++) {
+                var random = baseRandom + s * 317L + 7L;
+                var px = (unit(random, 11) - 0.5f) * width * 2f;
+                var pz = (unit(random, 23) - 0.5f) * width * 2f;
+                var angle = unit(random, 130) * 6.2832f;
+                var lateral = spread * 0.14f * (0.5f + unit(random, 90));
+                var branchLength = Math.max(0.05f, length * (0.5f + 0.4f * unit(random, 150)));
+                treeBranch(ctx, path, group, px, originY, pz,
+                        lateral * (float) Math.cos(angle), direction, lateral * (float) Math.sin(angle),
+                        branchLength, length, 1, depth, split, spread, width,
+                        random, opacity, time, phase, 0f, growWindow, budget);
+            }
+        };
+    }
+
+    private static void treeBranch(SimContext ctx, ArcCurve path, long group,
+                                   float x, float y, float z,
+                                   float slopeX, float forward, float slopeZ,
+                                   float len, float remaining, int level, int depth, int split,
+                                   float spread, float width,
+                                   long random, float opacity, float time, float phase, float begin, float growWindow, int[] budget) {
+        var grow = growWindow > 0f ? Math.clamp((time - begin) / growWindow, 0f, 1f) : 1f;
+        var growInv = 1f - grow;
+        var grown = len * (1f - growInv * growInv * growInv);
+        if (grown <= 0.02f || budget[0] <= 0) return;
+        // `forward` is the signed advance; lateral is a slope, and child length is bounded by the
+        // remaining range, so the crown can never overshoot the target distance.
+        var segments = Math.max(6, 14 - level * 2);
+        // Smooth large-scale bending (scaled to the branch length) instead of straight or zig-zag lines.
+        var jitter = grown * spread * (0.10f + 0.05f * level);
+        var leaf = level >= depth;
+        path.clearPoints();
+        for (var i = 0; i <= segments; i++) {
+            var u = (float) i / segments;
+            var envelope = (float) Math.sin(u * Math.PI * 0.5f);
+            var nx = noise(random, u + phase, 2) * 0.65f + noise(random + 53, u * 1.6f + phase * 1.7f, 3) * 0.35f;
+            var nz = noise(random + 91, u + phase, 2) * 0.65f + noise(random + 137, u * 1.8f + phase * 1.7f, 3) * 0.35f;
+            // Segments stay close to full width where they meet a parent (no pinched junction) and
+            // only the outermost tips taper away.
+            var taper = 0.80f + 0.20f * smooth(u * 5f);
+            if (leaf) taper *= 1f - 0.9f * smooth((u - 0.7f) / 0.3f);
+            path.addPoint(x + slopeX * grown * u + nx * jitter * envelope,
+                    y + forward * grown * u,
+                    z + slopeZ * grown * u + nz * jitter * envelope,
+                    width * taper, level, 0);
+        }
+        emitDemo(ctx, path, group, random, opacity, "electricity");
+        budget[0]--;
+
+        if (leaf || budget[0] <= 0) return;
+        var nodeRandom = random + level * 911L + 137L;
+        // Irregular branching: a node may drop a child so the crown never repeats the same fan.
+        var kids = split > 1 && unit(nodeRandom, 200) < 0.3f ? split - 1 : split;
+        var cone = spread * (0.14f + 0.10f * level);
+        for (var c = 0; c < kids && budget[0] > 0; c++) {
+            var childRandom = nodeRandom + c * 317L;
+            var startU = 0.15f + 0.8f * unit(childRandom, 180);
+            var envelopeAt = (float) Math.sin(startU * Math.PI * 0.5f);
+            var sx = x + slopeX * grown * startU
+                    + (noise(random, startU + phase, 2) * 0.65f + noise(random + 53, startU * 1.6f + phase * 1.7f, 3) * 0.35f) * jitter * envelopeAt;
+            var sz = z + slopeZ * grown * startU
+                    + (noise(random + 91, startU + phase, 2) * 0.65f + noise(random + 137, startU * 1.8f + phase * 1.7f, 3) * 0.35f) * jitter * envelopeAt;
+            var sy = y + forward * grown * startU;
+            var childRemaining = Math.max(0.05f, remaining - grown * startU);
+            var childLen = Math.max(0.05f, childRemaining * (0.45f + 0.35f * unit(childRandom, 150)));
+            var childAngle = unit(random, 130) * 6.2832f + c * 2.399963f
+                    + (unit(childRandom, 70) - 0.5f) * 1.8f;
+            var lateral = cone * (0.3f + unit(childRandom, 90) * 1.1f);
+            treeBranch(ctx, path, group, sx, sy, sz,
+                    lateral * (float) Math.cos(childAngle), forward, lateral * (float) Math.sin(childAngle),
+                    childLen, childRemaining, level + 1, depth, split, spread,
+                    width * 0.66f, childRandom, opacity, time, phase, begin + growWindow * startU, growWindow, budget);
+        }
+    }
+
+    public static SimNode orbit(VfxBlock block, PortValueSource ports) {
+        var group = SkyDischargeEmitter.newGroup();
+        float[] epoch = {Float.NaN};
+        var path = new ArcCurve();
+        var point = new Vector3f();
+        var rotation = new Quaternionf();
+        var branch = new ArcCurve();
+        return (buffer, ctx) -> {
+            ctx.arcs().removeGroup(group);
+            var time = time(ctx, epoch);
+            var strength = value(block, ctx, "strength", 1, 0, 1);
+            var alpha = value(block, ctx, "opacity", 1, 0, 1) * (0.30f + strength * 0.70f);
+            if (alpha <= 0.001f) return;
+            var hint = value(block, ctx, "hint", 0, 0, 1) > 0.5f;
+            var motionTime = time * value(block, ctx, "motion_speed", 1, 0, 4);
+            var motion = value(block, ctx, "motion_strength", 1, 0, 2) * (hint ? 0.35f : 1);
+            var radius = value(block, ctx, "radius", 0.30f, 0.02f, 8) * (0.75f + strength * 0.25f);
+            radius *= 1 + motion * (0.045f * (float) Math.sin(motionTime * 7.3f)
+                    + 0.025f * (float) Math.sin(motionTime * 12.1f + 0.6f));
+            var width = value(block, ctx, "width", 0.014f, 0.001f, 0.25f) * (0.6f + strength * 0.4f);
+            var rimWidth = value(block, ctx, "rim_width", 0.0055f, 0.0005f, 0.15f) * (0.6f + strength * 0.4f);
+            var frame = (int) (motionTime * value(block, ctx, "flicker_rate", 18, 1, 40));
+            var seed = (long) ctx.paramFloat("seed", 42);
+            var random = seed + frame * 911L;
+            rotation.identity().rotateX(0.28f + motion * (float) Math.sin(motionTime * 3.7f) * 0.16f)
+                    .rotateY(0.20f + motion * (float) Math.sin(motionTime * 2.9f + 1) * 0.22f)
+                    .rotateZ(motion * (float) Math.sin(motionTime * 1.5f) * 0.10f);
+            // A substantial continuous rim remains readable between the sparse white-hot sections.
+            path.clearPoints();
+            for (var i = 0; i <= 64; i++) {
+                var angle = i * (float) (Math.PI * 2) / 64;
+                ringPoint(random, angle, radius, motionTime, motion, rotation, point);
+                var flow = 1 + motion * 0.15f * (float) Math.sin(angle * 2 - motionTime * 12);
+                path.addPoint(point.x, point.y, point.z, rimWidth * flow, 0);
+            }
+            emit(ctx, path, group, random, alpha * 0.85f, "electricity");
+            for (var piece = 0; piece < (hint ? 1 : 3); piece++) {
+                var phase = motionTime * (1.6f + piece * 0.12f) + piece * 2.094395f
+                        + motion * (float) Math.sin(motionTime * 2.2f + piece) * 0.38f;
+                var span = 0.48f + unit(random, piece + 10) * 0.34f;
+                path.clearPoints();
+                for (var i = 0; i <= 20; i++) {
+                    var u = i / 20f;
+                    ringPoint(random, phase + span * u, radius, motionTime, motion, rotation, point);
+                    var hot = (float) Math.pow(Math.sin(u * Math.PI), 0.8);
+                    path.addPoint(point.x, point.y, point.z, width * (0.10f + hot), 0);
+                }
+                emit(ctx, path, group, random + piece, alpha, "electricity");
+            }
+            var filaments = hint ? 0 : Math.round(value(block, ctx, "filaments", 4, 0, 6));
+            var reach = value(block, ctx, "filament_reach", 1.15f, 0, 2);
+            for (var tail = 0; tail < filaments; tail++) {
+                var angle = tail * 2.399963f + motionTime * 0.55f
+                        + motion * (float) Math.sin(motionTime * 3.5f + tail * 1.7f) * 0.45f;
+                ringPoint(random, angle, radius, motionTime, motion, rotation, point);
+                float startX = point.x, startY = point.y, startZ = point.z;
+                var direction = angle + (unit(random, tail + 30) - 0.5f) * 1.3f;
+                var pulse = 0.5f + 0.5f * (float) Math.sin(motionTime * (7 + tail) + tail * 1.7f);
+                var length = radius * reach * (0.25f + pulse * 0.75f);
+                var surge = tail % 2 == 0 ? smooth((pulse - 0.40f) / 0.60f) : 0;
+                path.clearPoints();
+                for (var i = 0; i <= 12; i++) {
+                    var u = i / 12f;
+                    var drift = noise(random + tail * 73L, u, 7) * radius * 0.17f * u;
+                    point.set((float) Math.cos(direction) * length * u - (float) Math.sin(direction) * drift,
+                            (float) Math.sin(direction) * length * u + (float) Math.cos(direction) * drift,
+                            drift * 0.4f).rotate(rotation);
+                    path.addPoint(startX + point.x, startY + point.y, startZ + point.z,
+                            width * (0.16f + surge * 0.52f) * (1 - u * 0.92f), 0);
+                }
+                emit(ctx, path, group, random + tail + 50, alpha * 0.86f, "electricity");
+                // Thin forks inherit their root from the parent filament instead of radiating from the hand.
+                branch.clearPoints();
+                for (var i = 0; i <= 6; i++) {
+                    var u = i / 6f;
+                    point.set((float) Math.cos(direction + 0.85f) * length * u * 0.48f,
+                            (float) Math.sin(direction + 0.85f) * length * u * 0.48f,
+                            noise(random + tail, u, 4) * radius * 0.10f * u).rotate(rotation);
+                    branch.addPoint(path.x(5) + point.x, path.y(5) + point.y, path.z(5) + point.z,
+                            width * 0.09f * (1 - u), 0);
+                }
+                emit(ctx, branch, group, random + tail + 70, alpha * 0.68f, "electricity");
+            }
+        };
+    }
+
+    private static void ringPoint(long seed, float angle, float radius, float time, float motion,
+                                  Quaternionf rotation, Vector3f point) {
+        var turn = angle / (float) (Math.PI * 2);
+        turn -= (float) Math.floor(turn);
+        var cursor = turn * 24;
+        var cell = (int) cursor;
+        float a = unit(seed, cell + 100), b = unit(seed, (cell + 1) % 24 + 100);
+        var r = radius * (0.94f + 0.12f * (a + (b - a) * (cursor - cell)));
+        r *= 1 + motion * (0.06f * (float) Math.sin(angle * 3 - time * 6)
+                + 0.035f * (float) Math.sin(angle * 5 + time * 9));
+        point.set((float) Math.cos(angle) * r, (float) Math.sin(angle) * r,
+                radius * (0.045f * (float) Math.sin(angle * 3)
+                        + motion * 0.12f * (float) Math.sin(angle * 2 + time * 4))).rotate(rotation);
+    }
+
+    static void emit(SimContext ctx, ArcCurve path, long group, long seed, float opacity, String layer) {
+        for (var shell = 0; shell < 2; shell++) {
+            var arc = BlueWhiteArcStyle.shell(ctx.arcs(), group, seed, opacity, shell, layer);
+            for (var i = 0; i < path.size(); i++) {
+                arc.addPoint(path.x(i), path.y(i), path.z(i), path.width(i) * BlueWhiteArcStyle.widthScale(shell),
+                        path.generation(i), path.segment(i));
+            }
+        }
+    }
+
+    static void emitDemo(SimContext ctx, ArcCurve path, long group, long seed, float opacity, String layer) {
+        var arc = ArcSupport.add(ctx.arcs(), group);
+        arc.setColor(0.8f, 0.9f, 1f, Math.clamp(opacity, 0f, 1f));
+        arc.setSeed(seed);
+        arc.setLifetime(1f);
+        arc.setNoiseStrength(0f);
+        arc.setDriftSpeed(0f);
+        arc.setLayer(layer);
+        for (var i = 0; i < path.size(); i++) {
+            arc.addPoint(path.x(i), path.y(i), path.z(i), path.width(i),
+                    path.generation(i), path.segment(i));
+        }
+    }
+
+    private static float noise(long seed, float u, int cells) {
+        var cursor = u * cells;
+        var cell = (int) cursor;
+        var a = unit(seed, cell + 150) * 2 - 1;
+        var b = unit(seed, cell + 151) * 2 - 1;
+        return a + (b - a) * (cursor - cell);
+    }
+
+    static float time(SimContext ctx, float[] epoch) {
+        if (!Float.isFinite(epoch[0])) epoch[0] = ctx.time();
+        var value = ctx.paramFloat("time", -1);
+        return Math.max(0, Float.isFinite(value) && value >= 0 ? value : ctx.time() - epoch[0]);
+    }
+
+    static float value(VfxBlock block, SimContext ctx, String id, float fallback, float min, float max) {
+        return BlockProps.resolve(block, ctx, id, fallback, min, max);
+    }
+
+    private static float smooth(float value) {
+        value = Math.clamp(value, 0, 1);
+        return value * value * (3 - 2 * value);
+    }
+
+    static PropertySpec number(String id, float value) {
+        return new PropertySpec(id, id.replace('_', ' '), ValueType.FLOAT, Value.of(value), Optional.empty());
+    }
+}

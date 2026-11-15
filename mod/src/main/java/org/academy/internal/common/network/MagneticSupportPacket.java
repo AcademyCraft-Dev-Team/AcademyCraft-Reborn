@@ -9,8 +9,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.server.ability.electromaster.SupportReference;
 import org.academy.internal.common.ability.electromaster.skills.lv3.MagnetManipulation;
+import org.academy.internal.server.ability.electromaster.SupportReference;
 import org.jspecify.annotations.Nullable;
 import org.misaka.MisakaNetworkClient;
 import org.misaka.MisakaNetworkServer;
@@ -37,9 +37,9 @@ public final class MagneticSupportPacket extends Packet<ClientPacketListener, Ma
     }, b -> {
         var dimension = Identifier.STREAM_CODEC.decode(b);
         int entity = ByteBufCodecs.VAR_INT.decode(b);
-        boolean active = b.readBoolean();
+        var active = b.readBoolean();
         var point = active ? Vec3.STREAM_CODEC.decode(b) : Vec3.ZERO;
-        int face = active ? b.readUnsignedByte() : Direction.UP.ordinal();
+        var face = active ? b.readUnsignedByte() : Direction.UP.ordinal();
         if (entity < 0 || face >= Direction.values().length || !Double.isFinite(point.lengthSqr())) {
             throw new IllegalArgumentException("Invalid magnetic support");
         }

@@ -4,18 +4,13 @@ import org.academy.api.client.render.graph.type.Curve;
 import org.academy.api.client.render.graph.type.Gradient;
 import org.academy.api.client.render.graph.type.Value;
 import org.academy.api.client.render.graph.type.ValueType;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer;
+import org.academy.api.client.render.vfxgraph.curve.EffectCurveSource;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceProjector;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.function.IntConsumer;
 
 /**
@@ -29,15 +24,15 @@ public final class SimContext {
     private final Map<String, Gradient> gradients;
     private final Map<String, Value> liveParams;
     private final Set<String> overriddenParams;
-    private final ArcBuffer arcs;
+    private final CurveBuffer arcs;
     private Map<String, SurfaceProjector> surfaces = Map.of();
-    private Map<String, EffectArcSource> arcSources = Map.of();
+    private Map<String, EffectCurveSource> arcSources = Map.of();
 
-    public void setArcSources(Map<String, EffectArcSource> sources) {
+    public void setArcSources(Map<String, EffectCurveSource> sources) {
         arcSources = sources;
     }
 
-    public @Nullable EffectArcSource arcSource(String name) {
+    public @Nullable EffectCurveSource arcSource(String name) {
         return arcSources.get(name);
     }
 
@@ -74,16 +69,16 @@ public final class SimContext {
 
     public SimContext(float dt, float time, Random random, Map<String, Curve> curves, Map<String, Gradient> gradients,
                       Map<String, Value> liveParams) {
-        this(dt, time, random, curves, gradients, liveParams, new ArcBuffer());
+        this(dt, time, random, curves, gradients, liveParams, new CurveBuffer());
     }
 
     public SimContext(float dt, float time, Random random, Map<String, Curve> curves, Map<String, Gradient> gradients,
-                      Map<String, Value> liveParams, ArcBuffer arcs) {
+                      Map<String, Value> liveParams, CurveBuffer arcs) {
         this(dt, time, random, curves, gradients, liveParams, new HashSet<>(), arcs);
     }
 
     public SimContext(float dt, float time, Random random, Map<String, Curve> curves, Map<String, Gradient> gradients,
-                      Map<String, Value> liveParams, Set<String> overriddenParams, ArcBuffer arcs) {
+                      Map<String, Value> liveParams, Set<String> overriddenParams, CurveBuffer arcs) {
         this.dt = dt;
         this.time = time;
         this.random = random;
@@ -107,7 +102,7 @@ public final class SimContext {
         return random;
     }
 
-    public ArcBuffer arcs() {
+    public CurveBuffer arcs() {
         return arcs;
     }
 

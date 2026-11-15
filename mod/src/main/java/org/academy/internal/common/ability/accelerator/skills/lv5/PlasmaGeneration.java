@@ -39,14 +39,14 @@ import org.academy.api.common.ability.AbilityLevel;
 import org.academy.api.common.ability.DevCondition;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.gson.TypeHandler;
-import org.academy.api.common.vfx.PlasmaChargeVisuals;
-import org.academy.api.common.vfx.SkillVfxState;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfxgraph.SkillVfxStates;
+import org.academy.internal.client.ability.SkillVfxStates;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
+import org.academy.internal.common.ability.accelerator.PlasmaChargeVisuals;
 import org.academy.internal.common.network.PacketTypes;
+import org.academy.internal.common.network.SkillVfxState;
 import org.academy.internal.common.sounds.SoundEvents;
 import org.academy.internal.common.world.damagesource.DestroyBlocksSetting;
 import org.academy.internal.common.world.damagesource.PvpSetting;
@@ -453,7 +453,7 @@ public class PlasmaGeneration extends Skill {
              * 第一蓄力层正好持续 40 tick（2 秒），风暴缩放在这一层内线性走完 0.5 → 3.0。
              */
             private static float tornadoExpandRate(Plasma plasma) {
-                float firstStage = Mth.clamp(
+                var firstStage = Mth.clamp(
                         plasma.getGatherProgress() * PlasmaGeneration.MAX_STAGE,
                         0.0f,
                         1.0f
@@ -503,12 +503,12 @@ public class PlasmaGeneration extends Skill {
 
                 private void capturePosition(Plasma plasma) {
                     var current = worldPosition(plasma);
-                    float dx = current.x - lastPosition.x;
-                    float dy = current.y - lastPosition.y;
-                    float dz = current.z - lastPosition.z;
-                    float lengthSquared = dx * dx + dy * dy + dz * dz;
+                    var dx = current.x - lastPosition.x;
+                    var dy = current.y - lastPosition.y;
+                    var dz = current.z - lastPosition.z;
+                    var lengthSquared = dx * dx + dy * dy + dz * dz;
                     if (launched && lengthSquared > 1.0E-5f) {
-                        float inverseLength = 1f / (float) Math.sqrt(lengthSquared);
+                        var inverseLength = 1f / (float) Math.sqrt(lengthSquared);
                         projectileDirection.set(dx * inverseLength, dy * inverseLength, dz * inverseLength);
                     }
                     lastPosition.set(current);

@@ -51,9 +51,9 @@ import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.sync.DataSyncManager;
 import org.academy.api.server.sync.ServerSyncManager;
 import org.academy.api.server.vanilla.MinecraftServerContext;
-import org.academy.internal.client.render.vfxgraph.FrameContext;
-import org.academy.internal.client.render.vfxgraph.TickingVfx;
-import org.academy.internal.client.render.vfxgraph.VfxContexts;
+import org.academy.internal.client.render.effect.FrameContext;
+import org.academy.internal.client.render.effect.TickingVfx;
+import org.academy.internal.client.render.effect.VfxContexts;
 import org.academy.internal.client.renderer.entity.ReflectedBeamVisualGeometry;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
@@ -351,8 +351,8 @@ public final class Railgun extends Skill {
                 var data = player.getExistingDataOrNull(AttachmentTypes.RAILGUN_DATA);
                 if (data == null || hint && !data.coinReturnHint()) return false;
                 var mc = Minecraft.getInstance();
-                boolean firstPerson = player == mc.getCameraEntity() && mc.options.getCameraType().isFirstPerson();
-                boolean right = hint ? data.mainHandRight() : data.rightHand();
+                var firstPerson = player == mc.getCameraEntity() && mc.options.getCameraType().isFirstPerson();
+                var right = hint ? data.mainHandRight() : data.rightHand();
                 Matrix4f transform;
                 if (firstPerson) {
                     transform = new Matrix4f(camera.viewRotation()).invert();
@@ -415,8 +415,8 @@ public final class Railgun extends Skill {
                 ageSeconds = (ray.tickCount + ctx.partialTick()) / 20f;
                 var origin = ray.position();
                 var direction = Vec3.directionFromRotation(ray.getXRot(), ray.getYRot()).normalize();
-                float originalLength = ReflectedBeamVisualGeometry.safeLength(ray.getBeamLength());
-                float length = ray.isReflectionActive()
+                var originalLength = ReflectedBeamVisualGeometry.safeLength(ray.getBeamLength());
+                var length = ray.isReflectionActive()
                         ? Math.min(originalLength, ReflectedBeamVisualGeometry.safeLength(ray.getReflectionDistance()))
                         : originalLength;
                 detail = ctx.cameraPos().distance(origin.toVector3f()) > 72 ? 0.35f : 1;
@@ -446,11 +446,11 @@ public final class Railgun extends Skill {
 
             private void segment(ActiveEffect effect, Vec3 start, Vec3 direction, float length, Vector3f camera) {
                 var unit = direction.normalize().toVector3f();
-                boolean valid = unit.isFinite() && unit.lengthSquared() > 1.0e-12f && length > 0;
+                var valid = unit.isFinite() && unit.lengthSquared() > 1.0e-12f && length > 0;
                 effect.setPosition(start.toVector3f());
                 if (valid) effect.setRotation(new Quaternionf().rotationTo(new Vector3f(0, 0, 1), unit));
                 effect.effect().setLiveParam("length", Value.of(valid ? length : 0));
-                float proximity = Math.clamp((3f - camera.distance(start.toVector3f())) / 1.5f, 0, 1);
+                var proximity = Math.clamp((3f - camera.distance(start.toVector3f())) / 1.5f, 0, 1);
                 effect.effect().setLiveParam("view_near_origin", Value.of(proximity));
                 // Include the entire segment, so a distant muzzle cannot cull a beam crossing the camera.
                 var center = start.toVector3f().fma(valid ? length * 0.5f : 0, unit);

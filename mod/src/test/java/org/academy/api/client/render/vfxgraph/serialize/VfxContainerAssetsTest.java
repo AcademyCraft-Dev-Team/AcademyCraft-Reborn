@@ -1,9 +1,9 @@
 package org.academy.api.client.render.vfxgraph.serialize;
 
 import com.google.gson.JsonParser;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.validate.VfxGraphValidator;
@@ -23,12 +23,12 @@ class VfxContainerAssetsTest {
         var metadata = new SimpleNodeRegistry();
         var blocks = new VfxBlockRegistry();
         var ops = new VfxOperatorRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
         var codec = new JsonVfxGraphCodec(metadata);
         var validator = new VfxGraphValidator(metadata);
 
-        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "minimal_burst", "demo_fire",
+        for (var name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "minimal_burst", "demo_fire",
                 "plasma_cannon_charge", "plasma_cannon_focus", "plasma_cannon_projectile", "plasma_cannon_impact", "entity_smoke",
                 "platinum_execution", "aeromanip_mist_burst", "aeromanip_mist_field",
                 "aeromanip_mist_ring", "aeromanip_mist_stream", "aeromanip_mist_blade", "aeromanip_mist_vortex",

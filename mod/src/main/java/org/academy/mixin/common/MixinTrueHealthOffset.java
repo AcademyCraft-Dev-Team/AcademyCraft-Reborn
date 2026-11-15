@@ -55,7 +55,7 @@ public abstract class MixinTrueHealthOffset implements HealthOffsetAccess {
         }
         var state = academy$offsetState;
         if (state == null) return original;
-        double offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
+        var offset = Double.longBitsToDouble(state.encodedOffset ^ state.mask);
         if (!Double.isFinite(offset) || offset < 0) return original;
         return Math.min(original, (float) Math.max(0, state.maximum - offset));
     }
@@ -70,13 +70,13 @@ public abstract class MixinTrueHealthOffset implements HealthOffsetAccess {
             original.call(entity, requested);
             return;
         }
-        float before = entity.getHealth();
-        long saved = state.encodedOffset;
+        var before = entity.getHealth();
+        var saved = state.encodedOffset;
         state.heal(Math.max(0, requested - before));
         try {
             original.call(entity, requested);
         } finally {
-            float gained = Math.max(0, entity.getHealth() - before);
+            var gained = Math.max(0, entity.getHealth() - before);
             state.encodedOffset = saved;
             state.heal(gained);
             TrueHealthOffsetRuntime.persistAndSync(entity);
@@ -89,7 +89,7 @@ public abstract class MixinTrueHealthOffset implements HealthOffsetAccess {
         var state = academy$offsetState;
         if (state == null) return original.call(source);
         academy$offsetState = null;
-        boolean protectedFromDeath = false;
+        var protectedFromDeath = false;
         try {
             protectedFromDeath = original.call(source);
             return protectedFromDeath;

@@ -2,8 +2,7 @@ package org.academy.api.common.ability.program;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import org.academy.api.server.world.level.storage.PlayerData;
-import org.academy.internal.server.ability.AbilitySystemServer;
+import org.academy.api.common.ability.SkillSystems;
 
 import java.math.BigInteger;
 import java.util.Map;
@@ -20,7 +19,7 @@ public final class ProgramSharedVariables {
     }
 
     public static Identifier category(ServerPlayer player) {
-        var category = AbilitySystemServer.getSystem(player)
+        var category = SkillSystems.of(player)
                 .getPlayerAbilityCategory(player.getUUID());
         if (category == null) throw new IllegalStateException("Program owner has no ability category");
         return category.getKey();
@@ -28,7 +27,8 @@ public final class ProgramSharedVariables {
 
     public static Optional<ProgramValue<?>> read(ServerPlayer player, Identifier category, String name) {
         validateName(name);
-        var saved = data(player).getProgramSharedVariables(category.toString()).get(name);
+        var saved = SkillSystems.of(player)
+                .getProgramSharedVariables(player.getUUID(), category.toString()).get(name);
         if (saved == null) return Optional.empty();
         try {
             return Optional.of(decode(saved));
@@ -38,18 +38,18 @@ public final class ProgramSharedVariables {
     }
 
     public static Map<String, SavedValue> snapshot(ServerPlayer player, Identifier category) {
-        return data(player).getProgramSharedVariables(category.toString());
+        return SkillSystems.of(player).getProgramSharedVariables(player.getUUID(), category.toString());
     }
 
     public static void write(ServerPlayer player, Identifier category, String name, ProgramValue<?> value) {
         validateName(name);
         var saved = encode(value);
-        var data = data(player);
-        var existing = data.getProgramSharedVariables(category.toString());
+        var system = SkillSystems.of(player);
+        var existing = system.getProgramSharedVariables(player.getUUID(), category.toString());
         if (!existing.containsKey(name) && existing.size() >= MAX_VARIABLES) {
             throw new IllegalStateException("Program shared variable limit exceeded");
         }
-        data.setProgramSharedVariable(category.toString(), name, saved);
+        system.setProgramSharedVariable(player.getUUID(), category.toString(), name, saved);
     }
 
     public static void validateValue(ProgramValue<?> value) {
@@ -57,16 +57,16 @@ public final class ProgramSharedVariables {
     }
 
     public static void restore(ServerPlayer player, Identifier category, String name, SavedValue value) {
-        data(player).setProgramSharedVariable(category.toString(), name, value);
+        SkillSystems.of(player).setProgramSharedVariable(player.getUUID(), category.toString(), name, value);
     }
 
     public static void remove(ServerPlayer player, Identifier category, String name) {
         validateName(name);
-        data(player).removeProgramSharedVariable(category.toString(), name);
+        SkillSystems.of(player).removeProgramSharedVariable(player.getUUID(), category.toString(), name);
     }
 
     public static void clear(ServerPlayer player, Identifier category) {
-        data(player).clearProgramSharedVariables(category.toString());
+        SkillSystems.of(player).clearProgramSharedVariables(player.getUUID(), category.toString());
     }
 
     public static ProgramValue<?> defaultValue(ProgramValueType type) {
@@ -92,12 +92,6 @@ public final class ProgramSharedVariables {
                 || name.codePoints().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException("Invalid shared variable name");
         }
-    }
-
-    private static PlayerData data(ServerPlayer player) {
-        var data = AbilitySystemServer.getSystem(player).getPlayerData(player.getUUID());
-        if (data == null) throw new IllegalStateException("Program owner data is unavailable");
-        return data;
     }
 
     static SavedValue encode(ProgramValue<?> value) {

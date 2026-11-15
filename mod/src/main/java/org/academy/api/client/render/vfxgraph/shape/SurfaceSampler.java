@@ -23,9 +23,9 @@ public interface SurfaceSampler {
      */
     static void box(int face, float u, float v, Vector3f min, Vector3f max,
                     Matrix4fc transform, Vector3f position, Vector3f normal) {
-        float x = min.x + (max.x - min.x) * u;
-        float y = min.y + (max.y - min.y) * v;
-        float z = min.z + (max.z - min.z) * u;
+        var x = min.x + (max.x - min.x) * u;
+        var y = min.y + (max.y - min.y) * v;
+        var z = min.z + (max.z - min.z) * u;
         switch (Math.floorMod(face, 6)) {
             case 0 -> {
                 position.set(min.x, y, z);

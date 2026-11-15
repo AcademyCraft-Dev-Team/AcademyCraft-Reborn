@@ -21,7 +21,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.ability.electromaster.MagneticallyManipulable;
+import org.academy.internal.common.ability.electromaster.MagneticallyManipulable;
 import org.academy.internal.common.world.entity.EntityTypes;
 import org.academy.internal.common.world.item.Items;
 import org.jspecify.annotations.Nullable;

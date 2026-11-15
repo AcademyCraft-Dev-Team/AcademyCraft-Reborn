@@ -146,8 +146,8 @@ public final class SharedAccountService {
             ServerPlayer player
     ) {
         var provider = normalize(packet.provider());
-        String messageKey = "";
-        boolean ok = true;
+        var messageKey = "";
+        var ok = true;
         switch (packet.action()) {
             case UPLOAD, CLEAR -> {
                 if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {

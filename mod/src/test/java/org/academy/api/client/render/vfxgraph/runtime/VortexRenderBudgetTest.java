@@ -1,4 +1,5 @@
 package org.academy.api.client.render.vfxgraph.runtime;
+import org.academy.internal.client.render.vfxgraph.wind.VortexRenderBudget;
 
 import org.junit.jupiter.api.Test;
 
@@ -11,12 +12,12 @@ class VortexRenderBudgetTest {
         var budget = new VortexRenderBudget();
         budget.beginFrame(16);
         assertEquals(0, budget.allocate(0, true));
-        int admitted = 1;
-        for (int i = 1; i < 16; i++) if (budget.allocate(3, true) >= 0) admitted++;
+        var admitted = 1;
+        for (var i = 1; i < 16; i++) if (budget.allocate(3, true) >= 0) admitted++;
         assertEquals(16, admitted);
         assertTrue(budget.vertices() <= VortexRenderBudget.MAX_VERTICES);
         assertTrue(budget.bytes() <= VortexRenderBudget.MAX_UPLOAD_BYTES);
-        for (int i = 0; i < 1000; i++) budget.allocate(1, true);
+        for (var i = 0; i < 1000; i++) budget.allocate(1, true);
         assertTrue(budget.vertices() <= VortexRenderBudget.MAX_VERTICES);
         assertTrue(budget.bytes() <= VortexRenderBudget.MAX_UPLOAD_BYTES);
         budget.beginFrame();

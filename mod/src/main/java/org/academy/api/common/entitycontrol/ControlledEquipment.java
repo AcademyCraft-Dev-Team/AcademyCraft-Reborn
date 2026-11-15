@@ -57,7 +57,7 @@ public final class ControlledEquipment {
      * Refresh on the server while AI takeover is active; existing equipment takes precedence per slot.
      */
     public static void refresh(Mob subject) {
-        int armor = 0;
+        var armor = 0;
         if (subject.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) armor += 2;
         if (subject.getItemBySlot(EquipmentSlot.CHEST).isEmpty()) armor += 6;
         if (subject.getItemBySlot(EquipmentSlot.LEGS).isEmpty()) armor += 5;

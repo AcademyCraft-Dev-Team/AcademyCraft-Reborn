@@ -5,7 +5,6 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.common.ability.VortexAttackPattern;
 import org.academy.internal.common.ability.accelerator.Accelerator;
 import org.academy.internal.common.network.PacketTypes;
 import org.misaka.MisakaNetworkClient;
@@ -41,13 +40,13 @@ public final class BlackWingAttackPacket extends Packet<ClientPacketListener, Bl
             buf -> {
                 int entityId = ByteBufCodecs.VAR_INT.decode(buf);
                 var pattern = VortexAttackPattern.byId(ByteBufCodecs.VAR_INT.decode(buf));
-                long startTick = buf.readLong();
-                long epoch = buf.readLong();
-                long sequence = buf.readLong();
-                float initialProgress = buf.readFloat();
+                var startTick = buf.readLong();
+                var epoch = buf.readLong();
+                var sequence = buf.readLong();
+                var initialProgress = buf.readFloat();
                 var targets = new ArrayList<Vec3>();
-                int count = pattern == VortexAttackPattern.FOURFOLD_SLAM ? 4 : 1;
-                for (int i = 0; i < count; i++) {
+                var count = pattern == VortexAttackPattern.FOURFOLD_SLAM ? 4 : 1;
+                for (var i = 0; i < count; i++) {
                     targets.add(new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
                 }
                 return new BlackWingAttackPacket(entityId, pattern, startTick, targets, epoch, sequence, initialProgress);
@@ -74,7 +73,7 @@ public final class BlackWingAttackPacket extends Packet<ClientPacketListener, Bl
             throw new IllegalArgumentException("Invalid vortex snapshot progress");
         this.pattern = pattern;
         this.startTick = startTick;
-        int count = pattern == VortexAttackPattern.FOURFOLD_SLAM ? 4 : 1;
+        var count = pattern == VortexAttackPattern.FOURFOLD_SLAM ? 4 : 1;
         if (targets.size() != count) throw new IllegalArgumentException("Unexpected vortex landing count");
         this.targets = List.copyOf(targets);
         for (var target : targets) {

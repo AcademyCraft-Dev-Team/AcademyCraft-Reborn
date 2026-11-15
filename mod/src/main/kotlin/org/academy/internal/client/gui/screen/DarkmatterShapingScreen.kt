@@ -12,8 +12,9 @@ import org.academy.api.client.gui.layout.SizeMode
 import org.academy.api.client.gui.screen.UiScreen
 import org.academy.api.client.gui.text.shape.TextMeasurer
 import org.academy.api.client.gui.widget.*
-import org.academy.api.common.ability.darkmatter.*
+import org.academy.internal.client.ability.darkmatter.DarkmatterClientState
 import org.academy.internal.common.ability.Skills
+import org.academy.internal.common.ability.darkmatter.*
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterShaping
 import java.util.*
 import kotlin.math.roundToInt
@@ -638,7 +639,7 @@ class DarkmatterShapingScreen : UiScreen(Component.translatable("screen.academy.
     private fun clientValidation(candidate: Map<String, Int>): DarkmatterShaping.Server.ModifierValidation {
         return DarkmatterShaping.Server.validateModifiers(
             selectedShape, candidate,
-            AbilitySystemClient.getDarkmatterLevel().coerceIn(1, 5),
+            DarkmatterClientState.level().coerceIn(1, 5),
             AbilitySystemClient.getSkillProficiencyMilestone(Skills.DARKMATTER_SHAPING.get())
         )
     }
@@ -703,7 +704,7 @@ class DarkmatterShapingScreen : UiScreen(Component.translatable("screen.academy.
     }
 
     private fun previewProfile(): DarkmatterShapingProfile {
-        val level = AbilitySystemClient.getDarkmatterLevel().coerceIn(1, 5)
+        val level = DarkmatterClientState.level().coerceIn(1, 5)
         val total = level * 50
         val alpha = (total * alphaPercent / 100.0f).roundToInt()
         return DarkmatterShapingProfile(level, alpha, total - alpha, modifiers)
@@ -831,7 +832,7 @@ class DarkmatterShapingScreen : UiScreen(Component.translatable("screen.academy.
         private const val TOOLTIP_FONT_SIZE = 6.5f
 
         private fun currentAbilityLevel(): Int {
-            return AbilitySystemClient.getDarkmatterLevel().coerceIn(1, 5)
+            return DarkmatterClientState.level().coerceIn(1, 5)
         }
 
         private fun setGroupVisible(widgets: List<Widget>, visible: Boolean) {

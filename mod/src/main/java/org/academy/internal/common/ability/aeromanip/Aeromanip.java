@@ -13,12 +13,12 @@ import org.academy.api.common.ability.AbilityResourceSpec;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.common.damage.DamageComposition;
 import org.academy.api.common.damage.SkillDamageSource;
-import org.academy.api.server.ability.aeromanip.AeromanipResourceService;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.common.ability.development.AbilityDevelopmentProfiles;
 import org.academy.internal.common.world.damagesource.DamageTypes;
 import org.academy.internal.server.ability.AbilitySystemServer;
 import org.academy.internal.server.ability.AeromanipResourceManager;
+import org.academy.internal.server.ability.aeromanip.AeromanipResourceService;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;

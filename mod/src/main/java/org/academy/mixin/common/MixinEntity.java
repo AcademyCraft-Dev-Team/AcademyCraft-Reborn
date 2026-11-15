@@ -9,7 +9,6 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import org.academy.api.common.entitycontrol.AttackDecision;
-import org.academy.api.server.damage.DefenseFeedbackSuppression;
 import org.academy.api.server.entity.SurvivalDefenseAspect;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.ability.mentalout.control.ImpressionRidingManager;
@@ -17,6 +16,7 @@ import org.academy.internal.common.ability.mentalout.control.MentalControlRuntim
 import org.academy.internal.common.attachment.AttachmentTypes;
 import org.academy.internal.common.entitycontrol.EntityControlApi;
 import org.academy.internal.common.entitycontrol.EntityMotionGuard;
+import org.academy.internal.server.damage.DefenseFeedbackSuppression;
 import org.academy.internal.server.entity.SurvivalDefense;
 import org.academy.internal.server.team.TeamRelations;
 import org.spongepowered.asm.mixin.Mixin;

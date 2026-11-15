@@ -684,11 +684,11 @@ public final class WideAreaInterferenceClientState {
             });
             event.submitCustomGeometry(Render.RenderTypes.MINE_DETECT_LINES, (snapshot, consumer) -> {
                 var step = Math.max(1, (int) Math.ceil(Math.max(box.getXsize(), box.getZsize()) / 32));
-                for (double x = Math.ceil(box.minX); x < box.maxX; x += step) {
+                for (var x = Math.ceil(box.minX); x < box.maxX; x += step) {
                     LineBoxRenderer.renderWireframeBox(snapshot, consumer,
                             new AABB(x, box.maxY, box.minZ, x, box.maxY, box.maxZ), 1, 1, 1, 0.18f);
                 }
-                for (double z = Math.ceil(box.minZ); z < box.maxZ; z += step) {
+                for (var z = Math.ceil(box.minZ); z < box.maxZ; z += step) {
                     LineBoxRenderer.renderWireframeBox(snapshot, consumer,
                             new AABB(box.minX, box.maxY, z, box.maxX, box.maxY, z), 1, 1, 1, 0.18f);
                 }

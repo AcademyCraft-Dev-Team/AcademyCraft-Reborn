@@ -22,8 +22,6 @@ public final class ImagPhaseFluidRenderer implements CustomFluidRenderer {
             FluidRenderer.Output output,
             BlockState blockState
     ) {
-        // Let the normal translucent fluid mesh provide the black liquid body, including
-        // vanilla still/flowing texture differences. Stars are real particles in the volume.
         return false;
     }
 }

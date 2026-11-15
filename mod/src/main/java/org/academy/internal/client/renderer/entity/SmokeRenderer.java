@@ -8,7 +8,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.SmokeVolumes;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
 import org.academy.internal.client.renderer.entity.state.SmokeRenderState;
 import org.academy.internal.common.world.entity.skill.Smoke;

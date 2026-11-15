@@ -1,7 +1,7 @@
 package org.academy.api.common.ability.program;
 
 import com.google.gson.Gson;
-import org.academy.api.server.world.level.storage.PlayerData;
+import org.academy.internal.server.world.level.storage.PlayerData;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;

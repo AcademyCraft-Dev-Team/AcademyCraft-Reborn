@@ -3,7 +3,7 @@ package org.academy.api.client.render.vfxgraph.shape;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.entity.player.PlayerModelType;
-import org.academy.api.client.render.vfxgraph.arc.MeshDistance;
+import org.academy.api.client.render.vfxgraph.curve.MeshDistance;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 

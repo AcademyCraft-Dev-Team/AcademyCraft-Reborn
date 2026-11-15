@@ -5,8 +5,6 @@ import org.academy.api.server.time.TemporalPauseSource;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.function.BooleanSupplier;
-
 /**
  * Protects the vanilla simulation boundary, including cancellations inside a fallback tick.
  */
@@ -27,30 +25,16 @@ public final class TemporalBoundaryProtection {
     }
 
     public static CallbackInfo protectCallback(CallbackInfo callback, boolean protectedBoundary) {
-        return protectCallback(callback, protectedBoundary, () -> false);
-    }
-
-    public static CallbackInfo protectCallback(CallbackInfo callback, boolean protectedBoundary,
-                                               BooleanSupplier ownedControl) {
-        return protectedBoundary ? new UncancelableCallback(callback, ownedControl) : callback;
+        return protectedBoundary ? new UncancelableCallback(callback) : callback;
     }
 
     private static final class UncancelableCallback extends CallbackInfo {
-        private final CallbackInfo original;
-        private final BooleanSupplier ownedControl;
-
-        private UncancelableCallback(CallbackInfo original, BooleanSupplier ownedControl) {
+        private UncancelableCallback(CallbackInfo original) {
             super(original.getId(), true);
-            this.original = original;
-            this.ownedControl = ownedControl;
         }
 
         @Override
         public void cancel() {
-            if (ownedControl.getAsBoolean()) {
-                original.cancel();
-                super.cancel();
-            }
         }
     }
 }

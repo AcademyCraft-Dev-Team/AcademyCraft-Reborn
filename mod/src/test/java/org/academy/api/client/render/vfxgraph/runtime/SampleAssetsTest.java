@@ -2,6 +2,7 @@ package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.google.gson.JsonParser;
 import net.minecraft.resources.Identifier;
+import org.academy.VfxSeriesTestRegistration;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SampleAssetsTest {
     @BeforeEach
     void setUp() {
+        VfxSeriesTestRegistration.install();
         var manager = VfxGraphManager.INSTANCE;
         manager.init();
         manager.clearEffects();
@@ -31,7 +33,7 @@ class SampleAssetsTest {
 
     @Test
     void packagedAssetsDecodeAndSpawn() {
-        for (String name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "minimal_burst", "demo_fire",
+        for (var name : new String[]{"demo_burst", "demo_fountain", "demo_ribbon", "minimal_burst", "demo_fire",
                 "surface_arc", "contact_arc", "spark", "demo_blender_arc", "arc_generate", "plasma_cannon_charge",
                 "plasma_cannon_focus", "plasma_cannon_projectile", "plasma_cannon_impact", "entity_smoke",
                 "platinum_execution", "aeromanip_mist_burst", "aeromanip_mist_field",

@@ -35,7 +35,7 @@ public interface MixinEntityGetter {
             cir.setReturnValue(List.of());
             return;
         }
-        Predicate<Entity> predicate = source == null
+        var predicate = source == null
                 ? EntitySelector.CAN_BE_COLLIDED_WITH
                 : EntitySelector.NO_SPECTATORS.and(source::canCollideWith);
         var queryBounds = bounds.inflate(1.0e-7);

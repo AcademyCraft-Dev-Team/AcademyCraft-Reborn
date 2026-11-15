@@ -5,8 +5,8 @@ import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.model.GraphParameter;
 import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.arc.ArcBuffer;
-import org.academy.api.client.render.vfxgraph.arc.EffectArcSource;
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer;
+import org.academy.api.client.render.vfxgraph.curve.EffectCurveSource;
 import org.academy.api.client.render.vfxgraph.block.BlockGeometryBuffer;
 import org.academy.api.client.render.vfxgraph.block.BlockGeometryFrame;
 import org.academy.api.client.render.vfxgraph.block.EffectBlockGeometrySource;
@@ -145,7 +145,7 @@ public final class GraphEffect {
         if (systemSimulator != null) systemSimulator.setSurfaceSampler(name, sampler);
     }
 
-    public void setArcSource(String name, EffectArcSource source) {
+    public void setArcSource(String name, EffectCurveSource source) {
         if (systemSimulator != null) systemSimulator.setArcSource(name, source);
     }
 
@@ -200,7 +200,7 @@ public final class GraphEffect {
     /**
      * 本帧活电弧缓冲（M22，ADR-026：路径驱动 spine，Tube 渲染）；扁平模型无电弧返回 null。
      */
-    public @Nullable ArcBuffer arcBuffer() {
+    public @Nullable CurveBuffer arcBuffer() {
         return systemSimulator != null ? systemSimulator.arcBuffer() : null;
     }
 

@@ -6,12 +6,12 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-import org.academy.api.server.ability.VectorDefenseProtection;
 import org.academy.internal.common.ability.accelerator.skills.lv3.VectorDeviation;
 import org.academy.internal.common.ability.accelerator.skills.lv4.ReflectionFilter;
 import org.academy.internal.common.ability.accelerator.skills.lv4.VectorReflection;
 import org.academy.internal.common.world.damagesource.PvpSetting;
 import org.academy.internal.common.world.effect.StatusEffects;
+import org.academy.internal.server.ability.VectorDefenseProtection;
 import org.academy.internal.server.time.TemporalMutationProtection;
 import org.jspecify.annotations.Nullable;
 

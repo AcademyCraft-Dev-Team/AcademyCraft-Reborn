@@ -2,6 +2,7 @@ package org.academy.api.client.render.vfxgraph.runtime;
 
 import com.google.gson.JsonObject;
 import net.minecraft.resources.Identifier;
+import org.academy.VfxSeriesTestRegistration;
 import org.academy.api.client.render.graph.model.Graph;
 import org.academy.api.client.render.graph.model.GraphNode;
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
@@ -26,8 +27,8 @@ class VfxGraphManagerTest {
         var manager = VfxGraphManager.INSTANCE;
         var id = Identifier.fromNamespaceAndPath("academy", "vfxgraph/lightning_nova");
         var casts = new ActiveEffect[20];
-        for (int pulse = 0; pulse < 50; pulse++) {
-            for (int cast = 0; cast < casts.length; cast++) {
+        for (var pulse = 0; pulse < 50; pulse++) {
+            for (var cast = 0; cast < casts.length; cast++) {
                 var effect = manager.spawnOrRefresh(id, new Vector3f(cast, 0, 0), "caster:" + cast);
                 if (pulse == 0) casts[cast] = effect;
                 assertSame(casts[cast], effect);
@@ -59,6 +60,7 @@ class VfxGraphManagerTest {
 
     @BeforeEach
     void setUp() {
+        VfxSeriesTestRegistration.install();
         codec = new JsonGraphCodec(new SimpleNodeRegistry());
         var manager = VfxGraphManager.INSTANCE;
         manager.init();

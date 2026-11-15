@@ -29,8 +29,8 @@ class OffscreenSimulationTest {
         var visible = effect();
         int hiddenSteps = 0, visibleSteps = 0;
         float hiddenTime = 0;
-        for (int frame = 0; frame < 120; frame++) {
-            float dt = hidden.simulationStep(1f / 60, false);
+        for (var frame = 0; frame < 120; frame++) {
+            var dt = hidden.simulationStep(1f / 60, false);
             if (dt > 0) hiddenSteps++;
             hiddenTime += dt;
             if (visible.simulationStep(1f / 60, true) > 0) visibleSteps++;

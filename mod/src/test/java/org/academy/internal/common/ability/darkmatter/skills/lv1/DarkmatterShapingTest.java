@@ -1,10 +1,10 @@
 package org.academy.internal.common.ability.darkmatter.skills.lv1;
 
 import io.netty.buffer.Unpooled;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterModifiers;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingRegistries;
+import org.academy.internal.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterModifiers;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShapingRegistries;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

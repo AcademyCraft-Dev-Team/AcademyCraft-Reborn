@@ -1024,8 +1024,8 @@ public final class GroupControlRuntime {
             if (stack.isEmpty()) return;
             var remainder = stack.copy();
             var inventory = controller.getInventory();
-            for (int pass = 0; pass < 2 && !remainder.isEmpty(); pass++) {
-                for (int slot = 0; slot < inventory.getNonEquipmentItems().size() && !remainder.isEmpty(); slot++) {
+            for (var pass = 0; pass < 2 && !remainder.isEmpty(); pass++) {
+                for (var slot = 0; slot < inventory.getNonEquipmentItems().size() && !remainder.isEmpty(); slot++) {
                     var existing = inventory.getItem(slot);
                     if (pass == 0 && (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, remainder)))
                         continue;
@@ -1169,7 +1169,7 @@ public final class GroupControlRuntime {
             clearWorkApproach();
             var container = HopperBlockEntity.getContainerOrHandlerAt(level, pos, null).container();
             if (container == null) return false;
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            for (var slot = 0; slot < container.getContainerSize(); slot++) {
                 if (!suitable.test(container.getItem(slot))) continue;
                 var replacement = container.removeItem(slot, 1);
                 if (replacement.isEmpty()) continue;
@@ -1292,7 +1292,7 @@ public final class GroupControlRuntime {
             clearWorkApproach();
             var container = HopperBlockEntity.getContainerOrHandlerAt(level, pos, null).container();
             if (container == null) return false;
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            for (var slot = 0; slot < container.getContainerSize(); slot++) {
                 if (!isSeed(container.getItem(slot))) continue;
                 bufferedDrops.add(container.removeItem(slot, 16));
                 container.setChanged();
@@ -1388,7 +1388,7 @@ public final class GroupControlRuntime {
             if (closed) return;
             removeOrder();
             var server = subject.level() instanceof ServerLevel level ? level.getServer() : null;
-            ServerPlayer controller = server == null
+            var controller = server == null
                     ? null : server.getPlayerList().getPlayer(controllerId);
             if (controller != null) {
                 if (command instanceof GroupControlCommand.GatherResources) {
@@ -1423,7 +1423,7 @@ public final class GroupControlRuntime {
             }
             if (command instanceof GroupControlCommand.Farm(var region)) {
                 var server = subject.level() instanceof ServerLevel level ? level.getServer() : null;
-                ServerPlayer controller = server == null
+                var controller = server == null
                         ? null : server.getPlayerList().getPlayer(controllerId);
                 if (controller != null) depositFarmDrops(controller, region, true);
             }

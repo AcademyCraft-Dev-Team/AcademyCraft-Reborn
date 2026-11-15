@@ -22,8 +22,8 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.academy.AcademyCraft;
 import org.academy.api.common.attribute.PlayerAttributes;
 import org.academy.api.common.attribute.PropsMath;
-import org.academy.api.server.damage.HealthLossGuards;
 import org.academy.internal.common.world.damagesource.DamageTypes;
+import org.academy.internal.server.damage.HealthLossGuards;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayDeque;

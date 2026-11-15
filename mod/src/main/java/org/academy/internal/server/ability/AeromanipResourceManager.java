@@ -5,13 +5,13 @@ import net.minecraft.server.level.ServerPlayer;
 import org.academy.api.common.ability.Skill;
 import org.academy.api.common.ability.SyncTypes;
 import org.academy.api.server.ability.AbilityResourceUsage;
-import org.academy.api.server.ability.aeromanip.AeromanipResourceService;
 import org.academy.api.server.world.WaterSuppression;
-import org.academy.api.server.world.level.storage.PlayerData;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.aeromanip.Aeromanip;
 import org.academy.internal.common.ability.aeromanip.config.AeromanipConfig;
 import org.academy.internal.common.ability.aeromanip.targeting.AirAccessResolver;
+import org.academy.internal.server.ability.aeromanip.AeromanipResourceService;
+import org.academy.internal.server.world.level.storage.PlayerData;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -89,7 +89,7 @@ public final class SkillProficiencyCommandGameTests {
             helper.assertTrue(data.getSkillDataMap().get(arc.getKeyString()).getProficiency() == 1200,
                     "Single-skill command must retain the requested proficiency");
             system.toggleSkill(uuid, Skills.ELECTRICAL_CONTACT.get().getKeyString());
-            Map<String, Boolean> enabledStates = data.getSkillDataMap().entrySet().stream()
+            var enabledStates = data.getSkillDataMap().entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().isEnabled()));
             var oldAbilityLevel = system.getPlayerLevel(uuid);
 

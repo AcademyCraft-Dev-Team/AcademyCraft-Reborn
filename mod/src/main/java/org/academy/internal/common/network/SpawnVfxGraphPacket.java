@@ -169,11 +169,11 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
      * Axial effects are visible to observers near any point on the scaled +Y path.
      */
     double distanceToEffectSquared(Vec3 observer) {
-        double length = floatParams.getOrDefault("length", 0f) * (double) scale;
+        var length = floatParams.getOrDefault("length", 0f) * (double) scale;
         if (!Double.isFinite(length) || length <= 0 || direction.lengthSqr() < 1.0e-8)
             return observer.distanceToSqr(position);
         var axis = direction.normalize();
-        double along = Math.clamp(observer.subtract(position).dot(axis), 0, length);
+        var along = Math.clamp(observer.subtract(position).dot(axis), 0, length);
         return observer.distanceToSqr(position.add(axis.scale(along)));
     }
 
@@ -255,7 +255,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 }
                 effect.setScale(packet.scale);
                 if (packet.scale >= 8f) effect.setAlwaysVisible(true);
-                float boundsRadius = packet.floatParams.getOrDefault("bounds_radius", 0f) * packet.scale;
+                var boundsRadius = packet.floatParams.getOrDefault("bounds_radius", 0f) * packet.scale;
                 if (boundsRadius > 0) {
                     // A following radial effect keeps its bounds centered on its moving origin.
                     effect.bindFrame((active, camera, partialTick) -> {
@@ -266,7 +266,7 @@ public final class SpawnVfxGraphPacket extends Packet<ClientPacketListener, Spaw
                 effect.setRotation(orientedRotation(packet.direction, packet.localXDirection));
                 effect.setGameTimeLifetimeSeconds(packet.lifetimeSeconds);
                 if (!packet.floatParams.containsKey("time")) effect.bindGameTime("time");
-                float length = packet.floatParams.getOrDefault("length", 0f) * packet.scale;
+                var length = packet.floatParams.getOrDefault("length", 0f) * packet.scale;
                 if (length > 0 && packet.direction.lengthSqr() > 1.0e-8) {
                     var center = packet.position.add(packet.direction.normalize().scale(length * 0.5f));
                     effect.setCullingSphere(center.toVector3f(), length * 0.5f + 8 * packet.scale);

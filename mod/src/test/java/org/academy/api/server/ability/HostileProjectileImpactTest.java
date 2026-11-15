@@ -1,6 +1,7 @@
 package org.academy.api.server.ability;
 
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.server.ability.HostileProjectiles;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

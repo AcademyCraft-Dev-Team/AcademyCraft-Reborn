@@ -1,9 +1,11 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
 import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.sim.VfxSystemSimulator;
@@ -28,7 +30,7 @@ class M29bArcGatingTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -90,6 +92,32 @@ class M29bArcGatingTest {
         assertTrue(sim.arcBuffer().count() > 0, "frequency<=0 keeps legacy per-frame spawn");
     }
 
+    @Test
+    void zeroFramePeriodIsTreatedAsEveryFrame() {
+        var system = new VfxSystem("s",
+                List.of(
+                        ctx("spawn", VfxContextType.SPAWN,
+                                block("bS", "vfx.block.arc_surface",
+                                        Map.of("mesh", "builtin:plane", "density", "1",
+                                                "probability", "1", "frequency", "1",
+                                                "frame_period", "0", "fps", "30", "lifetime", "0.4")),
+                                block("bC", "vfx.block.arc_contact",
+                                        Map.of("mesh", "builtin:plane", "contact_mesh", "builtin:sphere",
+                                                "density", "1", "probability", "1", "frequency", "1",
+                                                "frame_period", "0", "fps", "30", "lifetime", "0.4"))),
+                        ctx("out", VfxContextType.OUTPUT,
+                                block("bO", "vfx.block.output_arc", Map.of()))
+                ),
+                List.of(), List.of(new VfxFlowEdge("spawn", "out")),
+                List.of(), List.of(), List.of("bO"));
+
+        var sim = new VfxSystemSimulator(system, blocks, ops, 42L, List.of());
+        for (var i = 0; i < 60; i++) {
+            sim.step(1f / 60f);
+        }
+        assertTrue(sim.arcBuffer().count() > 0, "frame_period=0 should behave as period 1");
+    }
+
     /**
      * arc_spark 只从本帧新增弧（fresh）派生火花；且每弧火花数有上限 → 火花总量有界。
      */
@@ -119,7 +147,7 @@ class M29bArcGatingTest {
         // 火花稳态应远小于"每条弧每控制点每帧"的指数放大（旧 ~1000+）。给宽松上界。
         var sparks = 0;
         for (var a = 0; a < sim.arcBuffer().count(); a++) {
-            if (!sim.arcBuffer().arc(a).hasSurface()) sparks++;
+            if (!ArcTestSupport.at(sim.arcBuffer(), a).hasSurface()) sparks++;
         }
         assertTrue(sparks < 100, "spark arcs should be bounded (fresh-only + per-arc cap), got " + sparks);
     }

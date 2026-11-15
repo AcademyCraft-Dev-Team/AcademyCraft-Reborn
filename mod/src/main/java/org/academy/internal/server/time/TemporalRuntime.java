@@ -1113,7 +1113,7 @@ public final class TemporalRuntime implements TemporalService {
             TemporalChannel channel
     ) {
         var containers = queue.allContainers;
-        long pendingTicks = 0L;
+        var pendingTicks = 0L;
         for (var container : containers.values()) {
             pendingTicks += container.getAll().count();
         }

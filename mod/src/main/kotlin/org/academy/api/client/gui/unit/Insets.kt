@@ -1,9 +1,5 @@
 package org.academy.api.client.gui.unit
 
-/**
- * 四边内缩/外缩，供 padding（[org.academy.api.client.gui.widget.Widget] 自身属性）
- * 与 margin（[org.academy.api.client.gui.widget.WidgetContainer.LayoutParams] 父级参数）共用。
- */
 data class Insets(
     val left: Dp,
     val top: Dp,

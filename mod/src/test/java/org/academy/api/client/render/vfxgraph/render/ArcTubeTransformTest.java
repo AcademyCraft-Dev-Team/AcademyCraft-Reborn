@@ -1,7 +1,7 @@
 package org.academy.api.client.render.vfxgraph.render;
 
-import org.academy.api.client.render.vfxgraph.arc.ArcCurve;
-import org.academy.api.client.render.vfxgraph.arc.CurveToMeshBuilder;
+import org.academy.api.client.render.vfxgraph.curve.TubeCurve;
+import org.academy.api.client.render.vfxgraph.curve.CurveToMeshBuilder;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ArcTubeTransformTest {
 
     private static CurveToMeshBuilder.MeshData twoPointTube() {
-        var arc = new ArcCurve();
+        var arc = new TubeCurve();
         arc.addPoint(0f, 0f, 0f, 0.01f, 0);
         arc.addPoint(0f, 1f, 0f, 0.01f, 0);
         arc.setColor(1f, 0.5f, 0.2f, 1f);

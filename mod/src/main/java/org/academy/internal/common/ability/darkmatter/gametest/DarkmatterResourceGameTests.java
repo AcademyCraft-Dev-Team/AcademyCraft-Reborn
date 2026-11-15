@@ -46,12 +46,12 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.academy.AcademyCraft;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
 import org.academy.api.common.damage.LawDetonationDamageSource;
 import org.academy.api.common.damage.SkillDamageSource;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.Skills;
 import org.academy.internal.common.ability.darkmatter.Darkmatter;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
 import org.academy.internal.common.ability.darkmatter.damage.DarkmatterLawMark;
 import org.academy.internal.common.ability.darkmatter.equipment.DarkmatterEnchantments;
 import org.academy.internal.common.ability.darkmatter.skills.lv1.DarkmatterDisassemble;
@@ -708,8 +708,8 @@ public final class DarkmatterResourceGameTests {
                 helper.getLevel().addFreshEntity(feather);
                 // Step every projectile tick explicitly: the headless test clock can advance
                 // faster than world entity ticks, while the visual exit lasts only a few ticks.
-                boolean observedExit = false;
-                for (int tick = 0; tick < 20 && !feather.isRemoved(); tick++) {
+                var observedExit = false;
+                for (var tick = 0; tick < 20 && !feather.isRemoved(); tick++) {
                     feather.tick();
                     observedExit |= feather.hasPassedTarget() && !feather.isRemoved()
                             && feather.getX() > target.getBoundingBox().maxX;

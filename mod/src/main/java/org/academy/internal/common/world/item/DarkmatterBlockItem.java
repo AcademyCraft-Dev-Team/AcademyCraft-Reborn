@@ -7,9 +7,9 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
-import org.academy.api.common.ability.darkmatter.DarkmatterShape;
-import org.academy.api.common.ability.darkmatter.DarkmatterShapingProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShape;
+import org.academy.internal.common.ability.darkmatter.DarkmatterShapingProfile;
 import org.academy.internal.common.world.level.block.DarkmatterConfigurableBlock;
 import org.academy.internal.common.world.level.block.entity.DarkmatterBlockEntity;
 
@@ -47,9 +47,9 @@ public final class DarkmatterBlockItem extends BlockItem implements DarkmatterSh
 
     @Override
     protected boolean placeBlock(BlockPlaceContext context, BlockState placementState) {
-        boolean placed = super.placeBlock(context, placementState);
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
+        var placed = super.placeBlock(context, placementState);
+        var level = context.getLevel();
+        var pos = context.getClickedPos();
         if (placed && !level.isClientSide() && level.getBlockEntity(pos) instanceof DarkmatterBlockEntity darkmatterBlockEntity) {
             darkmatterBlockEntity.setProfile(profile(context.getItemInHand()));
             level.sendBlockUpdated(pos, placementState, placementState, Block.UPDATE_ALL);

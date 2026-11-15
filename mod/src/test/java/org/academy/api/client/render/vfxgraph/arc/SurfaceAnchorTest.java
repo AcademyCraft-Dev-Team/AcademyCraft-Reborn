@@ -1,13 +1,10 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+import org.academy.VfxSeriesTestRegistration;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
 
 import org.academy.api.client.render.graph.registry.SimpleNodeRegistry;
-import org.academy.api.client.render.vfxgraph.model.VfxBlock;
-import org.academy.api.client.render.vfxgraph.model.VfxContext;
-import org.academy.api.client.render.vfxgraph.model.VfxContextType;
-import org.academy.api.client.render.vfxgraph.model.VfxFlowEdge;
-import org.academy.api.client.render.vfxgraph.model.VfxSystem;
+import org.academy.api.client.render.vfxgraph.model.*;
 import org.academy.api.client.render.vfxgraph.nodes.VfxBlockRegistry;
-import org.academy.api.client.render.vfxgraph.nodes.VfxBlocks;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperatorRegistry;
 import org.academy.api.client.render.vfxgraph.operator.VfxOperators;
 import org.academy.api.client.render.vfxgraph.shape.SurfaceSampler;
@@ -19,9 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SurfaceAnchorTest {
     private VfxBlockRegistry blocks;
@@ -32,7 +27,7 @@ class SurfaceAnchorTest {
         blocks = new VfxBlockRegistry();
         ops = new VfxOperatorRegistry();
         var metadata = new SimpleNodeRegistry();
-        VfxBlocks.registerAll(metadata, blocks);
+        VfxSeriesTestRegistration.registerAll(metadata, blocks);
         VfxOperators.registerAll(metadata, ops);
     }
 
@@ -72,7 +67,7 @@ class SurfaceAnchorTest {
 
         assertTrue(sim.arcBuffer().count() > 0);
         for (var i = 0; i < sim.arcBuffer().count(); i++) {
-            var arc = sim.arcBuffer().arc(i);
+            var arc = ArcTestSupport.at(sim.arcBuffer(), i);
             assertTrue(arc.hasAnchor());
             assertEquals(0f, arc.y(0), 1e-3f);
             assertEquals(0f, arc.y(arc.size() - 1), 1e-3f);
@@ -82,7 +77,7 @@ class SurfaceAnchorTest {
         sim.step(1f / 60f);
 
         for (var i = 0; i < sim.arcBuffer().count(); i++) {
-            var arc = sim.arcBuffer().arc(i);
+            var arc = ArcTestSupport.at(sim.arcBuffer(), i);
             if (!arc.hasAnchor()) continue;
             assertEquals(2f, arc.y(0), 1e-3f);
             assertEquals(2f, arc.y(arc.size() - 1), 1e-3f);
@@ -116,7 +111,7 @@ class SurfaceAnchorTest {
         var sim = new VfxSystemSimulator(system("test", "5"), blocks, ops, 42L, List.of());
         sim.setSurfaceSampler("test", surface);
         sim.step(1f / 60f);
-        var arc = sim.arcBuffer().arc(0);
+        var arc = ArcTestSupport.at(sim.arcBuffer(), 0);
         assertTrue(arc.hasAnchor());
         assertFalse(arc.hasSurface());
         assertEquals(surface, arc.anchorSampler());
@@ -151,7 +146,7 @@ class SurfaceAnchorTest {
 
         var anchored = 0;
         for (var i = 0; i < sim.arcBuffer().count(); i++) {
-            if (sim.arcBuffer().arc(i).hasAnchor()) anchored++;
+            if (ArcTestSupport.at(sim.arcBuffer(), i).hasAnchor()) anchored++;
         }
         assertTrue(anchored > 0);
         assertTrue(sim.arcBuffer().count() > anchored);

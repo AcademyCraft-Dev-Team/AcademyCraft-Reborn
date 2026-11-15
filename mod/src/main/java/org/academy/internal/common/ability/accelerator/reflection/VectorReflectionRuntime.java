@@ -254,8 +254,8 @@ public final class VectorReflectionRuntime {
                 .orElse(VectorReflectionRuntime.class));
         if (caller == VectorReflectionRuntime.class) return true;
         try {
-            CodeSource callerSource = caller.getProtectionDomain().getCodeSource();
-            CodeSource academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
+            var callerSource = caller.getProtectionDomain().getCodeSource();
+            var academySource = AcademyCraft.class.getProtectionDomain().getCodeSource();
             return callerSource != null && academySource != null
                     && Objects.equals(callerSource.getLocation(), academySource.getLocation());
         } catch (SecurityException ignored) {

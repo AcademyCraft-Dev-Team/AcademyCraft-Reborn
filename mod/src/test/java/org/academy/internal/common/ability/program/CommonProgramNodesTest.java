@@ -328,7 +328,7 @@ class CommonProgramNodesTest {
         var randomNodes = new ArrayList<ProgramGraph.Node>();
         var edges = new ArrayList<ProgramGraph.Edge>();
         randomNodes.add(node(1, PrecisionProgramNodeIds.ON_CAST));
-        for (int i = 0; i < 24; i++) {
+        for (var i = 0; i < 24; i++) {
             int randomId = 2 + i * 3, first = randomId + 1, second = randomId + 2;
             randomNodes.add(randomNumberNode(randomId, "float", "0", "1"));
             randomNodes.add(variableNode(first, CommonProgramNodeIds.VARIABLE_SET, "a" + i, ProgramValueTypes.FLOAT.id()));
@@ -342,7 +342,7 @@ class CommonProgramNodesTest {
         edges.add(edge(73, "flow", 74, "flow"));
         var variables = run(new ProgramGraph(randomNodes, edges), null).variables();
         var unique = new HashSet<Object>();
-        for (int i = 0; i < 24; i++) {
+        for (var i = 0; i < 24; i++) {
             var value = variables.get("a" + i).value();
             assertEquals(value, variables.get("b" + i).value());
             unique.add(value);
@@ -502,7 +502,7 @@ class CommonProgramNodesTest {
     void entityPositionPassesTheSelectedAnchorToTheTargetResolver() {
         var expected = new ProgramWorldPosition(OVERWORLD, 4.0, 65.0, 8.0);
         var seenAnchor = new ProgramEntityPositionAnchor[1];
-        ProgramTargetResolver resolver = new ProgramTargetResolver() {
+        var resolver = new ProgramTargetResolver() {
             @Override
             public Object caster() {
                 return "caster";

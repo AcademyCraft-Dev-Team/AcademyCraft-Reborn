@@ -32,8 +32,7 @@ import org.academy.api.client.ability.AbilitySystemClient;
 import org.academy.api.client.config.KeyBindingConfig;
 import org.academy.api.client.input.InputSystem;
 import org.academy.api.client.render.graph.type.Value;
-import org.academy.api.client.render.vfxgraph.arc.ArcCurveBuilder;
-import org.academy.api.client.render.vfxgraph.arc.ArcEmission;
+import org.academy.api.client.render.vfxgraph.curve.CurveEmission;
 import org.academy.api.client.render.vfxgraph.render.GraphCamera;
 import org.academy.api.client.render.vfxgraph.runtime.ActiveEffect;
 import org.academy.api.client.render.vfxgraph.runtime.VfxGraphManager;
@@ -43,6 +42,7 @@ import org.academy.api.common.gson.TypeHandler;
 import org.academy.api.server.ability.ServerContext;
 import org.academy.api.server.vanilla.MinecraftServerContext;
 import org.academy.internal.client.hud.ability.ToggleStatusHud;
+import org.academy.internal.client.render.vfxgraph.arc.ArcCurveBuilder;
 import org.academy.internal.common.ability.AbilityCategories;
 import org.academy.internal.common.ability.SkillNames;
 import org.academy.internal.common.ability.Skills;
@@ -163,9 +163,9 @@ public class MagneticWeapon extends Skill {
 
             private boolean sample(ActiveEffect effect, GraphCamera camera, float partialTick) {
                 if (blade.level() != Minecraft.getInstance().level) return false;
-                boolean removed = blade.isRemoved() || !blade.isAlive();
+                var removed = blade.isRemoved() || !blade.isAlive();
                 if (removed && !Float.isFinite(removedAt)) removedAt = effect.gameAgeSeconds();
-                float fade = removed ? Math.max(0, 1 - (effect.gameAgeSeconds() - removedAt) / 0.15f) : 1;
+                var fade = removed ? Math.max(0, 1 - (effect.gameAgeSeconds() - removedAt) / 0.15f) : 1;
                 if (fade <= 0) {
                     this.bladePosition = null;
                     this.quality = null;
@@ -202,7 +202,7 @@ public class MagneticWeapon extends Skill {
                 return true;
             }
 
-            private void emitPaths(ArcEmission out) {
+            private void emitPaths(CurveEmission out) {
                 var position = bladePosition;
                 var quality = this.quality;
                 if (position == null || quality == null) return;
@@ -256,7 +256,7 @@ public class MagneticWeapon extends Skill {
                 );
             }
 
-            private void emitTrail(ArcEmission out, Quality quality,
+            private void emitTrail(CurveEmission out, Quality quality,
                                    Vec3 bladePosition, long seed, float fade) {
                 if (history.size() < 2) return;
                 var points = new ArrayList<>(history);
@@ -290,7 +290,7 @@ public class MagneticWeapon extends Skill {
                 }
             }
 
-            private void emitActivation(ArcEmission out, Quality quality,
+            private void emitActivation(CurveEmission out, Quality quality,
                                         Vec3 bladePosition, long seed, float fade) {
                 var owner = blade.level().getEntity(blade.getOwnerId());
                 if (!(owner instanceof Avatar avatar)) return;
@@ -313,7 +313,7 @@ public class MagneticWeapon extends Skill {
                 }
             }
 
-            private void emitIdleSpark(ArcEmission out, Vec3 bladePosition, long seed, Vec3 direction, float fade) {
+            private void emitIdleSpark(CurveEmission out, Vec3 bladePosition, long seed, Vec3 direction, float fade) {
                 var interval = 12 + Mth.positiveModulo(blade.getId(), 8);
                 if (Mth.positiveModulo(blade.tickCount, interval) >= 2) return;
                 var side = normalizedOr(direction.cross(new Vec3(0.0, 1.0, 0.0)), new Vec3(1.0, 0.0, 0.0));
@@ -326,7 +326,7 @@ public class MagneticWeapon extends Skill {
                         1, 1, 1.1f, 0.3f, 0.4f);
             }
 
-            private void emitImpact(ArcEmission out, Quality quality, long seed, float fade) {
+            private void emitImpact(CurveEmission out, Quality quality, long seed, float fade) {
                 if (impactTicks <= 0) return;
                 var count = switch (quality.status()) {
                     case ALL -> 6;

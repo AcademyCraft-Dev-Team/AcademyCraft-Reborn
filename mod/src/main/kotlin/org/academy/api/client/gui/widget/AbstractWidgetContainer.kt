@@ -232,10 +232,10 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
         val origin = Matrix4f(context.pose().last().pose())
         renderInternal(context)
         val built = buildCache(context, start, blurStart, origin)
-        if (context.accumulatedAlpha > ALPHA_CACHE_EPSILON) {
-            ownRenderCache = built
+        ownRenderCache = if (context.accumulatedAlpha > ALPHA_CACHE_EPSILON) {
+            built
         } else {
-            ownRenderCache = null
+            null
         }
         isRenderDirty = false
     }
@@ -375,8 +375,8 @@ abstract class AbstractWidgetContainer : AbstractWidget(), WidgetContainer {
 
         val intercepted = onInterceptEvent(event)
         if (!intercepted) {
-            if (event.type == EventType.MOUSE_MOVED) {
-                val newHoveredWidget = findTopWidgetAt((event as MouseEvent).x, event.y)
+            if (event is MouseEvent) {
+                val newHoveredWidget = findTopWidgetAt(event.x, event.y)
                 if (hoveredWidget !== newHoveredWidget) {
                     var current = hoveredWidget
                     while (current != null) {

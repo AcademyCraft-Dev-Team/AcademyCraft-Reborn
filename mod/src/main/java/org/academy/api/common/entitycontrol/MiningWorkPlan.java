@@ -78,7 +78,7 @@ public final class MiningWorkPlan {
             if (target.owner != null) faces.merge(face(pos), 1, Integer::sum);
         });
         BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
+        var bestScore = Double.MAX_VALUE;
         for (var entry : targets.entrySet()) {
             var pos = entry.getKey();
             var target = entry.getValue();

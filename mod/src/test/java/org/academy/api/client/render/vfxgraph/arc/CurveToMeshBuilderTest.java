@@ -1,4 +1,8 @@
-package org.academy.api.client.render.vfxgraph.arc;
+package org.academy.api.client.render.vfxgraph.curve;
+import org.academy.api.client.render.vfxgraph.curve.CurveBuffer;
+import org.academy.internal.client.render.vfxgraph.arc.ArcCurve;
+import org.academy.internal.client.render.vfxgraph.arc.ArcTestSupport;
+import org.academy.internal.client.render.vfxgraph.arc.CurveGenerator;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,8 +28,8 @@ class CurveToMeshBuilderTest {
         assertEquals(vertices.capacity(), vertices.position());
         assertEquals(indices.capacity(), indices.position());
         indices.flip();
-        for (int i = 0; i < 48; i++) {
-            int index = indices.getInt();
+        for (var i = 0; i < 48; i++) {
+            var index = indices.getInt();
             assertTrue(i < 24 ? index >= 100 && index < 108 : index >= 108 && index < 116);
         }
         vertices.clear();
@@ -54,8 +58,8 @@ class CurveToMeshBuilderTest {
 
     @Test
     void thinCurveResolutionCapRespectsOutputAndResetsOnPoolReuse() {
-        var buffer = new ArcBuffer();
-        var arc = buffer.add();
+        var buffer = new CurveBuffer();
+        var arc = ArcTestSupport.add(buffer);
         arc.addPoint(0, 0, 0, 0.05f, 0);
         arc.addPoint(0, 1, 0, 0.05f, 0);
         arc.setMaxTubeSegments(6);
@@ -63,7 +67,7 @@ class CurveToMeshBuilderTest {
         assertEquals(8, CurveToMeshBuilder.build(arc, 4, 1, 1, 1, 1, 1).vertexCount());
         arc.setEndCap(true);
         buffer.clear();
-        var reused = buffer.add();
+        var reused = ArcTestSupport.add(buffer);
         assertEquals(0, reused.maxTubeSegments(), "A later main column must not inherit attachment LOD");
         assertTrue(!reused.endCap(), "Ordinary arcs must not inherit the beam's terminal disk");
     }
@@ -86,23 +90,23 @@ class CurveToMeshBuilderTest {
         assertEquals(vertices.capacity(), vertices.position());
         assertEquals(indices.capacity(), indices.position());
         indices.flip();
-        for (int i = 0; i < size.indices(); i++) {
-            int index = indices.getInt();
+        for (var i = 0; i < size.indices(); i++) {
+            var index = indices.getInt();
             assertTrue(i < 72 ? index >= 100 && index < 125 : index >= 125 && index < 150);
         }
-        for (int run = 0; run < 2; run++) {
-            int cap = run * 25 + 16;
-            for (int i = cap; i < cap + 9; i++) {
+        for (var run = 0; run < 2; run++) {
+            var cap = run * 25 + 16;
+            for (var i = cap; i < cap + 9; i++) {
                 assertEquals(run == 0 ? 5 : 3, vertices.getFloat(i * 48 + 8), 0.0001f);
                 assertEquals(0, vertices.getFloat(i * 48 + 12), 0.0001f);
                 assertEquals(0, vertices.getFloat(i * 48 + 16), 0.0001f);
                 assertEquals(1, vertices.getFloat(i * 48 + 20), 0.0001f);
             }
             int a = cap * 48, b = (cap + 1) * 48, center = (cap + 8) * 48;
-            float ax = vertices.getFloat(a) - vertices.getFloat(center);
-            float ay = vertices.getFloat(a + 4) - vertices.getFloat(center + 4);
-            float bx = vertices.getFloat(b) - vertices.getFloat(center);
-            float by = vertices.getFloat(b + 4) - vertices.getFloat(center + 4);
+            var ax = vertices.getFloat(a) - vertices.getFloat(center);
+            var ay = vertices.getFloat(a + 4) - vertices.getFloat(center + 4);
+            var bx = vertices.getFloat(b) - vertices.getFloat(center);
+            var by = vertices.getFloat(b + 4) - vertices.getFloat(center + 4);
             assertTrue(ax * by - ay * bx > 0, "Cap winding must face the forward tangent");
         }
     }

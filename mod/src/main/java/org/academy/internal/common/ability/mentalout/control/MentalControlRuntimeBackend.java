@@ -96,6 +96,21 @@ public final class MentalControlRuntimeBackend implements MentalControlApi.Backe
     }
 
     @Override
+    public boolean isProtectedTarget(LivingEntity subject) {
+        return MentalControlRuntime.isProtectedTarget(subject);
+    }
+
+    @Override
+    public void releaseBySubject(MinecraftServer server, UUID subjectId) {
+        MentalControlRuntime.releaseBySubject(server, subjectId);
+    }
+
+    @Override
+    public void clearResistance(LivingEntity subject) {
+        MentalResistanceManager.clearProtection(subject);
+    }
+
+    @Override
     public void releaseByControllerSourceAndSubject(
             MinecraftServer server,
             UUID controllerId,

@@ -30,7 +30,7 @@ public final class VectorRedirectGraphEffects {
         var direction = plan.redirectedDirection();
         var mirrorPoint = plan.mirrorPoint();
         var seed = (float) plan.attack().fingerprint();
-        ServerLevel level = plan.redirector().level();
+        var level = plan.redirector().level();
         if (plan.attack().executionPolicy().visualStyle() == VectorVisualStyle.ARC) {
             var clampedRadius = Mth.clamp(radius, 0.02f, 4.0f);
             var jaggedness = plan.kind() == VectorRedirectKind.REFRACTION ? 0.18f : 0.1f;

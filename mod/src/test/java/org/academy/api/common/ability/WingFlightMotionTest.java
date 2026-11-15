@@ -1,6 +1,8 @@
 package org.academy.api.common.ability;
 
 import net.minecraft.world.phys.Vec3;
+import org.academy.internal.common.ability.accelerator.flight.WingControlIntent;
+import org.academy.internal.common.ability.accelerator.flight.WingFlightMotion;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +39,7 @@ class WingFlightMotionTest {
     @Test
     void noServerUpdatesAreNeededToStopAndHoverForHundredsOfLocalFrames() {
         var velocity = new Vec3(10, -10, 10);
-        for (int frame = 0; frame < 400; frame++) {
+        for (var frame = 0; frame < 400; frame++) {
             velocity = WingFlightMotion.step(velocity, RELEASED, frame == 0 ? 16 : 0, 0, 1);
             assertEquals(Vec3.ZERO, velocity);
         }

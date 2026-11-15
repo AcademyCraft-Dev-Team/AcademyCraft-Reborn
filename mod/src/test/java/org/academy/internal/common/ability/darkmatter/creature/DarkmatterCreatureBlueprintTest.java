@@ -1,6 +1,6 @@
 package org.academy.internal.common.ability.darkmatter.creature;
 
-import org.academy.api.common.ability.darkmatter.DarkmatterCreatureRegistries;
+import org.academy.internal.common.ability.darkmatter.DarkmatterCreatureRegistries;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

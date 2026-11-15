@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.academy.api.common.ability.darkmatter.DarkmatterBlockProfile;
+import org.academy.internal.common.ability.darkmatter.DarkmatterBlockProfile;
 
 /**
  * Stores physical parameters that cannot be represented economically as block-state variants.

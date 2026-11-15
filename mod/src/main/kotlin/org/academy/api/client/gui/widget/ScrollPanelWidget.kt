@@ -4,7 +4,6 @@ import net.minecraft.util.Mth
 import org.academy.api.client.gui.event.EventType
 import org.academy.api.client.gui.event.InputEvent
 import org.academy.api.client.gui.event.MouseEvent
-import org.academy.api.client.gui.event.ScrollEvent
 import org.academy.api.client.gui.layout.MeasureSpec
 import org.academy.api.client.gui.layout.Orientation
 import org.academy.api.client.gui.render.Canvas
@@ -17,6 +16,8 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     protected var scrollTargetY: Float = 0f
     protected var scrollSpeed: Float = 24f
     private var pendingScrollToEnd = false
+    private var lastMouseX: Double = 0.0
+    private var lastMouseY: Double = 0.0
 
     var content: Widget? = null
         private set
@@ -28,6 +29,7 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     }
 
     private fun notifyScrollChanged() {
+        dispatchEvent(MouseEvent.createMoveEvent(lastMouseX, lastMouseY))
         if (scrollListeners.isEmpty()) return
         for (listener in scrollListeners) listener()
     }
@@ -75,7 +77,8 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         var desiredWidth = lp.paddingLeft + lp.paddingRight
         var desiredHeight = lp.paddingTop + lp.paddingBottom
 
-        if (content != null && content!!.isVisible()) {
+        val content = content
+        if (content != null && content.isVisible()) {
             var contentWidthSpec = widthMeasureSpec
             var contentHeightSpec = heightMeasureSpec
 
@@ -91,11 +94,11 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
                 }
             }
 
-            measureChild(content!!, contentWidthSpec, contentHeightSpec)
+            measureChild(content, contentWidthSpec, contentHeightSpec)
 
-            val contentLp = content!!.layoutParams
-            desiredWidth += content!!.measuredWidth + contentLp.marginLeft + contentLp.marginRight
-            desiredHeight += content!!.measuredHeight + contentLp.marginTop + contentLp.marginBottom
+            val contentLp = content.layoutParams
+            desiredWidth += content.measuredWidth + contentLp.marginLeft + contentLp.marginRight
+            desiredHeight += content.measuredHeight + contentLp.marginTop + contentLp.marginBottom
         }
 
         setMeasuredDimension(
@@ -105,11 +108,12 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
     }
 
     override fun onLayout() {
-        if (content != null && content!!.isVisible()) {
-            content!!.layout(0f, 0f, content!!.measuredWidth, content!!.measuredHeight)
+        val content = content
+        if (content != null && content.isVisible()) {
+            content.layout(0f, 0f, content.measuredWidth, content.measuredHeight)
 
-            val maxScrollX = max(0f, content!!.width - width)
-            val maxScrollY = max(0f, content!!.height - height)
+            val maxScrollX = max(0f, content.width - width)
+            val maxScrollY = max(0f, content.height - height)
 
             var currentScrollX = scrollX
             var currentScrollY = scrollY
@@ -136,14 +140,16 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         if (!isAbsoluteEnabled() || !isVisible()) return
 
         if (event is MouseEvent && !isMouseOver(event.x, event.y)) {
+            val hoveredWidget = hoveredWidget
             if (hoveredWidget != null) {
-                hoveredWidget!!.isHovered = false
-                hoveredWidget = null
+                hoveredWidget.isHovered = false
+                this.hoveredWidget = null
             }
 
+            val gestureTarget = gestureTarget
             if (gestureTarget != null) {
-                gestureTarget!!.dispatchEvent(event)
-                if (event.type == EventType.MOUSE_RELEASED) gestureTarget = null
+                gestureTarget.dispatchEvent(event)
+                if (event.type == EventType.MOUSE_RELEASED) this.gestureTarget = null
             }
             return
         }
@@ -211,15 +217,18 @@ open class ScrollPanelWidget(protected val orientation: Orientation? = Orientati
         context.pose().popPose()
     }
 
-    override fun onMouseScrolled(event: ScrollEvent) {
+    override fun onMouseScrolled(event: MouseEvent) {
         if (isMouseOver(event.x, event.y)) {
             event.consume()
             scrollTargetY = Mth.clamp(scrollTargetY - (event.delta * scrollSpeed).toFloat(), 0f, maxScrollY)
-            if (event.xDelta != 0.0) {
-                scrollTargetX = Mth.clamp(scrollTargetX - (event.xDelta * scrollSpeed).toFloat(), 0f, maxScrollX)
-            }
             invalidate()
         }
+    }
+
+    override fun onMouseMoved(event: MouseEvent) {
+        lastMouseX = event.x
+        lastMouseY = event.y
+        super.onMouseMoved(event)
     }
 
     fun setScrollTarget(scrollTarget: Float): ScrollPanelWidget {
