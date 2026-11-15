@@ -184,11 +184,15 @@ class TerminalHud private constructor() {
             val height = w.guiScaledHeight
             xPos = width / 2.0
             yPos = height / 2.0
-            SDLMouse.SDL_WarpMouseInWindow(w.handle(), (w.width / 2.0).toFloat(), (w.height / 2.0).toFloat())
+            SDLMouse.SDL_HideCursor()
+            mc.mouseHandler.releaseMouse()
             startXPos = m.xpos
             startYPos = m.ypos
             context.get().requestLayout()
-        } else SDLMouse.SDL_WarpMouseInWindow(w.handle(), startXPos.toFloat(), startYPos.toFloat())
+        } else {
+            SDLMouse.SDL_ShowCursor()
+            mc.mouseHandler.grabMouse()
+        }
     }
 
     @MainThread
@@ -325,12 +329,6 @@ class TerminalHud private constructor() {
                     )
                 )
             }
-
-            SDLMouse.SDL_WarpMouseInWindow(
-                Minecraft.getInstance().window.handle(),
-                Mth.clamp(event.xpos, 0.0, window.width.toDouble()).toFloat(),
-                Mth.clamp(event.ypos, 0.0, window.height.toDouble()).toFloat()
-            )
 
             event.setCanceled(true)
         }

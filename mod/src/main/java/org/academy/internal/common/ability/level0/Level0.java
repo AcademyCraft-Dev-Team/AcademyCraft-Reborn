@@ -16,7 +16,7 @@ public final class Level0 extends AbilityCategory {
 
     @Override
     public Identifier getIcon() {
-        return R.textures.gui.icon.icon_nocategory;
+        return R.textures.ability.level0.icon;
     }
 
     @Override

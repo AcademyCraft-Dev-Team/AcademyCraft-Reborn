@@ -238,7 +238,6 @@ public final class R {
             public static final class accelerator {
                 public static final Identifier icon = academy("textures/ability/accelerator/icon.png");
                 public static final Identifier icon_glow = academy("textures/ability/accelerator/icon_glow.png");
-                public static final Identifier icon_overlay = academy("textures/ability/accelerator/icon_overlay.png");
 
                 private accelerator() {
                 }
@@ -326,7 +325,6 @@ public final class R {
             public static final class electromaster {
                 public static final Identifier icon = academy("textures/ability/electromaster/icon.png");
                 public static final Identifier icon_glow = academy("textures/ability/electromaster/icon_glow.png");
-                public static final Identifier icon_overlay = academy("textures/ability/electromaster/icon_overlay.png");
 
                 private electromaster() {
                 }
@@ -405,7 +403,6 @@ public final class R {
             public static final class level0 {
                 public static final Identifier icon = academy("textures/ability/level0/icon.png");
                 public static final Identifier icon_glow = academy("textures/ability/level0/icon_glow.png");
-                public static final Identifier icon_overlay = academy("textures/ability/level0/icon_overlay.png");
 
                 private level0() {
                 }
@@ -475,7 +472,6 @@ public final class R {
             public static final class meltdowner {
                 public static final Identifier icon = academy("textures/ability/meltdowner/icon.png");
                 public static final Identifier icon_glow = academy("textures/ability/meltdowner/icon_glow.png");
-                public static final Identifier icon_overlay = academy("textures/ability/meltdowner/icon_overlay.png");
 
                 private meltdowner() {
                 }
@@ -569,7 +565,6 @@ public final class R {
             public static final class teleport {
                 public static final Identifier icon = academy("textures/ability/teleport/icon.png");
                 public static final Identifier icon_glow = academy("textures/ability/teleport/icon_glow.png");
-                public static final Identifier icon_overlay = academy("textures/ability/teleport/icon_overlay.png");
 
                 private teleport() {
                 }
@@ -657,7 +652,6 @@ public final class R {
                 public static final Identifier icon_electromaster = academy("textures/gui/icon/icon_electromaster.png");
                 public static final Identifier icon_inv = academy("textures/gui/icon/icon_inv.png");
                 public static final Identifier icon_meltdowner = academy("textures/gui/icon/icon_meltdowner.png");
-                public static final Identifier icon_nocategory = academy("textures/gui/icon/icon_nocategory.png");
                 public static final Identifier icon_node = academy("textures/gui/icon/icon_node.png");
                 public static final Identifier icon_settings = academy("textures/gui/icon/icon_settings.png");
                 public static final Identifier icon_teleporter = academy("textures/gui/icon/icon_teleporter.png");
